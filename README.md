@@ -13,7 +13,7 @@
 - `frontend/`：Vue 3 前端
 - `tests/`：单元和接口测试
 
-设计约束和后续系统扩展方式见 [`docs/architecture.md`](docs/architecture.md)。
+设计约束和后续系统扩展方式见 [`docs/architecture.md`](docs/architecture.md)，伙伴、主角天赋、逐格生产和品质公式见 [`docs/game-design-foundations.md`](docs/game-design-foundations.md)。
 
 ## 本地测试
 
