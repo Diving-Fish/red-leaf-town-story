@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "game": {
+    "title": "红叶镇物语",
+    "starting_coins": 80,
+    "initial_inventory": {}
+  },
+  "stamina": {
+    "restore_seconds": 180
+  },
+  "levels": [
+    {"level": 1, "total_xp": 0, "plot_slots": 3, "stamina_cap": 20, "unlocks": ["system:farming", "crop:carrot"]},
+    {"level": 2, "total_xp": 20, "plot_slots": 3, "stamina_cap": 22, "unlocks": ["crop:wheat"]},
+    {"level": 3, "total_xp": 60, "plot_slots": 4, "stamina_cap": 24, "unlocks": ["system:crafting"]},
+    {"level": 4, "total_xp": 130, "plot_slots": 4, "stamina_cap": 26, "unlocks": ["system:livestock"]},
+    {"level": 5, "total_xp": 240, "plot_slots": 5, "stamina_cap": 28, "unlocks": ["system:gacha"]}
+  ],
+  "items": [
+    {"id": "carrot_seed", "name": "胡萝卜种子", "icon": "sprout", "kind": "seed", "sell_price": 0},
+    {"id": "carrot", "name": "胡萝卜", "icon": "carrot", "kind": "produce", "sell_price": 5},
+    {"id": "wheat_seed", "name": "小麦种子", "icon": "sprout", "kind": "seed", "sell_price": 0},
+    {"id": "wheat", "name": "小麦", "icon": "wheat", "kind": "produce", "sell_price": 9}
+  ],
+  "crops": [
+    {
+      "id": "carrot",
+      "name": "胡萝卜",
+      "seed_item_id": "carrot_seed",
+      "produce_item_id": "carrot",
+      "growth_seconds": 30,
+      "yield_min": 2,
+      "yield_max": 3,
+      "stamina_cost": 1,
+      "plant_xp": 1,
+      "harvest_xp": 4,
+      "min_level": 1,
+      "accent": "#e97845"
+    },
+    {
+      "id": "wheat",
+      "name": "小麦",
+      "seed_item_id": "wheat_seed",
+      "produce_item_id": "wheat",
+      "growth_seconds": 90,
+      "yield_min": 2,
+      "yield_max": 4,
+      "stamina_cost": 2,
+      "plant_xp": 2,
+      "harvest_xp": 7,
+      "min_level": 2,
+      "accent": "#d5a83e"
+    }
+  ],
+  "shop": [
+    {"id": "carrot_seed", "item_id": "carrot_seed", "price": 8, "currency": "coins", "min_level": 1},
+    {"id": "wheat_seed", "item_id": "wheat_seed", "price": 13, "currency": "coins", "min_level": 2}
+  ]
+}
