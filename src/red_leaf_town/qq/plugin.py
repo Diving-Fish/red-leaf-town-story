@@ -80,6 +80,10 @@ async def farm_summary(bot: Bot, event: Event):
     ready = sum(1 for plot in state["plots"] if plot["ready"])
     growing = sum(1 for plot in state["plots"] if not plot["empty"] and not plot["ready"])
     working_partners = sum(1 for partner in state["partners"] if partner["locked"])
+    gathering_ready = sum(1 for site in state.get("gathering_sites", []) if site["ready"])
+    gathering_running = sum(
+        1 for site in state.get("gathering_sites", []) if not site["empty"] and not site["ready"]
+    )
     await _reply(
         event,
         f"🍁 {player['display_name']} · Lv.{player['level']}\n"
@@ -87,5 +91,6 @@ async def farm_summary(bot: Bot, event: Event):
         f"体力：{player['stamina']}/{player['stamina_cap']}\n"
         f"伙伴：{state['partner_count']} 位，{working_partners} 位任务中\n"
         f"农田：{ready} 块可收获，{growing} 块生长中\n"
+        f"采集：{gathering_ready} 处可领取，{gathering_running} 处进行中\n"
         "前往 Web 页面管理农场：https://chiyuki.diving-fish.com/red-leaf-town/",
     ).send()

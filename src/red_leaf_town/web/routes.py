@@ -463,6 +463,36 @@ def create_blueprint(*, partner_catalog_path: str | Path = DEFAULT_PARTNER_CONTE
         result = get_service().harvest(subject, slot)
         return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
 
+    @blueprint.put("/api/red-leaf-town/gathering/sites/<string:site_id>/partner")
+    @login_required
+    async def assign_gathering_partner(subject: str, site_id: str):
+        payload = await request.get_json(silent=True) or {}
+        result = get_service().assign_gathering_partner(
+            subject,
+            site_id,
+            str(payload.get("partner_id", "")),
+        )
+        return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
+
+    @blueprint.post("/api/red-leaf-town/gathering/sites/<string:site_id>/start")
+    @login_required
+    async def start_gathering(subject: str, site_id: str):
+        payload = await request.get_json(silent=True) or {}
+        result = get_service().start_gathering(subject, site_id, str(payload.get("task_id", "")))
+        return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
+
+    @blueprint.post("/api/red-leaf-town/gathering/sites/<string:site_id>/collect")
+    @login_required
+    async def collect_gathering(subject: str, site_id: str):
+        result = get_service().collect_gathering(subject, site_id)
+        return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
+
+    @blueprint.post("/api/red-leaf-town/talents/<string:node_id>/unlock")
+    @login_required
+    async def unlock_talent(subject: str, node_id: str):
+        result = get_service().unlock_talent(subject, node_id)
+        return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
+
     @blueprint.post("/api/red-leaf-town/inventory/<string:item_id>/sell")
     @login_required
     async def sell(subject: str, item_id: str):

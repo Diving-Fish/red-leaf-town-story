@@ -1,5 +1,5 @@
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "game": {
     "title": "红叶镇物语",
     "starting_coins": 80,
@@ -23,10 +23,16 @@
       "partner_capacity": 1,
       "partner_level_cap": 20,
       "collaborator_slots": 1
+    },
+    "gathering": {
+      "character_base_ability": 0,
+      "partner_capacity": 1,
+      "partner_level_cap": 20,
+      "collaborator_slots": 1
     }
   },
   "levels": [
-    {"level": 1, "total_xp": 0, "plot_slots": 3, "stamina_cap": 20, "unlocks": ["system:farming", "crop:carrot"]},
+    {"level": 1, "total_xp": 0, "plot_slots": 3, "stamina_cap": 20, "unlocks": ["system:farming", "system:gathering", "crop:carrot", "gathering:maple_forest"]},
     {"level": 2, "total_xp": 20, "plot_slots": 3, "stamina_cap": 22, "unlocks": ["crop:wheat"]},
     {"level": 3, "total_xp": 60, "plot_slots": 4, "stamina_cap": 24, "unlocks": ["system:crafting"]},
     {"level": 4, "total_xp": 130, "plot_slots": 4, "stamina_cap": 26, "unlocks": ["system:livestock"]},
@@ -34,9 +40,11 @@
   ],
   "items": [
     {"id": "carrot_seed", "name": "胡萝卜种子", "icon": "sprout", "kind": "seed", "sell_price": 0},
-    {"id": "carrot", "name": "胡萝卜", "icon": "carrot", "kind": "produce", "sell_price": 5},
+    {"id": "carrot", "name": "胡萝卜", "icon": "carrot", "kind": "produce", "sell_price": 5, "has_quality": true},
     {"id": "wheat_seed", "name": "小麦种子", "icon": "sprout", "kind": "seed", "sell_price": 0},
-    {"id": "wheat", "name": "小麦", "icon": "wheat", "kind": "produce", "sell_price": 9}
+    {"id": "wheat", "name": "小麦", "icon": "wheat", "kind": "produce", "sell_price": 9, "has_quality": true},
+    {"id": "maple_wood", "name": "枫木", "icon": "trees", "kind": "material", "sell_price": 7, "has_quality": true},
+    {"id": "autumn_herb", "name": "秋露草", "icon": "leaf", "kind": "material", "sell_price": 10, "has_quality": true}
   ],
   "crops": [
     {
@@ -80,6 +88,84 @@
         "miracle_probability_cap": 0.003,
         "miracle_eligible": false
       }
+    }
+  ],
+  "gathering_sites": [
+    {
+      "id": "maple_forest",
+      "name": "红枫林缘",
+      "description": "镇外最近的一片枫林，常能找到木材与可用枝条。",
+      "accent": "#b85f3f",
+      "min_level": 1
+    },
+    {
+      "id": "dew_meadow",
+      "name": "秋露草场",
+      "description": "晨雾散去后，草叶间会显露带着露水的药草。",
+      "accent": "#739765",
+      "min_level": 2
+    }
+  ],
+  "gathering_tasks": [
+    {
+      "id": "collect_maple_wood",
+      "site_id": "maple_forest",
+      "name": "拾取枫木",
+      "produce_item_id": "maple_wood",
+      "duration_seconds": 45,
+      "time_difficulty": 90,
+      "yield_min": 2,
+      "yield_max": 3,
+      "stamina_cost": 1,
+      "collect_xp": 4,
+      "min_level": 1,
+      "quality": {
+        "thresholds": [45, 90, 150, 230],
+        "width": 16,
+        "miracle_probability_cap": 0.003,
+        "miracle_eligible": false
+      }
+    },
+    {
+      "id": "collect_autumn_herb",
+      "site_id": "dew_meadow",
+      "name": "采集秋露草",
+      "produce_item_id": "autumn_herb",
+      "duration_seconds": 90,
+      "time_difficulty": 135,
+      "yield_min": 1,
+      "yield_max": 3,
+      "stamina_cost": 2,
+      "collect_xp": 7,
+      "min_level": 2,
+      "quality": {
+        "thresholds": [60, 115, 180, 270],
+        "width": 19,
+        "miracle_probability_cap": 0.003,
+        "miracle_eligible": false
+      }
+    }
+  ],
+  "talents": [
+    {
+      "id": "gathering_roster_1",
+      "industry": "gathering",
+      "name": "结伴入林",
+      "description": "采集伙伴同时驻场上限增加 1。",
+      "cost": 1,
+      "min_level": 2,
+      "prerequisites": [],
+      "partner_capacity_bonus": 1
+    },
+    {
+      "id": "gathering_roster_2",
+      "industry": "gathering",
+      "name": "林野调度",
+      "description": "采集伙伴同时驻场上限再增加 1。",
+      "cost": 1,
+      "min_level": 4,
+      "prerequisites": ["gathering_roster_1"],
+      "partner_capacity_bonus": 1
     }
   ],
   "shop": [

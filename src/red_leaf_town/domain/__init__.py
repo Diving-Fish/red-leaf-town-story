@@ -1,4 +1,5 @@
 from .models import (
+    GatheringSiteState,
     OwnedPartnerState,
     PlayerState,
     PlotState,
@@ -10,6 +11,7 @@ from .models import (
 )
 
 __all__ = [
+    "GatheringSiteState",
     "OwnedPartnerState",
     "PlayerState",
     "PlotState",

@@ -98,6 +98,73 @@ export interface IndustryRules {
   partner_capacity: number
   partner_level_cap: number
   collaborator_slots: number
+  base_partner_capacity: number
+}
+
+export interface GatheringTaskDefinition {
+  id: string
+  site_id: string
+  name: string
+  produce_item_id: string
+  duration_seconds: number
+  time_difficulty: number
+  yield_min: number
+  yield_max: number
+  stamina_cost: number
+  collect_xp: number
+  min_level: number
+  quality: QualityCurveDefinition
+  item: {
+    id: string
+    name: string
+    icon: string
+    kind: string
+    sell_price: number
+    has_quality: boolean
+  }
+}
+
+export interface GatheringSiteState {
+  site_id: string
+  assigned_partner_ids: string[]
+  task_snapshot: ProductionTaskSnapshot | null
+  task_result: ProductionResultSnapshot | null
+  empty: boolean
+  ready: boolean
+  remaining_seconds: number
+  definition: {
+    id: string
+    name: string
+    description: string
+    accent: string
+    min_level: number
+  } | null
+  task: GatheringTaskDefinition | null
+  available_tasks: GatheringTaskDefinition[]
+  assigned_partners: OwnedPartner[]
+  assignment_locked: boolean
+  assignment_locked_until: number | null
+}
+
+export interface TalentNode {
+  id: string
+  industry: string
+  name: string
+  description: string
+  cost: number
+  min_level: number
+  prerequisites: string[]
+  partner_capacity_bonus: number
+  unlocked: boolean
+  can_unlock: boolean
+  locked_reason: string | null
+}
+
+export interface TalentState {
+  earned_points: number
+  available_points: number
+  unlocked_node_ids: string[]
+  nodes: TalentNode[]
 }
 
 export interface InventoryItem {
@@ -136,10 +203,13 @@ export interface GameState {
   player: PlayerSummary
   plots: PlotState[]
   next_plot_level: number | null
+  gathering_sites: GatheringSiteState[]
+  next_gathering_site_level: number | null
   inventory: InventoryItem[]
   partners: OwnedPartner[]
   partner_count: number
   industry_rules: Record<string, IndustryRules>
+  talents: TalentState
   shop: ShopEntry[]
 }
 
@@ -245,6 +315,7 @@ export interface OwnedPartner {
   upgrade_available?: boolean
   breakthrough_available?: boolean
   assigned_plot_slot: number | null
+  assigned_gathering_site_id: string | null
   locked: boolean
   locked_until: number | null
 }

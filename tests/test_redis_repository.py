@@ -71,11 +71,26 @@ def test_schema_two_spirit_warehouse_is_rewritten_with_partner_fields(repository
     }))
 
     loaded = repository.get(player_id)
-    assert loaded.schema_version == 5
+    assert loaded.schema_version == 6
     assert loaded.owned_partners[0].partner_id == "maple_sprite"
 
     repository.update(player_id, lambda player: None)
     stored = json.loads(repository.redis.get(repository._player_key(player_id)))
-    assert stored["schema_version"] == 5
+    assert stored["schema_version"] == 6
     assert stored["owned_partners"][0]["partner_id"] == "maple_sprite"
     assert "owned_spirits" not in stored
+
+
+def test_gathering_assignment_and_task_snapshot_persist(repository):
+    service = GameService(load_content(), repository, clock=lambda: 1_700_000_000)
+    player = service.ensure_player("redis-gathering-sub", "林间居民")
+    service.admin_grant_partner(player.player_id, "sprite_001")
+    service.snapshot_by_sub("redis-gathering-sub")
+    service.assign_gathering_partner("redis-gathering-sub", "maple_forest", "sprite_001")
+    service.start_gathering("redis-gathering-sub", "maple_forest", "collect_maple_wood")
+
+    reloaded = repository.get(player.player_id)
+    assert reloaded.schema_version == 6
+    assert reloaded.gathering_sites[0].assigned_partner_ids == ["sprite_001"]
+    assert reloaded.gathering_sites[0].task_snapshot.industry == "gathering"
+    assert reloaded.gathering_sites[0].task_snapshot.quality_parameters.ability == 40

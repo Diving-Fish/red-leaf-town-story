@@ -86,6 +86,17 @@ class PlotState(BaseModel):
         return not self.crop_id
 
 
+class GatheringSiteState(BaseModel):
+    site_id: str = Field(min_length=1)
+    assigned_partner_ids: list[str] = Field(default_factory=list, max_length=1)
+    task_snapshot: ProductionTaskSnapshot | None = None
+    task_result: ProductionResultSnapshot | None = None
+
+    @property
+    def empty(self) -> bool:
+        return self.task_snapshot is None
+
+
 class OwnedPartnerState(BaseModel):
     partner_id: str = Field(min_length=1)
     level: int = Field(default=1, ge=1, le=60)
@@ -104,7 +115,7 @@ class OwnedPartnerState(BaseModel):
 
 
 class PlayerState(BaseModel):
-    schema_version: int = 5
+    schema_version: int = 6
     version: int = 1
     player_id: str
     oauth_sub: str
@@ -116,6 +127,8 @@ class PlayerState(BaseModel):
     stamina_updated_at: int
     inventory: dict[str, dict[int, int]] = Field(default_factory=dict)
     plots: list[PlotState] = Field(default_factory=list)
+    gathering_sites: list[GatheringSiteState] = Field(default_factory=list)
+    talent_nodes: list[str] = Field(default_factory=list)
     owned_partners: list[OwnedPartnerState] = Field(default_factory=list)
     created_at: int
     updated_at: int
@@ -143,7 +156,10 @@ class PlayerState(BaseModel):
                 str(item_id): ({0: int(quantity)} if not isinstance(quantity, dict) else quantity)
                 for item_id, quantity in (inventory or {}).items()
             }
-        migrated["schema_version"] = 5
+        if schema_version < 6:
+            migrated.setdefault("gathering_sites", [])
+            migrated.setdefault("talent_nodes", [])
+        migrated["schema_version"] = 6
         return migrated
 
     @model_validator(mode="after")
@@ -156,7 +172,13 @@ class PlayerState(BaseModel):
         partner_ids = [entry.partner_id for entry in self.owned_partners]
         if len(partner_ids) != len(set(partner_ids)):
             raise ValueError("player cannot own the same partner more than once")
-        assigned_ids = [partner_id for plot in self.plots for partner_id in plot.assigned_partner_ids]
+        if len(self.talent_nodes) != len(set(self.talent_nodes)):
+            raise ValueError("player cannot unlock the same talent node more than once")
+        assigned_ids = [
+            partner_id
+            for production_slot in [*self.plots, *self.gathering_sites]
+            for partner_id in production_slot.assigned_partner_ids
+        ]
         if len(assigned_ids) != len(set(assigned_ids)):
             raise ValueError("partner cannot be assigned to more than one production slot")
         unknown_ids = set(assigned_ids) - set(partner_ids)

@@ -39,6 +39,7 @@ class ItemDefinition(BaseModel):
     icon: str
     kind: Literal["seed", "produce", "material", "product"]
     sell_price: int = Field(ge=0)
+    has_quality: bool = False
 
 
 class QualityGradeDefinition(BaseModel):
@@ -97,6 +98,46 @@ class CropDefinition(BaseModel):
         return self
 
 
+class GatheringSiteDefinition(BaseModel):
+    id: str = Field(min_length=1)
+    name: str = Field(min_length=1)
+    description: str = ""
+    accent: str
+    min_level: int = Field(default=1, ge=1)
+
+
+class GatheringTaskDefinition(BaseModel):
+    id: str = Field(min_length=1)
+    site_id: str = Field(min_length=1)
+    name: str = Field(min_length=1)
+    produce_item_id: str = Field(min_length=1)
+    duration_seconds: int = Field(gt=0)
+    time_difficulty: int = Field(gt=0)
+    yield_min: int = Field(ge=1)
+    yield_max: int = Field(ge=1)
+    stamina_cost: int = Field(ge=0)
+    collect_xp: int = Field(ge=0)
+    min_level: int = Field(ge=1)
+    quality: QualityCurveDefinition
+
+    @model_validator(mode="after")
+    def validate_yield(self):
+        if self.yield_max < self.yield_min:
+            raise ValueError(f"gathering task {self.id}: yield_max must be >= yield_min")
+        return self
+
+
+class TalentNodeDefinition(BaseModel):
+    id: str = Field(min_length=1)
+    industry: str = Field(min_length=1)
+    name: str = Field(min_length=1)
+    description: str = ""
+    cost: int = Field(default=1, ge=1)
+    min_level: int = Field(default=1, ge=1)
+    prerequisites: list[str] = Field(default_factory=list)
+    partner_capacity_bonus: int = Field(default=0, ge=0)
+
+
 class ShopEntry(BaseModel):
     id: str
     item_id: str
@@ -114,6 +155,9 @@ class GameContent(BaseModel):
     levels: list[LevelDefinition]
     items: list[ItemDefinition]
     crops: list[CropDefinition]
+    gathering_sites: list[GatheringSiteDefinition] = Field(default_factory=list)
+    gathering_tasks: list[GatheringTaskDefinition] = Field(default_factory=list)
+    talents: list[TalentNodeDefinition] = Field(default_factory=list)
     shop: list[ShopEntry]
 
     @model_validator(mode="after")
@@ -125,6 +169,9 @@ class GameContent(BaseModel):
         unique([item.id for item in self.items], "item")
         unique([crop.id for crop in self.crops], "crop")
         unique([entry.id for entry in self.shop], "shop")
+        unique([entry.id for entry in self.gathering_sites], "gathering site")
+        unique([entry.id for entry in self.gathering_tasks], "gathering task")
+        unique([entry.id for entry in self.talents], "talent")
         levels = [entry.level for entry in self.levels]
         unique([str(level) for level in levels], "level")
         if levels != sorted(levels) or not levels or levels[0] != 1:
@@ -134,11 +181,29 @@ class GameContent(BaseModel):
             raise ValueError("level total_xp must be sorted and start at 0")
         if "farming" not in self.industries:
             raise ValueError("farming industry rules are required")
+        if "gathering" not in self.industries:
+            raise ValueError("gathering industry rules are required")
 
         items = {item.id for item in self.items}
         for crop in self.crops:
             if crop.seed_item_id not in items or crop.produce_item_id not in items:
                 raise ValueError(f"crop {crop.id} references an unknown item")
+            if not self.item_map[crop.produce_item_id].has_quality:
+                raise ValueError(f"crop {crop.id} output must support quality")
+        gathering_site_ids = {site.id for site in self.gathering_sites}
+        for task in self.gathering_tasks:
+            if task.site_id not in gathering_site_ids:
+                raise ValueError(f"gathering task {task.id} references an unknown site")
+            if task.produce_item_id not in items:
+                raise ValueError(f"gathering task {task.id} references an unknown item")
+            if not self.item_map[task.produce_item_id].has_quality:
+                raise ValueError(f"gathering task {task.id} output must support quality")
+        talent_ids = {talent.id for talent in self.talents}
+        for talent in self.talents:
+            if talent.industry not in self.industries:
+                raise ValueError(f"talent {talent.id} references an unknown industry")
+            if any(prerequisite not in talent_ids for prerequisite in talent.prerequisites):
+                raise ValueError(f"talent {talent.id} references an unknown prerequisite")
         for entry in self.shop:
             if entry.item_id not in items:
                 raise ValueError(f"shop {entry.id} references an unknown item")
@@ -155,6 +220,18 @@ class GameContent(BaseModel):
     @property
     def shop_map(self) -> dict[str, ShopEntry]:
         return {entry.id: entry for entry in self.shop}
+
+    @property
+    def gathering_site_map(self) -> dict[str, GatheringSiteDefinition]:
+        return {entry.id: entry for entry in self.gathering_sites}
+
+    @property
+    def gathering_task_map(self) -> dict[str, GatheringTaskDefinition]:
+        return {entry.id: entry for entry in self.gathering_tasks}
+
+    @property
+    def talent_map(self) -> dict[str, TalentNodeDefinition]:
+        return {entry.id: entry for entry in self.talents}
 
     def level_for_xp(self, experience: int) -> LevelDefinition:
         current = self.levels[0]

@@ -19,6 +19,10 @@ def test_default_content_is_consistent():
     assert content.item_map["carrot"].sell_price > 0
     assert [grade.name for grade in content.quality.grades] == ["普通", "良品", "上品", "臻品", "奇迹"]
     assert content.crop_map["carrot"].quality.thresholds == sorted(content.crop_map["carrot"].quality.thresholds)
+    assert content.industries["gathering"].partner_capacity == 1
+    assert content.gathering_task_map["collect_maple_wood"].produce_item_id == "maple_wood"
+    assert content.item_map["maple_wood"].has_quality is True
+    assert content.talent_map["gathering_roster_1"].partner_capacity_bonus == 1
 
 
 def test_unknown_crop_item_is_rejected():

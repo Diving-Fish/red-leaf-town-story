@@ -15,6 +15,7 @@ import {
   ShoppingBasket,
   Sparkles,
   Sprout,
+  Trees,
   UserRound,
   X,
 } from 'lucide-vue-next'
@@ -39,6 +40,7 @@ const levelProgress = computed(() => {
 const loginUrl = computed(() => `/api/oauth/red-leaf-town/start?next=${encodeURIComponent('/red-leaf-town/')}`)
 const navItems = [
   { to: '/', label: '农场', icon: Sprout },
+  { to: '/gathering', label: '采集', icon: Trees },
   { to: '/shop', label: '种子商店', icon: ShoppingBasket },
   { to: '/inventory', label: '仓库', icon: Archive },
   { to: '/partners', label: '伙伴', icon: Sparkles },

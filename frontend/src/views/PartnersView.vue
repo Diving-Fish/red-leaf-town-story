@@ -5,6 +5,7 @@ import { useRoute, useRouter } from 'vue-router'
 
 import CroppedImage from '@/components/CroppedImage.vue'
 import { useGameStore } from '@/stores/game'
+import type { OwnedPartner } from '@/types'
 
 const game = useGameStore()
 const route = useRoute()
@@ -31,6 +32,15 @@ function acquiredDate(timestamp: number) {
 
 function breakthroughName(stage: number) {
   return stage === 0 ? '未突破' : `${stage} 次突破`
+}
+
+function assignmentLabel(partner: OwnedPartner) {
+  if (partner.assigned_plot_slot !== null) return `农田 · 土地 ${partner.assigned_plot_slot + 1}${partner.locked ? ' · 任务中' : ''}`
+  if (partner.assigned_gathering_site_id) {
+    const site = game.state?.gathering_sites.find((entry) => entry.site_id === partner.assigned_gathering_site_id)
+    return `采集 · ${site?.definition?.name || partner.assigned_gathering_site_id}${partner.locked ? ' · 任务中' : ''}`
+  }
+  return '未派驻'
 }
 </script>
 
@@ -71,7 +81,7 @@ function breakthroughName(stage: number) {
             />
             <Sparkles v-else :size="19" />
           </span>
-          <span><strong>{{ partner.name }}</strong><small>Lv.{{ partner.level }} · {{ partner.assigned_plot_slot !== null ? `土地 ${partner.assigned_plot_slot + 1}` : breakthroughName(partner.breakthrough) }}</small></span>
+          <span><strong>{{ partner.name }}</strong><small>Lv.{{ partner.level }} · {{ partner.assigned_plot_slot !== null || partner.assigned_gathering_site_id ? assignmentLabel(partner) : breakthroughName(partner.breakthrough) }}</small></span>
           <i>{{ partner.rarity ? `${partner.rarity}★` : '?' }}</i>
         </RouterLink>
       </aside>
@@ -92,7 +102,7 @@ function breakthroughName(stage: number) {
             <span><small>突破阶段</small><strong>{{ breakthroughName(selected.breakthrough) }}</strong></span>
             <span><small>成长曲线</small><strong>{{ selected.growth_curve_name || '—' }}</strong></span>
             <span><small>结缘日期</small><strong>{{ acquiredDate(selected.acquired_at) }}</strong></span>
-            <span><small>农田驻场</small><strong>{{ selected.assigned_plot_slot !== null ? `土地 ${selected.assigned_plot_slot + 1}${selected.locked ? ' · 任务中' : ''}` : '未驻场' }}</strong></span>
+            <span><small>当前派驻</small><strong>{{ assignmentLabel(selected) }}</strong></span>
           </div>
 
           <section class="profile-section">

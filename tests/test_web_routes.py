@@ -114,6 +114,35 @@ async def test_sell_api_accepts_exact_quality_bucket(client, service):
 
 
 @runs
+async def test_gathering_partner_start_and_talent_apis(client, service):
+    player = service.repository.get_by_sub("route-sub")
+    service.admin_grant_partner(player.player_id, "sprite_001")
+    authenticate(client)
+
+    assigned = await client.put(
+        "/api/red-leaf-town/gathering/sites/maple_forest/partner",
+        json={"partner_id": "sprite_001"},
+    )
+    assert assigned.status_code == 200
+    assert (await assigned.get_json())["data"]["state"]["gathering_sites"][0]["assigned_partner_ids"] == ["sprite_001"]
+
+    started = await client.post(
+        "/api/red-leaf-town/gathering/sites/maple_forest/start",
+        json={"task_id": "collect_maple_wood"},
+    )
+    body = await started.get_json()
+    assert started.status_code == 200
+    assert body["data"]["state"]["gathering_sites"][0]["task_snapshot"]["industry"] == "gathering"
+    assert body["data"]["state"]["partners"][0]["locked"] is True
+
+    service.repository.update(player.player_id, lambda state: setattr(state, "experience", 20))
+    unlocked = await client.post("/api/red-leaf-town/talents/gathering_roster_1/unlock")
+    unlocked_body = await unlocked.get_json()
+    assert unlocked.status_code == 200
+    assert unlocked_body["data"]["state"]["industry_rules"]["gathering"]["partner_capacity"] == 2
+
+
+@runs
 async def test_invalid_action_returns_structured_error(client):
     authenticate(client)
     response = await client.post("/api/red-leaf-town/plots/0/plant", json={"crop_id": "carrot"})
