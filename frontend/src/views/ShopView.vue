@@ -1,26 +1,40 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { LockKeyhole, ShoppingBasket } from 'lucide-vue-next'
 
-import GameIcon from '@/components/GameIcon.vue'
+import ActionButton from '@/components/ActionButton.vue'
+import ItemTile from '@/components/ItemTile.vue'
+import TipCard from '@/components/TipCard.vue'
+import ViewHeader from '@/components/ViewHeader.vue'
 import { useGameStore } from '@/stores/game'
+import type { ShopEntry } from '@/types'
 
 const game = useGameStore()
+
+const coins = computed(() => game.player?.coins || 0)
+
+function affordable(entry: ShopEntry, quantity: number) {
+  return coins.value >= entry.price * quantity
+}
+
+function reason(entry: ShopEntry, quantity: number) {
+  if (entry.locked) return `等级 ${entry.min_level} 解锁`
+  if (!affordable(entry, quantity)) return '金币不足'
+  return undefined
+}
 </script>
 
 <template>
-  <section class="view-section" v-if="game.state">
-    <header class="view-heading">
-      <div>
-        <p class="eyebrow">MAPLE SEED CO.</p>
-        <h1>种子商店</h1>
-        <p>精选当季种子，收获后可以在仓库出售农产品。</p>
-      </div>
-      <div class="season-chip"><ShoppingBasket :size="18" /> 今日营业中</div>
-    </header>
+  <section v-if="game.state" class="view-section">
+    <ViewHeader eyebrow="MAPLE SEED CO." title="种子商店" description="精选当季种子，收获后可以在仓库出售农产品。">
+      <template #chip><ShoppingBasket :size="18" /> 今日营业中</template>
+    </ViewHeader>
+
+    <TipCard text="买好种子就可以回农场开工了。" to="/farm" action-label="回农场种植" />
 
     <div class="catalog-grid">
       <article v-for="entry in game.state.shop" :key="entry.id" class="catalog-card" :class="{ locked: entry.locked }">
-        <div class="item-icon"><GameIcon :name="entry.item.icon" :size="34" /></div>
+        <ItemTile :icon="entry.item.icon" :size="66" tone="gold" />
         <div class="catalog-copy">
           <small>种子</small>
           <h2>{{ entry.item.name }}</h2>
@@ -29,8 +43,21 @@ const game = useGameStore()
         </div>
         <div class="catalog-buy">
           <strong>{{ entry.price }} <small>金币</small></strong>
-          <button class="primary-button" :disabled="entry.locked || game.busy" @click="game.buy(entry.id, 1)">购买</button>
-          <button class="text-button" :disabled="entry.locked || game.busy" @click="game.buy(entry.id, 5)">买 5 包</button>
+          <ActionButton
+            :action-key="`shop:${entry.id}:1`"
+            :group="`shop:${entry.id}`"
+            :disabled="entry.locked || !affordable(entry, 1)"
+            :reason="reason(entry, 1)"
+            @click="game.buy(entry.id, 1)"
+          >购买</ActionButton>
+          <ActionButton
+            variant="text"
+            :action-key="`shop:${entry.id}:5`"
+            :group="`shop:${entry.id}`"
+            :disabled="entry.locked || !affordable(entry, 5)"
+            :reason="reason(entry, 5)"
+            @click="game.buy(entry.id, 5)"
+          >买 5 包</ActionButton>
         </div>
       </article>
     </div>

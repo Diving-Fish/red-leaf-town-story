@@ -2,18 +2,40 @@ import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 
 import { api, ApiError } from '@/api'
+import { PRODUCTION_COPY, type ProductionIndustry } from '@/lib/production'
+import { qualityName } from '@/lib/quality'
+import { useTickerStore } from '@/stores/ticker'
 import type { AccountState, ActionResult, GameState } from '@/types'
 
+export interface ProductionOutcome {
+  quantity?: number
+  quality?: number
+  quality_name?: string
+}
+
+interface ActionOptions {
+  payload?: unknown
+  method?: string
+  successMessage?: string
+}
+
+const API_ROOT = '/api/red-leaf-town'
+
 export const useGameStore = defineStore('game', () => {
+  const ticker = useTickerStore()
   const status = ref<'checking' | 'guest' | 'ready' | 'error'>('checking')
   const state = ref<GameState | null>(null)
   const account = ref<AccountState | null>(null)
-  const busy = ref(false)
+  const pending = ref(new Set<string>())
   const notice = ref('')
   const error = ref('')
   const serverOffsetMs = ref(0)
+  let acceptedAt = 0
 
   const player = computed(() => state.value?.player || null)
+  const busy = computed(() => pending.value.size > 0)
+  const serverNow = computed(() => Math.floor((ticker.now + serverOffsetMs.value) / 1000))
+
   const inventoryMap = computed(() => {
     const result = new Map<string, GameState['inventory'][number]>()
     for (const item of state.value?.inventory || []) {
@@ -23,7 +45,62 @@ export const useGameStore = defineStore('game', () => {
     return result
   })
 
-  function acceptState(nextState: GameState) {
+  const liveStamina = computed(() => {
+    const current = player.value
+    if (!current) return 0
+    if (current.stamina >= current.stamina_cap) return current.stamina_cap
+    const elapsed = Math.max(0, serverNow.value - current.stamina_updated_at)
+    const gained = Math.floor(elapsed / current.stamina_restore_seconds)
+    return Math.min(current.stamina_cap, current.stamina + gained)
+  })
+
+  const staminaNextIn = computed(() => {
+    const current = player.value
+    if (!current || liveStamina.value >= current.stamina_cap) return 0
+    const elapsed = Math.max(0, serverNow.value - current.stamina_updated_at)
+    return current.stamina_restore_seconds - (elapsed % current.stamina_restore_seconds)
+  })
+
+  const readyCounts = computed(() => {
+    const snapshot = state.value
+    const counts = { plots: 0, gathering: 0, mining: 0, crafting: 0, total: 0 }
+    if (!snapshot) return counts
+    counts.plots = snapshot.plots.filter((entry) => entry.ready).length
+    counts.gathering = snapshot.gathering_sites.filter((entry) => entry.ready).length
+    counts.mining = snapshot.mining_sites.filter((entry) => entry.ready).length
+    counts.crafting = snapshot.crafting_stations.filter((entry) => entry.ready).length
+    counts.total = counts.plots + counts.gathering + counts.mining + counts.crafting
+    return counts
+  })
+
+  const nextReadyAt = computed(() => {
+    const snapshot = state.value
+    if (!snapshot) return 0
+    const stamps: number[] = []
+    for (const plot of snapshot.plots) {
+      if (!plot.empty && !plot.ready && plot.ready_at) stamps.push(plot.ready_at)
+    }
+    const nodes = [...snapshot.gathering_sites, ...snapshot.mining_sites, ...snapshot.crafting_stations]
+    for (const node of nodes) {
+      if (!node.empty && !node.ready && node.task_snapshot) stamps.push(node.task_snapshot.ready_at)
+    }
+    return stamps.length ? Math.min(...stamps) : 0
+  })
+
+  function isPending(key: string) {
+    return pending.value.has(key)
+  }
+
+  function isPendingPrefix(prefix: string) {
+    for (const key of pending.value) {
+      if (key.startsWith(prefix)) return true
+    }
+    return false
+  }
+
+  function acceptState(nextState: GameState, startedAt: number) {
+    if (startedAt < acceptedAt) return
+    acceptedAt = startedAt
     state.value = nextState
     serverOffsetMs.value = nextState.server_time * 1000 - Date.now()
     if (account.value) account.value.state = nextState
@@ -39,8 +116,9 @@ export const useGameStore = defineStore('game', () => {
       history.replaceState({}, '', `${location.pathname}${location.hash}`)
     }
     try {
-      account.value = await api<AccountState>('/api/red-leaf-town/account')
-      acceptState(account.value.state)
+      const startedAt = performance.now()
+      account.value = await api<AccountState>(`${API_ROOT}/account`)
+      acceptState(account.value.state, startedAt)
       status.value = 'ready'
     } catch (caught) {
       if (caught instanceof ApiError && caught.status === 401) status.value = 'guest'
@@ -52,151 +130,133 @@ export const useGameStore = defineStore('game', () => {
   }
 
   async function refresh(silent = false) {
-    if (status.value !== 'ready' || busy.value) return
+    if (status.value !== 'ready' || isPending('refresh')) return
+    pending.value.add('refresh')
     try {
-      const nextState = await api<GameState>('/api/red-leaf-town/state')
-      acceptState(nextState)
+      const startedAt = performance.now()
+      acceptState(await api<GameState>(`${API_ROOT}/state`), startedAt)
     } catch (caught) {
       if (!silent) fail(caught)
+    } finally {
+      pending.value.delete('refresh')
     }
   }
 
-  async function action(path: string, payload?: unknown, successMessage = '', method = 'POST') {
-    if (busy.value) return
-    busy.value = true
+  async function action(key: string, path: string, options: ActionOptions = {}) {
+    if (pending.value.has(key)) return undefined
+    pending.value.add(key)
     error.value = ''
+    const startedAt = performance.now()
     try {
       const result = await api<ActionResult>(path, {
-        method,
-        body: payload === undefined ? undefined : JSON.stringify(payload),
+        method: options.method || 'POST',
+        body: options.payload === undefined ? undefined : JSON.stringify(options.payload),
       })
-      acceptState(result.state)
-      if (successMessage) showNotice(successMessage)
+      acceptState(result.state, startedAt)
+      if (options.successMessage) showNotice(options.successMessage)
       return result.result
     } catch (caught) {
       fail(caught)
+      return undefined
     } finally {
-      busy.value = false
+      pending.value.delete(key)
     }
   }
 
+  function outcomeText(result: ProductionOutcome | undefined, verb: string, noun: string) {
+    if (!result) return ''
+    const quality = result.quality_name || qualityName(result.quality)
+    return `${verb} ${result.quantity} 个${quality}${noun}`
+  }
+
   function buy(shopId: string, quantity = 1) {
-    return action('/api/red-leaf-town/shop/buy', { shop_id: shopId, quantity }, '种子已放入仓库')
+    return action(`shop:${shopId}:${quantity}`, `${API_ROOT}/shop/buy`, {
+      payload: { shop_id: shopId, quantity },
+      successMessage: '种子已放入仓库',
+    })
+  }
+
+  function sell(itemId: string, quantity: number, quality: number | null = null) {
+    return action(`inventory:${itemId}:${quality || 0}:${quantity}`, `${API_ROOT}/inventory/${itemId}/sell`, {
+      payload: { quantity, quality: quality || 0 },
+      successMessage: '交易完成',
+    })
   }
 
   function plant(slot: number, cropId: string) {
-    return action(`/api/red-leaf-town/plots/${slot}/plant`, { crop_id: cropId }, '种子已经种下')
+    return action(`plot:${slot}:plant:${cropId}`, `${API_ROOT}/plots/${slot}/plant`, {
+      payload: { crop_id: cropId },
+      successMessage: '种子已经种下',
+    })
   }
 
   async function harvest(slot: number) {
-    const result = await action(`/api/red-leaf-town/plots/${slot}/harvest`)
-    if (result) showNotice(`收获了 ${result.quantity} 个${result.quality_name || ''}产物`)
+    const result = (await action(`plot:${slot}:harvest`, `${API_ROOT}/plots/${slot}/harvest`)) as
+      | ProductionOutcome
+      | undefined
+    if (result) showNotice(outcomeText(result, '收获了', '产物'))
     return result
   }
 
   function assignPartner(slot: number, partnerId: string | null) {
-    return action(
-      `/api/red-leaf-town/plots/${slot}/partners`,
-      { partner_id: partnerId || '' },
-      partnerId ? '伙伴已安排到这块土地' : '伙伴已撤下',
-      'PUT',
-    )
-  }
-
-  function assignGatheringPartner(siteId: string, partnerId: string | null) {
-    return action(
-      `/api/red-leaf-town/gathering/sites/${siteId}/partner`,
-      { partner_id: partnerId || '' },
-      partnerId ? '伙伴已前往采集点' : '伙伴已撤回',
-      'PUT',
-    )
-  }
-
-  function startGathering(siteId: string, taskId: string) {
-    return action(
-      `/api/red-leaf-town/gathering/sites/${siteId}/start`,
-      { task_id: taskId },
-      '伙伴已经出发采集',
-    )
-  }
-
-  async function collectGathering(siteId: string) {
-    const result = await action(`/api/red-leaf-town/gathering/sites/${siteId}/collect`)
-    if (result) showNotice(`带回了 ${result.quantity} 个${result.quality_name || ''}采集物`)
-    return result
+    return action(`plot:${slot}:partner`, `${API_ROOT}/plots/${slot}/partners`, {
+      payload: { partner_id: partnerId || '' },
+      method: 'PUT',
+      successMessage: partnerId ? '伙伴已安排到这块土地' : '伙伴已撤下',
+    })
   }
 
   function unlockTalent(nodeId: string) {
-    return action(`/api/red-leaf-town/talents/${nodeId}/unlock`, undefined, '天赋已经点亮')
+    return action(`talent:${nodeId}`, `${API_ROOT}/talents/${nodeId}/unlock`, { successMessage: '天赋已经点亮' })
   }
 
-  function assignCraftingPartner(stationId: string, partnerId: string | null) {
-    return action(
-      `/api/red-leaf-town/crafting/stations/${stationId}/partner`,
-      { partner_id: partnerId || '' },
-      partnerId ? '伙伴已安排到工位' : '伙伴已撤下',
-      'PUT',
-    )
+  function productionBase(industry: ProductionIndustry, nodeId: string) {
+    return `${API_ROOT}/${PRODUCTION_COPY[industry].endpoint}/${nodeId}`
   }
 
-  function startCrafting(stationId: string, recipeId: string) {
-    return action(
-      `/api/red-leaf-town/crafting/stations/${stationId}/start`,
-      { recipe_id: recipeId },
-      '加工任务已经开始',
-    )
+  function assignProductionPartner(industry: ProductionIndustry, nodeId: string, partnerId: string | null) {
+    return action(`${industry}:${nodeId}:partner`, `${productionBase(industry, nodeId)}/partner`, {
+      payload: { partner_id: partnerId || '' },
+      method: 'PUT',
+      successMessage: partnerId ? '伙伴已安排到岗位' : '伙伴已撤下',
+    })
   }
 
-  async function collectCrafting(stationId: string) {
-    const result = await action(`/api/red-leaf-town/crafting/stations/${stationId}/collect`)
-    if (result) showNotice(`制成了 ${result.quantity} 个${result.quality_name || ''}加工品`)
+  function startProduction(industry: ProductionIndustry, nodeId: string, taskId: string) {
+    const copy = PRODUCTION_COPY[industry]
+    return action(`${industry}:${nodeId}:start:${taskId}`, `${productionBase(industry, nodeId)}/start`, {
+      payload: { [copy.startPayloadKey]: taskId },
+      successMessage: '任务已经开始',
+    })
+  }
+
+  async function collectProduction(industry: ProductionIndustry, nodeId: string) {
+    const copy = PRODUCTION_COPY[industry]
+    const result = (await action(`${industry}:${nodeId}:collect`, `${productionBase(industry, nodeId)}/collect`)) as
+      | ProductionOutcome
+      | undefined
+    if (result) showNotice(outcomeText(result, copy.collectVerb, copy.collectNoun))
     return result
-  }
-
-  function assignMiningPartner(siteId: string, partnerId: string | null) {
-    return action(
-      `/api/red-leaf-town/mining/sites/${siteId}/partner`,
-      { partner_id: partnerId || '' },
-      partnerId ? '伙伴已安排到矿点' : '伙伴已撤下',
-      'PUT',
-    )
-  }
-
-  function startMining(siteId: string, taskId: string) {
-    return action(
-      `/api/red-leaf-town/mining/sites/${siteId}/start`,
-      { task_id: taskId },
-      '采矿任务已经开始',
-    )
-  }
-
-  async function collectMining(siteId: string) {
-    const result = await action(`/api/red-leaf-town/mining/sites/${siteId}/collect`)
-    if (result) showNotice(`取得了 ${result.quantity} 个${result.quality_name || ''}矿石`)
-    return result
-  }
-
-  function sell(itemId: string, quantity: number, quality: number | null = null) {
-    return action(`/api/red-leaf-town/inventory/${itemId}/sell`, { quantity, quality: quality || 0 }, '交易完成')
   }
 
   async function createBindingCode() {
-    busy.value = true
+    if (isPending('binding-code')) return null
+    pending.value.add('binding-code')
     try {
       return await api<{ binding_code: string; command: string; expires_in: number }>(
-        '/api/red-leaf-town/account/binding-code',
+        `${API_ROOT}/account/binding-code`,
         { method: 'POST' },
       )
     } catch (caught) {
       fail(caught)
       return null
     } finally {
-      busy.value = false
+      pending.value.delete('binding-code')
     }
   }
 
   async function logout() {
-    await api<unknown>('/api/red-leaf-town/logout', { method: 'POST' }).catch(() => undefined)
+    await api<unknown>(`${API_ROOT}/logout`, { method: 'POST' }).catch(() => undefined)
     account.value = null
     state.value = null
     status.value = 'guest'
@@ -224,26 +284,28 @@ export const useGameStore = defineStore('game', () => {
     account,
     player,
     inventoryMap,
+    pending,
     busy,
     notice,
     error,
+    serverNow,
+    liveStamina,
+    staminaNextIn,
+    readyCounts,
+    nextReadyAt,
+    isPending,
+    isPendingPrefix,
     initialize,
     refresh,
     buy,
+    sell,
     plant,
     harvest,
     assignPartner,
-    assignGatheringPartner,
-    startGathering,
-    collectGathering,
     unlockTalent,
-    assignCraftingPartner,
-    startCrafting,
-    collectCrafting,
-    assignMiningPartner,
-    startMining,
-    collectMining,
-    sell,
+    assignProductionPartner,
+    startProduction,
+    collectProduction,
     createBindingCode,
     logout,
     effectiveNow,

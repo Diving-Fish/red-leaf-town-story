@@ -1,56 +1,34 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import {
-  Archive,
-  BatteryCharging,
-  ChevronRight,
-  Coins,
-  Copy,
-  Leaf,
-  LogOut,
-  Map,
-  Menu,
-  RefreshCw,
-  ShoppingBasket,
-  Sparkles,
-  Sprout,
-  Trees,
-  Hammer,
-  LayoutDashboard,
-  Pickaxe,
-  UserRound,
-  X,
-} from 'lucide-vue-next'
+import { ChevronRight, Copy, Leaf, LogOut, Map, Menu, RefreshCw, RotateCw, UserRound, X } from 'lucide-vue-next'
 
+import ActionButton from '@/components/ActionButton.vue'
+import AppNav from '@/components/AppNav.vue'
+import ConfirmDialog from '@/components/ConfirmDialog.vue'
+import ProgressBar from '@/components/ProgressBar.vue'
+import ResourcePill from '@/components/ResourcePill.vue'
+import { useReadyWatch } from '@/composables/useReadyWatch'
 import { useGameStore } from '@/stores/game'
+import { useUiStore } from '@/stores/ui'
 
 const game = useGameStore()
+const ui = useUiStore()
 const route = useRoute()
-const accountOpen = ref(false)
-const navOpen = ref(false)
 const bindingCommand = ref('')
 let pollTimer = 0
 
 const isAdminRoute = computed(() => route.meta.admin === true)
 const routeTitle = computed(() => String(route.meta.title || '红叶镇'))
+const loginUrl = computed(() => `/api/oauth/red-leaf-town/start?next=${encodeURIComponent('/red-leaf-town/')}`)
 const levelProgress = computed(() => {
   const player = game.player
   if (!player || !player.next_level_xp) return 100
-  const currentFloor = player.current_level_xp
-  return Math.max(2, Math.min(100, ((player.experience - currentFloor) / (player.next_level_xp - currentFloor)) * 100))
+  const floor = player.current_level_xp
+  return Math.max(2, Math.min(100, ((player.experience - floor) / (player.next_level_xp - floor)) * 100))
 })
-const loginUrl = computed(() => `/api/oauth/red-leaf-town/start?next=${encodeURIComponent('/red-leaf-town/')}`)
-const navItems = [
-  { to: '/', label: '总览', icon: LayoutDashboard },
-  { to: '/farm', label: '农场', icon: Sprout },
-  { to: '/gathering', label: '采集', icon: Trees },
-  { to: '/crafting', label: '加工', icon: Hammer },
-  { to: '/mining', label: '矿产', icon: Pickaxe },
-  { to: '/shop', label: '种子商店', icon: ShoppingBasket },
-  { to: '/inventory', label: '仓库', icon: Archive },
-  { to: '/partners', label: '伙伴', icon: Sparkles },
-]
+
+useReadyWatch()
 
 onMounted(async () => {
   if (isAdminRoute.value) return
@@ -58,6 +36,15 @@ onMounted(async () => {
   pollTimer = window.setInterval(() => game.refresh(true), 15_000)
 })
 onBeforeUnmount(() => window.clearInterval(pollTimer))
+
+watch(
+  () => ui.navOpen,
+  (open) => {
+    document.body.style.overflow = open ? 'hidden' : ''
+  },
+)
+
+watch(() => route.fullPath, () => ui.closePicker())
 
 async function generateBindingCode() {
   const result = await game.createBindingCode()
@@ -82,16 +69,19 @@ async function copyBindingCommand() {
   </div>
 
   <main v-else-if="game.status === 'guest' || game.status === 'error'" class="login-screen">
-    <div class="login-landscape" aria-hidden="true">
-      <i class="hill hill-one" /><i class="hill hill-two" /><i class="sun" />
-    </div>
+    <div class="login-landscape" aria-hidden="true"><i class="hill hill-one" /><i class="hill hill-two" /><i class="sun" /></div>
     <section class="login-card">
       <div class="brand-seal"><Leaf :size="38" /></div>
       <p class="eyebrow">WELCOME TO</p>
       <h1>红叶镇物语</h1>
       <p class="login-copy">在山谷的红叶落下之前，经营一片属于你的土地。离开时，时间仍会继续流动。</p>
       <p v-if="game.error" class="error-banner">{{ game.error }}</p>
-      <a class="oauth-button" :href="loginUrl">
+      <button v-if="game.status === 'error'" class="oauth-button" @click="game.initialize()">
+        <RotateCw :size="19" />
+        重新连接红叶镇
+        <ChevronRight :size="18" />
+      </button>
+      <a class="oauth-button" :class="{ 'oauth-button--muted': game.status === 'error' }" :href="loginUrl">
         <UserRound :size="19" />
         使用水鱼账号登录
         <ChevronRight :size="18" />
@@ -101,23 +91,22 @@ async function copyBindingCommand() {
   </main>
 
   <div v-else-if="game.state && game.player" class="game-shell">
-    <aside class="sidebar" :class="{ open: navOpen }">
+    <div v-if="ui.navOpen" class="nav-scrim" @click="ui.navOpen = false" />
+
+    <aside class="sidebar" :class="{ open: ui.navOpen }">
       <div class="sidebar-brand">
         <div class="brand-seal brand-seal--small"><Leaf :size="24" /></div>
         <div><strong>红叶镇物语</strong><small>RED LEAF TOWN</small></div>
-        <button class="icon-button mobile-close" @click="navOpen = false"><X :size="20" /></button>
+        <button class="icon-button mobile-close" @click="ui.navOpen = false"><X :size="20" /></button>
       </div>
-      <nav>
-        <RouterLink v-for="item in navItems" :key="item.to" :to="item.to" @click="navOpen = false">
-          <component :is="item.icon" :size="20" />
-          <span>{{ item.label }}</span>
-        </RouterLink>
-      </nav>
+
+      <AppNav variant="rail" @navigate="ui.navOpen = false" />
+
       <div class="coming-soon">
         <Map :size="18" />
         <div><strong>小镇还在扩建</strong><span>畜牧产业将在后续开放</span></div>
       </div>
-      <button class="profile-button" @click="accountOpen = true">
+      <button class="profile-button" @click="ui.accountOpen = true; ui.navOpen = false">
         <span class="avatar">{{ game.player.display_name.slice(0, 1) }}</span>
         <span><strong>{{ game.player.display_name }}</strong><small>Lv.{{ game.player.level }} · 小镇居民</small></span>
         <ChevronRight :size="17" />
@@ -126,37 +115,38 @@ async function copyBindingCommand() {
 
     <div class="main-column">
       <header class="topbar">
-        <button class="icon-button menu-button" @click="navOpen = true"><Menu :size="21" /></button>
+        <button class="icon-button menu-button" @click="ui.navOpen = true"><Menu :size="21" /></button>
         <div class="page-location"><small>当前位置</small><strong>{{ routeTitle }}</strong></div>
         <div class="resource-strip">
-          <span class="resource-pill coins"><Coins :size="17" /><strong>{{ game.player.coins }}</strong><small>金币</small></span>
-          <span class="resource-pill stamina"><BatteryCharging :size="17" /><strong>{{ game.player.stamina }}/{{ game.player.stamina_cap }}</strong><small>体力</small></span>
+          <ResourcePill kind="coins" />
+          <ResourcePill kind="stamina" />
         </div>
-        <button class="icon-button refresh-button" :disabled="game.busy" @click="game.refresh()"><RefreshCw :size="18" /></button>
+        <button class="icon-button refresh-button" :class="{ spinning: game.isPending('refresh') }" @click="game.refresh()">
+          <RefreshCw :size="18" />
+        </button>
       </header>
 
       <div class="level-ribbon">
         <span>等级 {{ game.player.level }}</span>
-        <div class="level-track"><i :style="{ width: `${levelProgress}%` }" /></div>
+        <ProgressBar class="level-track" :value="levelProgress" :height="4" track="#27312a" color="linear-gradient(90deg, var(--leaf), var(--gold))" />
         <small>{{ game.player.next_level_xp ? `${game.player.experience} / ${game.player.next_level_xp} XP` : '已达当前上限' }}</small>
       </div>
 
       <div class="page-scroll"><RouterView /></div>
     </div>
 
-    <nav class="mobile-nav">
-      <RouterLink v-for="item in navItems" :key="item.to" :to="item.to">
-        <component :is="item.icon" :size="20" /><span>{{ item.label }}</span>
-      </RouterLink>
-      <button @click="accountOpen = true"><UserRound :size="20" /><span>账户</span></button>
-    </nav>
+    <AppNav variant="bar" @more="ui.navOpen = true" />
 
-    <div v-if="accountOpen" class="modal-backdrop" @click.self="accountOpen = false">
+    <div v-if="ui.accountOpen" class="modal-backdrop" @click.self="ui.accountOpen = false">
       <section class="account-modal">
-        <button class="icon-button modal-close" @click="accountOpen = false"><X :size="20" /></button>
+        <button class="icon-button modal-close" @click="ui.accountOpen = false"><X :size="20" /></button>
         <div class="account-hero">
           <span class="avatar avatar--large">{{ game.player.display_name.slice(0, 1) }}</span>
-          <div><p class="eyebrow">TOWN RESIDENT</p><h2>{{ game.player.display_name }}</h2><span>居民编号 {{ game.player.player_id.slice(0, 8) }}</span></div>
+          <div>
+            <p class="eyebrow">TOWN RESIDENT</p>
+            <h2>{{ game.player.display_name }}</h2>
+            <span>居民编号 {{ game.player.player_id.slice(0, 8) }}</span>
+          </div>
         </div>
         <div class="account-section">
           <h3>QQ Bot 绑定</h3>
@@ -166,12 +156,17 @@ async function copyBindingCommand() {
             <div class="command-box"><code>{{ bindingCommand }}</code><button @click="copyBindingCommand"><Copy :size="16" /></button></div>
             <small>请在 10 分钟内把这条指令发送给机器人。</small>
           </template>
-          <button v-else class="secondary-button" :disabled="game.busy" @click="generateBindingCode">生成 QQ 绑定指令</button>
+          <ActionButton v-else variant="secondary" action-key="binding-code" @click="generateBindingCode">
+            生成 QQ 绑定指令
+          </ActionButton>
         </div>
-        <button class="logout-button" @click="game.logout(); accountOpen = false"><LogOut :size="17" />退出水鱼账号</button>
+        <button class="logout-button" @click="game.logout(); ui.accountOpen = false">
+          <LogOut :size="17" />退出水鱼账号
+        </button>
       </section>
     </div>
   </div>
 
+  <ConfirmDialog />
   <Transition name="toast"><div v-if="game.notice" class="toast">{{ game.notice }}</div></Transition>
 </template>

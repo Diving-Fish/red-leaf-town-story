@@ -1,0 +1,85 @@
+<script setup lang="ts">
+import { computed } from 'vue'
+import { Clock3 } from 'lucide-vue-next'
+
+import ActionButton from '@/components/ActionButton.vue'
+import ItemTile from '@/components/ItemTile.vue'
+import PartnerPicker from '@/components/PartnerPicker.vue'
+import ProgressBar from '@/components/ProgressBar.vue'
+import QualityTag from '@/components/QualityTag.vue'
+import { useCountdown } from '@/composables/useCountdown'
+import { industryMeta } from '@/lib/industries'
+import { PRODUCTION_COPY, type ProductionNode } from '@/lib/production'
+import { useGameStore } from '@/stores/game'
+
+const props = defineProps<{ node: ProductionNode }>()
+const game = useGameStore()
+
+const copy = computed(() => PRODUCTION_COPY[props.node.industry])
+const meta = computed(() => industryMeta(props.node.industry))
+const scope = computed(() => `${props.node.industry}:${props.node.nodeId}`)
+const { progress, label } = useCountdown(
+  () => props.node.taskSnapshot?.ready_at,
+  () => props.node.taskSnapshot?.final_duration,
+)
+</script>
+
+<template>
+  <article class="surface-card industry-card" :class="{ ready: node.ready }" :style="{ '--industry-accent': node.accent }">
+    <header class="industry-card-heading">
+      <ItemTile :size="47" :accent="node.accent"><component :is="meta.icon" :size="25" /></ItemTile>
+      <div><h2>{{ node.name }}</h2><p>{{ node.description }}</p></div>
+    </header>
+
+    <PartnerPicker
+      :picker-id="scope"
+      :industry="node.industry"
+      :action-key="`${scope}:partner`"
+      :assigned="node.assignedPartner"
+      :placeholder="copy.soloLabel"
+      :placeholder-hint="copy.soloHint"
+      :solo-label="copy.soloLabel"
+      :locked="node.assignmentLocked"
+      :locked-label="copy.lockedLabel"
+      @select="(partnerId) => game.assignProductionPartner(node.industry, node.nodeId, partnerId)"
+    />
+
+    <template v-if="node.empty">
+      <div class="production-tasks"><slot name="tasks" /></div>
+      <p v-if="copy.requiresPartner && !node.assignedPartnerId" class="node-hint">{{ copy.missingPartnerHint }}</p>
+    </template>
+
+    <div v-else-if="node.ready" class="production-status">
+      <ItemTile :icon="node.activeItemIcon" :size="46" :accent="node.accent" />
+      <div>
+        <strong>{{ copy.readyTitle }}</strong>
+        <small v-if="node.taskResult">
+          <QualityTag :quality="node.taskResult.quality" /> {{ node.taskResult.quantity }} 个{{ node.activeItemName }}
+        </small>
+      </div>
+      <ActionButton
+        :action-key="`${scope}:collect`"
+        @click="game.collectProduction(node.industry, node.nodeId)"
+      >{{ copy.collectLabel }}</ActionButton>
+    </div>
+
+    <div v-else class="production-running">
+      <div class="production-status">
+        <ItemTile :icon="node.activeItemIcon" :size="46" :accent="node.accent" />
+        <div>
+          <strong>{{ node.activeName }}</strong>
+          <small>品质 Q{{ node.taskSnapshot?.quality_parameters.ability }} · 剩余 {{ label }}</small>
+        </div>
+        <Clock3 :size="17" />
+      </div>
+      <slot name="running" />
+      <ProgressBar class="running-progress" :value="progress" :color="node.accent" smooth />
+    </div>
+  </article>
+</template>
+
+<style scoped>
+.production-tasks { display: grid; gap: 8px; margin-top: 4px; }
+.node-hint { margin: 9px 0 0; text-align: center; color: #778178; font-size: 12px; }
+.running-progress { margin-top: 12px; }
+</style>

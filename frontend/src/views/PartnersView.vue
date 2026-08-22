@@ -3,7 +3,10 @@ import { computed, watch } from 'vue'
 import { ArrowUpCircle, Lock, Sparkles, Star, WandSparkles } from 'lucide-vue-next'
 import { useRoute, useRouter } from 'vue-router'
 
-import CroppedImage from '@/components/CroppedImage.vue'
+import PartnerAvatar from '@/components/PartnerAvatar.vue'
+import StateBlock from '@/components/StateBlock.vue'
+import ViewHeader from '@/components/ViewHeader.vue'
+import { industryName } from '@/lib/industries'
 import { useGameStore } from '@/stores/game'
 import type { OwnedPartner } from '@/types'
 
@@ -35,39 +38,45 @@ function breakthroughName(stage: number) {
 }
 
 function assignmentLabel(partner: OwnedPartner) {
-  if (partner.assigned_plot_slot !== null) return `农田 · 土地 ${partner.assigned_plot_slot + 1}${partner.locked ? ' · 任务中' : ''}`
+  const suffix = partner.locked ? ' · 任务中' : ''
+  if (partner.assigned_plot_slot !== null) return `${industryName('farming')} · 土地 ${partner.assigned_plot_slot + 1}${suffix}`
   if (partner.assigned_gathering_site_id) {
     const site = game.state?.gathering_sites.find((entry) => entry.site_id === partner.assigned_gathering_site_id)
-    return `采集 · ${site?.definition?.name || partner.assigned_gathering_site_id}${partner.locked ? ' · 任务中' : ''}`
+    return `${industryName('gathering')} · ${site?.definition?.name || partner.assigned_gathering_site_id}${suffix}`
   }
   if (partner.assigned_crafting_station_id) {
     const station = game.state?.crafting_stations.find((entry) => entry.station_id === partner.assigned_crafting_station_id)
-    return `加工 · ${station?.definition?.name || partner.assigned_crafting_station_id}${partner.locked ? ' · 任务中' : ''}`
+    return `${industryName('crafting')} · ${station?.definition?.name || partner.assigned_crafting_station_id}${suffix}`
   }
   if (partner.assigned_mining_site_id) {
     const site = game.state?.mining_sites.find((entry) => entry.site_id === partner.assigned_mining_site_id)
-    return `矿产 · ${site?.definition?.name || partner.assigned_mining_site_id}${partner.locked ? ' · 任务中' : ''}`
+    return `${industryName('mining')} · ${site?.definition?.name || partner.assigned_mining_site_id}${suffix}`
   }
   return '未派驻'
+}
+
+function rosterSubtitle(partner: OwnedPartner) {
+  const assigned =
+    partner.assigned_plot_slot !== null ||
+    partner.assigned_gathering_site_id ||
+    partner.assigned_crafting_station_id ||
+    partner.assigned_mining_site_id
+  return `Lv.${partner.level} · ${assigned ? assignmentLabel(partner) : breakthroughName(partner.breakthrough)}`
 }
 </script>
 
 <template>
   <section v-if="game.state" class="view-section partner-view">
-    <header class="view-heading">
-      <div>
-        <p class="eyebrow">PARTNER ARCHIVE</p>
-        <h1>伙伴仓库</h1>
-        <p>查看已经与你结缘的伙伴。每位伙伴只能持有一次。</p>
-      </div>
-      <div class="season-chip"><Sparkles :size="18" /> {{ game.state.partner_count }} 位伙伴</div>
-    </header>
+    <ViewHeader eyebrow="PARTNER ARCHIVE" title="伙伴仓库" description="查看已经与你结缘的伙伴。每位伙伴只能持有一次。">
+      <template #chip><Sparkles :size="18" /> {{ game.state.partner_count }} 位伙伴</template>
+    </ViewHeader>
 
-    <div v-if="!game.state.partners.length" class="empty-state partner-empty">
-      <WandSparkles :size="44" />
-      <h2>还没有伙伴来到这里</h2>
-      <p>完成招募或活动后，已经拥有的伙伴会出现在仓库中。</p>
-    </div>
+    <StateBlock
+      v-if="!game.state.partners.length"
+      :icon="WandSparkles"
+      title="还没有伙伴来到这里"
+      description="完成招募或活动后，已经拥有的伙伴会出现在仓库中。"
+    />
 
     <div v-else class="partner-warehouse">
       <aside class="partner-roster">
@@ -78,18 +87,8 @@ function assignmentLabel(partner: OwnedPartner) {
           :to="{ name: 'partners', params: { partnerId: partner.partner_id } }"
           :class="{ active: selected?.partner_id === partner.partner_id }"
         >
-          <span class="roster-avatar">
-            <CroppedImage
-              v-if="partner.artwork?.url && partner.avatar_crop"
-              :image-url="partner.artwork.url"
-              :image-width="partner.artwork.width"
-              :image-height="partner.artwork.height"
-              :crop="partner.avatar_crop"
-              :alt="`${partner.name}头像`"
-            />
-            <Sparkles v-else :size="19" />
-          </span>
-          <span><strong>{{ partner.name }}</strong><small>Lv.{{ partner.level }} · {{ partner.assigned_plot_slot !== null || partner.assigned_gathering_site_id || partner.assigned_crafting_station_id || partner.assigned_mining_site_id ? assignmentLabel(partner) : breakthroughName(partner.breakthrough) }}</small></span>
+          <PartnerAvatar :artwork="partner.artwork" :crop="partner.avatar_crop" :name="partner.name" :size="43" />
+          <span><strong>{{ partner.name }}</strong><small>{{ rosterSubtitle(partner) }}</small></span>
           <i>{{ partner.rarity ? `${partner.rarity}★` : '?' }}</i>
         </RouterLink>
       </aside>
@@ -141,9 +140,8 @@ function assignmentLabel(partner: OwnedPartner) {
 </template>
 
 <style scoped>
-.partner-empty { min-height: 420px; }
 .partner-warehouse { display: grid; grid-template-columns: 245px minmax(0, 1fr); gap: 16px; align-items: start; }
-.partner-roster { position: sticky; top: 106px; padding: 13px; border: 1px solid var(--line); border-radius: 19px 6px; background: var(--surface); }.partner-roster > p { margin: 4px 7px 13px; color: #77837a; font-size: 12px; font-weight: 800; letter-spacing: .12em; }.partner-roster a { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 9px; padding: 9px; margin-top: 4px; border: 1px solid transparent; border-radius: 11px; }.partner-roster a.active { border-color: #9abb7833; background: #9abb7811; }.roster-avatar { width: 43px; height: 43px; overflow: hidden; display: grid; place-items: center; color: var(--leaf-bright); border-radius: 13px 5px; background: #111914; }.partner-roster strong,.partner-roster small { display: block; }.partner-roster strong { font-size: 12px; }.partner-roster small { margin-top: 3px; color: #768178; font-size: 12px; }.partner-roster i { color: var(--gold); font-size: 12px; font-style: normal; }
+.partner-roster { position: sticky; top: 106px; padding: 13px; border: 1px solid var(--line); border-radius: 19px 6px; background: var(--surface); }.partner-roster > p { margin: 4px 7px 13px; color: #77837a; font-size: 12px; font-weight: 800; letter-spacing: .12em; }.partner-roster a { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 9px; padding: 9px; margin-top: 4px; border: 1px solid transparent; border-radius: 11px; }.partner-roster a.active { border-color: #9abb7833; background: #9abb7811; }.partner-roster strong,.partner-roster small { display: block; }.partner-roster strong { font-size: 12px; }.partner-roster small { margin-top: 3px; color: #768178; font-size: 12px; }.partner-roster i { color: var(--gold); font-size: 12px; font-style: normal; }
 .partner-detail { min-width: 0; display: grid; grid-template-columns: minmax(230px, 330px) minmax(0, 1fr); gap: clamp(24px, 4vw, 48px); padding: clamp(18px, 3vw, 34px); border: 1px solid var(--line); border-radius: 25px 8px; background: linear-gradient(145deg, #1b271f, #151e19); }.partner-illustration { position: relative; width: 100%; overflow: hidden; aspect-ratio: 9 / 16; display: grid; place-items: center; color: #708078; border-radius: 22px 7px; background: #0d1410; box-shadow: 0 22px 60px #0005; }.partner-illustration > img { width: 100%; height: 100%; object-fit: cover; }.partner-illustration > div { display: grid; place-items: center; gap: 9px; font-size: 12px; }.rarity-ribbon { position: absolute; left: 12px; top: 12px; display: flex; align-items: center; gap: 4px; padding: 6px 9px; color: #2a2113; font-size: 12px; font-weight: 800; border-radius: 99px; background: #e2bd6f; }
 .partner-profile { padding: 10px 0; }.partner-profile > .eyebrow { margin: 0; }.profile-title { display: flex; align-items: baseline; gap: 13px; }.profile-title h2 { margin: 5px 0 0; font: 700 clamp(2rem, 4vw, 3rem) Georgia, 'Noto Serif SC', serif; }.profile-title > span { color: var(--leaf-bright); font-weight: 700; }.partner-description { max-width: 620px; margin: 16px 0 22px; color: #9ba69c; font-size: 13px; line-height: 1.8; }.profile-meta { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }.profile-meta > span { padding: 11px; border: 1px solid var(--line); border-radius: 10px; background: #ffffff04; }.profile-meta small,.profile-meta strong { display: block; }.profile-meta small { color: #6f7b72; font-size: 12px; }.profile-meta strong { margin-top: 4px; font-size: 12px; }
 .profile-section { margin-top: 25px; }.profile-section h3 { margin: 0 0 10px; font-size: 13px; }.tendency-list { display: grid; grid-template-columns: repeat(3, minmax(100px, 1fr)); gap: 8px; }.tendency-list > div { display: grid; grid-template-columns: 1fr auto; align-items: end; padding: 11px; border: 1px solid #87a96b24; border-radius: 10px; background: #87a96b0b; }.tendency-list span { font-size: 12px; }.tendency-list strong { color: var(--leaf-bright); font-size: 17px; }.tendency-list small { grid-column: 1 / -1; margin-top: 3px; color: #6e7a71; font-size: 12px; }.owned-traits { display: grid; gap: 7px; }.owned-traits > div { padding: 10px 12px; border-left: 2px solid var(--gold); background: #ffffff04; }.owned-traits strong,.owned-traits span { display: block; }.owned-traits strong { font-size: 12px; }.owned-traits span { margin-top: 4px; color: #7e8a81; font-size: 12px; }.section-placeholder { color: #707c73; font-size: 12px; }
