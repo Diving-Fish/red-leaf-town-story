@@ -41,6 +41,39 @@ class ItemDefinition(BaseModel):
     sell_price: int = Field(ge=0)
 
 
+class QualityGradeDefinition(BaseModel):
+    level: int = Field(ge=1, le=5)
+    name: str = Field(min_length=1)
+    sale_multiplier: float = Field(gt=0)
+
+
+class QualitySystemDefinition(BaseModel):
+    grades: list[QualityGradeDefinition] = Field(min_length=5, max_length=5)
+
+    @model_validator(mode="after")
+    def validate_grades(self):
+        if [grade.level for grade in self.grades] != [1, 2, 3, 4, 5]:
+            raise ValueError("quality grades must define levels 1 through 5 in order")
+        return self
+
+    @property
+    def grade_map(self) -> dict[int, QualityGradeDefinition]:
+        return {grade.level: grade for grade in self.grades}
+
+
+class QualityCurveDefinition(BaseModel):
+    thresholds: list[float] = Field(min_length=4, max_length=4)
+    width: float = Field(gt=0)
+    miracle_probability_cap: float = Field(default=0, ge=0, le=0.01)
+    miracle_eligible: bool = False
+
+    @model_validator(mode="after")
+    def validate_thresholds(self):
+        if self.thresholds != sorted(self.thresholds) or len(set(self.thresholds)) != 4:
+            raise ValueError("quality thresholds must be strictly increasing")
+        return self
+
+
 class CropDefinition(BaseModel):
     id: str
     name: str
@@ -55,6 +88,7 @@ class CropDefinition(BaseModel):
     harvest_xp: int = Field(ge=0)
     min_level: int = Field(ge=1)
     accent: str
+    quality: QualityCurveDefinition
 
     @model_validator(mode="after")
     def validate_yield(self):
@@ -75,6 +109,7 @@ class GameContent(BaseModel):
     schema_version: int = Field(ge=1)
     game: GameMeta
     stamina: StaminaDefinition
+    quality: QualitySystemDefinition
     industries: dict[str, IndustryRulesDefinition]
     levels: list[LevelDefinition]
     items: list[ItemDefinition]

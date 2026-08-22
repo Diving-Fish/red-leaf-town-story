@@ -11,6 +11,25 @@ class TaskPartnerSnapshot(BaseModel):
     ability: int = Field(ge=0)
 
 
+class TaskQualitySnapshot(BaseModel):
+    ability: int = Field(default=0, ge=0)
+    thresholds: list[float] = Field(default_factory=lambda: [1, 2, 3, 4], min_length=4, max_length=4)
+    width: float = Field(default=1, gt=0)
+    miracle_probability_cap: float = Field(default=0, ge=0, le=0.01)
+    miracle_eligible: bool = False
+    probabilities: list[float] = Field(default_factory=lambda: [1, 0, 0, 0, 0], min_length=5, max_length=5)
+
+    @model_validator(mode="after")
+    def validate_quality_parameters(self):
+        if self.thresholds != sorted(self.thresholds) or len(set(self.thresholds)) != 4:
+            raise ValueError("quality thresholds must be strictly increasing")
+        if any(probability < 0 or probability > 1 for probability in self.probabilities):
+            raise ValueError("quality probabilities must be between zero and one")
+        if abs(sum(self.probabilities) - 1.0) > 1e-8:
+            raise ValueError("quality probabilities must sum to one")
+        return self
+
+
 class ProductionTaskSnapshot(BaseModel):
     rule_version: int = Field(default=1, ge=1)
     industry: str = Field(min_length=1)
@@ -31,7 +50,7 @@ class ProductionTaskSnapshot(BaseModel):
     yield_min: int = Field(ge=1)
     yield_max: int = Field(ge=1)
     harvest_xp: int = Field(ge=0)
-    quality_parameters: dict[str, int | float | str] = Field(default_factory=dict)
+    quality_parameters: TaskQualitySnapshot = Field(default_factory=TaskQualitySnapshot)
 
     @model_validator(mode="after")
     def validate_snapshot(self):
@@ -46,6 +65,13 @@ class ProductionTaskSnapshot(BaseModel):
         return self
 
 
+class ProductionResultSnapshot(BaseModel):
+    item_id: str = Field(min_length=1)
+    quantity: int = Field(ge=1)
+    quality: int = Field(ge=1, le=5)
+    resolved_at: int = Field(ge=0)
+
+
 class PlotState(BaseModel):
     slot: int = Field(ge=0)
     crop_id: str = ""
@@ -53,6 +79,7 @@ class PlotState(BaseModel):
     ready_at: int = 0
     assigned_partner_ids: list[str] = Field(default_factory=list, max_length=1)
     task_snapshot: ProductionTaskSnapshot | None = None
+    task_result: ProductionResultSnapshot | None = None
 
     @property
     def empty(self) -> bool:
@@ -77,7 +104,7 @@ class OwnedPartnerState(BaseModel):
 
 
 class PlayerState(BaseModel):
-    schema_version: int = 4
+    schema_version: int = 5
     version: int = 1
     player_id: str
     oauth_sub: str
@@ -87,7 +114,7 @@ class PlayerState(BaseModel):
     coins: int = Field(default=0, ge=0)
     stamina: int = Field(default=0, ge=0)
     stamina_updated_at: int
-    inventory: dict[str, int] = Field(default_factory=dict)
+    inventory: dict[str, dict[int, int]] = Field(default_factory=dict)
     plots: list[PlotState] = Field(default_factory=list)
     owned_partners: list[OwnedPartnerState] = Field(default_factory=list)
     created_at: int
@@ -106,11 +133,26 @@ class PlayerState(BaseModel):
                 migrated["owned_partners"] = legacy_partners
             migrated.setdefault("owned_partners", [])
         if schema_version < 4:
-            migrated["schema_version"] = 4
+            schema_version = 4
+        inventory = migrated.get("inventory")
+        if schema_version < 5 or (
+            isinstance(inventory, dict)
+            and any(not isinstance(quantity, dict) for quantity in inventory.values())
+        ):
+            migrated["inventory"] = {
+                str(item_id): ({0: int(quantity)} if not isinstance(quantity, dict) else quantity)
+                for item_id, quantity in (inventory or {}).items()
+            }
+        migrated["schema_version"] = 5
         return migrated
 
     @model_validator(mode="after")
     def validate_owned_partners(self):
+        for item_id, qualities in self.inventory.items():
+            if any(quality < 0 or quality > 5 for quality in qualities):
+                raise ValueError(f"inventory item {item_id} has an invalid quality")
+            if any(quantity < 0 for quantity in qualities.values()):
+                raise ValueError(f"inventory item {item_id} has a negative quantity")
         partner_ids = [entry.partner_id for entry in self.owned_partners]
         if len(partner_ids) != len(set(partner_ids)):
             raise ValueError("player cannot own the same partner more than once")

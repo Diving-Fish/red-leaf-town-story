@@ -467,7 +467,12 @@ def create_blueprint(*, partner_catalog_path: str | Path = DEFAULT_PARTNER_CONTE
     @login_required
     async def sell(subject: str, item_id: str):
         payload = await request.get_json(silent=True) or {}
-        result = get_service().sell(subject, item_id, int(payload.get("quantity", 1)))
+        result = get_service().sell(
+            subject,
+            item_id,
+            int(payload.get("quantity", 1)),
+            int(payload.get("quality", 0)),
+        )
         return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
 
     @blueprint.post("/api/red-leaf-town/account/binding-code")

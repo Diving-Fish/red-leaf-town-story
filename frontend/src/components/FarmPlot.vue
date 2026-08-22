@@ -30,6 +30,7 @@ const remaining = computed(() => {
   return Math.max(0, props.plot.ready_at - game.effectiveNow())
 })
 const ready = computed(() => Boolean(props.plot?.crop && remaining.value <= 0))
+const qualityNames = ['', '普通', '良品', '上品', '臻品', '奇迹']
 const assignedPartner = computed(() => props.plot?.assigned_partners[0] || null)
 const farmingPartners = computed(() => (props.partners || []).filter(
   (partner) => !partner.missing && partner.tendencies?.some((tendency) => tendency.industry === 'farming'),
@@ -145,9 +146,9 @@ async function choosePartner(partnerId: string | null) {
         <span><strong>{{ partner.name }}</strong><small>农作 {{ farmingAbility(partner) }}</small></span><Lock v-if="partner.locked" :size="12" />
       </button>
     </div>
-    <span v-if="plot.task_snapshot && !ready" class="task-boost">能力 {{ plot.task_snapshot.total_ability }} · 效率 {{ plot.task_snapshot.time_efficiency.toFixed(2) }}×</span>
+    <span v-if="plot.task_snapshot && !ready" class="task-boost">能力 {{ plot.task_snapshot.total_ability }} · 品质 Q{{ plot.task_snapshot.quality_parameters.ability }} · 效率 {{ plot.task_snapshot.time_efficiency.toFixed(2) }}×</span>
     <template v-if="ready">
-      <p class="ready-label">已经成熟</p>
+      <p class="ready-label">{{ plot.task_result ? `${qualityNames[plot.task_result.quality]}品质 · ${plot.task_result.quantity} 个` : '已经成熟' }}</p>
       <button class="primary-button harvest-button" :disabled="game.busy" @click="game.harvest(plot.slot)">
         收获
       </button>

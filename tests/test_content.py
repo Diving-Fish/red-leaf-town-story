@@ -17,6 +17,8 @@ def test_default_content_is_consistent():
     assert content.crop_map["carrot"].time_difficulty > 0
     assert content.industries["farming"].collaborator_slots == 1
     assert content.item_map["carrot"].sell_price > 0
+    assert [grade.name for grade in content.quality.grades] == ["普通", "良品", "上品", "臻品", "奇迹"]
+    assert content.crop_map["carrot"].quality.thresholds == sorted(content.crop_map["carrot"].quality.thresholds)
 
 
 def test_unknown_crop_item_is_rejected():
@@ -30,4 +32,11 @@ def test_duplicate_ids_are_rejected():
     payload = json.loads(load_content().model_dump_json())
     payload["items"].append(payload["items"][0])
     with pytest.raises(ValidationError, match="duplicate item"):
+        GameContent.model_validate(payload)
+
+
+def test_non_increasing_quality_thresholds_are_rejected():
+    payload = load_content().model_dump()
+    payload["crops"][0]["quality"]["thresholds"] = [40, 80, 80, 220]
+    with pytest.raises(ValidationError, match="strictly increasing"):
         GameContent.model_validate(payload)

@@ -26,16 +26,16 @@ const game = useGameStore()
     </div>
 
     <div v-else class="inventory-list">
-      <article v-for="item in game.state.inventory" :key="item.item_id" class="inventory-row">
+      <article v-for="item in game.state.inventory" :key="item.inventory_key" class="inventory-row" :class="item.quality ? `quality-${item.quality}` : ''">
         <div class="item-icon item-icon--small"><GameIcon :name="item.icon" :size="26" /></div>
         <div class="inventory-copy">
-          <h2>{{ item.name }}</h2>
-          <span>{{ item.kind === 'seed' ? '种植用种子' : `收购价 ${item.sell_price} 金币` }}</span>
+          <h2>{{ item.name }} <em v-if="item.quality" class="quality-label">{{ item.quality_name }}</em></h2>
+          <span>{{ item.kind === 'seed' ? '种植用种子' : `收购价 ${item.sell_price} 金币${item.quality_sale_multiplier > 1 ? ` · ${item.quality_sale_multiplier}×` : ''}` }}</span>
         </div>
         <strong class="quantity">× {{ item.quantity }}</strong>
         <div v-if="item.sell_price" class="row-actions">
-          <button class="text-button" :disabled="game.busy" @click="game.sell(item.item_id, 1)">出售 1 个</button>
-          <button class="primary-button" :disabled="game.busy" @click="game.sell(item.item_id, item.quantity)">全部出售</button>
+          <button class="text-button" :disabled="game.busy" @click="game.sell(item.item_id, 1, item.quality)">出售 1 个</button>
+          <button class="primary-button" :disabled="game.busy" @click="game.sell(item.item_id, item.quantity, item.quality)">全部出售</button>
         </div>
       </article>
     </div>

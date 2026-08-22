@@ -33,7 +33,7 @@ def test_oauth_player_actions_and_openid_binding_persist(repository):
 
     service.buy("redis-oauth-sub", "carrot_seed", 2)
     reloaded = repository.get(first.player_id)
-    assert reloaded.inventory["carrot_seed"] == 2
+    assert reloaded.inventory["carrot_seed"][0] == 2
     assert reloaded.coins == 64
 
     identity = QQIdentity(platform="QQ", bot_id="official-bot", subject="opaque-openid")
@@ -71,11 +71,11 @@ def test_schema_two_spirit_warehouse_is_rewritten_with_partner_fields(repository
     }))
 
     loaded = repository.get(player_id)
-    assert loaded.schema_version == 4
+    assert loaded.schema_version == 5
     assert loaded.owned_partners[0].partner_id == "maple_sprite"
 
     repository.update(player_id, lambda player: None)
     stored = json.loads(repository.redis.get(repository._player_key(player_id)))
-    assert stored["schema_version"] == 4
+    assert stored["schema_version"] == 5
     assert stored["owned_partners"][0]["partner_id"] == "maple_sprite"
     assert "owned_spirits" not in stored

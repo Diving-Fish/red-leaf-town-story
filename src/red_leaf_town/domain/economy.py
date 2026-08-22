@@ -7,22 +7,28 @@ class EconomyError(ValueError):
     pass
 
 
-def add_item(player: PlayerState, item_id: str, amount: int) -> None:
+def add_item(player: PlayerState, item_id: str, amount: int, quality: int = 0) -> None:
     if amount <= 0:
         raise EconomyError("物品数量必须为正数")
-    player.inventory[item_id] = player.inventory.get(item_id, 0) + amount
+    if quality < 0 or quality > 5:
+        raise EconomyError("物品品质无效")
+    qualities = player.inventory.setdefault(item_id, {})
+    qualities[quality] = qualities.get(quality, 0) + amount
 
 
-def remove_item(player: PlayerState, item_id: str, amount: int) -> None:
+def remove_item(player: PlayerState, item_id: str, amount: int, quality: int = 0) -> None:
     if amount <= 0:
         raise EconomyError("物品数量必须为正数")
-    owned = player.inventory.get(item_id, 0)
+    qualities = player.inventory.get(item_id, {})
+    owned = qualities.get(quality, 0)
     if owned < amount:
         raise EconomyError("物品数量不足")
     remaining = owned - amount
     if remaining:
-        player.inventory[item_id] = remaining
+        qualities[quality] = remaining
     else:
+        qualities.pop(quality, None)
+    if not qualities:
         player.inventory.pop(item_id, None)
 
 

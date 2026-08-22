@@ -23,6 +23,19 @@ export interface CropDefinition {
   stamina_cost: number
   min_level: number
   accent: string
+  quality: QualityCurveDefinition
+}
+
+export interface QualityCurveDefinition {
+  thresholds: number[]
+  width: number
+  miracle_probability_cap: number
+  miracle_eligible: boolean
+}
+
+export interface TaskQualitySnapshot extends QualityCurveDefinition {
+  ability: number
+  probabilities: number[]
 }
 
 export interface PlotState {
@@ -32,6 +45,7 @@ export interface PlotState {
   ready_at: number
   assigned_partner_ids: string[]
   task_snapshot: ProductionTaskSnapshot | null
+  task_result: ProductionResultSnapshot | null
   empty: boolean
   ready: boolean
   remaining_seconds: number
@@ -39,6 +53,13 @@ export interface PlotState {
   assigned_partners: OwnedPartner[]
   assignment_locked: boolean
   assignment_locked_until: number | null
+}
+
+export interface ProductionResultSnapshot {
+  item_id: string
+  quantity: number
+  quality: number
+  resolved_at: number
 }
 
 export interface TaskPartnerSnapshot {
@@ -69,7 +90,7 @@ export interface ProductionTaskSnapshot {
   yield_min: number
   yield_max: number
   harvest_xp: number
-  quality_parameters: Record<string, number | string>
+  quality_parameters: TaskQualitySnapshot
 }
 
 export interface IndustryRules {
@@ -81,10 +102,15 @@ export interface IndustryRules {
 
 export interface InventoryItem {
   item_id: string
+  inventory_key: string
   name: string
   icon: string
   kind: string
   quantity: number
+  quality: number | null
+  quality_name: string | null
+  quality_sale_multiplier: number
+  base_sell_price: number
   sell_price: number
 }
 

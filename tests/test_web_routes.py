@@ -93,6 +93,24 @@ async def test_shop_and_plant_api(client):
     body = await planted.get_json()
     assert planted.status_code == 200
     assert body["data"]["state"]["plots"][0]["crop_id"] == "carrot"
+    assert len(body["data"]["state"]["plots"][0]["task_snapshot"]["quality_parameters"]["probabilities"]) == 5
+
+
+@runs
+async def test_sell_api_accepts_exact_quality_bucket(client, service):
+    from red_leaf_town.domain.economy import add_item
+
+    player = service.repository.get_by_sub("route-sub")
+    service.repository.update(player.player_id, lambda state: add_item(state, "carrot", 2, 3))
+    authenticate(client)
+    response = await client.post(
+        "/api/red-leaf-town/inventory/carrot/sell",
+        json={"quantity": 1, "quality": 3},
+    )
+    body = await response.get_json()
+    assert response.status_code == 200
+    assert body["data"]["result"]["quality_name"] == "上品"
+    assert body["data"]["result"]["unit_price"] == 8
 
 
 @runs

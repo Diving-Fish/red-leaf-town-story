@@ -14,7 +14,14 @@ export const useGameStore = defineStore('game', () => {
   const serverOffsetMs = ref(0)
 
   const player = computed(() => state.value?.player || null)
-  const inventoryMap = computed(() => new Map((state.value?.inventory || []).map((item) => [item.item_id, item])))
+  const inventoryMap = computed(() => {
+    const result = new Map<string, GameState['inventory'][number]>()
+    for (const item of state.value?.inventory || []) {
+      const current = result.get(item.item_id)
+      result.set(item.item_id, current ? { ...current, quantity: current.quantity + item.quantity } : item)
+    }
+    return result
+  })
 
   function acceptState(nextState: GameState) {
     state.value = nextState
@@ -81,8 +88,10 @@ export const useGameStore = defineStore('game', () => {
     return action(`/api/red-leaf-town/plots/${slot}/plant`, { crop_id: cropId }, '种子已经种下')
   }
 
-  function harvest(slot: number) {
-    return action(`/api/red-leaf-town/plots/${slot}/harvest`, undefined, '收获已放入仓库')
+  async function harvest(slot: number) {
+    const result = await action(`/api/red-leaf-town/plots/${slot}/harvest`)
+    if (result) showNotice(`收获了 ${result.quantity} 个${result.quality_name || ''}产物`)
+    return result
   }
 
   function assignPartner(slot: number, partnerId: string | null) {
@@ -94,8 +103,8 @@ export const useGameStore = defineStore('game', () => {
     )
   }
 
-  function sell(itemId: string, quantity: number) {
-    return action(`/api/red-leaf-town/inventory/${itemId}/sell`, { quantity }, '交易完成')
+  function sell(itemId: string, quantity: number, quality: number | null = null) {
+    return action(`/api/red-leaf-town/inventory/${itemId}/sell`, { quantity, quality: quality || 0 }, '交易完成')
   }
 
   async function createBindingCode() {

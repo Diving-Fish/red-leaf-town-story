@@ -3,18 +3,21 @@ from __future__ import annotations
 import random
 import time
 from collections.abc import Callable
-from math import ceil
+from math import ceil, floor
 
 from red_leaf_town.content import GameContent
 from red_leaf_town.domain import (
     OwnedPartnerState,
     PlayerState,
+    ProductionResultSnapshot,
     ProductionTaskSnapshot,
     QQIdentity,
     TaskPartnerSnapshot,
+    TaskQualitySnapshot,
 )
 from red_leaf_town.domain.economy import EconomyError, add_item, grant_coins, remove_item, spend_coins
 from red_leaf_town.domain.progression import consume_stamina, grant_experience, normalize_plot_slots, settle_stamina
+from red_leaf_town.domain.quality import QUALITY_NAMES, quality_probabilities, roll_quality
 from red_leaf_town.partner_content import (
     GROWTH_CURVE_NAMES,
     INDUSTRY_NAMES,
@@ -109,6 +112,7 @@ class GameService:
             plot.planted_at = now
             plot.ready_at = task_snapshot.ready_at
             plot.task_snapshot = task_snapshot
+            plot.task_result = None
             levels = grant_experience(player, crop.plant_xp, self.content)
             return {
                 "slot": slot,
@@ -120,6 +124,8 @@ class GameService:
                 "time_saved": task_snapshot.base_duration - task_snapshot.final_duration,
                 "total_ability": task_snapshot.total_ability,
                 "time_efficiency": task_snapshot.time_efficiency,
+                "quality_ability": task_snapshot.quality_parameters.ability,
+                "quality_probabilities": task_snapshot.quality_parameters.probabilities,
             }
 
         player, result = self._update_by_sub(oauth_sub, mutation)
@@ -135,31 +141,25 @@ class GameService:
                 raise GameError("plot_empty", "这块土地还没有作物")
             if plot.ready_at > now:
                 raise GameError("crop_not_ready", "作物还没有成熟")
-            crop = self.content.crop_map.get(plot.crop_id)
-            task = plot.task_snapshot
-            if task:
-                item_id = task.produce_item_id
-                yield_min = task.yield_min
-                yield_max = task.yield_max
-                harvest_xp = task.harvest_xp
-            elif crop:
-                item_id = crop.produce_item_id
-                yield_min = crop.yield_min
-                yield_max = crop.yield_max
-                harvest_xp = crop.harvest_xp
-            else:
+            task_result = plot.task_result
+            if task_result is None:
                 raise GameError("task_content_missing", "进行中的作物配置缺失，请联系管理员", 409)
-            amount = self.rng.randint(yield_min, yield_max)
-            add_item(player, item_id, amount)
+            task = plot.task_snapshot
+            crop = self.content.crop_map.get(plot.crop_id)
+            harvest_xp = task.harvest_xp if task else crop.harvest_xp if crop else 0
+            add_item(player, task_result.item_id, task_result.quantity, task_result.quality)
             levels = grant_experience(player, harvest_xp, self.content)
             plot.crop_id = ""
             plot.planted_at = 0
             plot.ready_at = 0
             plot.task_snapshot = None
+            plot.task_result = None
             return {
                 "slot": slot,
-                "item_id": item_id,
-                "quantity": amount,
+                "item_id": task_result.item_id,
+                "quantity": task_result.quantity,
+                "quality": task_result.quality,
+                "quality_name": QUALITY_NAMES[task_result.quality],
                 "experience": harvest_xp,
                 "levels": levels,
             }
@@ -212,21 +212,45 @@ class GameService:
         player, result = self._update_by_sub(oauth_sub, mutation)
         return {"result": result, "state": self._snapshot(player, now)}
 
-    def sell(self, oauth_sub: str, item_id: str, quantity: int) -> dict:
+    def sell(self, oauth_sub: str, item_id: str, quantity: int, quality: int = 0) -> dict:
         if quantity < 1:
             raise GameError("invalid_quantity", "出售数量必须为正数")
         item = self.content.item_map.get(item_id)
         if not item or item.sell_price <= 0:
             raise GameError("item_not_sellable", "该物品不能出售")
+        if item.kind not in {"produce", "product"} and quality != 0:
+            raise GameError("invalid_quality", "该物品不使用品质")
+        now = self._now()
 
         def mutation(player: PlayerState):
+            self._settle(player, now)
+            selected_quality = quality
+            if item.kind in {"produce", "product"} and selected_quality == 0:
+                available = [
+                    candidate
+                    for candidate, amount in player.inventory.get(item_id, {}).items()
+                    if candidate in self.content.quality.grade_map and amount > 0
+                ]
+                if len(available) != 1:
+                    raise GameError("invalid_quality", "请选择要出售的物品品质")
+                selected_quality = available[0]
+            if item.kind in {"produce", "product"} and selected_quality not in self.content.quality.grade_map:
+                raise GameError("invalid_quality", "请选择要出售的物品品质")
+            unit_price = self._quality_unit_price(item.sell_price, selected_quality)
             try:
-                remove_item(player, item_id, quantity)
-                coins = item.sell_price * quantity
+                remove_item(player, item_id, quantity, selected_quality)
+                coins = unit_price * quantity
                 grant_coins(player, coins)
             except EconomyError as exc:
                 raise GameError("economy_error", str(exc)) from exc
-            return {"item_id": item_id, "quantity": quantity, "coins": coins}
+            return {
+                "item_id": item_id,
+                "quantity": quantity,
+                "quality": selected_quality or None,
+                "quality_name": QUALITY_NAMES.get(selected_quality),
+                "unit_price": unit_price,
+                "coins": coins,
+            }
 
         player, result = self._update_by_sub(oauth_sub, mutation)
         return {"result": result, "state": self._snapshot(player)}
@@ -298,10 +322,14 @@ class GameService:
         return self.repository.update(player.player_id, mutation)
 
     def _settle(self, player: PlayerState, now: int) -> None:
+        self._normalize_inventory_quality(player)
         level = self.content.level_for_xp(player.experience)
         player.level = level.level
         normalize_plot_slots(player, self.content)
         settle_stamina(player, self.content, now)
+        for plot in player.plots:
+            if not plot.empty and plot.ready_at <= now and plot.task_result is None:
+                self._resolve_farming_output(plot, now)
 
     def _plot(self, player: PlayerState, slot: int):
         if slot < 0 or slot >= len(player.plots):
@@ -346,6 +374,14 @@ class GameService:
         total_ability = character_ability + sum(entry.ability for entry in partner_snapshots)
         time_efficiency = 1 + 2 * total_ability / (total_ability + crop.time_difficulty)
         final_duration = max(1, ceil(crop.growth_seconds / time_efficiency))
+        quality = crop.quality
+        probabilities = quality_probabilities(
+            total_ability,
+            quality.thresholds,
+            quality.width,
+            quality.miracle_probability_cap,
+            quality.miracle_eligible,
+        )
         return ProductionTaskSnapshot(
             industry="farming",
             content_id=crop.id,
@@ -365,7 +401,14 @@ class GameService:
             yield_min=crop.yield_min,
             yield_max=crop.yield_max,
             harvest_xp=crop.harvest_xp,
-            quality_parameters={},
+            quality_parameters=TaskQualitySnapshot(
+                ability=total_ability,
+                thresholds=quality.thresholds,
+                width=quality.width,
+                miracle_probability_cap=quality.miracle_probability_cap,
+                miracle_eligible=quality.miracle_eligible,
+                probabilities=probabilities,
+            ),
         )
 
     @staticmethod
@@ -385,18 +428,27 @@ class GameService:
         next_level = next((entry for entry in self.content.levels if entry.level > player.level), None)
         items = self.content.item_map
         crops = self.content.crop_map
-        inventory = [
-            {
-                "item_id": item_id,
-                "name": items[item_id].name if item_id in items else item_id,
-                "icon": items[item_id].icon if item_id in items else "package",
-                "kind": items[item_id].kind if item_id in items else "material",
-                "quantity": quantity,
-                "sell_price": items[item_id].sell_price if item_id in items else 0,
-            }
-            for item_id, quantity in sorted(player.inventory.items())
-            if quantity > 0
-        ]
+        inventory = []
+        for item_id, qualities in sorted(player.inventory.items()):
+            item = items.get(item_id)
+            for quality, quantity in sorted(qualities.items()):
+                if quantity <= 0:
+                    continue
+                base_sell_price = item.sell_price if item else 0
+                grade = self.content.quality.grade_map.get(quality)
+                inventory.append({
+                    "item_id": item_id,
+                    "inventory_key": f"{item_id}:{quality}",
+                    "name": item.name if item else item_id,
+                    "icon": item.icon if item else "package",
+                    "kind": item.kind if item else "material",
+                    "quantity": quantity,
+                    "quality": quality or None,
+                    "quality_name": grade.name if grade else None,
+                    "quality_sale_multiplier": grade.sale_multiplier if grade else 1,
+                    "base_sell_price": base_sell_price,
+                    "sell_price": self._quality_unit_price(base_sell_price, quality),
+                })
         partner_records = self._partner_snapshots(player, now)
         partner_map = {entry["partner_id"]: entry for entry in partner_records}
         lock_deadlines = self._partner_lock_deadlines(player, now)
@@ -542,6 +594,44 @@ class GameService:
             "effective_level": effective_level,
             "effective_ability": definition.ability_at(tendency.industry, effective_level),
         }
+
+    def _normalize_inventory_quality(self, player: PlayerState) -> None:
+        for item_id, qualities in list(player.inventory.items()):
+            item = self.content.item_map.get(item_id)
+            if item and item.kind in {"produce", "product"} and qualities.get(0, 0) > 0:
+                qualities[1] = qualities.get(1, 0) + qualities.pop(0)
+            for quality, quantity in list(qualities.items()):
+                if quantity == 0:
+                    qualities.pop(quality)
+            if not qualities:
+                player.inventory.pop(item_id)
+
+    def _resolve_farming_output(self, plot, now: int) -> None:
+        task = plot.task_snapshot
+        crop = self.content.crop_map.get(plot.crop_id)
+        if task:
+            item_id = task.produce_item_id
+            yield_min = task.yield_min
+            yield_max = task.yield_max
+            probabilities = task.quality_parameters.probabilities
+        elif crop:
+            item_id = crop.produce_item_id
+            yield_min = crop.yield_min
+            yield_max = crop.yield_max
+            probabilities = [1, 0, 0, 0, 0]
+        else:
+            return
+        plot.task_result = ProductionResultSnapshot(
+            item_id=item_id,
+            quantity=self.rng.randint(yield_min, yield_max),
+            quality=roll_quality(self.rng, probabilities),
+            resolved_at=now,
+        )
+
+    def _quality_unit_price(self, base_price: int, quality: int) -> int:
+        grade = self.content.quality.grade_map.get(quality)
+        multiplier = grade.sale_multiplier if grade else 1
+        return floor(base_price * multiplier + 0.5)
 
     @staticmethod
     def _admin_player_summary(player: PlayerState) -> dict:

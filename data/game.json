@@ -1,5 +1,5 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "game": {
     "title": "红叶镇物语",
     "starting_coins": 80,
@@ -7,6 +7,15 @@
   },
   "stamina": {
     "restore_seconds": 180
+  },
+  "quality": {
+    "grades": [
+      {"level": 1, "name": "普通", "sale_multiplier": 1.0},
+      {"level": 2, "name": "良品", "sale_multiplier": 1.2},
+      {"level": 3, "name": "上品", "sale_multiplier": 1.5},
+      {"level": 4, "name": "臻品", "sale_multiplier": 2.0},
+      {"level": 5, "name": "奇迹", "sale_multiplier": 3.0}
+    ]
   },
   "industries": {
     "farming": {
@@ -43,7 +52,13 @@
       "plant_xp": 1,
       "harvest_xp": 4,
       "min_level": 1,
-      "accent": "#e97845"
+      "accent": "#e97845",
+      "quality": {
+        "thresholds": [40, 80, 140, 220],
+        "width": 15,
+        "miracle_probability_cap": 0.003,
+        "miracle_eligible": false
+      }
     },
     {
       "id": "wheat",
@@ -58,7 +73,13 @@
       "plant_xp": 2,
       "harvest_xp": 7,
       "min_level": 2,
-      "accent": "#d5a83e"
+      "accent": "#d5a83e",
+      "quality": {
+        "thresholds": [55, 105, 175, 260],
+        "width": 18,
+        "miracle_probability_cap": 0.003,
+        "miracle_eligible": false
+      }
     }
   ],
   "shop": [
