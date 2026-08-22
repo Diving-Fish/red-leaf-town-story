@@ -23,6 +23,7 @@ def test_default_content_is_consistent():
     assert content.gathering_task_map["collect_maple_wood"].produce_item_id == "maple_wood"
     assert content.item_map["maple_wood"].has_quality is True
     assert content.talent_map["gathering_roster_1"].partner_capacity_bonus == 1
+    assert content.recipe_map["saw_maple_plank"].unlock_condition.hook == "player_level"
 
 
 def test_unknown_crop_item_is_rejected():
@@ -43,4 +44,23 @@ def test_non_increasing_quality_thresholds_are_rejected():
     payload = load_content().model_dump()
     payload["crops"][0]["quality"]["thresholds"] = [40, 80, 80, 220]
     with pytest.raises(ValidationError, match="strictly increasing"):
+        GameContent.model_validate(payload)
+
+
+def test_every_recipe_requires_an_explicit_unlock_condition():
+    payload = load_content().model_dump()
+    payload["recipes"][0].pop("unlock_condition")
+    with pytest.raises(ValidationError, match="unlock_condition"):
+        GameContent.model_validate(payload)
+
+
+def test_unknown_or_invalid_recipe_unlock_hook_is_rejected():
+    payload = load_content().model_dump()
+    payload["recipes"][0]["unlock_condition"]["hook"] = "implicit_default"
+    with pytest.raises(ValidationError, match="unknown unlock hook"):
+        GameContent.model_validate(payload)
+
+    payload = load_content().model_dump()
+    payload["recipes"][0]["unlock_condition"]["params"] = {}
+    with pytest.raises(ValidationError, match="positive integer level"):
         GameContent.model_validate(payload)

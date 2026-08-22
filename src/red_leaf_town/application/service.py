@@ -7,6 +7,7 @@ from math import ceil, floor
 
 from red_leaf_town.content import GameContent
 from red_leaf_town.domain import (
+    CraftingStationState,
     GatheringSiteState,
     OwnedPartnerState,
     PlayerState,
@@ -14,17 +15,20 @@ from red_leaf_town.domain import (
     ProductionTaskSnapshot,
     QQIdentity,
     TaskPartnerSnapshot,
+    TaskInputSnapshot,
     TaskQualitySnapshot,
 )
 from red_leaf_town.domain.economy import EconomyError, add_item, grant_coins, remove_item, spend_coins
 from red_leaf_town.domain.progression import (
     consume_stamina,
     grant_experience,
+    normalize_crafting_stations,
     normalize_gathering_sites,
     normalize_plot_slots,
     settle_stamina,
 )
 from red_leaf_town.domain.quality import QUALITY_NAMES, quality_probabilities, roll_quality
+from red_leaf_town.recipe_unlocks import describe_recipe_unlock, evaluate_recipe_unlock
 from red_leaf_town.partner_content import (
     GROWTH_CURVE_NAMES,
     INDUSTRY_NAMES,
@@ -297,6 +301,135 @@ class GameService:
         player, result = self._update_by_sub(oauth_sub, mutation)
         return {"result": result, "state": self._snapshot(player, now)}
 
+    def assign_crafting_partner(self, oauth_sub: str, station_id: str, partner_id: str = "") -> dict:
+        partner_id = str(partner_id or "").strip()
+        now = self._now()
+        catalog = self.partner_catalog_loader()
+
+        def mutation(player: PlayerState):
+            self._settle(player, now)
+            station = self._crafting_station(player, station_id)
+            desired_ids = [partner_id] if partner_id else []
+            if station.assigned_partner_ids == desired_ids:
+                return {"station_id": station_id, "partner_id": partner_id or None, "changed": False}
+            if station.task_snapshot is not None and station.task_snapshot.ready_at > now:
+                raise GameError("partner_assignment_locked", "加工进行中，不能调整这个工位的伙伴", 409)
+
+            locked_until = self._partner_lock_deadlines(player, now)
+            affected_ids = set(station.assigned_partner_ids)
+            if partner_id:
+                affected_ids.add(partner_id)
+            if any(locked_until.get(candidate, 0) > now for candidate in affected_ids):
+                raise GameError("partner_locked", "伙伴正在参与进行中的任务，暂时不能移动", 409)
+
+            if partner_id:
+                owned = next((entry for entry in player.owned_partners if entry.partner_id == partner_id), None)
+                definition = catalog.partner_map.get(partner_id)
+                if owned is None:
+                    raise GameError("partner_not_owned", "你还没有这个伙伴", 404)
+                if definition is None:
+                    raise GameError("partner_not_found", "伙伴配置不存在", 404)
+                if not any(tendency.industry == "crafting" for tendency in definition.tendencies):
+                    raise GameError("partner_tendency_mismatch", "这个伙伴没有加工倾向", 409)
+
+            if partner_id:
+                self._clear_partner_assignment(player, partner_id)
+            station.assigned_partner_ids = desired_ids
+            if self._industry_assigned_count(player, "crafting") > self._industry_partner_capacity(player, "crafting"):
+                raise GameError("partner_capacity_reached", "当前加工伙伴编制已满", 409)
+            return {"station_id": station_id, "partner_id": partner_id or None, "changed": True}
+
+        player, result = self._update_by_sub(oauth_sub, mutation)
+        return {"result": result, "state": self._snapshot(player, now)}
+
+    def start_crafting(self, oauth_sub: str, station_id: str, recipe_id: str) -> dict:
+        recipe = self.content.recipe_map.get(recipe_id)
+        if recipe is None or recipe.station_id != station_id:
+            raise GameError("recipe_not_found", "这个工位没有该配方", 404)
+        now = self._now()
+
+        def mutation(player: PlayerState):
+            self._settle(player, now)
+            station = self._crafting_station(player, station_id)
+            condition = recipe.unlock_condition
+            if not evaluate_recipe_unlock(player, condition.hook, condition.params):
+                raise GameError(
+                    "recipe_locked",
+                    f"配方尚未解锁：{describe_recipe_unlock(condition.hook, condition.params)}",
+                    409,
+                )
+            if not station.empty:
+                raise GameError("crafting_station_occupied", "这个工位已有加工任务")
+            if self._industry_assigned_count(player, "crafting") > self._industry_partner_capacity(player, "crafting"):
+                raise GameError("partner_capacity_reached", "当前加工伙伴编制已满", 409)
+            consumed_inputs = self._consume_recipe_inputs(player, recipe)
+            snapshot = self._build_production_task_snapshot(
+                player=player,
+                assigned_partner_ids=station.assigned_partner_ids,
+                industry="crafting",
+                content_id=recipe.id,
+                production_slot_id=f"crafting:station:{station.station_id}",
+                now=now,
+                base_duration=recipe.duration_seconds,
+                time_difficulty=recipe.time_difficulty,
+                produce_item_id=recipe.produce_item_id,
+                yield_min=recipe.produce_quantity,
+                yield_max=recipe.produce_quantity,
+                harvest_xp=recipe.collect_xp,
+                quality=recipe.quality,
+                consumed_inputs=consumed_inputs,
+            )
+            try:
+                consume_stamina(player, recipe.stamina_cost, self.content, now)
+            except ValueError as exc:
+                raise GameError("resource_insufficient", str(exc)) from exc
+            station.task_snapshot = snapshot
+            station.task_result = None
+            return {
+                "station_id": station_id,
+                "recipe_id": recipe_id,
+                "ready_at": snapshot.ready_at,
+                "base_duration": snapshot.base_duration,
+                "final_duration": snapshot.final_duration,
+                "total_ability": snapshot.total_ability,
+                "quality_ability": snapshot.quality_parameters.ability,
+                "consumed_inputs": [entry.model_dump() for entry in consumed_inputs],
+            }
+
+        player, result = self._update_by_sub(oauth_sub, mutation)
+        return {"result": result, "state": self._snapshot(player, now)}
+
+    def collect_crafting(self, oauth_sub: str, station_id: str) -> dict:
+        now = self._now()
+
+        def mutation(player: PlayerState):
+            self._settle(player, now)
+            station = self._crafting_station(player, station_id)
+            if station.task_snapshot is None:
+                raise GameError("crafting_station_empty", "这个工位没有进行中的任务")
+            if station.task_snapshot.ready_at > now:
+                raise GameError("crafting_not_ready", "加工还没有完成")
+            result = station.task_result
+            if result is None:
+                raise GameError("task_content_missing", "加工任务配置缺失，请联系管理员", 409)
+            collect_xp = station.task_snapshot.harvest_xp
+            add_item(player, result.item_id, result.quantity, result.quality)
+            levels = grant_experience(player, collect_xp, self.content)
+            station.task_snapshot = None
+            station.task_result = None
+            return {
+                "station_id": station_id,
+                "item_id": result.item_id,
+                "quantity": result.quantity,
+                "quality": result.quality,
+                "quality_name": QUALITY_NAMES[result.quality],
+                "experience": collect_xp,
+                "levels": levels,
+            }
+
+        player, result = self._update_by_sub(oauth_sub, mutation)
+        return {"result": result, "state": self._snapshot(player, now)}
+
     def unlock_talent(self, oauth_sub: str, node_id: str) -> dict:
         node = self.content.talent_map.get(node_id)
         if node is None:
@@ -483,6 +616,7 @@ class GameService:
         player.level = level.level
         normalize_plot_slots(player, self.content)
         normalize_gathering_sites(player, self.content)
+        normalize_crafting_stations(player, self.content)
         settle_stamina(player, self.content, now)
         for plot in player.plots:
             if not plot.empty and plot.ready_at <= now and plot.task_result is None:
@@ -490,6 +624,9 @@ class GameService:
         for site in player.gathering_sites:
             if site.task_snapshot and site.task_snapshot.ready_at <= now and site.task_result is None:
                 self._resolve_output(site, now)
+        for station in player.crafting_stations:
+            if station.task_snapshot and station.task_snapshot.ready_at <= now and station.task_result is None:
+                self._resolve_output(station, now)
 
     def _plot(self, player: PlayerState, slot: int):
         if slot < 0 or slot >= len(player.plots):
@@ -501,6 +638,12 @@ class GameService:
         if site is None:
             raise GameError("gathering_site_locked", "这个采集点尚未解锁", 404)
         return site
+
+    def _crafting_station(self, player: PlayerState, station_id: str) -> CraftingStationState:
+        station = next((entry for entry in player.crafting_stations if entry.station_id == station_id), None)
+        if station is None:
+            raise GameError("crafting_station_locked", "这个加工工位尚未解锁", 404)
+        return station
 
     def _build_farming_task_snapshot(self, player, plot, crop, now: int) -> ProductionTaskSnapshot:
         if self._industry_assigned_count(player, "farming") > self._industry_partner_capacity(player, "farming"):
@@ -537,6 +680,7 @@ class GameService:
         yield_max: int,
         harvest_xp: int,
         quality,
+        consumed_inputs: list[TaskInputSnapshot] | None = None,
     ) -> ProductionTaskSnapshot:
         rules = self.content.industries[industry]
         if len(assigned_partner_ids) > rules.collaborator_slots:
@@ -598,6 +742,7 @@ class GameService:
             yield_min=yield_min,
             yield_max=yield_max,
             harvest_xp=harvest_xp,
+            consumed_inputs=consumed_inputs or [],
             quality_parameters=TaskQualitySnapshot(
                 ability=total_ability,
                 thresholds=quality.thresholds,
@@ -611,7 +756,7 @@ class GameService:
     @staticmethod
     def _partner_lock_deadlines(player: PlayerState, now: int) -> dict[str, int]:
         deadlines: dict[str, int] = {}
-        for production_slot in [*player.plots, *player.gathering_sites]:
+        for production_slot in [*player.plots, *player.gathering_sites, *player.crafting_stations]:
             task = production_slot.task_snapshot
             if task is None or task.ready_at <= now:
                 continue
@@ -717,6 +862,46 @@ class GameService:
             ),
             None,
         )
+        crafting_stations = []
+        recipe_map = self.content.recipe_map
+        for station in player.crafting_stations:
+            definition = self.content.crafting_station_map.get(station.station_id)
+            task_snapshot = station.task_snapshot
+            assigned_partners = [
+                partner_map[partner_id]
+                for partner_id in station.assigned_partner_ids
+                if partner_id in partner_map
+            ]
+            assignment_locked_until = max(
+                (lock_deadlines.get(partner_id, 0) for partner_id in station.assigned_partner_ids),
+                default=0,
+            )
+            crafting_stations.append({
+                **station.model_dump(),
+                "empty": station.empty,
+                "ready": bool(task_snapshot and task_snapshot.ready_at <= now),
+                "remaining_seconds": max(0, task_snapshot.ready_at - now) if task_snapshot else 0,
+                "definition": definition.model_dump() if definition else None,
+                "recipe": self._recipe_snapshot(player, recipe_map[task_snapshot.content_id])
+                if task_snapshot and task_snapshot.content_id in recipe_map else None,
+                "recipes": [
+                    self._recipe_snapshot(player, recipe)
+                    for recipe in self.content.recipes
+                    if recipe.station_id == station.station_id
+                ],
+                "assigned_partners": assigned_partners,
+                "assignment_locked": assignment_locked_until > now,
+                "assignment_locked_until": assignment_locked_until or None,
+            })
+        unlocked_crafting_station_ids = {station.station_id for station in player.crafting_stations}
+        next_crafting_station_level = next(
+            (
+                definition.min_level
+                for definition in self.content.crafting_stations
+                if definition.id not in unlocked_crafting_station_ids
+            ),
+            None,
+        )
         return {
             "server_time": now,
             "player": {
@@ -737,6 +922,8 @@ class GameService:
             "next_plot_level": next_plot_level,
             "gathering_sites": gathering_sites,
             "next_gathering_site_level": next_gathering_site_level,
+            "crafting_stations": crafting_stations,
+            "next_crafting_station_level": next_crafting_station_level,
             "inventory": inventory,
             "partners": partner_records,
             "partner_count": len(partner_records),
@@ -778,6 +965,11 @@ class GameService:
             for site in player.gathering_sites
             for partner_id in site.assigned_partner_ids
         }
+        assigned_crafting_stations = {
+            partner_id: station.station_id
+            for station in player.crafting_stations
+            for partner_id in station.assigned_partner_ids
+        }
         lock_deadlines = self._partner_lock_deadlines(player, now)
         records: list[dict] = []
         for owned in sorted(player.owned_partners, key=lambda entry: (entry.acquired_at, entry.partner_id)):
@@ -790,6 +982,7 @@ class GameService:
                     "rarity": None,
                     "assigned_plot_slot": assigned_slots.get(owned.partner_id),
                     "assigned_gathering_site_id": assigned_gathering_sites.get(owned.partner_id),
+                    "assigned_crafting_station_id": assigned_crafting_stations.get(owned.partner_id),
                     "locked": lock_deadlines.get(owned.partner_id, 0) > now,
                     "locked_until": lock_deadlines.get(owned.partner_id) or None,
                 })
@@ -827,6 +1020,7 @@ class GameService:
                 "breakthrough_available": False,
                 "assigned_plot_slot": assigned_slots.get(owned.partner_id),
                 "assigned_gathering_site_id": assigned_gathering_sites.get(owned.partner_id),
+                "assigned_crafting_station_id": assigned_crafting_stations.get(owned.partner_id),
                 "locked": lock_deadlines.get(owned.partner_id, 0) > now,
                 "locked_until": lock_deadlines.get(owned.partner_id) or None,
             })
@@ -850,7 +1044,7 @@ class GameService:
 
     @staticmethod
     def _clear_partner_assignment(player: PlayerState, partner_id: str) -> None:
-        for production_slot in [*player.plots, *player.gathering_sites]:
+        for production_slot in [*player.plots, *player.gathering_sites, *player.crafting_stations]:
             if partner_id in production_slot.assigned_partner_ids:
                 production_slot.assigned_partner_ids = []
 
@@ -860,6 +1054,8 @@ class GameService:
             return sum(len(plot.assigned_partner_ids) for plot in player.plots)
         if industry == "gathering":
             return sum(len(site.assigned_partner_ids) for site in player.gathering_sites)
+        if industry == "crafting":
+            return sum(len(station.assigned_partner_ids) for station in player.crafting_stations)
         return 0
 
     def _industry_partner_capacity(self, player: PlayerState, industry: str) -> int:
@@ -903,6 +1099,54 @@ class GameService:
             "available_points": available_points,
             "unlocked_node_ids": list(player.talent_nodes),
             "nodes": nodes,
+        }
+
+    def _consume_recipe_inputs(self, player: PlayerState, recipe) -> list[TaskInputSnapshot]:
+        consumed: list[TaskInputSnapshot] = []
+        for requirement in recipe.inputs:
+            qualities = player.inventory.get(requirement.item_id, {})
+            if sum(qualities.values()) < requirement.quantity:
+                item = self.content.item_map.get(requirement.item_id)
+                raise GameError("resource_insufficient", f"{item.name if item else requirement.item_id}数量不足")
+            remaining = requirement.quantity
+            for quality, owned in sorted(qualities.items()):
+                amount = min(owned, remaining)
+                if amount <= 0:
+                    continue
+                remove_item(player, requirement.item_id, amount, quality)
+                consumed.append(TaskInputSnapshot(
+                    item_id=requirement.item_id,
+                    quality=quality,
+                    quantity=amount,
+                ))
+                remaining -= amount
+                if remaining == 0:
+                    break
+        return consumed
+
+    def _recipe_snapshot(self, player: PlayerState, recipe) -> dict:
+        condition = recipe.unlock_condition
+        unlocked = evaluate_recipe_unlock(player, condition.hook, condition.params)
+        inputs = []
+        ingredients_available = True
+        for requirement in recipe.inputs:
+            item = self.content.item_map[requirement.item_id]
+            owned_by_quality = player.inventory.get(requirement.item_id, {})
+            owned_quantity = sum(owned_by_quality.values())
+            ingredients_available = ingredients_available and owned_quantity >= requirement.quantity
+            inputs.append({
+                **requirement.model_dump(),
+                "item": item.model_dump(),
+                "owned_quantity": owned_quantity,
+                "owned_by_quality": dict(sorted(owned_by_quality.items())),
+            })
+        return {
+            **recipe.model_dump(),
+            "item": self.content.item_map[recipe.produce_item_id].model_dump(),
+            "inputs": inputs,
+            "unlocked": unlocked,
+            "unlock_description": describe_recipe_unlock(condition.hook, condition.params),
+            "ingredients_available": ingredients_available,
         }
 
     def _normalize_inventory_quality(self, player: PlayerState) -> None:

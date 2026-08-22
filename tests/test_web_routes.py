@@ -143,6 +143,40 @@ async def test_gathering_partner_start_and_talent_apis(client, service):
 
 
 @runs
+async def test_crafting_recipe_hook_and_start_api(client, service):
+    from red_leaf_town.domain.economy import add_item
+
+    player = service.repository.get_by_sub("route-sub")
+    service.repository.update(player.player_id, lambda state: setattr(state, "experience", 60))
+    service.repository.update(player.player_id, lambda state: add_item(state, "maple_wood", 2, 1))
+    authenticate(client)
+
+    state_response = await client.get("/api/red-leaf-town/state")
+    station = (await state_response.get_json())["data"]["crafting_stations"][0]
+    recipe = next(entry for entry in station["recipes"] if entry["id"] == "saw_maple_plank")
+    assert recipe["unlocked"] is True
+    assert recipe["unlock_condition"]["hook"] == "player_level"
+
+    locked = await client.post(
+        "/api/red-leaf-town/crafting/stations/town_workbench/start",
+        json={"recipe_id": "pickle_carrot"},
+    )
+    assert locked.status_code == 409
+    assert (await locked.get_json())["code"] == "recipe_locked"
+
+    started = await client.post(
+        "/api/red-leaf-town/crafting/stations/town_workbench/start",
+        json={"recipe_id": "saw_maple_plank"},
+    )
+    body = await started.get_json()
+    assert started.status_code == 200
+    assert body["data"]["state"]["crafting_stations"][0]["task_snapshot"]["industry"] == "crafting"
+    assert body["data"]["result"]["consumed_inputs"] == [
+        {"item_id": "maple_wood", "quality": 1, "quantity": 2},
+    ]
+
+
+@runs
 async def test_invalid_action_returns_structured_error(client):
     authenticate(client)
     response = await client.post("/api/red-leaf-town/plots/0/plant", json={"crop_id": "carrot"})

@@ -1,4 +1,5 @@
 from .models import (
+    CraftingStationState,
     GatheringSiteState,
     OwnedPartnerState,
     PlayerState,
@@ -7,10 +8,12 @@ from .models import (
     ProductionTaskSnapshot,
     QQIdentity,
     TaskPartnerSnapshot,
+    TaskInputSnapshot,
     TaskQualitySnapshot,
 )
 
 __all__ = [
+    "CraftingStationState",
     "GatheringSiteState",
     "OwnedPartnerState",
     "PlayerState",
@@ -19,5 +22,6 @@ __all__ = [
     "ProductionTaskSnapshot",
     "QQIdentity",
     "TaskPartnerSnapshot",
+    "TaskInputSnapshot",
     "TaskQualitySnapshot",
 ]

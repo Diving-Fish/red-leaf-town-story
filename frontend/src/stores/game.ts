@@ -130,6 +130,29 @@ export const useGameStore = defineStore('game', () => {
     return action(`/api/red-leaf-town/talents/${nodeId}/unlock`, undefined, '天赋已经点亮')
   }
 
+  function assignCraftingPartner(stationId: string, partnerId: string | null) {
+    return action(
+      `/api/red-leaf-town/crafting/stations/${stationId}/partner`,
+      { partner_id: partnerId || '' },
+      partnerId ? '伙伴已安排到工位' : '伙伴已撤下',
+      'PUT',
+    )
+  }
+
+  function startCrafting(stationId: string, recipeId: string) {
+    return action(
+      `/api/red-leaf-town/crafting/stations/${stationId}/start`,
+      { recipe_id: recipeId },
+      '加工任务已经开始',
+    )
+  }
+
+  async function collectCrafting(stationId: string) {
+    const result = await action(`/api/red-leaf-town/crafting/stations/${stationId}/collect`)
+    if (result) showNotice(`制成了 ${result.quantity} 个${result.quality_name || ''}加工品`)
+    return result
+  }
+
   function sell(itemId: string, quantity: number, quality: number | null = null) {
     return action(`/api/red-leaf-town/inventory/${itemId}/sell`, { quantity, quality: quality || 0 }, '交易完成')
   }
@@ -191,6 +214,9 @@ export const useGameStore = defineStore('game', () => {
     startGathering,
     collectGathering,
     unlockTalent,
+    assignCraftingPartner,
+    startCrafting,
+    collectCrafting,
     sell,
     createBindingCode,
     logout,

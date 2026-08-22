@@ -1,5 +1,5 @@
 {
-  "schema_version": 4,
+  "schema_version": 5,
   "game": {
     "title": "红叶镇物语",
     "starting_coins": 80,
@@ -29,6 +29,12 @@
       "partner_capacity": 1,
       "partner_level_cap": 20,
       "collaborator_slots": 1
+    },
+    "crafting": {
+      "character_base_ability": 0,
+      "partner_capacity": 1,
+      "partner_level_cap": 20,
+      "collaborator_slots": 1
     }
   },
   "levels": [
@@ -44,7 +50,11 @@
     {"id": "wheat_seed", "name": "小麦种子", "icon": "sprout", "kind": "seed", "sell_price": 0},
     {"id": "wheat", "name": "小麦", "icon": "wheat", "kind": "produce", "sell_price": 9, "has_quality": true},
     {"id": "maple_wood", "name": "枫木", "icon": "trees", "kind": "material", "sell_price": 7, "has_quality": true},
-    {"id": "autumn_herb", "name": "秋露草", "icon": "leaf", "kind": "material", "sell_price": 10, "has_quality": true}
+    {"id": "autumn_herb", "name": "秋露草", "icon": "leaf", "kind": "material", "sell_price": 10, "has_quality": true},
+    {"id": "maple_plank", "name": "枫木板", "icon": "panels-top-left", "kind": "product", "sell_price": 18, "has_quality": true},
+    {"id": "herbal_salve", "name": "秋露药膏", "icon": "flask-conical", "kind": "product", "sell_price": 28, "has_quality": true},
+    {"id": "flour", "name": "小麦粉", "icon": "package", "kind": "product", "sell_price": 24, "has_quality": true},
+    {"id": "pickled_carrot", "name": "腌渍胡萝卜", "icon": "cooking-pot", "kind": "product", "sell_price": 22, "has_quality": true}
   ],
   "crops": [
     {
@@ -166,6 +176,93 @@
       "min_level": 4,
       "prerequisites": ["gathering_roster_1"],
       "partner_capacity_bonus": 1
+    }
+  ],
+  "crafting_stations": [
+    {
+      "id": "town_workbench",
+      "name": "镇民工坊",
+      "description": "一张结实的工作台，可以处理农作物和林野素材。",
+      "accent": "#b08155",
+      "min_level": 3
+    }
+  ],
+  "recipes": [
+    {
+      "id": "saw_maple_plank",
+      "station_id": "town_workbench",
+      "name": "锯制枫木板",
+      "inputs": [{"item_id": "maple_wood", "quantity": 2}],
+      "produce_item_id": "maple_plank",
+      "produce_quantity": 1,
+      "duration_seconds": 60,
+      "time_difficulty": 100,
+      "stamina_cost": 1,
+      "collect_xp": 6,
+      "quality": {
+        "thresholds": [45, 90, 150, 230],
+        "width": 16,
+        "miracle_probability_cap": 0.003,
+        "miracle_eligible": false
+      },
+      "unlock_condition": {"hook": "player_level", "params": {"level": 3}}
+    },
+    {
+      "id": "make_herbal_salve",
+      "station_id": "town_workbench",
+      "name": "调制秋露药膏",
+      "inputs": [{"item_id": "autumn_herb", "quantity": 2}],
+      "produce_item_id": "herbal_salve",
+      "produce_quantity": 1,
+      "duration_seconds": 90,
+      "time_difficulty": 125,
+      "stamina_cost": 1,
+      "collect_xp": 8,
+      "quality": {
+        "thresholds": [55, 105, 170, 255],
+        "width": 18,
+        "miracle_probability_cap": 0.003,
+        "miracle_eligible": false
+      },
+      "unlock_condition": {"hook": "player_level", "params": {"level": 3}}
+    },
+    {
+      "id": "mill_flour",
+      "station_id": "town_workbench",
+      "name": "研磨小麦粉",
+      "inputs": [{"item_id": "wheat", "quantity": 2}],
+      "produce_item_id": "flour",
+      "produce_quantity": 1,
+      "duration_seconds": 75,
+      "time_difficulty": 115,
+      "stamina_cost": 1,
+      "collect_xp": 7,
+      "quality": {
+        "thresholds": [50, 100, 165, 250],
+        "width": 17,
+        "miracle_probability_cap": 0.003,
+        "miracle_eligible": false
+      },
+      "unlock_condition": {"hook": "player_level", "params": {"level": 3}}
+    },
+    {
+      "id": "pickle_carrot",
+      "station_id": "town_workbench",
+      "name": "腌渍胡萝卜",
+      "inputs": [{"item_id": "carrot", "quantity": 3}],
+      "produce_item_id": "pickled_carrot",
+      "produce_quantity": 1,
+      "duration_seconds": 120,
+      "time_difficulty": 145,
+      "stamina_cost": 1,
+      "collect_xp": 10,
+      "quality": {
+        "thresholds": [65, 120, 190, 280],
+        "width": 20,
+        "miracle_probability_cap": 0.003,
+        "miracle_eligible": false
+      },
+      "unlock_condition": {"hook": "player_level", "params": {"level": 4}}
     }
   ],
   "shop": [

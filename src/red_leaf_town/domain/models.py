@@ -11,6 +11,12 @@ class TaskPartnerSnapshot(BaseModel):
     ability: int = Field(ge=0)
 
 
+class TaskInputSnapshot(BaseModel):
+    item_id: str = Field(min_length=1)
+    quality: int = Field(ge=0, le=5)
+    quantity: int = Field(ge=1)
+
+
 class TaskQualitySnapshot(BaseModel):
     ability: int = Field(default=0, ge=0)
     thresholds: list[float] = Field(default_factory=lambda: [1, 2, 3, 4], min_length=4, max_length=4)
@@ -50,6 +56,7 @@ class ProductionTaskSnapshot(BaseModel):
     yield_min: int = Field(ge=1)
     yield_max: int = Field(ge=1)
     harvest_xp: int = Field(ge=0)
+    consumed_inputs: list[TaskInputSnapshot] = Field(default_factory=list)
     quality_parameters: TaskQualitySnapshot = Field(default_factory=TaskQualitySnapshot)
 
     @model_validator(mode="after")
@@ -97,6 +104,17 @@ class GatheringSiteState(BaseModel):
         return self.task_snapshot is None
 
 
+class CraftingStationState(BaseModel):
+    station_id: str = Field(min_length=1)
+    assigned_partner_ids: list[str] = Field(default_factory=list, max_length=1)
+    task_snapshot: ProductionTaskSnapshot | None = None
+    task_result: ProductionResultSnapshot | None = None
+
+    @property
+    def empty(self) -> bool:
+        return self.task_snapshot is None
+
+
 class OwnedPartnerState(BaseModel):
     partner_id: str = Field(min_length=1)
     level: int = Field(default=1, ge=1, le=60)
@@ -115,7 +133,7 @@ class OwnedPartnerState(BaseModel):
 
 
 class PlayerState(BaseModel):
-    schema_version: int = 6
+    schema_version: int = 7
     version: int = 1
     player_id: str
     oauth_sub: str
@@ -128,6 +146,7 @@ class PlayerState(BaseModel):
     inventory: dict[str, dict[int, int]] = Field(default_factory=dict)
     plots: list[PlotState] = Field(default_factory=list)
     gathering_sites: list[GatheringSiteState] = Field(default_factory=list)
+    crafting_stations: list[CraftingStationState] = Field(default_factory=list)
     talent_nodes: list[str] = Field(default_factory=list)
     owned_partners: list[OwnedPartnerState] = Field(default_factory=list)
     created_at: int
@@ -159,7 +178,9 @@ class PlayerState(BaseModel):
         if schema_version < 6:
             migrated.setdefault("gathering_sites", [])
             migrated.setdefault("talent_nodes", [])
-        migrated["schema_version"] = 6
+        if schema_version < 7:
+            migrated.setdefault("crafting_stations", [])
+        migrated["schema_version"] = 7
         return migrated
 
     @model_validator(mode="after")
@@ -176,7 +197,7 @@ class PlayerState(BaseModel):
             raise ValueError("player cannot unlock the same talent node more than once")
         assigned_ids = [
             partner_id
-            for production_slot in [*self.plots, *self.gathering_sites]
+            for production_slot in [*self.plots, *self.gathering_sites, *self.crafting_stations]
             for partner_id in production_slot.assigned_partner_ids
         ]
         if len(assigned_ids) != len(set(assigned_ids)):

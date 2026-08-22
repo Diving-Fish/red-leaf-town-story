@@ -138,6 +138,39 @@ class TalentNodeDefinition(BaseModel):
     partner_capacity_bonus: int = Field(default=0, ge=0)
 
 
+class RecipeUnlockCondition(BaseModel):
+    hook: str = Field(min_length=1)
+    params: dict[str, int | str | bool]
+
+
+class RecipeInputDefinition(BaseModel):
+    item_id: str = Field(min_length=1)
+    quantity: int = Field(ge=1)
+
+
+class CraftingStationDefinition(BaseModel):
+    id: str = Field(min_length=1)
+    name: str = Field(min_length=1)
+    description: str = ""
+    accent: str
+    min_level: int = Field(default=1, ge=1)
+
+
+class RecipeDefinition(BaseModel):
+    id: str = Field(min_length=1)
+    station_id: str = Field(min_length=1)
+    name: str = Field(min_length=1)
+    inputs: list[RecipeInputDefinition] = Field(min_length=1)
+    produce_item_id: str = Field(min_length=1)
+    produce_quantity: int = Field(default=1, ge=1)
+    duration_seconds: int = Field(gt=0)
+    time_difficulty: int = Field(gt=0)
+    stamina_cost: int = Field(ge=0)
+    collect_xp: int = Field(ge=0)
+    quality: QualityCurveDefinition
+    unlock_condition: RecipeUnlockCondition
+
+
 class ShopEntry(BaseModel):
     id: str
     item_id: str
@@ -158,6 +191,8 @@ class GameContent(BaseModel):
     gathering_sites: list[GatheringSiteDefinition] = Field(default_factory=list)
     gathering_tasks: list[GatheringTaskDefinition] = Field(default_factory=list)
     talents: list[TalentNodeDefinition] = Field(default_factory=list)
+    crafting_stations: list[CraftingStationDefinition] = Field(default_factory=list)
+    recipes: list[RecipeDefinition] = Field(default_factory=list)
     shop: list[ShopEntry]
 
     @model_validator(mode="after")
@@ -172,6 +207,8 @@ class GameContent(BaseModel):
         unique([entry.id for entry in self.gathering_sites], "gathering site")
         unique([entry.id for entry in self.gathering_tasks], "gathering task")
         unique([entry.id for entry in self.talents], "talent")
+        unique([entry.id for entry in self.crafting_stations], "crafting station")
+        unique([entry.id for entry in self.recipes], "recipe")
         levels = [entry.level for entry in self.levels]
         unique([str(level) for level in levels], "level")
         if levels != sorted(levels) or not levels or levels[0] != 1:
@@ -183,6 +220,8 @@ class GameContent(BaseModel):
             raise ValueError("farming industry rules are required")
         if "gathering" not in self.industries:
             raise ValueError("gathering industry rules are required")
+        if "crafting" not in self.industries:
+            raise ValueError("crafting industry rules are required")
 
         items = {item.id for item in self.items}
         for crop in self.crops:
@@ -204,6 +243,20 @@ class GameContent(BaseModel):
                 raise ValueError(f"talent {talent.id} references an unknown industry")
             if any(prerequisite not in talent_ids for prerequisite in talent.prerequisites):
                 raise ValueError(f"talent {talent.id} references an unknown prerequisite")
+        crafting_station_ids = {station.id for station in self.crafting_stations}
+        from red_leaf_town.recipe_unlocks import recipe_unlock_hook_exists, validate_recipe_unlock
+        for recipe in self.recipes:
+            if recipe.station_id not in crafting_station_ids:
+                raise ValueError(f"recipe {recipe.id} references an unknown crafting station")
+            if recipe.produce_item_id not in items:
+                raise ValueError(f"recipe {recipe.id} references an unknown output item")
+            if not self.item_map[recipe.produce_item_id].has_quality:
+                raise ValueError(f"recipe {recipe.id} output must support quality")
+            if any(requirement.item_id not in items for requirement in recipe.inputs):
+                raise ValueError(f"recipe {recipe.id} references an unknown input item")
+            if not recipe_unlock_hook_exists(recipe.unlock_condition.hook):
+                raise ValueError(f"recipe {recipe.id} references an unknown unlock hook")
+            validate_recipe_unlock(recipe.unlock_condition.hook, recipe.unlock_condition.params)
         for entry in self.shop:
             if entry.item_id not in items:
                 raise ValueError(f"shop {entry.id} references an unknown item")
@@ -232,6 +285,14 @@ class GameContent(BaseModel):
     @property
     def talent_map(self) -> dict[str, TalentNodeDefinition]:
         return {entry.id: entry for entry in self.talents}
+
+    @property
+    def crafting_station_map(self) -> dict[str, CraftingStationDefinition]:
+        return {entry.id: entry for entry in self.crafting_stations}
+
+    @property
+    def recipe_map(self) -> dict[str, RecipeDefinition]:
+        return {entry.id: entry for entry in self.recipes}
 
     def level_for_xp(self, experience: int) -> LevelDefinition:
         current = self.levels[0]

@@ -90,7 +90,14 @@ export interface ProductionTaskSnapshot {
   yield_min: number
   yield_max: number
   harvest_xp: number
+  consumed_inputs: TaskInputSnapshot[]
   quality_parameters: TaskQualitySnapshot
+}
+
+export interface TaskInputSnapshot {
+  item_id: string
+  quality: number
+  quantity: number
 }
 
 export interface IndustryRules {
@@ -167,6 +174,55 @@ export interface TalentState {
   nodes: TalentNode[]
 }
 
+export interface RecipeInputState {
+  item_id: string
+  quantity: number
+  item: GatheringTaskDefinition['item']
+  owned_quantity: number
+  owned_by_quality: Record<number, number>
+}
+
+export interface RecipeState {
+  id: string
+  station_id: string
+  name: string
+  inputs: RecipeInputState[]
+  produce_item_id: string
+  produce_quantity: number
+  duration_seconds: number
+  time_difficulty: number
+  stamina_cost: number
+  collect_xp: number
+  quality: QualityCurveDefinition
+  unlock_condition: { hook: string; params: Record<string, number | string | boolean> }
+  item: GatheringTaskDefinition['item']
+  unlocked: boolean
+  unlock_description: string
+  ingredients_available: boolean
+}
+
+export interface CraftingStationState {
+  station_id: string
+  assigned_partner_ids: string[]
+  task_snapshot: ProductionTaskSnapshot | null
+  task_result: ProductionResultSnapshot | null
+  empty: boolean
+  ready: boolean
+  remaining_seconds: number
+  definition: {
+    id: string
+    name: string
+    description: string
+    accent: string
+    min_level: number
+  } | null
+  recipe: RecipeState | null
+  recipes: RecipeState[]
+  assigned_partners: OwnedPartner[]
+  assignment_locked: boolean
+  assignment_locked_until: number | null
+}
+
 export interface InventoryItem {
   item_id: string
   inventory_key: string
@@ -205,6 +261,8 @@ export interface GameState {
   next_plot_level: number | null
   gathering_sites: GatheringSiteState[]
   next_gathering_site_level: number | null
+  crafting_stations: CraftingStationState[]
+  next_crafting_station_level: number | null
   inventory: InventoryItem[]
   partners: OwnedPartner[]
   partner_count: number
@@ -316,6 +374,7 @@ export interface OwnedPartner {
   breakthrough_available?: boolean
   assigned_plot_slot: number | null
   assigned_gathering_site_id: string | null
+  assigned_crafting_station_id: string | null
   locked: boolean
   locked_until: number | null
 }

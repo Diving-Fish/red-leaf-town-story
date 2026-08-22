@@ -16,6 +16,7 @@ import {
   Sparkles,
   Sprout,
   Trees,
+  Hammer,
   UserRound,
   X,
 } from 'lucide-vue-next'
@@ -41,6 +42,7 @@ const loginUrl = computed(() => `/api/oauth/red-leaf-town/start?next=${encodeURI
 const navItems = [
   { to: '/', label: '农场', icon: Sprout },
   { to: '/gathering', label: '采集', icon: Trees },
+  { to: '/crafting', label: '加工', icon: Hammer },
   { to: '/shop', label: '种子商店', icon: ShoppingBasket },
   { to: '/inventory', label: '仓库', icon: Archive },
   { to: '/partners', label: '伙伴', icon: Sparkles },

@@ -40,6 +40,10 @@ function assignmentLabel(partner: OwnedPartner) {
     const site = game.state?.gathering_sites.find((entry) => entry.site_id === partner.assigned_gathering_site_id)
     return `采集 · ${site?.definition?.name || partner.assigned_gathering_site_id}${partner.locked ? ' · 任务中' : ''}`
   }
+  if (partner.assigned_crafting_station_id) {
+    const station = game.state?.crafting_stations.find((entry) => entry.station_id === partner.assigned_crafting_station_id)
+    return `加工 · ${station?.definition?.name || partner.assigned_crafting_station_id}${partner.locked ? ' · 任务中' : ''}`
+  }
   return '未派驻'
 }
 </script>
@@ -81,7 +85,7 @@ function assignmentLabel(partner: OwnedPartner) {
             />
             <Sparkles v-else :size="19" />
           </span>
-          <span><strong>{{ partner.name }}</strong><small>Lv.{{ partner.level }} · {{ partner.assigned_plot_slot !== null || partner.assigned_gathering_site_id ? assignmentLabel(partner) : breakthroughName(partner.breakthrough) }}</small></span>
+          <span><strong>{{ partner.name }}</strong><small>Lv.{{ partner.level }} · {{ partner.assigned_plot_slot !== null || partner.assigned_gathering_site_id || partner.assigned_crafting_station_id ? assignmentLabel(partner) : breakthroughName(partner.breakthrough) }}</small></span>
           <i>{{ partner.rarity ? `${partner.rarity}★` : '?' }}</i>
         </RouterLink>
       </aside>
