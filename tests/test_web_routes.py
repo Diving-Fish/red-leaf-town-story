@@ -177,6 +177,23 @@ async def test_crafting_recipe_hook_and_start_api(client, service):
 
 
 @runs
+async def test_mining_start_api_allows_player_without_partner(client, service):
+    player = service.repository.get_by_sub("route-sub")
+    service.repository.update(player.player_id, lambda state: setattr(state, "experience", 20))
+    authenticate(client)
+
+    started = await client.post(
+        "/api/red-leaf-town/mining/sites/copper_foothill/start",
+        json={"task_id": "mine_red_copper"},
+    )
+    body = await started.get_json()
+    assert started.status_code == 200
+    site = body["data"]["state"]["mining_sites"][0]
+    assert site["task_snapshot"]["industry"] == "mining"
+    assert site["task_snapshot"]["assigned_partner_ids"] == []
+
+
+@runs
 async def test_invalid_action_returns_structured_error(client):
     authenticate(client)
     response = await client.post("/api/red-leaf-town/plots/0/plant", json={"crop_id": "carrot"})

@@ -153,6 +153,29 @@ export const useGameStore = defineStore('game', () => {
     return result
   }
 
+  function assignMiningPartner(siteId: string, partnerId: string | null) {
+    return action(
+      `/api/red-leaf-town/mining/sites/${siteId}/partner`,
+      { partner_id: partnerId || '' },
+      partnerId ? '伙伴已安排到矿点' : '伙伴已撤下',
+      'PUT',
+    )
+  }
+
+  function startMining(siteId: string, taskId: string) {
+    return action(
+      `/api/red-leaf-town/mining/sites/${siteId}/start`,
+      { task_id: taskId },
+      '采矿任务已经开始',
+    )
+  }
+
+  async function collectMining(siteId: string) {
+    const result = await action(`/api/red-leaf-town/mining/sites/${siteId}/collect`)
+    if (result) showNotice(`取得了 ${result.quantity} 个${result.quality_name || ''}矿石`)
+    return result
+  }
+
   function sell(itemId: string, quantity: number, quality: number | null = null) {
     return action(`/api/red-leaf-town/inventory/${itemId}/sell`, { quantity, quality: quality || 0 }, '交易完成')
   }
@@ -217,6 +240,9 @@ export const useGameStore = defineStore('game', () => {
     assignCraftingPartner,
     startCrafting,
     collectCrafting,
+    assignMiningPartner,
+    startMining,
+    collectMining,
     sell,
     createBindingCode,
     logout,

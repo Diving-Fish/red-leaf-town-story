@@ -1,5 +1,5 @@
 {
-  "schema_version": 5,
+  "schema_version": 6,
   "game": {
     "title": "红叶镇物语",
     "starting_coins": 80,
@@ -35,13 +35,19 @@
       "partner_capacity": 1,
       "partner_level_cap": 20,
       "collaborator_slots": 1
+    },
+    "mining": {
+      "character_base_ability": 0,
+      "partner_capacity": 1,
+      "partner_level_cap": 20,
+      "collaborator_slots": 1
     }
   },
   "levels": [
     {"level": 1, "total_xp": 0, "plot_slots": 3, "stamina_cap": 20, "unlocks": ["system:farming", "system:gathering", "crop:carrot", "gathering:maple_forest"]},
-    {"level": 2, "total_xp": 20, "plot_slots": 3, "stamina_cap": 22, "unlocks": ["crop:wheat"]},
+    {"level": 2, "total_xp": 20, "plot_slots": 3, "stamina_cap": 22, "unlocks": ["crop:wheat", "system:mining", "mining:copper_foothill"]},
     {"level": 3, "total_xp": 60, "plot_slots": 4, "stamina_cap": 24, "unlocks": ["system:crafting"]},
-    {"level": 4, "total_xp": 130, "plot_slots": 4, "stamina_cap": 26, "unlocks": ["system:livestock"]},
+    {"level": 4, "total_xp": 130, "plot_slots": 4, "stamina_cap": 26, "unlocks": ["system:livestock", "mining:moonstone_depths"]},
     {"level": 5, "total_xp": 240, "plot_slots": 5, "stamina_cap": 28, "unlocks": ["system:gacha"]}
   ],
   "items": [
@@ -54,7 +60,9 @@
     {"id": "maple_plank", "name": "枫木板", "icon": "panels-top-left", "kind": "product", "sell_price": 18, "has_quality": true},
     {"id": "herbal_salve", "name": "秋露药膏", "icon": "flask-conical", "kind": "product", "sell_price": 28, "has_quality": true},
     {"id": "flour", "name": "小麦粉", "icon": "package", "kind": "product", "sell_price": 24, "has_quality": true},
-    {"id": "pickled_carrot", "name": "腌渍胡萝卜", "icon": "cooking-pot", "kind": "product", "sell_price": 22, "has_quality": true}
+    {"id": "pickled_carrot", "name": "腌渍胡萝卜", "icon": "cooking-pot", "kind": "product", "sell_price": 22, "has_quality": true},
+    {"id": "red_copper_ore", "name": "赤铜矿", "icon": "pickaxe", "kind": "material", "sell_price": 12, "has_quality": true},
+    {"id": "moon_silver_ore", "name": "月银矿", "icon": "gem", "kind": "material", "sell_price": 24, "has_quality": true}
   ],
   "crops": [
     {
@@ -263,6 +271,62 @@
         "miracle_eligible": false
       },
       "unlock_condition": {"hook": "player_level", "params": {"level": 4}}
+    }
+  ],
+  "mining_sites": [
+    {
+      "id": "copper_foothill",
+      "name": "赤岩山脚",
+      "description": "镇北浅层矿脉裸露的山脚，赤铜矿分布稳定。",
+      "accent": "#b66e4d",
+      "min_level": 2
+    },
+    {
+      "id": "moonstone_depths",
+      "name": "月石深洞",
+      "description": "旧矿道深处偶尔闪过银白矿光，作业时间更长。",
+      "accent": "#788ba8",
+      "min_level": 4
+    }
+  ],
+  "mining_tasks": [
+    {
+      "id": "mine_red_copper",
+      "site_id": "copper_foothill",
+      "name": "开采赤铜矿脉",
+      "produce_item_id": "red_copper_ore",
+      "duration_seconds": 75,
+      "time_difficulty": 115,
+      "yield_min": 2,
+      "yield_max": 3,
+      "stamina_cost": 2,
+      "collect_xp": 7,
+      "min_level": 2,
+      "quality": {
+        "thresholds": [50, 100, 165, 250],
+        "width": 17,
+        "miracle_probability_cap": 0.003,
+        "miracle_eligible": false
+      }
+    },
+    {
+      "id": "mine_moon_silver",
+      "site_id": "moonstone_depths",
+      "name": "勘采月银矿脉",
+      "produce_item_id": "moon_silver_ore",
+      "duration_seconds": 150,
+      "time_difficulty": 180,
+      "yield_min": 1,
+      "yield_max": 2,
+      "stamina_cost": 3,
+      "collect_xp": 13,
+      "min_level": 4,
+      "quality": {
+        "thresholds": [75, 140, 215, 310],
+        "width": 21,
+        "miracle_probability_cap": 0.003,
+        "miracle_eligible": false
+      }
     }
   ],
   "shop": [

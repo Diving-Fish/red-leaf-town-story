@@ -223,6 +223,32 @@ export interface CraftingStationState {
   assignment_locked_until: number | null
 }
 
+export interface MiningTaskDefinition extends Omit<GatheringTaskDefinition, 'site_id'> {
+  site_id: string
+}
+
+export interface MiningSiteState {
+  site_id: string
+  assigned_partner_ids: string[]
+  task_snapshot: ProductionTaskSnapshot | null
+  task_result: ProductionResultSnapshot | null
+  empty: boolean
+  ready: boolean
+  remaining_seconds: number
+  definition: {
+    id: string
+    name: string
+    description: string
+    accent: string
+    min_level: number
+  } | null
+  task: MiningTaskDefinition | null
+  available_tasks: MiningTaskDefinition[]
+  assigned_partners: OwnedPartner[]
+  assignment_locked: boolean
+  assignment_locked_until: number | null
+}
+
 export interface InventoryItem {
   item_id: string
   inventory_key: string
@@ -263,6 +289,8 @@ export interface GameState {
   next_gathering_site_level: number | null
   crafting_stations: CraftingStationState[]
   next_crafting_station_level: number | null
+  mining_sites: MiningSiteState[]
+  next_mining_site_level: number | null
   inventory: InventoryItem[]
   partners: OwnedPartner[]
   partner_count: number
@@ -375,6 +403,7 @@ export interface OwnedPartner {
   assigned_plot_slot: number | null
   assigned_gathering_site_id: string | null
   assigned_crafting_station_id: string | null
+  assigned_mining_site_id: string | null
   locked: boolean
   locked_until: number | null
 }

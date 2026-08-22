@@ -6,6 +6,8 @@ import ShopView from '@/views/ShopView.vue'
 import PartnersView from '@/views/PartnersView.vue'
 import GatheringView from '@/views/GatheringView.vue'
 import CraftingView from '@/views/CraftingView.vue'
+import MiningView from '@/views/MiningView.vue'
+import DashboardView from '@/views/DashboardView.vue'
 
 export default createRouter({
   history: createWebHistory('/red-leaf-town/'),
@@ -16,9 +18,11 @@ export default createRouter({
       component: () => import('@/views/AdminPartnersView.vue'),
       meta: { title: '伙伴管理', admin: true },
     },
-    { path: '/', name: 'farm', component: FarmView, meta: { title: '农场' } },
+    { path: '/', name: 'dashboard', component: DashboardView, meta: { title: '总览' } },
+    { path: '/farm', name: 'farm', component: FarmView, meta: { title: '农场' } },
     { path: '/gathering', name: 'gathering', component: GatheringView, meta: { title: '采集' } },
     { path: '/crafting', name: 'crafting', component: CraftingView, meta: { title: '加工' } },
+    { path: '/mining', name: 'mining', component: MiningView, meta: { title: '矿产' } },
     { path: '/shop', name: 'shop', component: ShopView, meta: { title: '种子商店' } },
     { path: '/inventory', name: 'inventory', component: InventoryView, meta: { title: '仓库' } },
     { path: '/partners/:partnerId?', name: 'partners', component: PartnersView, meta: { title: '伙伴仓库' } },

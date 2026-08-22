@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from red_leaf_town.content import GameContent
 
-from .models import CraftingStationState, GatheringSiteState, PlayerState, PlotState
+from .models import CraftingStationState, GatheringSiteState, MiningSiteState, PlayerState, PlotState
 
 
 def settle_stamina(player: PlayerState, content: GameContent, now: int) -> None:
@@ -43,6 +43,7 @@ def grant_experience(player: PlayerState, amount: int, content: GameContent) -> 
     normalize_plot_slots(player, content)
     normalize_gathering_sites(player, content)
     normalize_crafting_stations(player, content)
+    normalize_mining_sites(player, content)
     return unlocked_levels
 
 
@@ -66,5 +67,14 @@ def normalize_crafting_stations(player: PlayerState, content: GameContent) -> No
     player.crafting_stations = [
         current.get(definition.id, CraftingStationState(station_id=definition.id))
         for definition in content.crafting_stations
+        if definition.min_level <= player.level
+    ]
+
+
+def normalize_mining_sites(player: PlayerState, content: GameContent) -> None:
+    current = {site.site_id: site for site in player.mining_sites}
+    player.mining_sites = [
+        current.get(definition.id, MiningSiteState(site_id=definition.id))
+        for definition in content.mining_sites
         if definition.min_level <= player.level
     ]

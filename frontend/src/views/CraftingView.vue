@@ -72,7 +72,7 @@ function inputName(station: CraftingStationState, itemId: string) {
       <span>加工允许玩家独自操作；派驻具有加工倾向的伙伴可以缩短时间并提高品质能力。开工默认优先消耗低品质原料。</span>
     </div>
 
-    <div v-if="!game.state.crafting_stations.length" class="locked-workshop">
+    <div v-if="!game.state.crafting_stations.length" class="locked-panel">
       <Lock :size="34" />
       <h2>镇民工坊尚未开放</h2>
       <p>居民等级 {{ game.state.next_crafting_station_level || 3 }} 解锁加工产业。</p>
@@ -82,14 +82,14 @@ function inputName(station: CraftingStationState, itemId: string) {
       <article
         v-for="station in game.state.crafting_stations"
         :key="station.station_id"
-        class="crafting-station"
+        class="surface-card industry-card crafting-station"
         :class="{ ready: station.ready }"
-        :style="{ '--station-accent': station.definition?.accent || '#ad8159' }"
+        :style="{ '--industry-accent': station.definition?.accent || '#ad8159' }"
       >
-        <header class="station-heading">
-          <span><Hammer :size="25" /></span>
+        <header class="industry-card-heading station-heading">
+          <span class="industry-card-icon"><Hammer :size="25" /></span>
           <div><h2>{{ station.definition?.name || station.station_id }}</h2><p>{{ station.definition?.description }}</p></div>
-          <label>
+          <label class="production-partner-field">
             <small>协助伙伴（可选）</small>
             <select :value="station.assigned_partner_ids[0] || ''" :disabled="game.busy || station.assignment_locked" @change="assign(station.station_id, $event)">
               <option value="">玩家独自加工</option>
@@ -103,8 +103,8 @@ function inputName(station: CraftingStationState, itemId: string) {
           </label>
         </header>
 
-        <div v-if="station.assigned_partners[0]" class="artisan-chip">
-          <span>
+        <div v-if="station.assigned_partners[0]" class="production-partner-chip">
+          <span class="production-avatar">
             <CroppedImage
               v-if="station.assigned_partners[0].artwork?.url && station.assigned_partners[0].avatar_crop"
               :image-url="station.assigned_partners[0].artwork!.url!"
@@ -119,7 +119,7 @@ function inputName(station: CraftingStationState, itemId: string) {
         </div>
 
         <div v-if="station.empty" class="recipe-grid">
-          <article v-for="recipe in station.recipes" :key="recipe.id" class="recipe-card" :class="{ locked: !recipe.unlocked }">
+          <article v-for="recipe in station.recipes" :key="recipe.id" class="surface-card recipe-card" :class="{ locked: !recipe.unlocked }">
             <div class="recipe-output">
               <span><GameIcon :name="recipe.item.icon" :size="24" /></span>
               <div><h3>{{ recipe.name }}</h3><small>产出 {{ recipe.produce_quantity }} 个{{ recipe.item.name }}</small></div>
@@ -141,8 +141,8 @@ function inputName(station: CraftingStationState, itemId: string) {
           </article>
         </div>
 
-        <div v-else-if="station.ready" class="crafting-result">
-          <span><GameIcon :name="station.recipe?.item.icon" :size="34" /></span>
+        <div v-else-if="station.ready" class="production-status crafting-result">
+          <span class="production-task-icon"><GameIcon :name="station.recipe?.item.icon" :size="34" /></span>
           <div><strong>加工完成</strong><small v-if="station.task_result">{{ qualityNames[station.task_result.quality] }}品质 · {{ station.task_result.quantity }} 个{{ station.recipe?.item.name }}</small></div>
           <button class="primary-button" :disabled="game.busy" @click="game.collectCrafting(station.station_id)">领取成品</button>
         </div>
@@ -150,7 +150,7 @@ function inputName(station: CraftingStationState, itemId: string) {
         <div v-else class="crafting-running">
           <div class="running-product"><span><GameIcon :name="station.recipe?.item.icon" :size="28" /></span><div><strong>{{ station.recipe?.name }}</strong><small>品质 Q{{ station.task_snapshot?.quality_parameters.ability }} · 剩余 {{ timeLabel(remaining(station)) }}</small></div><Clock3 :size="17" /></div>
           <div class="consumed-list"><small>已投入</small><span v-for="input in station.task_snapshot?.consumed_inputs" :key="`${input.item_id}:${input.quality}`">{{ qualityNames[input.quality] || '无品质' }}{{ inputName(station, input.item_id) }} ×{{ input.quantity }}</span></div>
-          <div class="crafting-progress"><i :style="{ width: `${progress(station)}%` }" /></div>
+          <div class="production-progress"><i :style="{ width: `${progress(station)}%` }" /></div>
         </div>
       </article>
     </div>
@@ -158,6 +158,6 @@ function inputName(station: CraftingStationState, itemId: string) {
 </template>
 
 <style scoped>
-.crafting-tip { margin-bottom: 24px; }.locked-workshop { min-height: 330px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #778178; border: 1px dashed var(--line); border-radius: 22px 7px; background: #12191588; }.locked-workshop h2 { margin: 12px 0 4px; color: #aab3aa; font-family: Georgia, 'Noto Serif SC', serif; }.locked-workshop p { margin: 0; font-size: 11px; }.station-list { display: grid; gap: 18px; }.crafting-station { --station-accent: #ad8159; padding: 20px; border: 1px solid color-mix(in srgb, var(--station-accent) 32%, transparent); border-radius: 22px 7px; background: linear-gradient(145deg, color-mix(in srgb, var(--station-accent) 7%, #141b16), #111814); }.crafting-station.ready { box-shadow: inset 0 0 42px color-mix(in srgb, var(--station-accent) 8%, transparent); }.station-heading { display: grid; grid-template-columns: auto 1fr minmax(200px, 270px); align-items: center; gap: 13px; padding-bottom: 15px; border-bottom: 1px solid #ffffff0d; }.station-heading > span { width: 47px; height: 47px; display: grid; place-items: center; color: var(--station-accent); border-radius: 14px 5px; background: color-mix(in srgb, var(--station-accent) 13%, transparent); }.station-heading h2 { margin: 0 0 4px; font: 600 18px Georgia, 'Noto Serif SC', serif; }.station-heading p { margin: 0; color: #79837b; font-size: 10px; }.station-heading label small { display: block; margin-bottom: 4px; color: #727d75; font-size: 8px; }.station-heading select { width: 100%; height: 35px; padding: 0 9px; color: #cad2c8; border: 1px solid #ffffff14; border-radius: 8px; background: #0c120e; }.artisan-chip { width: fit-content; display: flex; align-items: center; gap: 8px; padding: 7px 10px; margin-top: 12px; border-radius: 10px; background: #ffffff05; }.artisan-chip > span { width: 31px; height: 31px; overflow: hidden; display: grid; place-items: center; border-radius: 9px 3px; background: #293028; }.artisan-chip strong,.artisan-chip small { display: block; }.artisan-chip strong { font-size: 10px; }.artisan-chip small { margin-top: 2px; color: #768078; font-size: 8px; }.recipe-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 15px; }.recipe-card { padding: 13px; border: 1px solid #ffffff0f; border-radius: 13px; background: #0c130f99; }.recipe-card.locked { opacity: .58; }.recipe-output { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 9px; }.recipe-output > span { width: 38px; height: 38px; display: grid; place-items: center; color: var(--station-accent); border-radius: 11px 4px; background: color-mix(in srgb, var(--station-accent) 11%, transparent); }.recipe-output h3 { margin: 0; font-size: 12px; }.recipe-output small { color: #78827a; font-size: 8px; }.recipe-inputs { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 11px; }.recipe-inputs span { display: flex; align-items: center; gap: 4px; padding: 4px 6px; color: #9eaa9f; border-radius: 6px; background: #ffffff05; font-size: 8px; }.recipe-inputs span.missing { color: #c08073; }.recipe-card > p { min-height: 14px; margin: 8px 0; color: #737e76; font-size: 8px; }.recipe-card .unlock-copy { color: #ae9163; }.recipe-card button { width: 100%; }.crafting-result { min-height: 130px; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 13px; margin-top: 15px; padding: 18px; border-radius: 14px; background: #0c130f99; }.crafting-result > span,.running-product > span { width: 52px; height: 52px; display: grid; place-items: center; color: var(--station-accent); border-radius: 15px 5px; background: color-mix(in srgb, var(--station-accent) 13%, transparent); }.crafting-result strong,.crafting-result small,.running-product strong,.running-product small { display: block; }.crafting-result small,.running-product small { margin-top: 4px; color: #7a867c; font-size: 9px; }.crafting-running { margin-top: 15px; padding: 15px; border-radius: 14px; background: #0c130f99; }.running-product { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 11px; }.consumed-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }.consumed-list small { color: #727d75; }.consumed-list span { padding: 3px 6px; color: #9ca69d; border-radius: 5px; background: #ffffff05; font-size: 8px; }.crafting-progress { height: 5px; overflow: hidden; margin-top: 12px; border-radius: 99px; background: #ffffff0b; }.crafting-progress i { display: block; height: 100%; border-radius: inherit; background: var(--station-accent); transition: width .4s ease; }
+.crafting-tip { margin-bottom: 24px; }.station-list { display: grid; gap: 18px; }.station-heading { grid-template-columns: auto 1fr minmax(220px, 280px); padding-bottom: 15px; border-bottom: 1px solid #ffffff0d; }.station-heading .production-partner-field { display: block; margin: 0; }.recipe-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 15px; }.recipe-card { padding: 13px; border-radius: 13px; background: #0c130f99; }.recipe-card.locked { opacity: .58; }.recipe-output { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 9px; }.recipe-output > span { width: 40px; height: 40px; display: grid; place-items: center; color: var(--industry-accent); border-radius: 11px 4px; background: color-mix(in srgb, var(--industry-accent) 11%, transparent); }.recipe-output h3 { margin: 0; }.recipe-output small { color: #78827a; }.recipe-inputs { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 11px; }.recipe-inputs span { display: flex; align-items: center; gap: 4px; padding: 5px 7px; color: #9eaa9f; border-radius: 6px; background: #ffffff05; }.recipe-inputs span.missing { color: #c08073; }.recipe-card > p { min-height: 16px; margin: 9px 0; color: #7c877e; }.recipe-card .unlock-copy { color: #ae9163; }.recipe-card button { width: 100%; }.crafting-result { min-height: 130px; }.crafting-running { margin-top: 15px; padding: 15px; border-radius: 14px; background: #0c130f99; }.running-product { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 11px; }.running-product > span { width: 52px; height: 52px; display: grid; place-items: center; color: var(--industry-accent); border-radius: 15px 5px; background: color-mix(in srgb, var(--industry-accent) 13%, transparent); }.running-product strong,.running-product small { display: block; }.running-product small { margin-top: 4px; color: #7a867c; }.consumed-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }.consumed-list small { color: #7b867d; }.consumed-list span { padding: 4px 7px; color: #a3aca4; border-radius: 5px; background: #ffffff05; }
 @media (max-width: 720px) { .station-heading { grid-template-columns: auto 1fr; }.station-heading label { grid-column: 1 / -1; }.recipe-grid { grid-template-columns: 1fr; }.crafting-result { grid-template-columns: auto 1fr; }.crafting-result button { grid-column: 1 / -1; width: 100%; } }
 </style>

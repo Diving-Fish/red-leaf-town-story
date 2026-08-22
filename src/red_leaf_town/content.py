@@ -171,6 +171,35 @@ class RecipeDefinition(BaseModel):
     unlock_condition: RecipeUnlockCondition
 
 
+class MiningSiteDefinition(BaseModel):
+    id: str = Field(min_length=1)
+    name: str = Field(min_length=1)
+    description: str = ""
+    accent: str
+    min_level: int = Field(default=1, ge=1)
+
+
+class MiningTaskDefinition(BaseModel):
+    id: str = Field(min_length=1)
+    site_id: str = Field(min_length=1)
+    name: str = Field(min_length=1)
+    produce_item_id: str = Field(min_length=1)
+    duration_seconds: int = Field(gt=0)
+    time_difficulty: int = Field(gt=0)
+    yield_min: int = Field(ge=1)
+    yield_max: int = Field(ge=1)
+    stamina_cost: int = Field(ge=0)
+    collect_xp: int = Field(ge=0)
+    min_level: int = Field(ge=1)
+    quality: QualityCurveDefinition
+
+    @model_validator(mode="after")
+    def validate_yield(self):
+        if self.yield_max < self.yield_min:
+            raise ValueError(f"mining task {self.id}: yield_max must be >= yield_min")
+        return self
+
+
 class ShopEntry(BaseModel):
     id: str
     item_id: str
@@ -193,6 +222,8 @@ class GameContent(BaseModel):
     talents: list[TalentNodeDefinition] = Field(default_factory=list)
     crafting_stations: list[CraftingStationDefinition] = Field(default_factory=list)
     recipes: list[RecipeDefinition] = Field(default_factory=list)
+    mining_sites: list[MiningSiteDefinition] = Field(default_factory=list)
+    mining_tasks: list[MiningTaskDefinition] = Field(default_factory=list)
     shop: list[ShopEntry]
 
     @model_validator(mode="after")
@@ -209,6 +240,8 @@ class GameContent(BaseModel):
         unique([entry.id for entry in self.talents], "talent")
         unique([entry.id for entry in self.crafting_stations], "crafting station")
         unique([entry.id for entry in self.recipes], "recipe")
+        unique([entry.id for entry in self.mining_sites], "mining site")
+        unique([entry.id for entry in self.mining_tasks], "mining task")
         levels = [entry.level for entry in self.levels]
         unique([str(level) for level in levels], "level")
         if levels != sorted(levels) or not levels or levels[0] != 1:
@@ -222,6 +255,8 @@ class GameContent(BaseModel):
             raise ValueError("gathering industry rules are required")
         if "crafting" not in self.industries:
             raise ValueError("crafting industry rules are required")
+        if "mining" not in self.industries:
+            raise ValueError("mining industry rules are required")
 
         items = {item.id for item in self.items}
         for crop in self.crops:
@@ -257,6 +292,14 @@ class GameContent(BaseModel):
             if not recipe_unlock_hook_exists(recipe.unlock_condition.hook):
                 raise ValueError(f"recipe {recipe.id} references an unknown unlock hook")
             validate_recipe_unlock(recipe.unlock_condition.hook, recipe.unlock_condition.params)
+        mining_site_ids = {site.id for site in self.mining_sites}
+        for task in self.mining_tasks:
+            if task.site_id not in mining_site_ids:
+                raise ValueError(f"mining task {task.id} references an unknown site")
+            if task.produce_item_id not in items:
+                raise ValueError(f"mining task {task.id} references an unknown item")
+            if not self.item_map[task.produce_item_id].has_quality:
+                raise ValueError(f"mining task {task.id} output must support quality")
         for entry in self.shop:
             if entry.item_id not in items:
                 raise ValueError(f"shop {entry.id} references an unknown item")
@@ -293,6 +336,14 @@ class GameContent(BaseModel):
     @property
     def recipe_map(self) -> dict[str, RecipeDefinition]:
         return {entry.id: entry for entry in self.recipes}
+
+    @property
+    def mining_site_map(self) -> dict[str, MiningSiteDefinition]:
+        return {entry.id: entry for entry in self.mining_sites}
+
+    @property
+    def mining_task_map(self) -> dict[str, MiningTaskDefinition]:
+        return {entry.id: entry for entry in self.mining_tasks}
 
     def level_for_xp(self, experience: int) -> LevelDefinition:
         current = self.levels[0]

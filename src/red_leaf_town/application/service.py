@@ -9,6 +9,7 @@ from red_leaf_town.content import GameContent
 from red_leaf_town.domain import (
     CraftingStationState,
     GatheringSiteState,
+    MiningSiteState,
     OwnedPartnerState,
     PlayerState,
     ProductionResultSnapshot,
@@ -24,6 +25,7 @@ from red_leaf_town.domain.progression import (
     grant_experience,
     normalize_crafting_stations,
     normalize_gathering_sites,
+    normalize_mining_sites,
     normalize_plot_slots,
     settle_stamina,
 )
@@ -430,6 +432,127 @@ class GameService:
         player, result = self._update_by_sub(oauth_sub, mutation)
         return {"result": result, "state": self._snapshot(player, now)}
 
+    def assign_mining_partner(self, oauth_sub: str, site_id: str, partner_id: str = "") -> dict:
+        partner_id = str(partner_id or "").strip()
+        now = self._now()
+        catalog = self.partner_catalog_loader()
+
+        def mutation(player: PlayerState):
+            self._settle(player, now)
+            site = self._mining_site(player, site_id)
+            desired_ids = [partner_id] if partner_id else []
+            if site.assigned_partner_ids == desired_ids:
+                return {"site_id": site_id, "partner_id": partner_id or None, "changed": False}
+            if site.task_snapshot is not None and site.task_snapshot.ready_at > now:
+                raise GameError("partner_assignment_locked", "采矿进行中，不能调整这个矿点的伙伴", 409)
+
+            locked_until = self._partner_lock_deadlines(player, now)
+            affected_ids = set(site.assigned_partner_ids)
+            if partner_id:
+                affected_ids.add(partner_id)
+            if any(locked_until.get(candidate, 0) > now for candidate in affected_ids):
+                raise GameError("partner_locked", "伙伴正在参与进行中的任务，暂时不能移动", 409)
+
+            if partner_id:
+                owned = next((entry for entry in player.owned_partners if entry.partner_id == partner_id), None)
+                definition = catalog.partner_map.get(partner_id)
+                if owned is None:
+                    raise GameError("partner_not_owned", "你还没有这个伙伴", 404)
+                if definition is None:
+                    raise GameError("partner_not_found", "伙伴配置不存在", 404)
+                if not any(tendency.industry == "mining" for tendency in definition.tendencies):
+                    raise GameError("partner_tendency_mismatch", "这个伙伴没有矿产倾向", 409)
+
+            if partner_id:
+                self._clear_partner_assignment(player, partner_id)
+            site.assigned_partner_ids = desired_ids
+            if self._industry_assigned_count(player, "mining") > self._industry_partner_capacity(player, "mining"):
+                raise GameError("partner_capacity_reached", "当前矿产伙伴编制已满", 409)
+            return {"site_id": site_id, "partner_id": partner_id or None, "changed": True}
+
+        player, result = self._update_by_sub(oauth_sub, mutation)
+        return {"result": result, "state": self._snapshot(player, now)}
+
+    def start_mining(self, oauth_sub: str, site_id: str, task_id: str) -> dict:
+        task = self.content.mining_task_map.get(task_id)
+        if task is None or task.site_id != site_id:
+            raise GameError("mining_task_not_found", "这个矿点没有该任务", 404)
+        now = self._now()
+
+        def mutation(player: PlayerState):
+            self._settle(player, now)
+            site = self._mining_site(player, site_id)
+            if player.level < task.min_level:
+                raise GameError("content_locked", f"达到 {task.min_level} 级后解锁")
+            if not site.empty:
+                raise GameError("mining_site_occupied", "这个矿点已有任务")
+            if self._industry_assigned_count(player, "mining") > self._industry_partner_capacity(player, "mining"):
+                raise GameError("partner_capacity_reached", "当前矿产伙伴编制已满", 409)
+            snapshot = self._build_production_task_snapshot(
+                player=player,
+                assigned_partner_ids=site.assigned_partner_ids,
+                industry="mining",
+                content_id=task.id,
+                production_slot_id=f"mining:site:{site.site_id}",
+                now=now,
+                base_duration=task.duration_seconds,
+                time_difficulty=task.time_difficulty,
+                produce_item_id=task.produce_item_id,
+                yield_min=task.yield_min,
+                yield_max=task.yield_max,
+                harvest_xp=task.collect_xp,
+                quality=task.quality,
+            )
+            try:
+                consume_stamina(player, task.stamina_cost, self.content, now)
+            except ValueError as exc:
+                raise GameError("resource_insufficient", str(exc)) from exc
+            site.task_snapshot = snapshot
+            site.task_result = None
+            return {
+                "site_id": site_id,
+                "task_id": task_id,
+                "ready_at": snapshot.ready_at,
+                "base_duration": snapshot.base_duration,
+                "final_duration": snapshot.final_duration,
+                "total_ability": snapshot.total_ability,
+                "quality_ability": snapshot.quality_parameters.ability,
+            }
+
+        player, result = self._update_by_sub(oauth_sub, mutation)
+        return {"result": result, "state": self._snapshot(player, now)}
+
+    def collect_mining(self, oauth_sub: str, site_id: str) -> dict:
+        now = self._now()
+
+        def mutation(player: PlayerState):
+            self._settle(player, now)
+            site = self._mining_site(player, site_id)
+            if site.task_snapshot is None:
+                raise GameError("mining_site_empty", "这个矿点没有进行中的任务")
+            if site.task_snapshot.ready_at > now:
+                raise GameError("mining_not_ready", "采矿还没有完成")
+            result = site.task_result
+            if result is None:
+                raise GameError("task_content_missing", "采矿任务配置缺失，请联系管理员", 409)
+            collect_xp = site.task_snapshot.harvest_xp
+            add_item(player, result.item_id, result.quantity, result.quality)
+            levels = grant_experience(player, collect_xp, self.content)
+            site.task_snapshot = None
+            site.task_result = None
+            return {
+                "site_id": site_id,
+                "item_id": result.item_id,
+                "quantity": result.quantity,
+                "quality": result.quality,
+                "quality_name": QUALITY_NAMES[result.quality],
+                "experience": collect_xp,
+                "levels": levels,
+            }
+
+        player, result = self._update_by_sub(oauth_sub, mutation)
+        return {"result": result, "state": self._snapshot(player, now)}
+
     def unlock_talent(self, oauth_sub: str, node_id: str) -> dict:
         node = self.content.talent_map.get(node_id)
         if node is None:
@@ -617,6 +740,7 @@ class GameService:
         normalize_plot_slots(player, self.content)
         normalize_gathering_sites(player, self.content)
         normalize_crafting_stations(player, self.content)
+        normalize_mining_sites(player, self.content)
         settle_stamina(player, self.content, now)
         for plot in player.plots:
             if not plot.empty and plot.ready_at <= now and plot.task_result is None:
@@ -627,6 +751,9 @@ class GameService:
         for station in player.crafting_stations:
             if station.task_snapshot and station.task_snapshot.ready_at <= now and station.task_result is None:
                 self._resolve_output(station, now)
+        for site in player.mining_sites:
+            if site.task_snapshot and site.task_snapshot.ready_at <= now and site.task_result is None:
+                self._resolve_output(site, now)
 
     def _plot(self, player: PlayerState, slot: int):
         if slot < 0 or slot >= len(player.plots):
@@ -644,6 +771,12 @@ class GameService:
         if station is None:
             raise GameError("crafting_station_locked", "这个加工工位尚未解锁", 404)
         return station
+
+    def _mining_site(self, player: PlayerState, site_id: str) -> MiningSiteState:
+        site = next((entry for entry in player.mining_sites if entry.site_id == site_id), None)
+        if site is None:
+            raise GameError("mining_site_locked", "这个矿点尚未解锁", 404)
+        return site
 
     def _build_farming_task_snapshot(self, player, plot, crop, now: int) -> ProductionTaskSnapshot:
         if self._industry_assigned_count(player, "farming") > self._industry_partner_capacity(player, "farming"):
@@ -756,7 +889,7 @@ class GameService:
     @staticmethod
     def _partner_lock_deadlines(player: PlayerState, now: int) -> dict[str, int]:
         deadlines: dict[str, int] = {}
-        for production_slot in [*player.plots, *player.gathering_sites, *player.crafting_stations]:
+        for production_slot in [*player.plots, *player.gathering_sites, *player.crafting_stations, *player.mining_sites]:
             task = production_slot.task_snapshot
             if task is None or task.ready_at <= now:
                 continue
@@ -902,6 +1035,48 @@ class GameService:
             ),
             None,
         )
+        mining_sites = []
+        mining_task_map = self.content.mining_task_map
+        for site in player.mining_sites:
+            definition = self.content.mining_site_map.get(site.site_id)
+            task_snapshot = site.task_snapshot
+            assigned_partners = [
+                partner_map[partner_id]
+                for partner_id in site.assigned_partner_ids
+                if partner_id in partner_map
+            ]
+            assignment_locked_until = max(
+                (lock_deadlines.get(partner_id, 0) for partner_id in site.assigned_partner_ids),
+                default=0,
+            )
+            mining_sites.append({
+                **site.model_dump(),
+                "empty": site.empty,
+                "ready": bool(task_snapshot and task_snapshot.ready_at <= now),
+                "remaining_seconds": max(0, task_snapshot.ready_at - now) if task_snapshot else 0,
+                "definition": definition.model_dump() if definition else None,
+                "task": {
+                    **mining_task_map[task_snapshot.content_id].model_dump(),
+                    "item": items[mining_task_map[task_snapshot.content_id].produce_item_id].model_dump(),
+                } if task_snapshot and task_snapshot.content_id in mining_task_map else None,
+                "available_tasks": [
+                    {**entry.model_dump(), "item": items[entry.produce_item_id].model_dump()}
+                    for entry in self.content.mining_tasks
+                    if entry.site_id == site.site_id and entry.min_level <= player.level
+                ],
+                "assigned_partners": assigned_partners,
+                "assignment_locked": assignment_locked_until > now,
+                "assignment_locked_until": assignment_locked_until or None,
+            })
+        unlocked_mining_site_ids = {site.site_id for site in player.mining_sites}
+        next_mining_site_level = next(
+            (
+                definition.min_level
+                for definition in self.content.mining_sites
+                if definition.id not in unlocked_mining_site_ids
+            ),
+            None,
+        )
         return {
             "server_time": now,
             "player": {
@@ -924,6 +1099,8 @@ class GameService:
             "next_gathering_site_level": next_gathering_site_level,
             "crafting_stations": crafting_stations,
             "next_crafting_station_level": next_crafting_station_level,
+            "mining_sites": mining_sites,
+            "next_mining_site_level": next_mining_site_level,
             "inventory": inventory,
             "partners": partner_records,
             "partner_count": len(partner_records),
@@ -970,6 +1147,11 @@ class GameService:
             for station in player.crafting_stations
             for partner_id in station.assigned_partner_ids
         }
+        assigned_mining_sites = {
+            partner_id: site.site_id
+            for site in player.mining_sites
+            for partner_id in site.assigned_partner_ids
+        }
         lock_deadlines = self._partner_lock_deadlines(player, now)
         records: list[dict] = []
         for owned in sorted(player.owned_partners, key=lambda entry: (entry.acquired_at, entry.partner_id)):
@@ -983,6 +1165,7 @@ class GameService:
                     "assigned_plot_slot": assigned_slots.get(owned.partner_id),
                     "assigned_gathering_site_id": assigned_gathering_sites.get(owned.partner_id),
                     "assigned_crafting_station_id": assigned_crafting_stations.get(owned.partner_id),
+                    "assigned_mining_site_id": assigned_mining_sites.get(owned.partner_id),
                     "locked": lock_deadlines.get(owned.partner_id, 0) > now,
                     "locked_until": lock_deadlines.get(owned.partner_id) or None,
                 })
@@ -1021,6 +1204,7 @@ class GameService:
                 "assigned_plot_slot": assigned_slots.get(owned.partner_id),
                 "assigned_gathering_site_id": assigned_gathering_sites.get(owned.partner_id),
                 "assigned_crafting_station_id": assigned_crafting_stations.get(owned.partner_id),
+                "assigned_mining_site_id": assigned_mining_sites.get(owned.partner_id),
                 "locked": lock_deadlines.get(owned.partner_id, 0) > now,
                 "locked_until": lock_deadlines.get(owned.partner_id) or None,
             })
@@ -1044,7 +1228,12 @@ class GameService:
 
     @staticmethod
     def _clear_partner_assignment(player: PlayerState, partner_id: str) -> None:
-        for production_slot in [*player.plots, *player.gathering_sites, *player.crafting_stations]:
+        for production_slot in [
+            *player.plots,
+            *player.gathering_sites,
+            *player.crafting_stations,
+            *player.mining_sites,
+        ]:
             if partner_id in production_slot.assigned_partner_ids:
                 production_slot.assigned_partner_ids = []
 
@@ -1056,6 +1245,8 @@ class GameService:
             return sum(len(site.assigned_partner_ids) for site in player.gathering_sites)
         if industry == "crafting":
             return sum(len(station.assigned_partner_ids) for station in player.crafting_stations)
+        if industry == "mining":
+            return sum(len(site.assigned_partner_ids) for site in player.mining_sites)
         return 0
 
     def _industry_partner_capacity(self, player: PlayerState, industry: str) -> int:

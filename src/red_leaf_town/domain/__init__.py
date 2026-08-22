@@ -1,6 +1,7 @@
 from .models import (
     CraftingStationState,
     GatheringSiteState,
+    MiningSiteState,
     OwnedPartnerState,
     PlayerState,
     PlotState,
@@ -15,6 +16,7 @@ from .models import (
 __all__ = [
     "CraftingStationState",
     "GatheringSiteState",
+    "MiningSiteState",
     "OwnedPartnerState",
     "PlayerState",
     "PlotState",

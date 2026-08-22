@@ -24,6 +24,10 @@ def test_default_content_is_consistent():
     assert content.item_map["maple_wood"].has_quality is True
     assert content.talent_map["gathering_roster_1"].partner_capacity_bonus == 1
     assert content.recipe_map["saw_maple_plank"].unlock_condition.hook == "player_level"
+    assert content.industries["mining"].collaborator_slots == 1
+    assert content.mining_site_map["copper_foothill"].min_level == 2
+    assert content.mining_task_map["mine_red_copper"].produce_item_id == "red_copper_ore"
+    assert content.item_map["red_copper_ore"].has_quality is True
 
 
 def test_unknown_crop_item_is_rejected():
@@ -63,4 +67,16 @@ def test_unknown_or_invalid_recipe_unlock_hook_is_rejected():
     payload = load_content().model_dump()
     payload["recipes"][0]["unlock_condition"]["params"] = {}
     with pytest.raises(ValidationError, match="positive integer level"):
+        GameContent.model_validate(payload)
+
+
+def test_mining_task_requires_known_site_and_quality_item():
+    payload = load_content().model_dump()
+    payload["mining_tasks"][0]["site_id"] = "missing_mine"
+    with pytest.raises(ValidationError, match="unknown site"):
+        GameContent.model_validate(payload)
+
+    payload = load_content().model_dump()
+    payload["mining_tasks"][0]["produce_item_id"] = "carrot_seed"
+    with pytest.raises(ValidationError, match="output must support quality"):
         GameContent.model_validate(payload)

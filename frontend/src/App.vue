@@ -17,6 +17,8 @@ import {
   Sprout,
   Trees,
   Hammer,
+  LayoutDashboard,
+  Pickaxe,
   UserRound,
   X,
 } from 'lucide-vue-next'
@@ -40,9 +42,11 @@ const levelProgress = computed(() => {
 })
 const loginUrl = computed(() => `/api/oauth/red-leaf-town/start?next=${encodeURIComponent('/red-leaf-town/')}`)
 const navItems = [
-  { to: '/', label: '农场', icon: Sprout },
+  { to: '/', label: '总览', icon: LayoutDashboard },
+  { to: '/farm', label: '农场', icon: Sprout },
   { to: '/gathering', label: '采集', icon: Trees },
   { to: '/crafting', label: '加工', icon: Hammer },
+  { to: '/mining', label: '矿产', icon: Pickaxe },
   { to: '/shop', label: '种子商店', icon: ShoppingBasket },
   { to: '/inventory', label: '仓库', icon: Archive },
   { to: '/partners', label: '伙伴', icon: Sparkles },
@@ -111,7 +115,7 @@ async function copyBindingCommand() {
       </nav>
       <div class="coming-soon">
         <Map :size="18" />
-        <div><strong>小镇还在扩建</strong><span>畜牧与工坊将随等级开放</span></div>
+        <div><strong>小镇还在扩建</strong><span>畜牧产业将在后续开放</span></div>
       </div>
       <button class="profile-button" @click="accountOpen = true">
         <span class="avatar">{{ game.player.display_name.slice(0, 1) }}</span>
