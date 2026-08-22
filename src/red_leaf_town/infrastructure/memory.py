@@ -52,6 +52,18 @@ class InMemoryPlayerRepository:
         player = self.players.get(player_id)
         return copy.deepcopy(player) if player else None
 
+    def search(self, query: str, limit: int = 50) -> list[PlayerState]:
+        normalized = str(query or "").strip().casefold()
+        matches = [
+            player
+            for player in self.players.values()
+            if not normalized
+            or normalized in player.player_id.casefold()
+            or normalized in player.display_name.casefold()
+        ]
+        matches.sort(key=lambda player: (-player.updated_at, player.player_id))
+        return [copy.deepcopy(player) for player in matches[:limit]]
+
     def update(self, player_id: str, mutation: Callable[[PlayerState], T]) -> tuple[PlayerState, T]:
         current = self.players.get(player_id)
         if not current:
@@ -60,6 +72,7 @@ class InMemoryPlayerRepository:
         result = mutation(candidate)
         candidate.version += 1
         candidate.updated_at += 1
+        candidate = PlayerState.model_validate(candidate.model_dump())
         self.players[player_id] = copy.deepcopy(candidate)
         return candidate, result
 

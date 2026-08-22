@@ -20,9 +20,9 @@ const availableCrops = computed(() => {
       <div>
         <p class="eyebrow">AUTUMN FARM</p>
         <h1>我的农场</h1>
-        <p>播下种子，时间会替你照料这片土地。</p>
+        <p>安排具有农作倾向的伙伴驻场，可以缩短下一次种植时间。</p>
       </div>
-      <div class="season-chip"><Tractor :size="18" /> 初秋 · 晴</div>
+      <div class="season-chip"><Tractor :size="18" /> 农作编制 {{ game.state.industry_rules.farming?.partner_capacity || 0 }}</div>
     </header>
 
     <div class="tip-card" v-if="!availableCrops.length">
@@ -37,6 +37,7 @@ const availableCrops = computed(() => {
         :key="plot.slot"
         :plot="plot"
         :crops="availableCrops"
+        :partners="game.state.partners"
       />
       <FarmPlot v-if="game.state.next_plot_level" :locked-level="game.state.next_plot_level" />
     </div>

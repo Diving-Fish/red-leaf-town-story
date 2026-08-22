@@ -1,0 +1,135 @@
+<script setup lang="ts">
+import { computed, watch } from 'vue'
+import { ArrowUpCircle, Lock, Sparkles, Star, WandSparkles } from 'lucide-vue-next'
+import { useRoute, useRouter } from 'vue-router'
+
+import CroppedImage from '@/components/CroppedImage.vue'
+import { useGameStore } from '@/stores/game'
+
+const game = useGameStore()
+const route = useRoute()
+const router = useRouter()
+
+const selected = computed(() => {
+  const requested = String(route.params.partnerId || '')
+  return game.state?.partners.find((partner) => partner.partner_id === requested) || game.state?.partners[0] || null
+})
+
+watch(
+  () => [route.params.partnerId, game.state?.partners.length] as const,
+  () => {
+    if (!route.params.partnerId && game.state?.partners[0]) {
+      router.replace({ name: 'partners', params: { partnerId: game.state.partners[0].partner_id } })
+    }
+  },
+  { immediate: true },
+)
+
+function acquiredDate(timestamp: number) {
+  return new Date(timestamp * 1000).toLocaleDateString('zh-CN')
+}
+
+function breakthroughName(stage: number) {
+  return stage === 0 ? '未突破' : `${stage} 次突破`
+}
+</script>
+
+<template>
+  <section v-if="game.state" class="view-section partner-view">
+    <header class="view-heading">
+      <div>
+        <p class="eyebrow">PARTNER ARCHIVE</p>
+        <h1>伙伴仓库</h1>
+        <p>查看已经与你结缘的伙伴。每位伙伴只能持有一次。</p>
+      </div>
+      <div class="season-chip"><Sparkles :size="18" /> {{ game.state.partner_count }} 位伙伴</div>
+    </header>
+
+    <div v-if="!game.state.partners.length" class="empty-state partner-empty">
+      <WandSparkles :size="44" />
+      <h2>还没有伙伴来到这里</h2>
+      <p>完成招募或活动后，已经拥有的伙伴会出现在仓库中。</p>
+    </div>
+
+    <div v-else class="partner-warehouse">
+      <aside class="partner-roster">
+        <p>我的伙伴</p>
+        <RouterLink
+          v-for="partner in game.state.partners"
+          :key="partner.partner_id"
+          :to="{ name: 'partners', params: { partnerId: partner.partner_id } }"
+          :class="{ active: selected?.partner_id === partner.partner_id }"
+        >
+          <span class="roster-avatar">
+            <CroppedImage
+              v-if="partner.artwork?.url && partner.avatar_crop"
+              :image-url="partner.artwork.url"
+              :image-width="partner.artwork.width"
+              :image-height="partner.artwork.height"
+              :crop="partner.avatar_crop"
+              :alt="`${partner.name}头像`"
+            />
+            <Sparkles v-else :size="19" />
+          </span>
+          <span><strong>{{ partner.name }}</strong><small>Lv.{{ partner.level }} · {{ partner.assigned_plot_slot !== null ? `土地 ${partner.assigned_plot_slot + 1}` : breakthroughName(partner.breakthrough) }}</small></span>
+          <i>{{ partner.rarity ? `${partner.rarity}★` : '?' }}</i>
+        </RouterLink>
+      </aside>
+
+      <article v-if="selected" class="partner-detail">
+        <div class="partner-illustration">
+          <img v-if="selected.artwork?.url" :src="selected.artwork.url" :alt="selected.name" />
+          <div v-else><Sparkles :size="46" /><span>暂无当前形态插画</span></div>
+          <span class="rarity-ribbon"><Star :size="14" fill="currentColor" />{{ selected.rarity || '?' }} 星</span>
+        </div>
+
+        <div class="partner-profile">
+          <p class="eyebrow">{{ selected.partner_id }}</p>
+          <div class="profile-title"><h2>{{ selected.name }}</h2><span>Lv.{{ selected.level }} / {{ selected.level_cap || 20 }}</span></div>
+          <p class="partner-description">{{ selected.description || '这位伙伴的故事尚未记录。' }}</p>
+
+          <div class="profile-meta">
+            <span><small>突破阶段</small><strong>{{ breakthroughName(selected.breakthrough) }}</strong></span>
+            <span><small>成长曲线</small><strong>{{ selected.growth_curve_name || '—' }}</strong></span>
+            <span><small>结缘日期</small><strong>{{ acquiredDate(selected.acquired_at) }}</strong></span>
+            <span><small>农田驻场</small><strong>{{ selected.assigned_plot_slot !== null ? `土地 ${selected.assigned_plot_slot + 1}${selected.locked ? ' · 任务中' : ''}` : '未驻场' }}</strong></span>
+          </div>
+
+          <section class="profile-section">
+            <h3>产业倾向</h3>
+            <div class="tendency-list">
+              <div v-for="tendency in selected.tendencies || []" :key="tendency.industry">
+                <span>{{ tendency.name }}</span><strong>{{ tendency.current_ability }}</strong><small>当前能力</small>
+              </div>
+            </div>
+          </section>
+
+          <section class="profile-section">
+            <h3>特性</h3>
+            <div v-if="selected.traits?.length" class="owned-traits">
+              <div v-for="trait in selected.traits" :key="trait.code"><strong>{{ trait.name }}</strong><span>{{ trait.description }}</span></div>
+            </div>
+            <p v-else class="section-placeholder">当前没有已配置特性。</p>
+          </section>
+
+          <div class="reserved-actions">
+            <button disabled><ArrowUpCircle :size="17" /><span><strong>升级</strong><small>功能即将开放</small></span><Lock :size="13" /></button>
+            <button disabled><WandSparkles :size="17" /><span><strong>突破</strong><small>功能即将开放</small></span><Lock :size="13" /></button>
+          </div>
+        </div>
+      </article>
+    </div>
+  </section>
+</template>
+
+<style scoped>
+.partner-empty { min-height: 420px; }
+.partner-warehouse { display: grid; grid-template-columns: 245px minmax(0, 1fr); gap: 16px; align-items: start; }
+.partner-roster { position: sticky; top: 106px; padding: 13px; border: 1px solid var(--line); border-radius: 19px 6px; background: var(--surface); }.partner-roster > p { margin: 4px 7px 13px; color: #77837a; font-size: 10px; font-weight: 800; letter-spacing: .12em; }.partner-roster a { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 9px; padding: 9px; margin-top: 4px; border: 1px solid transparent; border-radius: 11px; }.partner-roster a.active { border-color: #9abb7833; background: #9abb7811; }.roster-avatar { width: 43px; height: 43px; overflow: hidden; display: grid; place-items: center; color: var(--leaf-bright); border-radius: 13px 5px; background: #111914; }.partner-roster strong,.partner-roster small { display: block; }.partner-roster strong { font-size: 12px; }.partner-roster small { margin-top: 3px; color: #768178; font-size: 9px; }.partner-roster i { color: var(--gold); font-size: 9px; font-style: normal; }
+.partner-detail { min-width: 0; display: grid; grid-template-columns: minmax(230px, 330px) minmax(0, 1fr); gap: clamp(24px, 4vw, 48px); padding: clamp(18px, 3vw, 34px); border: 1px solid var(--line); border-radius: 25px 8px; background: linear-gradient(145deg, #1b271f, #151e19); }.partner-illustration { position: relative; width: 100%; overflow: hidden; aspect-ratio: 9 / 16; display: grid; place-items: center; color: #708078; border-radius: 22px 7px; background: #0d1410; box-shadow: 0 22px 60px #0005; }.partner-illustration > img { width: 100%; height: 100%; object-fit: cover; }.partner-illustration > div { display: grid; place-items: center; gap: 9px; font-size: 10px; }.rarity-ribbon { position: absolute; left: 12px; top: 12px; display: flex; align-items: center; gap: 4px; padding: 6px 9px; color: #2a2113; font-size: 10px; font-weight: 800; border-radius: 99px; background: #e2bd6f; }
+.partner-profile { padding: 10px 0; }.partner-profile > .eyebrow { margin: 0; }.profile-title { display: flex; align-items: baseline; gap: 13px; }.profile-title h2 { margin: 5px 0 0; font: 700 clamp(2rem, 4vw, 3rem) Georgia, 'Noto Serif SC', serif; }.profile-title > span { color: var(--leaf-bright); font-weight: 700; }.partner-description { max-width: 620px; margin: 16px 0 22px; color: #9ba69c; font-size: 13px; line-height: 1.8; }.profile-meta { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }.profile-meta > span { padding: 11px; border: 1px solid var(--line); border-radius: 10px; background: #ffffff04; }.profile-meta small,.profile-meta strong { display: block; }.profile-meta small { color: #6f7b72; font-size: 8px; }.profile-meta strong { margin-top: 4px; font-size: 11px; }
+.profile-section { margin-top: 25px; }.profile-section h3 { margin: 0 0 10px; font-size: 13px; }.tendency-list { display: grid; grid-template-columns: repeat(3, minmax(100px, 1fr)); gap: 8px; }.tendency-list > div { display: grid; grid-template-columns: 1fr auto; align-items: end; padding: 11px; border: 1px solid #87a96b24; border-radius: 10px; background: #87a96b0b; }.tendency-list span { font-size: 11px; }.tendency-list strong { color: var(--leaf-bright); font-size: 17px; }.tendency-list small { grid-column: 1 / -1; margin-top: 3px; color: #6e7a71; font-size: 8px; }.owned-traits { display: grid; gap: 7px; }.owned-traits > div { padding: 10px 12px; border-left: 2px solid var(--gold); background: #ffffff04; }.owned-traits strong,.owned-traits span { display: block; }.owned-traits strong { font-size: 11px; }.owned-traits span { margin-top: 4px; color: #7e8a81; font-size: 9px; }.section-placeholder { color: #707c73; font-size: 10px; }
+.reserved-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 28px; }.reserved-actions button { min-height: 53px; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 9px; padding: 0 13px; text-align: left; color: #748078; border: 1px dashed #ffffff14; border-radius: 10px; background: #ffffff03; }.reserved-actions strong,.reserved-actions small { display: block; }.reserved-actions small { margin-top: 2px; font-size: 8px; }
+@media (max-width: 900px) { .partner-warehouse { grid-template-columns: 1fr; }.partner-roster { position: static; display: flex; overflow-x: auto; }.partner-roster > p { display: none; }.partner-roster a { min-width: 205px; }.partner-detail { grid-template-columns: minmax(190px, 270px) 1fr; } }
+@media (max-width: 650px) { .partner-detail { grid-template-columns: 1fr; }.partner-illustration { width: min(280px, 100%); margin: auto; }.profile-meta { grid-template-columns: 1fr 1fr; }.tendency-list { grid-template-columns: 1fr 1fr; } }
+</style>

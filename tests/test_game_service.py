@@ -6,8 +6,11 @@ import pytest
 
 from red_leaf_town.application import GameError, GameService
 from red_leaf_town.content import load_content
-from red_leaf_town.domain import QQIdentity
+from pydantic import ValidationError
+
+from red_leaf_town.domain import PlayerState, QQIdentity
 from red_leaf_town.infrastructure import InMemoryPlayerRepository
+from red_leaf_town.partner_content import PartnerCatalog, PartnerDefinition
 
 
 class Clock:
@@ -97,3 +100,189 @@ def test_binding_uses_adapter_bot_and_openid_not_qq_number(game):
     another_bot = QQIdentity(platform="QQ", bot_id="another-bot", subject="opaque-openid")
     with pytest.raises(GameError, match="尚未绑定"):
         service.snapshot_by_identity(another_bot)
+
+
+def test_old_player_save_migrates_to_empty_partner_warehouse():
+    player = PlayerState.model_validate({
+        "schema_version": 1,
+        "player_id": "legacy-player",
+        "oauth_sub": "legacy-sub",
+        "display_name": "旧居民",
+        "stamina_updated_at": 1,
+        "created_at": 1,
+        "updated_at": 1,
+    })
+    assert player.schema_version == 4
+    assert player.owned_partners == []
+
+
+def test_schema_two_spirit_fields_migrate_to_partner_fields():
+    player = PlayerState.model_validate({
+        "schema_version": 2,
+        "player_id": "legacy-spirit-player",
+        "oauth_sub": "legacy-spirit-sub",
+        "display_name": "旧伙伴居民",
+        "stamina_updated_at": 1,
+        "created_at": 1,
+        "updated_at": 1,
+        "owned_spirits": [{"spirit_id": "maple_sprite", "acquired_at": 2}],
+    })
+    assert player.schema_version == 4
+    assert player.owned_partners[0].partner_id == "maple_sprite"
+    assert "owned_spirits" not in player.model_dump()
+
+
+def test_schema_three_plots_migrate_to_partner_assignment_structure():
+    player = PlayerState.model_validate({
+        "schema_version": 3,
+        "player_id": "legacy-plot-player",
+        "oauth_sub": "legacy-plot-sub",
+        "display_name": "旧农场居民",
+        "stamina_updated_at": 1,
+        "created_at": 1,
+        "updated_at": 1,
+        "plots": [{"slot": 0}],
+    })
+    assert player.schema_version == 4
+    assert player.plots[0].assigned_partner_ids == []
+    assert player.plots[0].task_snapshot is None
+
+
+def test_player_save_rejects_duplicate_owned_partners():
+    payload = {
+        "player_id": "duplicate-player",
+        "oauth_sub": "duplicate-sub",
+        "display_name": "重复居民",
+        "stamina_updated_at": 1,
+        "created_at": 1,
+        "updated_at": 1,
+        "owned_partners": [
+            {"partner_id": "maple_sprite", "acquired_at": 1},
+            {"partner_id": "maple_sprite", "acquired_at": 2},
+        ],
+    }
+    with pytest.raises(ValidationError, match="same partner"):
+        PlayerState.model_validate(payload)
+
+
+def test_player_save_rejects_partner_assigned_to_multiple_plots():
+    payload = {
+        "player_id": "duplicate-assignment-player",
+        "oauth_sub": "duplicate-assignment-sub",
+        "display_name": "重复驻场居民",
+        "stamina_updated_at": 1,
+        "created_at": 1,
+        "updated_at": 1,
+        "owned_partners": [{"partner_id": "maple_sprite", "acquired_at": 1}],
+        "plots": [
+            {"slot": 0, "assigned_partner_ids": ["maple_sprite"]},
+            {"slot": 1, "assigned_partner_ids": ["maple_sprite"]},
+        ],
+    }
+    with pytest.raises(ValidationError, match="more than one production slot"):
+        PlayerState.model_validate(payload)
+
+
+def test_admin_grants_unique_partner_and_snapshot_resolves_details(game):
+    service, repository, clock, player = game
+    definition = PartnerDefinition.model_validate({
+        "id": "maple_sprite",
+        "name": "枫糖",
+        "rarity": 4,
+        "growth_curve": "linear",
+        "tendencies": [{"industry": "farming", "level_1": 18, "level_60": 96}],
+        "trait_codes": ["1"],
+        "avatar_crops": [
+            {"breakthrough": stage, "x": 0, "y": 0, "w": 1, "h": 1}
+            for stage in range(3)
+        ],
+    })
+    catalog = PartnerCatalog(partners=[definition])
+    service.partner_catalog_loader = lambda: catalog
+
+    result = service.admin_grant_partner(player.player_id, "maple_sprite")
+    assert result["player"]["owned_partner_ids"] == ["maple_sprite"]
+    assert repository.get(player.player_id).owned_partners[0].level == 1
+    assert service.admin_search_players("枫糖")[0]["player_id"] == player.player_id
+
+    partner = service.snapshot_by_sub("oauth-sub-1")["partners"][0]
+    assert partner["name"] == "枫糖"
+    assert partner["level"] == 1
+    assert partner["level_cap"] == 20
+    assert partner["tendencies"][0]["current_ability"] == 18
+    assert partner["upgrade_available"] is False
+
+    with pytest.raises(GameError) as duplicate:
+        service.admin_grant_partner(player.player_id, "maple_sprite")
+    assert duplicate.value.status == 409
+
+
+def farming_partner(partner_id="farm_partner", level_1=40, level_60=120):
+    return PartnerDefinition.model_validate({
+        "id": partner_id,
+        "name": "田野助手",
+        "rarity": 3,
+        "growth_curve": "linear",
+        "tendencies": [{"industry": "farming", "level_1": level_1, "level_60": level_60}],
+        "avatar_crops": [
+            {"breakthrough": stage, "x": 0, "y": 0, "w": 1, "h": 1}
+            for stage in range(3)
+        ],
+    })
+
+
+def test_partner_assignment_creates_immutable_farming_task_snapshot(game):
+    service, repository, clock, player = game
+    service.content = service.content.model_copy(deep=True)
+    catalog = PartnerCatalog(partners=[farming_partner()])
+    service.partner_catalog_loader = lambda: catalog
+    service.admin_grant_partner(player.player_id, "farm_partner")
+    assigned = service.assign_partner("oauth-sub-1", 0, "farm_partner")
+    assert assigned["state"]["plots"][0]["assigned_partner_ids"] == ["farm_partner"]
+
+    service.buy("oauth-sub-1", "carrot_seed", 1)
+    planted = service.plant("oauth-sub-1", 0, "carrot")
+    task = planted["state"]["plots"][0]["task_snapshot"]
+    assert task["assigned_partner_ids"] == ["farm_partner"]
+    assert task["partner_snapshots"][0]["ability"] == 40
+    assert task["total_ability"] == 40
+    assert task["base_duration"] == 30
+    assert task["final_duration"] == 20
+    assert planted["state"]["plots"][0]["assignment_locked"] is True
+
+    with pytest.raises(GameError) as locked:
+        service.assign_partner("oauth-sub-1", 0, "")
+    assert locked.value.status == 409
+
+    service.content.crop_map["carrot"].yield_min = 99
+    service.content.crop_map["carrot"].yield_max = 99
+    clock.advance(task["final_duration"])
+    moved = service.assign_partner("oauth-sub-1", 1, "farm_partner")
+    assert moved["state"]["plots"][0]["assigned_partner_ids"] == []
+    assert moved["state"]["plots"][1]["assigned_partner_ids"] == ["farm_partner"]
+    harvested = service.harvest("oauth-sub-1", 0)
+    assert 2 <= harvested["result"]["quantity"] <= 3
+
+
+def test_partner_assignment_enforces_tendency_ownership_and_capacity(game):
+    service, _, _, player = game
+    gatherer = PartnerDefinition.model_validate({
+        **farming_partner("gather_partner").model_dump(),
+        "tendencies": [{"industry": "gathering", "level_1": 10, "level_60": 80}],
+    })
+    catalog = PartnerCatalog(partners=[farming_partner("farm_one"), farming_partner("farm_two"), gatherer])
+    service.partner_catalog_loader = lambda: catalog
+
+    with pytest.raises(GameError, match="还没有"):
+        service.assign_partner("oauth-sub-1", 0, "farm_one")
+    for partner_id in ("farm_one", "farm_two", "gather_partner"):
+        service.admin_grant_partner(player.player_id, partner_id)
+    with pytest.raises(GameError, match="没有农作倾向"):
+        service.assign_partner("oauth-sub-1", 0, "gather_partner")
+
+    service.assign_partner("oauth-sub-1", 0, "farm_one")
+    with pytest.raises(GameError, match="编制已满"):
+        service.assign_partner("oauth-sub-1", 1, "farm_two")
+    moved = service.assign_partner("oauth-sub-1", 1, "farm_one")
+    assert moved["state"]["plots"][0]["assigned_partner_ids"] == []
+    assert moved["state"]["plots"][1]["assigned_partner_ids"] == ["farm_one"]

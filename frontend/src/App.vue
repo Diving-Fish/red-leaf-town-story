@@ -13,6 +13,7 @@ import {
   Menu,
   RefreshCw,
   ShoppingBasket,
+  Sparkles,
   Sprout,
   UserRound,
   X,
@@ -27,6 +28,7 @@ const navOpen = ref(false)
 const bindingCommand = ref('')
 let pollTimer = 0
 
+const isAdminRoute = computed(() => route.meta.admin === true)
 const routeTitle = computed(() => String(route.meta.title || '红叶镇'))
 const levelProgress = computed(() => {
   const player = game.player
@@ -39,9 +41,11 @@ const navItems = [
   { to: '/', label: '农场', icon: Sprout },
   { to: '/shop', label: '种子商店', icon: ShoppingBasket },
   { to: '/inventory', label: '仓库', icon: Archive },
+  { to: '/partners', label: '伙伴', icon: Sparkles },
 ]
 
 onMounted(async () => {
+  if (isAdminRoute.value) return
   await game.initialize()
   pollTimer = window.setInterval(() => game.refresh(true), 15_000)
 })
@@ -60,7 +64,9 @@ async function copyBindingCommand() {
 </script>
 
 <template>
-  <div v-if="game.status === 'checking'" class="splash-screen">
+  <RouterView v-if="isAdminRoute" />
+
+  <div v-else-if="game.status === 'checking'" class="splash-screen">
     <div class="brand-seal"><Leaf :size="42" /></div>
     <h1>红叶镇物语</h1>
     <p>正在沿着山路前往小镇……</p>

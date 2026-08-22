@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "game": {
     "title": "红叶镇物语",
     "starting_coins": 80,
@@ -7,6 +7,14 @@
   },
   "stamina": {
     "restore_seconds": 180
+  },
+  "industries": {
+    "farming": {
+      "character_base_ability": 0,
+      "partner_capacity": 1,
+      "partner_level_cap": 20,
+      "collaborator_slots": 1
+    }
   },
   "levels": [
     {"level": 1, "total_xp": 0, "plot_slots": 3, "stamina_cap": 20, "unlocks": ["system:farming", "crop:carrot"]},
@@ -28,6 +36,7 @@
       "seed_item_id": "carrot_seed",
       "produce_item_id": "carrot",
       "growth_seconds": 30,
+      "time_difficulty": 100,
       "yield_min": 2,
       "yield_max": 3,
       "stamina_cost": 1,
@@ -42,6 +51,7 @@
       "seed_item_id": "wheat_seed",
       "produce_item_id": "wheat",
       "growth_seconds": 90,
+      "time_difficulty": 150,
       "yield_min": 2,
       "yield_max": 4,
       "stamina_cost": 2,

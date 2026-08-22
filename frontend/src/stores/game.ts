@@ -54,13 +54,13 @@ export const useGameStore = defineStore('game', () => {
     }
   }
 
-  async function action(path: string, payload?: unknown, successMessage = '') {
+  async function action(path: string, payload?: unknown, successMessage = '', method = 'POST') {
     if (busy.value) return
     busy.value = true
     error.value = ''
     try {
       const result = await api<ActionResult>(path, {
-        method: 'POST',
+        method,
         body: payload === undefined ? undefined : JSON.stringify(payload),
       })
       acceptState(result.state)
@@ -83,6 +83,15 @@ export const useGameStore = defineStore('game', () => {
 
   function harvest(slot: number) {
     return action(`/api/red-leaf-town/plots/${slot}/harvest`, undefined, '收获已放入仓库')
+  }
+
+  function assignPartner(slot: number, partnerId: string | null) {
+    return action(
+      `/api/red-leaf-town/plots/${slot}/partners`,
+      { partner_id: partnerId || '' },
+      partnerId ? '伙伴已安排到这块土地' : '伙伴已撤下',
+      'PUT',
+    )
   }
 
   function sell(itemId: string, quantity: number) {
@@ -141,6 +150,7 @@ export const useGameStore = defineStore('game', () => {
     buy,
     plant,
     harvest,
+    assignPartner,
     sell,
     createBindingCode,
     logout,

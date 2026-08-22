@@ -1,0 +1,57 @@
+{
+  "schema_version": 2,
+  "partners": [
+    {
+      "id": "sprite_001",
+      "name": "绯恩",
+      "rarity": 4,
+      "description": "最初的伙伴，向导和助手",
+      "growth_curve": "linear",
+      "tendencies": [
+        {
+          "industry": "gathering",
+          "level_1": 40,
+          "level_60": 300
+        },
+        {
+          "industry": "farming",
+          "level_1": 30,
+          "level_60": 243
+        }
+      ],
+      "trait_codes": [],
+      "artworks": [
+        {
+          "breakthrough": 0,
+          "asset_key": "red-leaf-town/partners/sprite_001/breakthrough-0-32a71b8882234327.webp",
+          "width": 936,
+          "height": 1664,
+          "content_type": "image/webp"
+        }
+      ],
+      "avatar_crops": [
+        {
+          "breakthrough": 0,
+          "x": 276,
+          "y": 113,
+          "w": 346,
+          "h": 346
+        },
+        {
+          "breakthrough": 1,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        },
+        {
+          "breakthrough": 2,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        }
+      ]
+    }
+  ]
+}

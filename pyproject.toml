@@ -8,6 +8,7 @@ version = "0.1.0"
 description = "红叶镇物语的游戏核心、Web API 与 QQ 插件"
 requires-python = ">=3.10"
 dependencies = [
+  "pillow>=10,<13",
   "pydantic>=2.9,<3",
   "quart>=0.19,<1",
   "redis>=5,<6",

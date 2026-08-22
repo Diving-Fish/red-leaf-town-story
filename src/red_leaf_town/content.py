@@ -18,6 +18,13 @@ class StaminaDefinition(BaseModel):
     restore_seconds: int = Field(gt=0)
 
 
+class IndustryRulesDefinition(BaseModel):
+    character_base_ability: int = Field(default=0, ge=0)
+    partner_capacity: int = Field(default=1, ge=0)
+    partner_level_cap: int = Field(default=20, ge=1, le=60)
+    collaborator_slots: int = Field(default=1, ge=1, le=2)
+
+
 class LevelDefinition(BaseModel):
     level: int = Field(ge=1)
     total_xp: int = Field(ge=0)
@@ -40,6 +47,7 @@ class CropDefinition(BaseModel):
     seed_item_id: str
     produce_item_id: str
     growth_seconds: int = Field(gt=0)
+    time_difficulty: int = Field(gt=0)
     yield_min: int = Field(ge=1)
     yield_max: int = Field(ge=1)
     stamina_cost: int = Field(ge=0)
@@ -67,6 +75,7 @@ class GameContent(BaseModel):
     schema_version: int = Field(ge=1)
     game: GameMeta
     stamina: StaminaDefinition
+    industries: dict[str, IndustryRulesDefinition]
     levels: list[LevelDefinition]
     items: list[ItemDefinition]
     crops: list[CropDefinition]
@@ -88,6 +97,8 @@ class GameContent(BaseModel):
         xp = [entry.total_xp for entry in self.levels]
         if xp != sorted(xp) or xp[0] != 0:
             raise ValueError("level total_xp must be sorted and start at 0")
+        if "farming" not in self.industries:
+            raise ValueError("farming industry rules are required")
 
         items = {item.id for item in self.items}
         for crop in self.crops:

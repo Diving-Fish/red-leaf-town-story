@@ -96,6 +96,27 @@ class RedisPlayerRepository:
         raw = self.redis.get(self._player_key(player_id))
         return PlayerState.model_validate_json(raw) if raw else None
 
+    def search(self, query: str, limit: int = 50) -> list[PlayerState]:
+        normalized = str(query or "").strip().casefold()
+        matches: list[PlayerState] = []
+        for key in self.redis.scan_iter(match=f"{self.PREFIX}player:*", count=100):
+            raw = self.redis.get(key)
+            if not raw:
+                continue
+            try:
+                player = PlayerState.model_validate_json(raw)
+            except (TypeError, ValueError):
+                continue
+            if (
+                normalized
+                and normalized not in player.player_id.casefold()
+                and normalized not in player.display_name.casefold()
+            ):
+                continue
+            matches.append(player)
+        matches.sort(key=lambda player: (-player.updated_at, player.player_id))
+        return matches[:limit]
+
     def update(self, player_id: str, mutation: Callable[[PlayerState], T]) -> tuple[PlayerState, T]:
         key = self._player_key(player_id)
         for _ in range(self.MAX_RETRIES):
@@ -109,6 +130,7 @@ class RedisPlayerRepository:
                     result = mutation(player)
                     player.version += 1
                     player.updated_at = max(player.updated_at + 1, player.stamina_updated_at)
+                    player = PlayerState.model_validate(player.model_dump())
                     pipe.multi()
                     pipe.set(key, player.model_dump_json())
                     pipe.execute()

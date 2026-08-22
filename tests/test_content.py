@@ -14,6 +14,8 @@ def test_default_content_is_consistent():
     assert content.level_for_xp(0).level == 1
     assert content.level_for_xp(20).level == 2
     assert content.crop_map["carrot"].seed_item_id == "carrot_seed"
+    assert content.crop_map["carrot"].time_difficulty > 0
+    assert content.industries["farming"].collaborator_slots == 1
     assert content.item_map["carrot"].sell_price > 0
 
 
