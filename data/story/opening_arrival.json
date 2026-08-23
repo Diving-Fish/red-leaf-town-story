@@ -1,0 +1,391 @@
+{
+  "id": "opening_arrival",
+  "title": "初到红叶镇",
+  "priority": 100,
+  "trigger": {
+    "hook": "all_of",
+    "params": {
+      "conditions": [
+        {
+          "hook": "cue",
+          "params": {
+            "cue": "view:dashboard"
+          }
+        },
+        {
+          "hook": "none_of",
+          "params": {
+            "conditions": [
+              {
+                "hook": "owns_partner",
+                "params": {
+                  "partner_id": "fein"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "rewards": {
+    "partner_ids": [
+      "fein"
+    ]
+  },
+  "steps": [
+    {
+      "type": "background",
+      "asset_id": "portal_hollow"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "",
+      "text": "你醒来的时候，天已经快黑了。"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "",
+      "text": "陌生的天空，陌生的山。"
+    },
+    {
+      "type": "portrait",
+      "slot": "left",
+      "asset_id": "fein_story"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "",
+      "text": "还有一个蹲在你旁边的陌生女孩。"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "？？？",
+      "text": "醒了？",
+      "focus": "left"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "？？？",
+      "text": "先别动，我确认一下。",
+      "focus": "left"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "",
+      "text": "她伸出两根手指，在你眼前晃了晃。"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "？？？",
+      "text": "几根？",
+      "focus": "left"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "你",
+      "text": "……两根。",
+      "focus": "right"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "？？？",
+      "text": "很好，是活的。",
+      "focus": "left"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "你",
+      "text": "本来就是。",
+      "focus": "right"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "？？？",
+      "text": "那可不一定。上次从那边掉出来的是一只鞋。",
+      "focus": "left"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "",
+      "text": "她朝身后指了指。那里的空气裂着一道口子，正在慢慢合上。"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "绯恩",
+      "text": "这里是红叶镇。我叫绯恩，镇上的向导。",
+      "focus": "left"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "绯恩",
+      "text": "你呢？",
+      "focus": "left"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "",
+      "text": "你张了张嘴。"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "",
+      "text": "……想不起来。"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "绯恩",
+      "text": "名字也不记得？",
+      "focus": "left"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "",
+      "text": "你摇头。"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "绯恩",
+      "text": "家呢？",
+      "focus": "left"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "",
+      "text": "你继续摇头。"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "",
+      "text": "绯恩安静了几秒。"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "绯恩",
+      "text": "那就先别想了。",
+      "focus": "left"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "绯恩",
+      "text": "天要黑了，总不能让你睡在这里。",
+      "focus": "left"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "",
+      "text": "她站起来，向你伸出手。"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "",
+      "text": "你握住那只手，被她拉了起来。"
+    },
+    {
+      "type": "background",
+      "asset_id": "town_gate_dusk"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "",
+      "text": "山路的尽头是一片屋顶，还有几缕炊烟。"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "绯恩",
+      "text": "对了，问你个事。",
+      "focus": "left"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "绯恩",
+      "text": "会种田吗？",
+      "focus": "left"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "你",
+      "text": "……不知道。",
+      "focus": "right"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "绯恩",
+      "text": "很好。",
+      "focus": "left"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "你",
+      "text": "哪里好了？",
+      "focus": "right"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "绯恩",
+      "text": "你没说不会。",
+      "focus": "left"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "",
+      "text": "她的脚步好像快了一点。"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "绯恩",
+      "text": "正好，镇上有间空屋。",
+      "focus": "left"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "你",
+      "text": "真的？",
+      "focus": "right"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "绯恩",
+      "text": "真的。",
+      "focus": "left"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "绯恩",
+      "text": "还有一片田。",
+      "focus": "left"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "你",
+      "text": "……",
+      "focus": "right"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "绯恩",
+      "text": "还有全套农具。",
+      "focus": "left"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "",
+      "text": "绯恩露出了一个很自然的笑容。"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "绯恩",
+      "text": "你运气不错。",
+      "focus": "left"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "",
+      "text": "不知道为什么，你觉得这句话不太可信。"
+    },
+    {
+      "type": "background",
+      "asset_id": "farm_house_night"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "",
+      "text": "屋子比想象中干净。桌上点着一盏灯，灯边靠着一把锄头。"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "你",
+      "text": "为什么入住还要给我锄头？",
+      "focus": "right"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "绯恩",
+      "text": "镇上原来管农业的人，上个月不干了。",
+      "focus": "left"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "你",
+      "text": "为什么不干了？",
+      "focus": "right"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "绯恩",
+      "text": "他说他想去看海。",
+      "focus": "left"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "绯恩",
+      "text": "所以这份工作现在空着。",
+      "focus": "left"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "你",
+      "text": "你从山上就在打这个主意了吧。",
+      "focus": "right"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "绯恩",
+      "text": "从看到你还有气的时候就开始了。",
+      "focus": "left"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "",
+      "text": "她把锄头塞进你手里，又想了想。"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "绯恩",
+      "text": "不过说真的。",
+      "focus": "left"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "绯恩",
+      "text": "想不起来也没关系。种地一般用不到记忆。",
+      "focus": "left"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "",
+      "text": "她说这句话的时候没有笑。"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "绯恩",
+      "text": "明天早上我来找你。先睡吧。",
+      "focus": "left"
+    },
+    {
+      "type": "portrait",
+      "slot": "left",
+      "visible": false
+    },
+    {
+      "type": "dialogue",
+      "speaker": "",
+      "text": "门关上了。"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "",
+      "text": "窗外是完全陌生的星空。"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "",
+      "text": "但至少今晚，你有地方睡。"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "",
+      "text": "【伙伴「绯恩」加入了你的队伍】"
+    }
+  ]
+}

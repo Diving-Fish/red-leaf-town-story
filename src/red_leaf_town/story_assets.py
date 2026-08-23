@@ -28,13 +28,15 @@ DEFAULT_STORY_LAYOUT = StoryAssetLayout()
 
 
 class StoryAsset(BaseModel):
+    """素材库里的一张图。asset_key 为空表示占位：剧本可以先引用它，图之后再补。"""
+
     id: str = Field(pattern=r"^[a-z][a-z0-9_-]{1,63}$")
     kind: StoryAssetKind
     name: str = Field(min_length=1, max_length=64)
-    asset_key: str = Field(min_length=1)
-    width: int = Field(gt=0)
-    height: int = Field(gt=0)
-    content_type: str = Field(pattern=r"^image/")
+    asset_key: str = ""
+    width: int = Field(default=0, ge=0)
+    height: int = Field(default=0, ge=0)
+    content_type: str = Field(default="", pattern=r"^(image/.+)?$")
     inline_layout: StoryAssetLayout = Field(default_factory=StoryAssetLayout)
     stage_layout: StoryAssetLayout = Field(default_factory=StoryAssetLayout)
     created_at: int = Field(default=0, ge=0)
@@ -58,7 +60,14 @@ class StoryAsset(BaseModel):
             self.inline_layout != DEFAULT_STORY_LAYOUT or self.stage_layout != DEFAULT_STORY_LAYOUT
         ):
             raise ValueError("only portrait assets carry layout parameters")
+        if self.asset_key and not (self.width and self.height and self.content_type):
+            raise ValueError("an uploaded story asset needs width, height and content type")
         return self
+
+    @property
+    def pending(self) -> bool:
+        """占位素材没有图，演出时这一步静默降级，不会让剧情播不下去。"""
+        return not self.asset_key
 
 
 class StoryAssetCatalog(BaseModel):

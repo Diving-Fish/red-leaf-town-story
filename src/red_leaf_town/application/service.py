@@ -697,11 +697,23 @@ class GameService:
         script = self.story_catalog_loader().script_map.get(story_id)
         if script is None:
             raise GameError("story_not_found", "剧情不存在", 404)
+        partner_map = self.partner_catalog_loader().partner_map
+        now = self._now()
 
         def mutation(player: PlayerState):
-            if script.id not in player.seen_story_ids:
-                player.seen_story_ids.append(script.id)
-            return {"story_id": script.id}
+            if script.id in player.seen_story_ids:
+                return {"story_id": script.id, "granted_partners": []}
+            player.seen_story_ids.append(script.id)
+            # 奖励只在第一次播完时结算，重复上报不会再发一次。
+            granted = []
+            for partner_id in script.rewards.partner_ids:
+                if partner_id not in partner_map:
+                    continue
+                if any(owned.partner_id == partner_id for owned in player.owned_partners):
+                    continue
+                player.owned_partners.append(OwnedPartnerState(partner_id=partner_id, acquired_at=now))
+                granted.append({"partner_id": partner_id, "name": partner_map[partner_id].name})
+            return {"story_id": script.id, "granted_partners": granted}
 
         player, result = self._update_by_sub(oauth_sub, mutation)
         return {"result": result, "state": self._snapshot(player)}
@@ -761,6 +773,16 @@ class GameService:
             "owned_partner": owned.model_dump(),
             "player": self._admin_player_summary(player),
         }
+
+    def admin_delete_player(self, player_id: str) -> dict:
+        """彻底删除一个角色。存档不可恢复，玩家再次登录会当作新居民重新建号。"""
+        player = self.repository.get(player_id)
+        if not player:
+            raise GameError("player_not_found", "玩家不存在", 404)
+        summary = self._admin_player_summary(player)
+        if not self.repository.delete(player_id):
+            raise GameError("player_not_found", "玩家不存在", 404)
+        return {"player": summary}
 
     def _settled_snapshot(self, player_id: str) -> dict:
         now = self._now()

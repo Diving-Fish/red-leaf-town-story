@@ -139,6 +139,30 @@ class RedisPlayerRepository:
                     continue
         raise RuntimeError("player update conflict")
 
+    def delete(self, player_id: str) -> bool:
+        """删号：存档、OAuth 索引、绑定标签，以及指向这个角色的 QQ 绑定都要一起清掉。"""
+        player = self.get(player_id)
+        if not player:
+            return False
+        keys = [
+            self._player_key(player_id),
+            self._oauth_key(player.oauth_sub),
+            f"{self._bindings_prefix()}{player_id}",
+        ]
+        # identity key 里只存了 player_id，反查只能扫一遍；删号是管理员操作，这点代价可以接受。
+        keys.extend(
+            key
+            for key in self.redis.scan_iter(match=f"{self.PREFIX}identity:*", count=100)
+            if str(self.redis.get(key) or "") == player_id
+        )
+        keys.extend(
+            key
+            for key in self.redis.scan_iter(match=f"{self.PREFIX}binding-code:*", count=100)
+            if str(self.redis.get(key) or "") == player_id
+        )
+        self.redis.delete(*keys)
+        return True
+
     def create_binding_code(self, player_id: str, ttl_seconds: int = 600) -> str:
         if not self.redis.exists(self._player_key(player_id)):
             raise KeyError(player_id)

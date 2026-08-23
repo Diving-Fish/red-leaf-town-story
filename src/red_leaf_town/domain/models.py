@@ -1,6 +1,11 @@
 from __future__ import annotations
 
+from copy import deepcopy
+
 from pydantic import BaseModel, Field, model_validator
+
+
+RENAMED_PARTNER_IDS: dict[str, str] = {"sprite_001": "fein"}
 
 
 class TaskPartnerSnapshot(BaseModel):
@@ -143,8 +148,37 @@ class OwnedPartnerState(BaseModel):
         return migrated
 
 
+def _rename_partner_ids(migrated: dict) -> dict:
+    """伙伴改 ID 之后，存档里所有引用它的地方都要跟着改，包括进行中的任务快照。"""
+    migrated = deepcopy(migrated)
+    for owned in migrated.get("owned_partners") or []:
+        if isinstance(owned, dict) and owned.get("partner_id") in RENAMED_PARTNER_IDS:
+            owned["partner_id"] = RENAMED_PARTNER_IDS[owned["partner_id"]]
+    slots = [
+        production_slot
+        for key in ("plots", "gathering_sites", "crafting_stations", "mining_sites")
+        for production_slot in (migrated.get(key) or [])
+        if isinstance(production_slot, dict)
+    ]
+    for production_slot in slots:
+        production_slot["assigned_partner_ids"] = _renamed_list(production_slot.get("assigned_partner_ids"))
+        task = production_slot.get("task_snapshot")
+        if not isinstance(task, dict):
+            continue
+        task["assigned_partner_ids"] = _renamed_list(task.get("assigned_partner_ids"))
+        task["support_partner_ids"] = _renamed_list(task.get("support_partner_ids"))
+        for snapshot in task.get("partner_snapshots") or []:
+            if isinstance(snapshot, dict) and snapshot.get("partner_id") in RENAMED_PARTNER_IDS:
+                snapshot["partner_id"] = RENAMED_PARTNER_IDS[snapshot["partner_id"]]
+    return migrated
+
+
+def _renamed_list(partner_ids) -> list[str]:
+    return [RENAMED_PARTNER_IDS.get(partner_id, partner_id) for partner_id in (partner_ids or [])]
+
+
 class PlayerState(BaseModel):
-    schema_version: int = 9
+    schema_version: int = 10
     version: int = 1
     player_id: str
     oauth_sub: str
@@ -197,7 +231,9 @@ class PlayerState(BaseModel):
             migrated.setdefault("mining_sites", [])
         if schema_version < 9:
             migrated.setdefault("seen_story_ids", [])
-        migrated["schema_version"] = 9
+        if schema_version < 10:
+            migrated = _rename_partner_ids(migrated)
+        migrated["schema_version"] = 10
         return migrated
 
     @model_validator(mode="after")

@@ -476,6 +476,11 @@ export interface StoryDialogueStep {
 
 export type StoryStep = StoryBackgroundStep | StoryPortraitStep | StoryDialogueStep
 
+export interface StoryRewards {
+  partner_ids: string[]
+  partner_names: string[]
+}
+
 export interface StoryScript {
   id: string
   title: string
@@ -483,6 +488,7 @@ export interface StoryScript {
   priority: number
   repeatable: boolean
   trigger_description: string
+  rewards: StoryRewards
   steps: StoryStep[]
 }
 

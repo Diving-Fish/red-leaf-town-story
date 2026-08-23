@@ -90,6 +90,9 @@ export const useGameStore = defineStore('game', () => {
     return stamps.length ? Math.min(...stamps) : 0
   })
 
+  // 剧情结算完的存档直接采用，伙伴加入之类的奖励不用等下一次轮询。
+  story.bindState((next) => acceptState(next, performance.now()))
+
   function isPending(key: string) {
     return pending.value.has(key)
   }

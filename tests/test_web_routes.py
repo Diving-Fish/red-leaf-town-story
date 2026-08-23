@@ -12,6 +12,7 @@ from werkzeug.datastructures import FileStorage
 from private.libraries.jwt import AUD_RED_LEAF_TOWN, subject_encode
 from red_leaf_town.application import GameService
 from red_leaf_town.content import load_content
+from red_leaf_town.domain import QQIdentity
 from red_leaf_town.infrastructure import InMemoryPlayerRepository
 from red_leaf_town.runtime import set_service
 from red_leaf_town.partner_content import load_partner_catalog
@@ -116,15 +117,15 @@ async def test_sell_api_accepts_exact_quality_bucket(client, service):
 @runs
 async def test_gathering_partner_start_and_talent_apis(client, service):
     player = service.repository.get_by_sub("route-sub")
-    service.admin_grant_partner(player.player_id, "sprite_001")
+    service.admin_grant_partner(player.player_id, "fein")
     authenticate(client)
 
     assigned = await client.put(
         "/api/red-leaf-town/gathering/sites/maple_forest/partner",
-        json={"partner_id": "sprite_001"},
+        json={"partner_id": "fein"},
     )
     assert assigned.status_code == 200
-    assert (await assigned.get_json())["data"]["state"]["gathering_sites"][0]["assigned_partner_ids"] == ["sprite_001"]
+    assert (await assigned.get_json())["data"]["state"]["gathering_sites"][0]["assigned_partner_ids"] == ["fein"]
 
     started = await client.post(
         "/api/red-leaf-town/gathering/sites/maple_forest/start",
@@ -442,3 +443,53 @@ async def test_partner_artwork_rejects_invalid_manual_crop_before_upload(admin_c
     )
     assert response.status_code == 400
     assert (await response.get_json())["code"] == "invalid_artwork_crop"
+
+
+@runs
+async def test_admin_can_delete_a_player(admin_client, service):
+    player = service.repository.get_by_sub("route-sub")
+    code = service.create_binding_code("route-sub")
+    identity = QQIdentity(platform="onebot", bot_id="bot-1", subject="qq-1")
+    service.bind_identity(code, identity)
+
+    response = await admin_client.delete(
+        f"/api/red-leaf-town/admin/players/{player.player_id}",
+        headers=admin_headers(),
+    )
+    body = await response.get_json()
+
+    assert response.status_code == 200
+    assert body["data"]["player"]["display_name"] == "小枫"
+    assert service.repository.get(player.player_id) is None
+    assert service.repository.get_by_sub("route-sub") is None
+    assert service.repository.player_id_for_identity(identity) is None
+
+    missing = await admin_client.delete(
+        f"/api/red-leaf-town/admin/players/{player.player_id}",
+        headers=admin_headers(),
+    )
+    assert missing.status_code == 404
+    assert (await missing.get_json())["code"] == "player_not_found"
+
+
+@runs
+async def test_player_delete_requires_admin_token(admin_client, service):
+    player = service.repository.get_by_sub("route-sub")
+    response = await admin_client.delete(f"/api/red-leaf-town/admin/players/{player.player_id}")
+    assert response.status_code == 403
+    assert service.repository.get(player.player_id) is not None
+
+
+@runs
+async def test_deleted_player_starts_over_on_the_next_login(admin_client, service):
+    player = service.repository.get_by_sub("route-sub")
+    service.mark_story_seen("route-sub", "fein_farm_greeting")
+    await admin_client.delete(
+        f"/api/red-leaf-town/admin/players/{player.player_id}",
+        headers=admin_headers(),
+    )
+
+    recreated = service.ensure_player("route-sub", "小枫")
+    assert recreated.player_id != player.player_id
+    assert recreated.seen_story_ids == []
+    assert recreated.owned_partners == []

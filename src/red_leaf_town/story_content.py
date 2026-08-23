@@ -83,17 +83,36 @@ class StoryTrigger(BaseModel):
         return describe_story_trigger(self.hook, self.params)
 
 
+class StoryRewards(BaseModel):
+    """剧本播完时结算一次的奖励，目前只有伙伴加入。"""
+
+    partner_ids: list[str] = Field(default_factory=list, max_length=8)
+
+    @model_validator(mode="after")
+    def validate_rewards(self):
+        if len(self.partner_ids) != len(set(self.partner_ids)):
+            raise ValueError("story rewards cannot grant the same partner twice")
+        return self
+
+    @property
+    def empty(self) -> bool:
+        return not self.partner_ids
+
+
 class StoryScript(BaseModel):
     id: str = Field(pattern=r"^[a-z][a-z0-9_-]{1,63}$")
     title: str = Field(min_length=1, max_length=64)
     trigger: StoryTrigger
     steps: list[StoryStep] = Field(min_length=1, max_length=200)
     priority: int = Field(default=0, ge=-100, le=100)
+    rewards: StoryRewards = Field(default_factory=StoryRewards)
 
     @model_validator(mode="after")
     def validate_script(self):
         if not any(step.type == "dialogue" for step in self.steps):
             raise ValueError("a story script must contain at least one dialogue step")
+        if self.trigger.repeatable and not self.rewards.empty:
+            raise ValueError("a repeatable story cannot carry rewards")
         return self
 
     @property
@@ -111,7 +130,8 @@ class StoryScript(BaseModel):
 
     @property
     def partner_ids(self) -> set[str]:
-        return {step.partner_id for step in self.steps if step.type == "portrait" and step.partner_id}
+        portraits = {step.partner_id for step in self.steps if step.type == "portrait" and step.partner_id}
+        return portraits | set(self.rewards.partner_ids)
 
 
 class StoryCatalog(BaseModel):
@@ -217,6 +237,7 @@ def serialize_step(step, assets: StoryAssetCatalog, partners: PartnerCatalog) ->
 
 
 def serialize_script(script: StoryScript, assets: StoryAssetCatalog, partners: PartnerCatalog) -> dict:
+    partner_map = partners.partner_map
     return {
         "id": script.id,
         "title": script.title,
@@ -224,6 +245,13 @@ def serialize_script(script: StoryScript, assets: StoryAssetCatalog, partners: P
         "priority": script.priority,
         "repeatable": script.trigger.repeatable,
         "trigger_description": script.trigger.description,
+        "rewards": {
+            "partner_ids": list(script.rewards.partner_ids),
+            "partner_names": [
+                partner_map[partner_id].name if partner_id in partner_map else partner_id
+                for partner_id in script.rewards.partner_ids
+            ],
+        },
         "steps": [serialize_step(step, assets, partners) for step in script.steps],
     }
 

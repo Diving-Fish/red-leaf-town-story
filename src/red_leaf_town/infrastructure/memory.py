@@ -76,6 +76,18 @@ class InMemoryPlayerRepository:
         self.players[player_id] = copy.deepcopy(candidate)
         return candidate, result
 
+    def delete(self, player_id: str) -> bool:
+        player = self.players.pop(player_id, None)
+        if not player:
+            return False
+        self.oauth_index.pop(player.oauth_sub, None)
+        self.bindings.pop(player_id, None)
+        for key in [key for key, owner in self.identity_index.items() if owner == player_id]:
+            del self.identity_index[key]
+        for code in [code for code, owner in self.binding_codes.items() if owner == player_id]:
+            del self.binding_codes[code]
+        return True
+
     def create_binding_code(self, player_id: str, ttl_seconds: int = 600) -> str:
         if player_id not in self.players:
             raise KeyError(player_id)

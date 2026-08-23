@@ -335,7 +335,7 @@ onMounted(() => {
         <div class="brand"><span><Leaf :size="22" /></span><div><strong>红叶镇后台</strong><small>伙伴卡片管理</small></div></div>
         <nav class="admin-section-tabs" aria-label="后台功能">
           <button :class="{ active: adminSection === 'cards' }" @click="adminSection = 'cards'">卡片配置</button>
-          <button :class="{ active: adminSection === 'grants' }" @click="adminSection = 'grants'">玩家发放</button>
+          <button :class="{ active: adminSection === 'grants' }" @click="adminSection = 'grants'">玩家存档</button>
         </nav>
         <div class="header-actions">
           <span v-if="notice" class="notice"><Check :size="15" />{{ notice }}</span>

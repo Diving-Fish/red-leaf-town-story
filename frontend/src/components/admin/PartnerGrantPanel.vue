@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
-import { Check, Search, Sparkles, UserRound, WandSparkles } from 'lucide-vue-next'
+import { computed, onMounted, ref, watch } from 'vue'
+import { Check, Search, Sparkles, TriangleAlert, UserRound, WandSparkles } from 'lucide-vue-next'
 
 import { api } from '@/api'
 import PartnerAvatar from '@/components/PartnerAvatar.vue'
@@ -17,11 +17,18 @@ const selectedPlayerId = ref('')
 const busy = ref(false)
 const error = ref('')
 const notice = ref('')
+const deleteConfirmation = ref('')
 
 const selectedPlayer = computed(() => players.value.find((player) => player.player_id === selectedPlayerId.value) || null)
 const availablePartners = computed(() => props.partners.filter(
   (partner) => !selectedPlayer.value?.owned_partner_ids.includes(partner.id),
 ))
+// 删号不可恢复，要求把角色名原样打一遍才放行。
+const deletable = computed(() => Boolean(
+  selectedPlayer.value && deleteConfirmation.value.trim() === selectedPlayer.value.display_name,
+))
+
+watch(selectedPlayerId, () => (deleteConfirmation.value = ''))
 
 function headers() {
   return { 'X-Admin-Token': props.adminToken, 'Content-Type': 'application/json' }
@@ -62,13 +69,38 @@ async function grantPartner(partnerId: string) {
     )
     const index = players.value.findIndex((player) => player.player_id === result.player.player_id)
     if (index >= 0) players.value[index] = result.player
-    notice.value = '伙伴已发放，玩家刷新后即可查看'
-    window.setTimeout(() => (notice.value = ''), 2600)
+    flash('伙伴已发放，玩家刷新后即可查看')
   } catch (caught) {
     error.value = caught instanceof Error ? caught.message : '发放失败'
   } finally {
     busy.value = false
   }
+}
+
+async function deletePlayer() {
+  if (!selectedPlayer.value || !deletable.value || busy.value) return
+  const target = selectedPlayer.value
+  busy.value = true
+  error.value = ''
+  try {
+    await api(`/api/red-leaf-town/admin/players/${encodeURIComponent(target.player_id)}`, {
+      method: 'DELETE',
+      headers: headers(),
+    })
+    players.value = players.value.filter((player) => player.player_id !== target.player_id)
+    selectedPlayerId.value = players.value[0]?.player_id || ''
+    deleteConfirmation.value = ''
+    flash(`${target.display_name} 的存档已删除，该账号再次登录会重新建号`)
+  } catch (caught) {
+    error.value = caught instanceof Error ? caught.message : '删除失败'
+  } finally {
+    busy.value = false
+  }
+}
+
+function flash(message: string) {
+  notice.value = message
+  window.setTimeout(() => (notice.value = ''), 2600)
 }
 
 onMounted(searchPlayers)
@@ -77,7 +109,7 @@ onMounted(searchPlayers)
 <template>
   <section class="grant-panel">
     <header>
-      <div><p>PLAYER DELIVERY</p><h1>玩家伙伴发放</h1><span>搜索玩家，并发放其尚未持有的伙伴。</span></div>
+      <div><p>PLAYER DELIVERY</p><h1>玩家存档管理</h1><span>搜索玩家，发放其尚未持有的伙伴，或删除整个角色存档。</span></div>
       <form @submit.prevent="searchPlayers"><Search :size="16" /><input v-model="query" placeholder="玩家名称或 Player ID" /><button :disabled="busy">搜索</button></form>
     </header>
     <p v-if="error" class="grant-error">{{ error }}</p>
@@ -118,6 +150,15 @@ onMounted(searchPlayers)
           </div>
           <div v-else class="all-owned"><Check :size="28" /><strong>没有可发放的伙伴</strong><span>该玩家已经持有目录中的全部伙伴。</span></div>
         </section>
+
+        <section class="danger-section">
+          <h3><TriangleAlert :size="14" />删除角色</h3>
+          <p>存档、伙伴、进行中的任务和 QQ 绑定会一起清掉，无法恢复。该水鱼账号再次登录会当作新居民重新建号，开局剧情也会重新播放。</p>
+          <div class="danger-actions">
+            <input v-model="deleteConfirmation" :placeholder="`输入 ${selectedPlayer.display_name} 以确认`" />
+            <button :disabled="!deletable || busy" @click="deletePlayer">永久删除</button>
+          </div>
+        </section>
       </main>
       <div v-else class="select-player-placeholder"><UserRound :size="38" /><span>请先选择玩家</span></div>
     </div>
@@ -129,6 +170,7 @@ onMounted(searchPlayers)
 .grant-error,.grant-notice { display: flex; align-items: center; gap: 6px; padding: 10px 13px; border-radius: 9px; font-size: 12px; }.grant-error { color: #efa08f; border: 1px solid #dc806d33; background: #dc806d0d; }.grant-notice { color: #acd08b; border: 1px solid #91b67333; background: #91b6730d; }
 .grant-layout { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 14px; align-items: start; }.player-results { min-height: 430px; padding: 13px; border: 1px solid #ffffff10; border-radius: 17px 6px; background: #141e18; }.player-results > small { display: block; margin: 3px 6px 11px; color: #6f7b73; font-size: 12px; }.player-results > button { width: 100%; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 9px; padding: 9px; margin-top: 4px; text-align: left; color: #cbd2c8; border: 1px solid transparent; border-radius: 10px; background: transparent; cursor: pointer; }.player-results > button.active { border-color: #98b97833; background: #98b97811; }.player-results > button > span { width: 36px; height: 36px; display: grid; place-items: center; color: #9fbd84; border-radius: 11px 4px; background: #243128; }.player-results strong,.player-results button small { display: block; }.player-results button small { margin-top: 3px; color: #6f7c73; font-size: 12px; }.player-results button i { min-width: 21px; padding: 3px; color: #d5ae63; text-align: center; font-size: 12px; font-style: normal; border-radius: 99px; background: #d5ae6311; }.no-players { padding: 50px 10px; color: #667269; text-align: center; font-size: 12px; }
 .grant-workspace { min-width: 0; padding: 22px; border: 1px solid #ffffff10; border-radius: 20px 7px; background: #17211b; }.selected-player { display: flex; align-items: center; gap: 12px; padding-bottom: 18px; border-bottom: 1px solid #ffffff0e; }.selected-player > span { width: 48px; height: 48px; display: grid; place-items: center; color: #b4ce99; border-radius: 15px 5px; background: #29382d; }.selected-player small,.selected-player code { display: block; color: #6e7b72; font-size: 12px; }.selected-player h2 { margin: 2px 0; font-size: 18px; }.owned-section,.available-section { margin-top: 22px; }.owned-section h3,.available-section h3 { margin: 0 0 10px; font-size: 12px; }.owned-section > p { color: #748077; font-size: 12px; }.owned-chips { display: flex; flex-wrap: wrap; gap: 6px; }.owned-chips span { display: flex; align-items: center; gap: 4px; padding: 6px 9px; color: #a9c88e; font-size: 12px; border-radius: 99px; background: #8fb26f12; }
+.danger-section { margin-top: 26px; padding: 15px; border: 1px solid #dc806d2e; border-radius: 12px; background: #dc806d08; }.danger-section h3 { display: flex; align-items: center; gap: 5px; margin: 0 0 8px; color: #e79c88; font-size: 12px; }.danger-section > p { margin: 0 0 11px; color: #98867f; font-size: 12px; line-height: 1.65; }.danger-actions { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }.danger-actions input { min-width: 0; height: 34px; padding: 0 11px; color: #eee9dd; font-size: 12px; border: 1px solid #ffffff16; border-radius: 8px; outline: 0; background: #111914; }.danger-actions button { min-height: 34px; padding: 0 14px; color: #2a1512; font-size: 12px; font-weight: 800; border: 0; border-radius: 8px; background: #dc9382; cursor: pointer; }.danger-actions button:disabled { color: #7e6b66; background: #dc806d24; cursor: not-allowed; }
 .grant-partner-grid { display: grid; grid-template-columns: repeat(2, minmax(220px, 1fr)); gap: 8px; }.grant-partner-grid article { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; padding: 10px; border: 1px solid #ffffff0e; border-radius: 12px; background: #101813; }.grant-avatar { color: #9ebd82; }.grant-partner-grid strong,.grant-partner-grid small { display: block; }.grant-partner-grid small { margin-top: 3px; color: #6d7970; font-size: 12px; }.grant-partner-grid button { min-height: 33px; display: flex; align-items: center; gap: 5px; padding: 0 10px; color: #172016; font-size: 12px; font-weight: 800; border: 0; border-radius: 8px; background: #a8c985; cursor: pointer; }.all-owned,.select-player-placeholder { min-height: 250px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: #69756c; }.all-owned strong { color: #9eaa9f; }.all-owned span { font-size: 12px; }.select-player-placeholder { min-height: 430px; border: 1px dashed #ffffff10; border-radius: 20px; font-size: 12px; }
 @media (max-width: 850px) { .grant-panel > header { align-items: start; flex-direction: column; }.grant-layout { grid-template-columns: 1fr; }.player-results { min-height: 0; max-height: 260px; overflow: auto; }.grant-partner-grid { grid-template-columns: 1fr; } }
 </style>

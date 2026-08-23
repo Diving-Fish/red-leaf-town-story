@@ -198,6 +198,7 @@ function restartLayoutPreview() {
       mode: layoutMode.value,
       priority: 0,
       repeatable: true,
+      rewards: { partner_ids: [], partner_names: [] },
       trigger_description: '',
       steps,
     },
@@ -309,7 +310,8 @@ async function saveLayout() {
               <div class="asset-frame asset-frame--wide"><img v-if="asset.url" :src="asset.url" :alt="asset.name" /></div>
               <div class="asset-meta">
                 <strong>{{ asset.name }}</strong>
-                <small>{{ asset.id }} · {{ asset.width }}×{{ asset.height }}</small>
+                <small v-if="asset.asset_key">{{ asset.id }} · {{ asset.width }}×{{ asset.height }}</small>
+                <small v-else class="pending-hint">{{ asset.id }} · 占位，用同一个 ID 上传即可补图</small>
               </div>
               <button class="delete-button" @click="remove(asset)"><Trash2 :size="14" /></button>
             </article>
@@ -322,7 +324,8 @@ async function saveLayout() {
               <div class="asset-frame"><img v-if="asset.url" :src="asset.url" :alt="asset.name" /></div>
               <div class="asset-meta">
                 <strong>{{ asset.name }}</strong>
-                <small>{{ asset.id }} · {{ asset.width }}×{{ asset.height }}</small>
+                <small v-if="asset.asset_key">{{ asset.id }} · {{ asset.width }}×{{ asset.height }}</small>
+                <small v-else class="pending-hint">{{ asset.id }} · 占位，用同一个 ID 上传即可补图</small>
                 <em>插话 ×{{ (asset.layouts?.inline.scale ?? 1).toFixed(2) }} · 舞台 ×{{ (asset.layouts?.stage.scale ?? 1).toFixed(2) }}</em>
               </div>
               <div class="asset-actions">
@@ -347,6 +350,9 @@ async function saveLayout() {
             </div>
             <span class="mode-chip" :class="`mode-chip--${script.mode}`">{{ script.mode === 'stage' ? '全屏舞台' : '就地插话' }}</span>
             <span v-if="script.repeatable" class="mode-chip">可重复</span>
+            <span v-if="script.rewards?.partner_names.length" class="mode-chip mode-chip--reward">
+              播完加入 {{ script.rewards.partner_names.join('、') }}
+            </span>
             <button class="preview-button" @click="preview(script)"><Play :size="14" />预览</button>
           </article>
           <p v-if="!(payload?.scripts || []).length" class="empty-hint">剧本目录还是空的。</p>
@@ -440,7 +446,8 @@ button { color: inherit; }
 .empty-hint { padding: 22px 10px; text-align: center; color: #657168; font-size: 12px; }
 .script-list { display: grid; gap: 8px; }
 .script-card { display: grid; grid-template-columns: 1fr auto auto auto; align-items: center; gap: 10px; padding: 14px; border: 1px solid #ffffff11; border-radius: 14px 5px; background: #17211b; }.script-card strong,.script-card small { display: block; }.script-card small { margin-top: 4px; color: #748077; font-size: 12px; }
-.mode-chip { padding: 4px 10px; color: #9db982; font-size: 12px; border-radius: 99px; background: #9db98214; }.mode-chip--stage { color: #d99177; background: #d9917714; }
+.mode-chip { padding: 4px 10px; color: #9db982; font-size: 12px; border-radius: 99px; background: #9db98214; }.mode-chip--stage { color: #d99177; background: #d9917714; }.mode-chip--reward { color: #e0bd72; background: #e0bd7214; }
+.pending-hint { color: #d9917799; }
 .preview-button { min-height: 34px; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; color: #cfd8c9; border: 1px solid #ffffff16; border-radius: 9px; background: transparent; cursor: pointer; }.preview-button:hover { border-color: #9cbe7c55; }
 @media (max-width: 900px) { .upload-card { grid-template-columns: 1fr; }.asset-columns { grid-template-columns: 1fr; } }
 @media (max-width: 760px) { .admin-header { height: auto; min-height: 66px; padding: 10px 14px; }.brand small,.header-actions > a,.notice { display: none; }.admin-body { padding: 22px 14px 80px; }.section-heading { display: block; }.section-heading p { max-width: none; margin-top: 6px; }.upload-fields { grid-template-columns: 1fr; }.script-card { grid-template-columns: 1fr auto; }.preview-button { grid-column: 2; } }

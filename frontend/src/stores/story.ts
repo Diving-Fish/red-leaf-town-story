@@ -3,6 +3,8 @@ import { defineStore } from 'pinia'
 
 import { api } from '@/api'
 import type {
+  ActionResult,
+  GameState,
   StoryAsset,
   StoryCueResult,
   StoryDialogueStep,
@@ -34,6 +36,12 @@ export const useStoryStore = defineStore('story', () => {
   const locked = ref(false)
   const requested = new Set<string>()
   let cursor = 0
+  // 剧情播完可能带来奖励（比如伙伴加入），上报时服务端会回一份新的存档。
+  let onState: ((next: GameState) => void) | null = null
+
+  function bindState(handler: (next: GameState) => void) {
+    onState = handler
+  }
 
   const active = computed(() => script.value !== null)
   const mode = computed(() => script.value?.mode || 'inline')
@@ -131,7 +139,9 @@ export const useStoryStore = defineStore('story', () => {
     const wasPreview = previewing.value
     clearStage()
     if (finished && !wasPreview) {
-      api(`${API_ROOT}/story/${encodeURIComponent(finished.id)}/seen`, { method: 'POST' }).catch(() => undefined)
+      api<ActionResult>(`${API_ROOT}/story/${encodeURIComponent(finished.id)}/seen`, { method: 'POST' })
+        .then((result) => onState?.(result.state))
+        .catch(() => undefined)
     }
     startNext()
   }
@@ -159,6 +169,7 @@ export const useStoryStore = defineStore('story', () => {
     speaker,
     focus,
     cue,
+    bindState,
     enqueue,
     preview,
     setPortraitLayout,

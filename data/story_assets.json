@@ -2,6 +2,26 @@
   "schema_version": 1,
   "assets": [
     {
+      "id": "farm_house_night",
+      "kind": "background",
+      "name": "TODO 空屋与农田 · 入夜",
+      "asset_key": "",
+      "width": 0,
+      "height": 0,
+      "content_type": "",
+      "inline_layout": {
+        "scale": 1.0,
+        "offset_x": 0.0,
+        "offset_y": 0.0
+      },
+      "stage_layout": {
+        "scale": 1.0,
+        "offset_x": 0.0,
+        "offset_y": 0.0
+      },
+      "created_at": 0
+    },
+    {
       "id": "fein_story",
       "kind": "portrait",
       "name": "绯恩",
@@ -15,9 +35,49 @@
         "offset_y": 0.31
       },
       "stage_layout": {
-        "scale": 2.0,
-        "offset_x": -0.05,
-        "offset_y": 0.3
+        "scale": 1.31,
+        "offset_x": 0.1,
+        "offset_y": 0.25
+      },
+      "created_at": 0
+    },
+    {
+      "id": "portal_hollow",
+      "kind": "background",
+      "name": "TODO 传送门空地 · 黄昏",
+      "asset_key": "",
+      "width": 0,
+      "height": 0,
+      "content_type": "",
+      "inline_layout": {
+        "scale": 1.0,
+        "offset_x": 0.0,
+        "offset_y": 0.0
+      },
+      "stage_layout": {
+        "scale": 1.0,
+        "offset_x": 0.0,
+        "offset_y": 0.0
+      },
+      "created_at": 0
+    },
+    {
+      "id": "town_gate_dusk",
+      "kind": "background",
+      "name": "TODO 红叶镇镇口 · 黄昏",
+      "asset_key": "",
+      "width": 0,
+      "height": 0,
+      "content_type": "",
+      "inline_layout": {
+        "scale": 1.0,
+        "offset_x": 0.0,
+        "offset_y": 0.0
+      },
+      "stage_layout": {
+        "scale": 1.0,
+        "offset_x": 0.0,
+        "offset_y": 0.0
       },
       "created_at": 0
     }

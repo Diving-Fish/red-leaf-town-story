@@ -563,6 +563,13 @@ def create_blueprint(
         result = get_service().admin_grant_partner(player_id, str(payload.get("partner_id", "")))
         return jsonify({"code": 0, "data": result})
 
+    @blueprint.delete("/api/red-leaf-town/admin/players/<string:player_id>")
+    async def admin_player_delete(player_id: str):
+        if not _is_admin_request():
+            return _admin_error()
+        result = get_service().admin_delete_player(player_id)
+        return jsonify({"code": 0, "data": result, "message": "角色已删除"})
+
     @blueprint.get("/api/oauth/red-leaf-town/start")
     async def oauth_start():
         from private.libraries.df_oauth import OAuthError, build_authorize_url
