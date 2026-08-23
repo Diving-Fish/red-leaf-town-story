@@ -71,12 +71,12 @@ def test_schema_two_spirit_warehouse_is_rewritten_with_partner_fields(repository
     }))
 
     loaded = repository.get(player_id)
-    assert loaded.schema_version == 8
+    assert loaded.schema_version == 9
     assert loaded.owned_partners[0].partner_id == "maple_sprite"
 
     repository.update(player_id, lambda player: None)
     stored = json.loads(repository.redis.get(repository._player_key(player_id)))
-    assert stored["schema_version"] == 8
+    assert stored["schema_version"] == 9
     assert stored["owned_partners"][0]["partner_id"] == "maple_sprite"
     assert "owned_spirits" not in stored
 
@@ -90,7 +90,7 @@ def test_gathering_assignment_and_task_snapshot_persist(repository):
     service.start_gathering("redis-gathering-sub", "maple_forest", "collect_maple_wood")
 
     reloaded = repository.get(player.player_id)
-    assert reloaded.schema_version == 8
+    assert reloaded.schema_version == 9
     assert reloaded.gathering_sites[0].assigned_partner_ids == ["sprite_001"]
     assert reloaded.gathering_sites[0].task_snapshot.industry == "gathering"
     assert reloaded.gathering_sites[0].task_snapshot.quality_parameters.ability == 40
@@ -106,7 +106,7 @@ def test_crafting_inputs_and_task_snapshot_persist_atomically(repository):
     service.start_crafting("redis-crafting-sub", "town_workbench", "saw_maple_plank")
 
     reloaded = repository.get(player.player_id)
-    assert reloaded.schema_version == 8
+    assert reloaded.schema_version == 9
     assert "maple_wood" not in reloaded.inventory
     task = reloaded.crafting_stations[0].task_snapshot
     assert task.industry == "crafting"
@@ -122,6 +122,6 @@ def test_mining_site_and_task_snapshot_persist(repository):
     service.start_mining("redis-mining-sub", "copper_foothill", "mine_red_copper")
 
     reloaded = repository.get(player.player_id)
-    assert reloaded.schema_version == 8
+    assert reloaded.schema_version == 9
     assert reloaded.mining_sites[0].site_id == "copper_foothill"
     assert reloaded.mining_sites[0].task_snapshot.industry == "mining"

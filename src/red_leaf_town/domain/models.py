@@ -144,7 +144,7 @@ class OwnedPartnerState(BaseModel):
 
 
 class PlayerState(BaseModel):
-    schema_version: int = 8
+    schema_version: int = 9
     version: int = 1
     player_id: str
     oauth_sub: str
@@ -161,6 +161,7 @@ class PlayerState(BaseModel):
     mining_sites: list[MiningSiteState] = Field(default_factory=list)
     talent_nodes: list[str] = Field(default_factory=list)
     owned_partners: list[OwnedPartnerState] = Field(default_factory=list)
+    seen_story_ids: list[str] = Field(default_factory=list)
     created_at: int
     updated_at: int
 
@@ -194,7 +195,9 @@ class PlayerState(BaseModel):
             migrated.setdefault("crafting_stations", [])
         if schema_version < 8:
             migrated.setdefault("mining_sites", [])
-        migrated["schema_version"] = 8
+        if schema_version < 9:
+            migrated.setdefault("seen_story_ids", [])
+        migrated["schema_version"] = 9
         return migrated
 
     @model_validator(mode="after")
@@ -209,6 +212,8 @@ class PlayerState(BaseModel):
             raise ValueError("player cannot own the same partner more than once")
         if len(self.talent_nodes) != len(set(self.talent_nodes)):
             raise ValueError("player cannot unlock the same talent node more than once")
+        if len(self.seen_story_ids) != len(set(self.seen_story_ids)):
+            raise ValueError("player cannot record the same story more than once")
         assigned_ids = [
             partner_id
             for production_slot in [*self.plots, *self.gathering_sites, *self.crafting_stations, *self.mining_sites]

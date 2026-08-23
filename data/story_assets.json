@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "assets": [
+    {
+      "id": "fein_story",
+      "kind": "portrait",
+      "name": "绯恩",
+      "asset_key": "red-leaf-town/story/portrait/fein_story-482a3c147e485c66.webp",
+      "width": 941,
+      "height": 1672,
+      "content_type": "image/webp",
+      "inline_layout": {
+        "scale": 3.0,
+        "offset_x": -0.15,
+        "offset_y": 0.31
+      },
+      "stage_layout": {
+        "scale": 2.0,
+        "offset_x": -0.05,
+        "offset_y": 0.3
+      },
+      "created_at": 0
+    }
+  ]
+}

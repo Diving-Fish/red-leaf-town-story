@@ -18,6 +18,12 @@ export default createRouter({
       component: () => import('@/views/AdminPartnersView.vue'),
       meta: { title: '伙伴管理', admin: true },
     },
+    {
+      path: '/admin/story',
+      name: 'admin-story',
+      component: () => import('@/views/AdminStoryView.vue'),
+      meta: { title: '剧情素材', admin: true },
+    },
     { path: '/', name: 'dashboard', component: DashboardView, meta: { title: '总览' } },
     { path: '/farm', name: 'farm', component: FarmView, meta: { title: '农场' } },
     { path: '/gathering', name: 'gathering', component: GatheringView, meta: { title: '采集' } },

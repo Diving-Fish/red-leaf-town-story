@@ -39,6 +39,9 @@ from red_leaf_town.partner_content import (
     load_partner_catalog,
 )
 from red_leaf_town.partner_traits import partner_trait_catalog
+from red_leaf_town.story_assets import StoryAssetCatalog, load_story_asset_catalog
+from red_leaf_town.story_content import StoryCatalog, load_story_catalog, serialize_script
+from red_leaf_town.story_triggers import StoryContext, validate_story_cue
 
 from .ports import PlayerRepository
 
@@ -60,12 +63,16 @@ class GameService:
         clock: Callable[[], float] = time.time,
         rng: random.Random | random.SystemRandom | None = None,
         partner_catalog_loader: Callable[[], PartnerCatalog] = load_partner_catalog,
+        story_catalog_loader: Callable[[], StoryCatalog] = load_story_catalog,
+        story_asset_loader: Callable[[], StoryAssetCatalog] = load_story_asset_catalog,
     ):
         self.content = content
         self.repository = repository
         self.clock = clock
         self.rng = rng or random.SystemRandom()
         self.partner_catalog_loader = partner_catalog_loader
+        self.story_catalog_loader = story_catalog_loader
+        self.story_asset_loader = story_asset_loader
 
     def ensure_player(self, oauth_sub: str, display_name: str) -> PlayerState:
         return self.repository.ensure_player(oauth_sub, display_name or "红叶镇居民", self._now())
@@ -666,6 +673,43 @@ class GameService:
 
         player, result = self._update_by_sub(oauth_sub, mutation)
         return {"result": result, "state": self._snapshot(player)}
+
+    def story_cue(self, oauth_sub: str, cue: str) -> dict:
+        """返回这个信号下应该立即播放的剧情，已经看过的一次性剧本不再返回。"""
+        try:
+            code = validate_story_cue(cue)
+        except ValueError as exc:
+            raise GameError("invalid_story_cue", "剧情信号格式不正确") from exc
+        player = self.repository.get_by_sub(oauth_sub)
+        if not player:
+            raise GameError("player_not_found", "角色不存在", 404)
+        catalog = self.story_catalog_loader()
+        context = StoryContext(player=player, cue=code, now=self._now())
+        matched = catalog.matching(context, set(player.seen_story_ids))
+        assets = self.story_asset_loader()
+        partners = self.partner_catalog_loader()
+        return {
+            "cue": code,
+            "stories": [serialize_script(script, assets, partners) for script in matched],
+        }
+
+    def mark_story_seen(self, oauth_sub: str, story_id: str) -> dict:
+        script = self.story_catalog_loader().script_map.get(story_id)
+        if script is None:
+            raise GameError("story_not_found", "剧情不存在", 404)
+
+        def mutation(player: PlayerState):
+            if script.id not in player.seen_story_ids:
+                player.seen_story_ids.append(script.id)
+            return {"story_id": script.id}
+
+        player, result = self._update_by_sub(oauth_sub, mutation)
+        return {"result": result, "state": self._snapshot(player)}
+
+    def story_scripts(self) -> list[dict]:
+        assets = self.story_asset_loader()
+        partners = self.partner_catalog_loader()
+        return [serialize_script(script, assets, partners) for script in self.story_catalog_loader().scripts]
 
     def create_binding_code(self, oauth_sub: str) -> str:
         player = self.repository.get_by_sub(oauth_sub)

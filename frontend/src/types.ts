@@ -425,3 +425,79 @@ export interface AdminPartnerGrantResult {
   }
   player: AdminPlayerSummary
 }
+
+export type StoryAssetKind = 'background' | 'portrait'
+export type StoryMode = 'inline' | 'stage'
+export type StoryPortraitSlot = 'left' | 'right'
+
+export interface StoryAssetLayout {
+  scale: number
+  offset_x: number
+  offset_y: number
+}
+
+export interface StoryAsset {
+  id: string
+  kind?: StoryAssetKind
+  name: string
+  asset_key: string
+  width: number
+  height: number
+  layouts?: Record<StoryMode, StoryAssetLayout>
+  inline_layout?: StoryAssetLayout
+  stage_layout?: StoryAssetLayout
+  content_type?: string
+  created_at?: number
+  url?: string
+}
+
+export interface StoryBackgroundStep {
+  type: 'background'
+  asset_id: string
+  asset: StoryAsset | null
+}
+
+export interface StoryPortraitStep {
+  type: 'portrait'
+  slot: StoryPortraitSlot
+  visible: boolean
+  asset_id: string
+  partner_id: string
+  breakthrough: number
+  asset: StoryAsset | null
+}
+
+export interface StoryDialogueStep {
+  type: 'dialogue'
+  speaker: string
+  text: string
+  focus: StoryPortraitSlot | 'none'
+}
+
+export type StoryStep = StoryBackgroundStep | StoryPortraitStep | StoryDialogueStep
+
+export interface StoryScript {
+  id: string
+  title: string
+  mode: StoryMode
+  priority: number
+  repeatable: boolean
+  trigger_description: string
+  steps: StoryStep[]
+}
+
+export interface StoryCueResult {
+  cue: string
+  stories: StoryScript[]
+}
+
+export interface StoryAdminPayload {
+  assets: StoryAsset[]
+  scripts: StoryScript[]
+  options: {
+    kinds: { id: StoryAssetKind; name: string }[]
+    trigger_hooks: string[]
+    script_directory: string
+    cdn: { provider: string; configured: boolean; base_url: string }
+  }
+}

@@ -25,6 +25,16 @@ from red_leaf_town.partner_content import (
     save_partner_catalog,
 )
 from red_leaf_town.partner_traits import partner_trait_catalog
+from red_leaf_town.story_assets import (
+    DEFAULT_STORY_ASSET_PATH,
+    STORY_ASSET_KIND_NAMES,
+    StoryAsset,
+    StoryAssetCatalog,
+    load_story_asset_catalog,
+    save_story_asset_catalog,
+)
+from red_leaf_town.story_content import DEFAULT_STORY_SCRIPT_DIR, load_story_catalog
+from red_leaf_town.story_triggers import story_trigger_hook_codes
 
 
 HOME_PATH = "/red-leaf-town/"
@@ -35,6 +45,9 @@ MAX_PARTNER_ARTWORK_SIZE = 12 * 1024 * 1024
 MAX_PARTNER_ARTWORK_PIXELS = 60_000_000
 MAX_PARTNER_ARTWORK_UNIT = 120
 PARTNER_ARTWORK_INPUT_FORMATS = {"JPEG", "PNG", "WEBP"}
+MAX_STORY_ASSET_SIZE = 12 * 1024 * 1024
+MAX_STORY_ASSET_PIXELS = 60_000_000
+MAX_STORY_ASSET_EDGE = {"background": 2560, "portrait": 1920}
 
 
 def _safe_next(value: str) -> str:
@@ -130,6 +143,31 @@ def _prepare_partner_artwork(data: bytes, form) -> tuple[bytes, int, int]:
     return output.getvalue(), output_width, output_height
 
 
+def _prepare_story_image(data: bytes, kind: str) -> tuple[bytes, int, int]:
+    """剧情素材不裁剪，只做格式校验、长边限制和 WebP 转码，保留立绘的透明通道。"""
+    from PIL import Image, ImageOps
+
+    with Image.open(io.BytesIO(data)) as source:
+        image_format = str(source.format or "").upper()
+        if image_format not in PARTNER_ARTWORK_INPUT_FORMATS:
+            raise ValueError("仅支持 JPG、PNG 和 WebP 图片")
+        image = ImageOps.exif_transpose(source)
+        image.load()
+    width, height = image.size
+    if width * height > MAX_STORY_ASSET_PIXELS:
+        raise ValueError("图片像素总量不能超过 6000 万")
+    max_edge = MAX_STORY_ASSET_EDGE[kind]
+    if max(width, height) > max_edge:
+        scale = max_edge / max(width, height)
+        width, height = max(1, round(width * scale)), max(1, round(height * scale))
+        image = image.resize((width, height), Image.Resampling.LANCZOS)
+    has_alpha = image.mode in {"RGBA", "LA"} or "transparency" in image.info
+    image = image.convert("RGBA" if has_alpha else "RGB")
+    output = io.BytesIO()
+    image.save(output, format="WEBP", quality=88, method=6)
+    return output.getvalue(), width, height
+
+
 def _default_avatar_crop(breakthrough: int, width: int, height: int) -> dict:
     side = min(width, height)
     return {
@@ -181,9 +219,38 @@ def login_required(handler):
     return wrapped
 
 
-def create_blueprint(*, partner_catalog_path: str | Path = DEFAULT_PARTNER_CONTENT_PATH) -> Blueprint:
+def create_blueprint(
+    *,
+    partner_catalog_path: str | Path = DEFAULT_PARTNER_CONTENT_PATH,
+    story_asset_path: str | Path = DEFAULT_STORY_ASSET_PATH,
+    story_script_dir: str | Path = DEFAULT_STORY_SCRIPT_DIR,
+) -> Blueprint:
     blueprint = Blueprint("red_leaf_town", __name__)
     catalog_path = Path(partner_catalog_path)
+    story_asset_catalog_path = Path(story_asset_path)
+    story_script_path = Path(story_script_dir)
+
+    def story_catalog():
+        return load_story_catalog(story_script_path, story_asset_catalog_path, catalog_path)
+
+    def story_admin_payload() -> dict:
+        from src.libraries import cdn_client
+
+        assets = load_story_asset_catalog(story_asset_catalog_path)
+        return {
+            "assets": [asset.model_dump() for asset in sorted(assets.assets, key=lambda entry: entry.id)],
+            "scripts": get_service().story_scripts(),
+            "options": {
+                "kinds": [{"id": key, "name": value} for key, value in STORY_ASSET_KIND_NAMES.items()],
+                "trigger_hooks": story_trigger_hook_codes(),
+                "script_directory": str(story_script_path),
+                "cdn": {
+                    "provider": cdn_client.active_provider(),
+                    "configured": cdn_client.is_configured(),
+                    "base_url": cdn_client.cdn_base_url(),
+                },
+            },
+        }
 
     def serialize_partner(partner: PartnerDefinition) -> dict:
         from src.libraries import cdn_client
@@ -353,6 +420,129 @@ def create_blueprint(*, partner_catalog_path: str | Path = DEFAULT_PARTNER_CONTE
             return _error("CDN 上传失败，请检查底层 provider 配置", 503, "cdn_upload_failed")
         save_partner_catalog(replace_partner(catalog, partner), catalog_path)
         return jsonify({"code": 0, "data": serialize_partner(partner)})
+
+    @blueprint.get("/api/red-leaf-town/admin/story")
+    async def admin_story_payload():
+        if not _is_admin_request():
+            return _admin_error()
+        try:
+            return jsonify({"code": 0, "data": _attach_cdn_urls(story_admin_payload())})
+        except (ValueError, ValidationError) as exc:
+            return _error(f"剧本内容无法加载：{exc}", 400, "invalid_story_content")
+
+    @blueprint.post("/api/red-leaf-town/admin/story/reload")
+    async def admin_story_reload():
+        if not _is_admin_request():
+            return _admin_error()
+        load_story_asset_catalog.cache_clear()
+        load_story_catalog.cache_clear()
+        try:
+            scripts = story_catalog().scripts
+        except (ValueError, ValidationError) as exc:
+            return _error(f"剧本内容无法加载：{exc}", 400, "invalid_story_content")
+        return jsonify({"code": 0, "data": {"script_count": len(scripts)}})
+
+    @blueprint.post("/api/red-leaf-town/admin/story/assets")
+    async def admin_story_asset_upload():
+        if not _is_admin_request():
+            return _admin_error()
+        form = await request.form
+        kind = str(form.get("kind", "")).strip()
+        if kind not in STORY_ASSET_KIND_NAMES:
+            return _error("素材类型必须是背景或立绘", 400, "invalid_asset_kind")
+        files = await request.files
+        uploaded = files.get("file")
+        if uploaded is None or not uploaded.filename:
+            return _error("未选择图片", 400, "file_required")
+        data = uploaded.read()
+        if not data:
+            return _error("图片内容为空", 400, "empty_file")
+        if len(data) > MAX_STORY_ASSET_SIZE:
+            return _error("图片不能超过 12 MB", 413, "file_too_large")
+        try:
+            webp_data, width, height = _prepare_story_image(data, kind)
+        except ValueError as exc:
+            return _error(str(exc), 400, "invalid_image")
+        except Exception:
+            return _error("无法识别图片内容", 400, "invalid_image")
+
+        digest = hashlib.sha256(webp_data).hexdigest()[:16]
+        asset_id = str(form.get("id", "")).strip()
+        try:
+            asset = StoryAsset(
+                id=asset_id,
+                kind=kind,
+                name=str(form.get("name", "")).strip() or asset_id,
+                asset_key=f"red-leaf-town/story/{kind}/{asset_id}-{digest}.webp",
+                width=width,
+                height=height,
+                content_type="image/webp",
+            )
+        except ValidationError as exc:
+            return _error("; ".join(item["msg"] for item in exc.errors()), 400, "invalid_asset")
+        from src.libraries import cdn_client
+
+        if not cdn_client.upload_bytes_at(asset.asset_key, webp_data, asset.content_type):
+            return _error("CDN 上传失败，请检查底层 provider 配置", 503, "cdn_upload_failed")
+        catalog = load_story_asset_catalog(story_asset_catalog_path)
+        records = [entry for entry in catalog.assets if entry.id != asset.id]
+        records.append(asset)
+        save_story_asset_catalog(
+            StoryAssetCatalog(schema_version=catalog.schema_version, assets=records),
+            story_asset_catalog_path,
+        )
+        load_story_catalog.cache_clear()
+        return jsonify({"code": 0, "data": _attach_cdn_urls(asset.model_dump())}), 201
+
+    @blueprint.patch("/api/red-leaf-town/admin/story/assets/<string:asset_id>")
+    async def admin_story_asset_update(asset_id: str):
+        if not _is_admin_request():
+            return _admin_error()
+        catalog = load_story_asset_catalog(story_asset_catalog_path)
+        current = catalog.asset_map.get(asset_id)
+        if current is None:
+            return _error("素材不存在", 404, "asset_not_found")
+        body = await request.get_json(silent=True) or {}
+        payload = current.model_dump()
+        for field in ("name", "inline_layout", "stage_layout"):
+            if field in body:
+                payload[field] = body[field]
+        try:
+            asset = StoryAsset.model_validate(payload)
+        except ValidationError as exc:
+            return _error("; ".join(item["msg"] for item in exc.errors()), 400, "invalid_asset")
+        save_story_asset_catalog(
+            StoryAssetCatalog(
+                schema_version=catalog.schema_version,
+                assets=[entry for entry in catalog.assets if entry.id != asset_id] + [asset],
+            ),
+            story_asset_catalog_path,
+        )
+        load_story_catalog.cache_clear()
+        return jsonify({"code": 0, "data": _attach_cdn_urls(asset.model_dump())})
+
+    @blueprint.delete("/api/red-leaf-town/admin/story/assets/<string:asset_id>")
+    async def admin_story_asset_delete(asset_id: str):
+        if not _is_admin_request():
+            return _admin_error()
+        catalog = load_story_asset_catalog(story_asset_catalog_path)
+        if asset_id not in catalog.asset_map:
+            return _error("素材不存在", 404, "asset_not_found")
+        try:
+            users = [script.id for script in story_catalog().scripts if asset_id in script.asset_ids]
+        except (ValueError, ValidationError) as exc:
+            return _error(f"剧本内容无法加载：{exc}", 400, "invalid_story_content")
+        if users:
+            return _error(f"这张素材仍被剧本引用：{'、'.join(sorted(users))}", 409, "asset_in_use")
+        save_story_asset_catalog(
+            StoryAssetCatalog(
+                schema_version=catalog.schema_version,
+                assets=[entry for entry in catalog.assets if entry.id != asset_id],
+            ),
+            story_asset_catalog_path,
+        )
+        load_story_catalog.cache_clear()
+        return jsonify({"code": 0, "message": "已删除"})
 
     @blueprint.get("/api/red-leaf-town/admin/players")
     async def admin_player_search():
@@ -551,6 +741,19 @@ def create_blueprint(*, partner_catalog_path: str | Path = DEFAULT_PARTNER_CONTE
             int(payload.get("quantity", 1)),
             int(payload.get("quality", 0)),
         )
+        return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
+
+    @blueprint.post("/api/red-leaf-town/story/cue")
+    @login_required
+    async def story_cue(subject: str):
+        payload = await request.get_json(silent=True) or {}
+        result = get_service().story_cue(subject, str(payload.get("cue", "")))
+        return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
+
+    @blueprint.post("/api/red-leaf-town/story/<string:story_id>/seen")
+    @login_required
+    async def story_seen(subject: str, story_id: str):
+        result = get_service().mark_story_seen(subject, story_id)
         return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
 
     @blueprint.post("/api/red-leaf-town/account/binding-code")

@@ -8,11 +8,14 @@ import AppNav from '@/components/AppNav.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import ProgressBar from '@/components/ProgressBar.vue'
 import ResourcePill from '@/components/ResourcePill.vue'
+import StoryOverlay from '@/components/story/StoryOverlay.vue'
 import { useReadyWatch } from '@/composables/useReadyWatch'
 import { useGameStore } from '@/stores/game'
+import { useStoryStore } from '@/stores/story'
 import { useUiStore } from '@/stores/ui'
 
 const game = useGameStore()
+const story = useStoryStore()
 const ui = useUiStore()
 const route = useRoute()
 const bindingCommand = ref('')
@@ -38,13 +41,20 @@ onMounted(async () => {
 onBeforeUnmount(() => window.clearInterval(pollTimer))
 
 watch(
+  () => [game.status, route.name] as const,
+  ([status, name]) => {
+    if (status !== 'ready' || !name || isAdminRoute.value) return
+    story.cue(`view:${String(name)}`)
+  },
+  { immediate: true },
+)
+
+watch(
   () => ui.navOpen,
   (open) => {
     document.body.style.overflow = open ? 'hidden' : ''
   },
 )
-
-watch(() => route.fullPath, () => ui.closePicker())
 
 async function generateBindingCode() {
   const result = await game.createBindingCode()
@@ -167,6 +177,7 @@ async function copyBindingCommand() {
     </div>
   </div>
 
+  <StoryOverlay v-if="!isAdminRoute" />
   <ConfirmDialog />
   <Transition name="toast"><div v-if="game.notice" class="toast">{{ game.notice }}</div></Transition>
 </template>

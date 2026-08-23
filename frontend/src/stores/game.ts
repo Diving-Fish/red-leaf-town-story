@@ -4,6 +4,7 @@ import { defineStore } from 'pinia'
 import { api, ApiError } from '@/api'
 import { PRODUCTION_COPY, type ProductionIndustry } from '@/lib/production'
 import { qualityName } from '@/lib/quality'
+import { useStoryStore } from '@/stores/story'
 import { useTickerStore } from '@/stores/ticker'
 import type { AccountState, ActionResult, GameState } from '@/types'
 
@@ -17,12 +18,14 @@ interface ActionOptions {
   payload?: unknown
   method?: string
   successMessage?: string
+  cue?: string
 }
 
 const API_ROOT = '/api/red-leaf-town'
 
 export const useGameStore = defineStore('game', () => {
   const ticker = useTickerStore()
+  const story = useStoryStore()
   const status = ref<'checking' | 'guest' | 'ready' | 'error'>('checking')
   const state = ref<GameState | null>(null)
   const account = ref<AccountState | null>(null)
@@ -154,6 +157,7 @@ export const useGameStore = defineStore('game', () => {
       })
       acceptState(result.state, startedAt)
       if (options.successMessage) showNotice(options.successMessage)
+      if (options.cue) story.cue(options.cue)
       return result.result
     } catch (caught) {
       fail(caught)
@@ -173,6 +177,7 @@ export const useGameStore = defineStore('game', () => {
     return action(`shop:${shopId}:${quantity}`, `${API_ROOT}/shop/buy`, {
       payload: { shop_id: shopId, quantity },
       successMessage: '种子已放入仓库',
+      cue: 'action:buy',
     })
   }
 
@@ -180,6 +185,7 @@ export const useGameStore = defineStore('game', () => {
     return action(`inventory:${itemId}:${quality || 0}:${quantity}`, `${API_ROOT}/inventory/${itemId}/sell`, {
       payload: { quantity, quality: quality || 0 },
       successMessage: '交易完成',
+      cue: 'action:sell',
     })
   }
 
@@ -187,11 +193,14 @@ export const useGameStore = defineStore('game', () => {
     return action(`plot:${slot}:plant:${cropId}`, `${API_ROOT}/plots/${slot}/plant`, {
       payload: { crop_id: cropId },
       successMessage: '种子已经种下',
+      cue: 'action:plant',
     })
   }
 
   async function harvest(slot: number) {
-    const result = (await action(`plot:${slot}:harvest`, `${API_ROOT}/plots/${slot}/harvest`)) as
+    const result = (await action(`plot:${slot}:harvest`, `${API_ROOT}/plots/${slot}/harvest`, {
+      cue: 'action:harvest',
+    })) as
       | ProductionOutcome
       | undefined
     if (result) showNotice(outcomeText(result, '收获了', '产物'))
@@ -207,7 +216,10 @@ export const useGameStore = defineStore('game', () => {
   }
 
   function unlockTalent(nodeId: string) {
-    return action(`talent:${nodeId}`, `${API_ROOT}/talents/${nodeId}/unlock`, { successMessage: '天赋已经点亮' })
+    return action(`talent:${nodeId}`, `${API_ROOT}/talents/${nodeId}/unlock`, {
+      successMessage: '天赋已经点亮',
+      cue: 'action:unlock_talent',
+    })
   }
 
   function productionBase(industry: ProductionIndustry, nodeId: string) {
@@ -227,12 +239,15 @@ export const useGameStore = defineStore('game', () => {
     return action(`${industry}:${nodeId}:start:${taskId}`, `${productionBase(industry, nodeId)}/start`, {
       payload: { [copy.startPayloadKey]: taskId },
       successMessage: '任务已经开始',
+      cue: `action:start_${industry}`,
     })
   }
 
   async function collectProduction(industry: ProductionIndustry, nodeId: string) {
     const copy = PRODUCTION_COPY[industry]
-    const result = (await action(`${industry}:${nodeId}:collect`, `${productionBase(industry, nodeId)}/collect`)) as
+    const result = (await action(`${industry}:${nodeId}:collect`, `${productionBase(industry, nodeId)}/collect`, {
+      cue: `action:collect_${industry}`,
+    })) as
       | ProductionOutcome
       | undefined
     if (result) showNotice(outcomeText(result, copy.collectVerb, copy.collectNoun))
