@@ -6,7 +6,7 @@ import { PRODUCTION_COPY, type ProductionIndustry } from '@/lib/production'
 import { qualityName } from '@/lib/quality'
 import { useStoryStore } from '@/stores/story'
 import { useTickerStore } from '@/stores/ticker'
-import type { AccountState, ActionResult, GameState } from '@/types'
+import type { AccountState, ActionResult, GameState, Reward, TributeDeliveryResult } from '@/types'
 
 export interface ProductionOutcome {
   quantity?: number
@@ -91,7 +91,22 @@ export const useGameStore = defineStore('game', () => {
   })
 
   // 剧情结算完的存档直接采用，伙伴加入之类的奖励不用等下一次轮询。
-  story.bindState((next) => acceptState(next, performance.now()))
+  story.bindState((settled) => {
+    acceptState(settled.state, performance.now())
+    const granted = (settled.result as { granted?: Reward | null }).granted
+    const text = granted ? rewardText(granted) : ''
+    if (text) showNotice(text)
+  })
+
+  function rewardText(reward: Reward) {
+    const parts: string[] = []
+    if (reward.coins) parts.push(`红叶币 ×${reward.coins}`)
+    if (reward.experience) parts.push(`经验 ×${reward.experience}`)
+    if (reward.talent_points) parts.push(`天赋点 ×${reward.talent_points}`)
+    parts.push(...reward.items.map((item) => `${item.name} ×${item.quantity}`))
+    parts.push(...reward.partners.map((partner) => `${partner.name} 加入`))
+    return parts.length ? `获得 ${parts.join('、')}` : ''
+  }
 
   function isPending(key: string) {
     return pending.value.has(key)
@@ -225,6 +240,25 @@ export const useGameStore = defineStore('game', () => {
     })
   }
 
+  async function deliverTribute(portalId: string, tributeId: string, quantity: number) {
+    const result = (await action(
+      `portal:${portalId}:${tributeId}`,
+      `${API_ROOT}/portals/${portalId}/tributes/${tributeId}/deliver`,
+      { payload: { quantity }, cue: 'action:deliver_tribute' },
+    )) as TributeDeliveryResult | undefined
+    if (!result) return undefined
+    // 传送门开了是主线进度，让剧情层也有机会插话。
+    if (result.portal_completed) story.cue('action:portal_complete')
+    showNotice(deliveryText(result))
+    return result
+  }
+
+  function deliveryText(result: TributeDeliveryResult) {
+    if (result.portal_completed) return `${result.portal_name}开启了`
+    if (result.tribute_completed) return '这一项贡品已经交齐'
+    return `交付了 ${result.delivered} 个，还差 ${result.required - result.total_delivered} 个`
+  }
+
   function productionBase(industry: ProductionIndustry, nodeId: string) {
     return `${API_ROOT}/${PRODUCTION_COPY[industry].endpoint}/${nodeId}`
   }
@@ -324,6 +358,7 @@ export const useGameStore = defineStore('game', () => {
     assignProductionPartner,
     startProduction,
     collectProduction,
+    deliverTribute,
     createBindingCode,
     logout,
     effectiveNow,

@@ -144,6 +144,16 @@ def _owns_partner(context: StoryContext, params: dict[str, Any]) -> bool:
 
 
 @register_story_trigger_hook(
+    "portal_completed",
+    lambda params: f"已经完成传送门 {params['portal_id']}",
+    lambda params: _require_identifier(params, "portal_id"),
+)
+def _portal_completed(context: StoryContext, params: dict[str, Any]) -> bool:
+    portal_id = str(params["portal_id"]).strip()
+    return any(entry.portal_id == portal_id and entry.completed_at for entry in context.player.portals)
+
+
+@register_story_trigger_hook(
     "talent_unlocked",
     lambda params: f"已经点亮天赋 {params['node_id']}",
     lambda params: _require_identifier(params, "node_id"),

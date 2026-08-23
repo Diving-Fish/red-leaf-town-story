@@ -12,6 +12,8 @@ from red_leaf_town.domain import (
     MiningSiteState,
     OwnedPartnerState,
     PlayerState,
+    PortalProgressState,
+    PortalTributeProgress,
     ProductionResultSnapshot,
     ProductionTaskSnapshot,
     QQIdentity,
@@ -39,6 +41,7 @@ from red_leaf_town.partner_content import (
     load_partner_catalog,
 )
 from red_leaf_town.partner_traits import partner_trait_catalog
+from red_leaf_town.rewards import serialize_reward
 from red_leaf_town.story_assets import StoryAssetCatalog, load_story_asset_catalog
 from red_leaf_town.story_content import StoryCatalog, load_story_catalog, serialize_script
 from red_leaf_town.story_triggers import StoryContext, validate_story_cue
@@ -674,6 +677,168 @@ class GameService:
         player, result = self._update_by_sub(oauth_sub, mutation)
         return {"result": result, "state": self._snapshot(player)}
 
+    def deliver_tribute(self, oauth_sub: str, portal_id: str, tribute_id: str, quantity: int) -> dict:
+        """往传送门交一批贡品。交满这一项就结算它的奖励，全部交满再结算全完成奖励。"""
+        portal = self.content.portal_map.get(portal_id)
+        tribute = next((entry for entry in portal.tributes if entry.id == tribute_id), None) if portal else None
+        if portal is None or tribute is None:
+            raise GameError("tribute_not_found", "这个传送门没有该贡品", 404)
+        requested = int(quantity)
+        if requested <= 0:
+            raise GameError("invalid_quantity", "交付数量必须为正数")
+        now = self._now()
+
+        def mutation(player: PlayerState):
+            self._settle(player, now)
+            if not self._portal_unlocked(player, portal):
+                raise GameError("portal_locked", f"传送门尚未开启：{self._portal_locked_reason(player, portal)}", 409)
+            progress = self._portal_progress(player, portal)
+            entry = progress.tribute(tribute_id)
+            if entry.completed_at:
+                raise GameError("tribute_completed", "这项贡品已经交齐了", 409)
+
+            remaining = tribute.quantity - entry.delivered
+            accepted = min(requested, remaining)
+            available = self._eligible_quantity(player, tribute)
+            if available < accepted:
+                item = self.content.item_map.get(tribute.item_id)
+                name = item.name if item else tribute.item_id
+                requirement = f"{QUALITY_NAMES[tribute.min_quality]}以上的" if tribute.min_quality else ""
+                raise GameError("resource_insufficient", f"{requirement}{name}数量不足")
+
+            consumed = self._consume_tribute(player, tribute, accepted)
+            entry.delivered += accepted
+            rewards = []
+            if entry.delivered >= tribute.quantity:
+                entry.completed_at = now
+                rewards.append({"source": "tribute", "label": self._tribute_label(tribute), **self._grant_reward(player, tribute.reward, now)})
+            portal_completed = False
+            unlocked_portals: list[dict] = []
+            if not progress.completed_at and all(item.completed_at for item in progress.tributes):
+                progress.completed_at = now
+                portal_completed = True
+                rewards.append({"source": "portal", "label": portal.name, **self._grant_reward(player, portal.completion_reward, now)})
+                unlocked_portals = self._newly_unlocked_portals(player, portal)
+            return {
+                "portal_id": portal.id,
+                "portal_name": portal.name,
+                "tribute_id": tribute_id,
+                "delivered": accepted,
+                "total_delivered": entry.delivered,
+                "required": tribute.quantity,
+                "tribute_completed": bool(entry.completed_at),
+                "portal_completed": portal_completed,
+                "consumed": [snapshot.model_dump() for snapshot in consumed],
+                "rewards": rewards,
+                "unlocked_portals": unlocked_portals,
+            }
+
+        player, result = self._update_by_sub(oauth_sub, mutation)
+        return {"result": result, "state": self._snapshot(player, now)}
+
+    def _portal_unlocked(self, player: PlayerState, portal) -> bool:
+        if player.level < portal.min_level:
+            return False
+        completed = self._completed_portal_ids(player)
+        return all(entry in completed for entry in portal.prerequisites)
+
+    def _portal_locked_reason(self, player: PlayerState, portal) -> str:
+        if player.level < portal.min_level:
+            return f"居民等级达到 {portal.min_level} 级"
+        completed = self._completed_portal_ids(player)
+        missing = [
+            self.content.portal_map[entry].name
+            for entry in portal.prerequisites
+            if entry not in completed and entry in self.content.portal_map
+        ]
+        return f"先完成{'、'.join(missing)}" if missing else "条件未满足"
+
+    @staticmethod
+    def _completed_portal_ids(player: PlayerState) -> set[str]:
+        return {entry.portal_id for entry in player.portals if entry.completed_at}
+
+    def _portal_progress(self, player: PlayerState, portal) -> PortalProgressState:
+        """进度按需建档，并补上内容里新增的贡品条目。"""
+        progress = next((entry for entry in player.portals if entry.portal_id == portal.id), None)
+        if progress is None:
+            progress = PortalProgressState(portal_id=portal.id)
+            player.portals.append(progress)
+        recorded = {entry.tribute_id for entry in progress.tributes}
+        progress.tributes.extend(
+            PortalTributeProgress(tribute_id=tribute.id)
+            for tribute in portal.tributes
+            if tribute.id not in recorded
+        )
+        return progress
+
+    def _tribute_label(self, tribute) -> str:
+        item = self.content.item_map.get(tribute.item_id)
+        prefix = f"{QUALITY_NAMES[tribute.min_quality]}以上的" if tribute.min_quality else ""
+        return f"{prefix}{item.name if item else tribute.item_id} ×{tribute.quantity}"
+
+    def _eligible_quantity(self, player: PlayerState, tribute) -> int:
+        return sum(
+            quantity
+            for quality, quantity in player.inventory.get(tribute.item_id, {}).items()
+            if quality >= tribute.min_quality
+        )
+
+    def _consume_tribute(self, player: PlayerState, tribute, amount: int) -> list[TaskInputSnapshot]:
+        """够格的品质里优先扣最低的，玩家不会被贡品吃掉臻品。"""
+        consumed: list[TaskInputSnapshot] = []
+        remaining = amount
+        qualities = player.inventory.get(tribute.item_id, {})
+        for quality, owned in sorted(qualities.items()):
+            if quality < tribute.min_quality or remaining <= 0:
+                continue
+            taken = min(owned, remaining)
+            remove_item(player, tribute.item_id, taken, quality)
+            consumed.append(TaskInputSnapshot(item_id=tribute.item_id, quality=quality, quantity=taken))
+            remaining -= taken
+        return consumed
+
+    def _grant_reward(self, player: PlayerState, reward, now: int) -> dict:
+        granted_items = []
+        for entry in reward.items:
+            add_item(player, entry.item_id, entry.quantity, entry.quality)
+            item = self.content.item_map.get(entry.item_id)
+            granted_items.append({
+                "item_id": entry.item_id,
+                "name": item.name if item else entry.item_id,
+                "quantity": entry.quantity,
+                "quality": entry.quality or None,
+                "quality_name": QUALITY_NAMES.get(entry.quality),
+            })
+        granted_partners = []
+        partner_map = self.partner_catalog_loader().partner_map
+        for partner_id in reward.partner_ids:
+            if partner_id not in partner_map:
+                continue
+            if any(owned.partner_id == partner_id for owned in player.owned_partners):
+                continue
+            player.owned_partners.append(OwnedPartnerState(partner_id=partner_id, acquired_at=now))
+            granted_partners.append({"partner_id": partner_id, "name": partner_map[partner_id].name})
+        if reward.coins:
+            grant_coins(player, reward.coins)
+        if reward.talent_points:
+            player.bonus_talent_points += reward.talent_points
+        levels = grant_experience(player, reward.experience, self.content) if reward.experience else []
+        return {
+            "coins": reward.coins,
+            "experience": reward.experience,
+            "talent_points": reward.talent_points,
+            "items": granted_items,
+            "partners": granted_partners,
+            "levels": levels,
+        }
+
+    def _newly_unlocked_portals(self, player: PlayerState, completed) -> list[dict]:
+        return [
+            {"portal_id": portal.id, "name": portal.name}
+            for portal in self.content.portals
+            if completed.id in portal.prerequisites and self._portal_unlocked(player, portal)
+        ]
+
     def story_cue(self, oauth_sub: str, cue: str) -> dict:
         """返回这个信号下应该立即播放的剧情，已经看过的一次性剧本不再返回。"""
         try:
@@ -690,30 +855,22 @@ class GameService:
         partners = self.partner_catalog_loader()
         return {
             "cue": code,
-            "stories": [serialize_script(script, assets, partners) for script in matched],
+            "stories": [serialize_script(script, assets, partners, self.content) for script in matched],
         }
 
     def mark_story_seen(self, oauth_sub: str, story_id: str) -> dict:
         script = self.story_catalog_loader().script_map.get(story_id)
         if script is None:
             raise GameError("story_not_found", "剧情不存在", 404)
-        partner_map = self.partner_catalog_loader().partner_map
         now = self._now()
 
         def mutation(player: PlayerState):
             if script.id in player.seen_story_ids:
-                return {"story_id": script.id, "granted_partners": []}
+                return {"story_id": script.id, "granted": None}
             player.seen_story_ids.append(script.id)
             # 奖励只在第一次播完时结算，重复上报不会再发一次。
-            granted = []
-            for partner_id in script.rewards.partner_ids:
-                if partner_id not in partner_map:
-                    continue
-                if any(owned.partner_id == partner_id for owned in player.owned_partners):
-                    continue
-                player.owned_partners.append(OwnedPartnerState(partner_id=partner_id, acquired_at=now))
-                granted.append({"partner_id": partner_id, "name": partner_map[partner_id].name})
-            return {"story_id": script.id, "granted_partners": granted}
+            granted = None if script.rewards.empty else self._grant_reward(player, script.rewards, now)
+            return {"story_id": script.id, "granted": granted}
 
         player, result = self._update_by_sub(oauth_sub, mutation)
         return {"result": result, "state": self._snapshot(player)}
@@ -721,7 +878,7 @@ class GameService:
     def story_scripts(self) -> list[dict]:
         assets = self.story_asset_loader()
         partners = self.partner_catalog_loader()
-        return [serialize_script(script, assets, partners) for script in self.story_catalog_loader().scripts]
+        return [serialize_script(script, assets, partners, self.content) for script in self.story_catalog_loader().scripts]
 
     def create_binding_code(self, oauth_sub: str) -> str:
         player = self.repository.get_by_sub(oauth_sub)
@@ -1179,6 +1336,7 @@ class GameService:
                 for industry, rules in self.content.industries.items()
             },
             "talents": self._talent_snapshot(player),
+            "portals": self._portal_snapshot(player),
             "shop": [
                 {
                     **entry.model_dump(),
@@ -1330,7 +1488,67 @@ class GameService:
             for node_id in player.talent_nodes
             if (node := self.content.talent_map.get(node_id)) is not None
         )
-        return max(0, player.level - 1 - spent)
+        return max(0, player.level - 1 + player.bonus_talent_points - spent)
+
+    def _reward_snapshot(self, reward) -> dict:
+        return serialize_reward(reward, self.content, self.partner_catalog_loader())
+
+    def _portal_snapshot(self, player: PlayerState) -> list[dict]:
+        items = self.content.item_map
+        progress_map = {entry.portal_id: entry for entry in player.portals}
+        completed_ids = self._completed_portal_ids(player)
+        portals = []
+        for portal in self.content.portals:
+            progress = progress_map.get(portal.id)
+            unlocked = self._portal_unlocked(player, portal)
+            tributes = []
+            for tribute in portal.tributes:
+                recorded = progress.tribute(tribute.id) if progress else None
+                delivered = min(recorded.delivered, tribute.quantity) if recorded else 0
+                item = items.get(tribute.item_id)
+                owned = self._eligible_quantity(player, tribute)
+                remaining = max(0, tribute.quantity - delivered)
+                tributes.append({
+                    "id": tribute.id,
+                    "item_id": tribute.item_id,
+                    "name": item.name if item else tribute.item_id,
+                    "icon": item.icon if item else "package",
+                    "quantity": tribute.quantity,
+                    "min_quality": tribute.min_quality or None,
+                    "min_quality_name": QUALITY_NAMES.get(tribute.min_quality),
+                    "delivered": delivered,
+                    "remaining": remaining,
+                    # 一次能交多少：手里够格的和还缺的取小。
+                    "deliverable": min(owned, remaining),
+                    "owned": owned,
+                    "completed": bool(recorded and recorded.completed_at),
+                    "reward": self._reward_snapshot(tribute.reward),
+                })
+            completed_count = sum(1 for entry in tributes if entry["completed"])
+            portals.append({
+                "portal_id": portal.id,
+                "name": portal.name,
+                "description": portal.description,
+                "accent": portal.accent,
+                "min_level": portal.min_level,
+                "prerequisites": [
+                    {
+                        "portal_id": entry,
+                        "name": self.content.portal_map[entry].name if entry in self.content.portal_map else entry,
+                        "completed": entry in completed_ids,
+                    }
+                    for entry in portal.prerequisites
+                ],
+                "unlocked": unlocked,
+                "locked_reason": None if unlocked else self._portal_locked_reason(player, portal),
+                "completed": bool(progress and progress.completed_at),
+                "completed_at": progress.completed_at if progress else 0,
+                "tributes": tributes,
+                "tribute_count": len(tributes),
+                "completed_tribute_count": completed_count,
+                "completion_reward": self._reward_snapshot(portal.completion_reward),
+            })
+        return portals
 
     def _talent_snapshot(self, player: PlayerState) -> dict:
         available_points = self._available_talent_points(player)

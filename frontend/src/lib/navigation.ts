@@ -1,5 +1,5 @@
 import type { Component } from 'vue'
-import { Archive, Hammer, LayoutDashboard, Pickaxe, ShoppingBasket, Sparkles, Sprout, Trees } from 'lucide-vue-next'
+import { Archive, DoorOpen, Hammer, LayoutDashboard, Pickaxe, ShoppingBasket, Sparkles, Sprout, Trees } from 'lucide-vue-next'
 
 export type ReadyGroup = 'plots' | 'gathering' | 'mining' | 'crafting'
 
@@ -17,6 +17,7 @@ export const NAV_ITEMS: NavItem[] = [
   { to: '/gathering', label: '采集', icon: Trees, primary: true, readyGroup: 'gathering' },
   { to: '/crafting', label: '加工', icon: Hammer, primary: false, readyGroup: 'crafting' },
   { to: '/mining', label: '矿产', icon: Pickaxe, primary: false, readyGroup: 'mining' },
+  { to: '/portals', label: '传送门', icon: DoorOpen, primary: false },
   { to: '/shop', label: '种子商店', icon: ShoppingBasket, primary: false },
   { to: '/inventory', label: '仓库', icon: Archive, primary: true },
   { to: '/partners', label: '伙伴', icon: Sparkles, primary: false },

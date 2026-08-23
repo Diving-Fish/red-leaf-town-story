@@ -177,8 +177,32 @@ def _renamed_list(partner_ids) -> list[str]:
     return [RENAMED_PARTNER_IDS.get(partner_id, partner_id) for partner_id in (partner_ids or [])]
 
 
+class PortalTributeProgress(BaseModel):
+    """一项贡品的交付进度。completed_at 非零表示这一项的奖励已经结算过。"""
+
+    tribute_id: str = Field(min_length=1)
+    delivered: int = Field(default=0, ge=0)
+    completed_at: int = Field(default=0, ge=0)
+
+
+class PortalProgressState(BaseModel):
+    portal_id: str = Field(min_length=1)
+    tributes: list[PortalTributeProgress] = Field(default_factory=list, max_length=8)
+    completed_at: int = Field(default=0, ge=0)
+
+    @model_validator(mode="after")
+    def validate_progress(self):
+        tribute_ids = [entry.tribute_id for entry in self.tributes]
+        if len(tribute_ids) != len(set(tribute_ids)):
+            raise ValueError(f"portal {self.portal_id} records the same tribute twice")
+        return self
+
+    def tribute(self, tribute_id: str) -> PortalTributeProgress | None:
+        return next((entry for entry in self.tributes if entry.tribute_id == tribute_id), None)
+
+
 class PlayerState(BaseModel):
-    schema_version: int = 10
+    schema_version: int = 11
     version: int = 1
     player_id: str
     oauth_sub: str
@@ -196,6 +220,8 @@ class PlayerState(BaseModel):
     talent_nodes: list[str] = Field(default_factory=list)
     owned_partners: list[OwnedPartnerState] = Field(default_factory=list)
     seen_story_ids: list[str] = Field(default_factory=list)
+    portals: list[PortalProgressState] = Field(default_factory=list)
+    bonus_talent_points: int = Field(default=0, ge=0)
     created_at: int
     updated_at: int
 
@@ -233,7 +259,10 @@ class PlayerState(BaseModel):
             migrated.setdefault("seen_story_ids", [])
         if schema_version < 10:
             migrated = _rename_partner_ids(migrated)
-        migrated["schema_version"] = 10
+        if schema_version < 11:
+            migrated.setdefault("portals", [])
+            migrated.setdefault("bonus_talent_points", 0)
+        migrated["schema_version"] = 11
         return migrated
 
     @model_validator(mode="after")
@@ -250,6 +279,9 @@ class PlayerState(BaseModel):
             raise ValueError("player cannot unlock the same talent node more than once")
         if len(self.seen_story_ids) != len(set(self.seen_story_ids)):
             raise ValueError("player cannot record the same story more than once")
+        portal_ids = [entry.portal_id for entry in self.portals]
+        if len(portal_ids) != len(set(portal_ids)):
+            raise ValueError("player cannot record the same portal more than once")
         assigned_ids = [
             partner_id
             for production_slot in [*self.plots, *self.gathering_sites, *self.crafting_stations, *self.mining_sites]

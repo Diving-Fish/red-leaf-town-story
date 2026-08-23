@@ -7,11 +7,13 @@ from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, Field, model_validator
 
+from red_leaf_town.content import DEFAULT_CONTENT_PATH, GameContent, RewardDefinition, load_content
 from red_leaf_town.partner_content import (
     DEFAULT_PARTNER_CONTENT_PATH,
     PartnerCatalog,
     load_partner_catalog,
 )
+from red_leaf_town.rewards import serialize_reward, validate_reward_references
 from red_leaf_town.story_assets import (
     DEFAULT_STORY_ASSET_PATH,
     DEFAULT_STORY_LAYOUT,
@@ -83,29 +85,13 @@ class StoryTrigger(BaseModel):
         return describe_story_trigger(self.hook, self.params)
 
 
-class StoryRewards(BaseModel):
-    """剧本播完时结算一次的奖励，目前只有伙伴加入。"""
-
-    partner_ids: list[str] = Field(default_factory=list, max_length=8)
-
-    @model_validator(mode="after")
-    def validate_rewards(self):
-        if len(self.partner_ids) != len(set(self.partner_ids)):
-            raise ValueError("story rewards cannot grant the same partner twice")
-        return self
-
-    @property
-    def empty(self) -> bool:
-        return not self.partner_ids
-
-
 class StoryScript(BaseModel):
     id: str = Field(pattern=r"^[a-z][a-z0-9_-]{1,63}$")
     title: str = Field(min_length=1, max_length=64)
     trigger: StoryTrigger
     steps: list[StoryStep] = Field(min_length=1, max_length=200)
     priority: int = Field(default=0, ge=-100, le=100)
-    rewards: StoryRewards = Field(default_factory=StoryRewards)
+    rewards: RewardDefinition = Field(default_factory=RewardDefinition)
 
     @model_validator(mode="after")
     def validate_script(self):
@@ -130,8 +116,7 @@ class StoryScript(BaseModel):
 
     @property
     def partner_ids(self) -> set[str]:
-        portraits = {step.partner_id for step in self.steps if step.type == "portrait" and step.partner_id}
-        return portraits | set(self.rewards.partner_ids)
+        return {step.partner_id for step in self.steps if step.type == "portrait" and step.partner_id}
 
 
 class StoryCatalog(BaseModel):
@@ -163,10 +148,13 @@ def validate_story_references(
     catalog: StoryCatalog,
     assets: StoryAssetCatalog,
     partners: PartnerCatalog,
+    content: GameContent | None = None,
 ) -> None:
+    content = content if content is not None else load_content()
     asset_map = assets.asset_map
     partner_map = partners.partner_map
     for script in catalog.scripts:
+        validate_reward_references(script.rewards, content, partners, f"story {script.id}")
         unknown_assets = script.asset_ids - set(asset_map)
         if unknown_assets:
             raise ValueError(f"story {script.id} references unknown assets: {', '.join(sorted(unknown_assets))}")
@@ -185,6 +173,7 @@ def load_story_catalog(
     directory: str | Path = DEFAULT_STORY_SCRIPT_DIR,
     asset_path: str | Path = DEFAULT_STORY_ASSET_PATH,
     partner_path: str | Path = DEFAULT_PARTNER_CONTENT_PATH,
+    content_path: str | Path = DEFAULT_CONTENT_PATH,
 ) -> StoryCatalog:
     script_dir = Path(directory)
     scripts: list[StoryScript] = []
@@ -202,6 +191,7 @@ def load_story_catalog(
         catalog,
         load_story_asset_catalog(asset_path),
         load_partner_catalog(partner_path),
+        load_content(content_path),
     )
     return catalog
 
@@ -236,8 +226,13 @@ def serialize_step(step, assets: StoryAssetCatalog, partners: PartnerCatalog) ->
     return payload
 
 
-def serialize_script(script: StoryScript, assets: StoryAssetCatalog, partners: PartnerCatalog) -> dict:
-    partner_map = partners.partner_map
+def serialize_script(
+    script: StoryScript,
+    assets: StoryAssetCatalog,
+    partners: PartnerCatalog,
+    content: GameContent | None = None,
+) -> dict:
+    content = content if content is not None else load_content()
     return {
         "id": script.id,
         "title": script.title,
@@ -245,13 +240,7 @@ def serialize_script(script: StoryScript, assets: StoryAssetCatalog, partners: P
         "priority": script.priority,
         "repeatable": script.trigger.repeatable,
         "trigger_description": script.trigger.description,
-        "rewards": {
-            "partner_ids": list(script.rewards.partner_ids),
-            "partner_names": [
-                partner_map[partner_id].name if partner_id in partner_map else partner_id
-                for partner_id in script.rewards.partner_ids
-            ],
-        },
+        "rewards": serialize_reward(script.rewards, content, partners),
         "steps": [serialize_step(step, assets, partners) for step in script.steps],
     }
 

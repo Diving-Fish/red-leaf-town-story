@@ -92,6 +92,9 @@ async def farm_summary(bot: Bot, event: Event):
     mining_running = sum(
         1 for site in state.get("mining_sites", []) if not site["empty"] and not site["ready"]
     )
+    portals = state.get("portals", [])
+    portals_opened = sum(1 for portal in portals if portal["completed"])
+    portals_active = sum(1 for portal in portals if portal["unlocked"] and not portal["completed"])
     await _reply(
         event,
         f"🍁 {player['display_name']} · Lv.{player['level']}\n"
@@ -102,5 +105,6 @@ async def farm_summary(bot: Bot, event: Event):
         f"采集：{gathering_ready} 处可领取，{gathering_running} 处进行中\n"
         f"加工：{crafting_ready} 件可领取，{crafting_running} 件制作中\n"
         f"矿产：{mining_ready} 处可收取，{mining_running} 处开采中\n"
+        f"传送门：已开启 {portals_opened} 座，{portals_active} 座待交贡品\n"
         "前往 Web 页面管理农场：https://chiyuki.diving-fish.com/red-leaf-town/",
     ).send()

@@ -771,6 +771,17 @@ def create_blueprint(
         )
         return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
 
+    @blueprint.post("/api/red-leaf-town/portals/<string:portal_id>/tributes/<string:tribute_id>/deliver")
+    @login_required
+    async def deliver_tribute(subject: str, portal_id: str, tribute_id: str):
+        payload = await request.get_json(silent=True) or {}
+        try:
+            quantity = int(payload.get("quantity", 1))
+        except (TypeError, ValueError):
+            return _error("交付数量必须是整数", 400, "invalid_quantity")
+        result = get_service().deliver_tribute(subject, portal_id, tribute_id, quantity)
+        return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
+
     @blueprint.post("/api/red-leaf-town/story/cue")
     @login_required
     async def story_cue(subject: str):

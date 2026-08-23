@@ -1,5 +1,5 @@
 {
-  "schema_version": 6,
+  "schema_version": 7,
   "game": {
     "title": "红叶镇物语",
     "starting_coins": 80,
@@ -10,11 +10,31 @@
   },
   "quality": {
     "grades": [
-      {"level": 1, "name": "普通", "sale_multiplier": 1.0},
-      {"level": 2, "name": "良品", "sale_multiplier": 1.2},
-      {"level": 3, "name": "上品", "sale_multiplier": 1.5},
-      {"level": 4, "name": "臻品", "sale_multiplier": 2.0},
-      {"level": 5, "name": "奇迹", "sale_multiplier": 3.0}
+      {
+        "level": 1,
+        "name": "普通",
+        "sale_multiplier": 1.0
+      },
+      {
+        "level": 2,
+        "name": "良品",
+        "sale_multiplier": 1.2
+      },
+      {
+        "level": 3,
+        "name": "上品",
+        "sale_multiplier": 1.5
+      },
+      {
+        "level": 4,
+        "name": "臻品",
+        "sale_multiplier": 2.0
+      },
+      {
+        "level": 5,
+        "name": "奇迹",
+        "sale_multiplier": 3.0
+      }
     ]
   },
   "industries": {
@@ -44,25 +64,153 @@
     }
   },
   "levels": [
-    {"level": 1, "total_xp": 0, "plot_slots": 3, "stamina_cap": 20, "unlocks": ["system:farming", "system:gathering", "crop:carrot", "gathering:maple_forest"]},
-    {"level": 2, "total_xp": 20, "plot_slots": 3, "stamina_cap": 22, "unlocks": ["crop:wheat", "system:mining", "mining:copper_foothill"]},
-    {"level": 3, "total_xp": 60, "plot_slots": 4, "stamina_cap": 24, "unlocks": ["system:crafting"]},
-    {"level": 4, "total_xp": 130, "plot_slots": 4, "stamina_cap": 26, "unlocks": ["system:livestock", "mining:moonstone_depths"]},
-    {"level": 5, "total_xp": 240, "plot_slots": 5, "stamina_cap": 28, "unlocks": ["system:gacha"]}
+    {
+      "level": 1,
+      "total_xp": 0,
+      "plot_slots": 3,
+      "stamina_cap": 20,
+      "unlocks": [
+        "system:farming",
+        "system:gathering",
+        "crop:carrot",
+        "gathering:maple_forest"
+      ]
+    },
+    {
+      "level": 2,
+      "total_xp": 20,
+      "plot_slots": 3,
+      "stamina_cap": 22,
+      "unlocks": [
+        "crop:wheat",
+        "system:mining",
+        "mining:copper_foothill"
+      ]
+    },
+    {
+      "level": 3,
+      "total_xp": 60,
+      "plot_slots": 4,
+      "stamina_cap": 24,
+      "unlocks": [
+        "system:crafting"
+      ]
+    },
+    {
+      "level": 4,
+      "total_xp": 130,
+      "plot_slots": 4,
+      "stamina_cap": 26,
+      "unlocks": [
+        "system:livestock",
+        "mining:moonstone_depths"
+      ]
+    },
+    {
+      "level": 5,
+      "total_xp": 240,
+      "plot_slots": 5,
+      "stamina_cap": 28,
+      "unlocks": [
+        "system:gacha"
+      ]
+    }
   ],
   "items": [
-    {"id": "carrot_seed", "name": "胡萝卜种子", "icon": "sprout", "kind": "seed", "sell_price": 0},
-    {"id": "carrot", "name": "胡萝卜", "icon": "carrot", "kind": "produce", "sell_price": 5, "has_quality": true},
-    {"id": "wheat_seed", "name": "小麦种子", "icon": "sprout", "kind": "seed", "sell_price": 0},
-    {"id": "wheat", "name": "小麦", "icon": "wheat", "kind": "produce", "sell_price": 9, "has_quality": true},
-    {"id": "maple_wood", "name": "枫木", "icon": "trees", "kind": "material", "sell_price": 7, "has_quality": true},
-    {"id": "autumn_herb", "name": "秋露草", "icon": "leaf", "kind": "material", "sell_price": 10, "has_quality": true},
-    {"id": "maple_plank", "name": "枫木板", "icon": "panels-top-left", "kind": "product", "sell_price": 18, "has_quality": true},
-    {"id": "herbal_salve", "name": "秋露药膏", "icon": "flask-conical", "kind": "product", "sell_price": 28, "has_quality": true},
-    {"id": "flour", "name": "小麦粉", "icon": "package", "kind": "product", "sell_price": 24, "has_quality": true},
-    {"id": "pickled_carrot", "name": "腌渍胡萝卜", "icon": "cooking-pot", "kind": "product", "sell_price": 22, "has_quality": true},
-    {"id": "red_copper_ore", "name": "赤铜矿", "icon": "pickaxe", "kind": "material", "sell_price": 12, "has_quality": true},
-    {"id": "moon_silver_ore", "name": "月银矿", "icon": "gem", "kind": "material", "sell_price": 24, "has_quality": true}
+    {
+      "id": "carrot_seed",
+      "name": "胡萝卜种子",
+      "icon": "sprout",
+      "kind": "seed",
+      "sell_price": 0
+    },
+    {
+      "id": "carrot",
+      "name": "胡萝卜",
+      "icon": "carrot",
+      "kind": "produce",
+      "sell_price": 5,
+      "has_quality": true
+    },
+    {
+      "id": "wheat_seed",
+      "name": "小麦种子",
+      "icon": "sprout",
+      "kind": "seed",
+      "sell_price": 0
+    },
+    {
+      "id": "wheat",
+      "name": "小麦",
+      "icon": "wheat",
+      "kind": "produce",
+      "sell_price": 9,
+      "has_quality": true
+    },
+    {
+      "id": "maple_wood",
+      "name": "枫木",
+      "icon": "trees",
+      "kind": "material",
+      "sell_price": 7,
+      "has_quality": true
+    },
+    {
+      "id": "autumn_herb",
+      "name": "秋露草",
+      "icon": "leaf",
+      "kind": "material",
+      "sell_price": 10,
+      "has_quality": true
+    },
+    {
+      "id": "maple_plank",
+      "name": "枫木板",
+      "icon": "panels-top-left",
+      "kind": "product",
+      "sell_price": 18,
+      "has_quality": true
+    },
+    {
+      "id": "herbal_salve",
+      "name": "秋露药膏",
+      "icon": "flask-conical",
+      "kind": "product",
+      "sell_price": 28,
+      "has_quality": true
+    },
+    {
+      "id": "flour",
+      "name": "小麦粉",
+      "icon": "package",
+      "kind": "product",
+      "sell_price": 24,
+      "has_quality": true
+    },
+    {
+      "id": "pickled_carrot",
+      "name": "腌渍胡萝卜",
+      "icon": "cooking-pot",
+      "kind": "product",
+      "sell_price": 22,
+      "has_quality": true
+    },
+    {
+      "id": "red_copper_ore",
+      "name": "赤铜矿",
+      "icon": "pickaxe",
+      "kind": "material",
+      "sell_price": 12,
+      "has_quality": true
+    },
+    {
+      "id": "moon_silver_ore",
+      "name": "月银矿",
+      "icon": "gem",
+      "kind": "material",
+      "sell_price": 24,
+      "has_quality": true
+    }
   ],
   "crops": [
     {
@@ -80,7 +228,12 @@
       "min_level": 1,
       "accent": "#e97845",
       "quality": {
-        "thresholds": [40, 80, 140, 220],
+        "thresholds": [
+          40,
+          80,
+          140,
+          220
+        ],
         "width": 15,
         "miracle_probability_cap": 0.003,
         "miracle_eligible": false
@@ -101,7 +254,12 @@
       "min_level": 2,
       "accent": "#d5a83e",
       "quality": {
-        "thresholds": [55, 105, 175, 260],
+        "thresholds": [
+          55,
+          105,
+          175,
+          260
+        ],
         "width": 18,
         "miracle_probability_cap": 0.003,
         "miracle_eligible": false
@@ -138,7 +296,12 @@
       "collect_xp": 4,
       "min_level": 1,
       "quality": {
-        "thresholds": [45, 90, 150, 230],
+        "thresholds": [
+          45,
+          90,
+          150,
+          230
+        ],
         "width": 16,
         "miracle_probability_cap": 0.003,
         "miracle_eligible": false
@@ -157,7 +320,12 @@
       "collect_xp": 7,
       "min_level": 2,
       "quality": {
-        "thresholds": [60, 115, 180, 270],
+        "thresholds": [
+          60,
+          115,
+          180,
+          270
+        ],
         "width": 19,
         "miracle_probability_cap": 0.003,
         "miracle_eligible": false
@@ -182,7 +350,9 @@
       "description": "采集伙伴同时驻场上限再增加 1。",
       "cost": 1,
       "min_level": 4,
-      "prerequisites": ["gathering_roster_1"],
+      "prerequisites": [
+        "gathering_roster_1"
+      ],
       "partner_capacity_bonus": 1
     }
   ],
@@ -200,7 +370,12 @@
       "id": "saw_maple_plank",
       "station_id": "town_workbench",
       "name": "锯制枫木板",
-      "inputs": [{"item_id": "maple_wood", "quantity": 2}],
+      "inputs": [
+        {
+          "item_id": "maple_wood",
+          "quantity": 2
+        }
+      ],
       "produce_item_id": "maple_plank",
       "produce_quantity": 1,
       "duration_seconds": 60,
@@ -208,18 +383,33 @@
       "stamina_cost": 1,
       "collect_xp": 6,
       "quality": {
-        "thresholds": [45, 90, 150, 230],
+        "thresholds": [
+          45,
+          90,
+          150,
+          230
+        ],
         "width": 16,
         "miracle_probability_cap": 0.003,
         "miracle_eligible": false
       },
-      "unlock_condition": {"hook": "player_level", "params": {"level": 3}}
+      "unlock_condition": {
+        "hook": "player_level",
+        "params": {
+          "level": 3
+        }
+      }
     },
     {
       "id": "make_herbal_salve",
       "station_id": "town_workbench",
       "name": "调制秋露药膏",
-      "inputs": [{"item_id": "autumn_herb", "quantity": 2}],
+      "inputs": [
+        {
+          "item_id": "autumn_herb",
+          "quantity": 2
+        }
+      ],
       "produce_item_id": "herbal_salve",
       "produce_quantity": 1,
       "duration_seconds": 90,
@@ -227,18 +417,33 @@
       "stamina_cost": 1,
       "collect_xp": 8,
       "quality": {
-        "thresholds": [55, 105, 170, 255],
+        "thresholds": [
+          55,
+          105,
+          170,
+          255
+        ],
         "width": 18,
         "miracle_probability_cap": 0.003,
         "miracle_eligible": false
       },
-      "unlock_condition": {"hook": "player_level", "params": {"level": 3}}
+      "unlock_condition": {
+        "hook": "player_level",
+        "params": {
+          "level": 3
+        }
+      }
     },
     {
       "id": "mill_flour",
       "station_id": "town_workbench",
       "name": "研磨小麦粉",
-      "inputs": [{"item_id": "wheat", "quantity": 2}],
+      "inputs": [
+        {
+          "item_id": "wheat",
+          "quantity": 2
+        }
+      ],
       "produce_item_id": "flour",
       "produce_quantity": 1,
       "duration_seconds": 75,
@@ -246,18 +451,33 @@
       "stamina_cost": 1,
       "collect_xp": 7,
       "quality": {
-        "thresholds": [50, 100, 165, 250],
+        "thresholds": [
+          50,
+          100,
+          165,
+          250
+        ],
         "width": 17,
         "miracle_probability_cap": 0.003,
         "miracle_eligible": false
       },
-      "unlock_condition": {"hook": "player_level", "params": {"level": 3}}
+      "unlock_condition": {
+        "hook": "player_level",
+        "params": {
+          "level": 3
+        }
+      }
     },
     {
       "id": "pickle_carrot",
       "station_id": "town_workbench",
       "name": "腌渍胡萝卜",
-      "inputs": [{"item_id": "carrot", "quantity": 3}],
+      "inputs": [
+        {
+          "item_id": "carrot",
+          "quantity": 3
+        }
+      ],
       "produce_item_id": "pickled_carrot",
       "produce_quantity": 1,
       "duration_seconds": 120,
@@ -265,12 +485,22 @@
       "stamina_cost": 1,
       "collect_xp": 10,
       "quality": {
-        "thresholds": [65, 120, 190, 280],
+        "thresholds": [
+          65,
+          120,
+          190,
+          280
+        ],
         "width": 20,
         "miracle_probability_cap": 0.003,
         "miracle_eligible": false
       },
-      "unlock_condition": {"hook": "player_level", "params": {"level": 4}}
+      "unlock_condition": {
+        "hook": "player_level",
+        "params": {
+          "level": 4
+        }
+      }
     }
   ],
   "mining_sites": [
@@ -303,7 +533,12 @@
       "collect_xp": 7,
       "min_level": 2,
       "quality": {
-        "thresholds": [50, 100, 165, 250],
+        "thresholds": [
+          50,
+          100,
+          165,
+          250
+        ],
         "width": 17,
         "miracle_probability_cap": 0.003,
         "miracle_eligible": false
@@ -322,15 +557,236 @@
       "collect_xp": 13,
       "min_level": 4,
       "quality": {
-        "thresholds": [75, 140, 215, 310],
+        "thresholds": [
+          75,
+          140,
+          215,
+          310
+        ],
         "width": 21,
         "miracle_probability_cap": 0.003,
         "miracle_eligible": false
       }
     }
   ],
+  "portals": [
+    {
+      "id": "first_gate",
+      "name": "第一传送门",
+      "description": "镇口那道一直没关上的裂口。绯恩说，先喂饱它，它才肯告诉你下一步。",
+      "accent": "#8aa6e0",
+      "min_level": 2,
+      "prerequisites": [],
+      "tributes": [
+        {
+          "id": "first_gate_carrot",
+          "item_id": "carrot",
+          "quantity": 12,
+          "reward": {
+            "coins": 70,
+            "experience": 12
+          }
+        },
+        {
+          "id": "first_gate_maple_wood",
+          "item_id": "maple_wood",
+          "quantity": 10,
+          "reward": {
+            "coins": 80,
+            "experience": 15
+          }
+        }
+      ],
+      "completion_reward": {
+        "coins": 220,
+        "experience": 45,
+        "items": [
+          {
+            "item_id": "wheat_seed",
+            "quantity": 5
+          }
+        ]
+      }
+    },
+    {
+      "id": "maple_gate",
+      "name": "枫林之门",
+      "description": "林子深处的那道门只收林子里的东西，而且挑得很。",
+      "accent": "#cf8b4e",
+      "min_level": 3,
+      "prerequisites": [
+        "first_gate"
+      ],
+      "tributes": [
+        {
+          "id": "maple_gate_plank",
+          "item_id": "maple_plank",
+          "quantity": 6,
+          "reward": {
+            "coins": 150,
+            "experience": 25
+          }
+        },
+        {
+          "id": "maple_gate_herb",
+          "item_id": "autumn_herb",
+          "quantity": 12,
+          "min_quality": 2,
+          "reward": {
+            "coins": 160,
+            "experience": 25
+          }
+        }
+      ],
+      "completion_reward": {
+        "coins": 380,
+        "experience": 80,
+        "talent_points": 1
+      }
+    },
+    {
+      "id": "copper_gate",
+      "name": "赤岩之门",
+      "description": "山脚下的门埋在矿渣里，敲上去是空的。",
+      "accent": "#c46a4b",
+      "min_level": 3,
+      "prerequisites": [
+        "first_gate"
+      ],
+      "tributes": [
+        {
+          "id": "copper_gate_ore",
+          "item_id": "red_copper_ore",
+          "quantity": 15,
+          "reward": {
+            "coins": 170,
+            "experience": 25
+          }
+        },
+        {
+          "id": "copper_gate_wheat",
+          "item_id": "wheat",
+          "quantity": 16,
+          "reward": {
+            "coins": 140,
+            "experience": 20
+          }
+        }
+      ],
+      "completion_reward": {
+        "coins": 400,
+        "experience": 85,
+        "items": [
+          {
+            "item_id": "moon_silver_ore",
+            "quantity": 3
+          }
+        ]
+      }
+    },
+    {
+      "id": "hearth_gate",
+      "name": "灶火之门",
+      "description": "它只对做熟的东西有反应。镇上没人知道为什么，绯恩说别问。",
+      "accent": "#d8a24d",
+      "min_level": 4,
+      "prerequisites": [
+        "maple_gate"
+      ],
+      "tributes": [
+        {
+          "id": "hearth_gate_flour",
+          "item_id": "flour",
+          "quantity": 8,
+          "reward": {
+            "coins": 220,
+            "experience": 30
+          }
+        },
+        {
+          "id": "hearth_gate_pickle",
+          "item_id": "pickled_carrot",
+          "quantity": 6,
+          "reward": {
+            "coins": 220,
+            "experience": 30
+          }
+        }
+      ],
+      "completion_reward": {
+        "coins": 500,
+        "experience": 120,
+        "items": [
+          {
+            "item_id": "herbal_salve",
+            "quantity": 3,
+            "quality": 3
+          }
+        ]
+      }
+    },
+    {
+      "id": "moonlit_gate",
+      "name": "月影之门",
+      "description": "两道门都开过之后，山谷里才会出现第三道。它比前面几道安静得多。",
+      "accent": "#a48fd6",
+      "min_level": 4,
+      "prerequisites": [
+        "maple_gate",
+        "copper_gate"
+      ],
+      "tributes": [
+        {
+          "id": "moonlit_gate_silver",
+          "item_id": "moon_silver_ore",
+          "quantity": 10,
+          "min_quality": 2,
+          "reward": {
+            "coins": 320,
+            "experience": 45
+          }
+        },
+        {
+          "id": "moonlit_gate_salve",
+          "item_id": "herbal_salve",
+          "quantity": 5,
+          "min_quality": 3,
+          "reward": {
+            "coins": 300,
+            "experience": 45
+          }
+        },
+        {
+          "id": "moonlit_gate_plank",
+          "item_id": "maple_plank",
+          "quantity": 10,
+          "reward": {
+            "coins": 260,
+            "experience": 40
+          }
+        }
+      ],
+      "completion_reward": {
+        "coins": 900,
+        "experience": 220,
+        "talent_points": 1
+      }
+    }
+  ],
   "shop": [
-    {"id": "carrot_seed", "item_id": "carrot_seed", "price": 8, "currency": "coins", "min_level": 1},
-    {"id": "wheat_seed", "item_id": "wheat_seed", "price": 13, "currency": "coins", "min_level": 2}
+    {
+      "id": "carrot_seed",
+      "item_id": "carrot_seed",
+      "price": 8,
+      "currency": "coins",
+      "min_level": 1
+    },
+    {
+      "id": "wheat_seed",
+      "item_id": "wheat_seed",
+      "price": 13,
+      "currency": "coins",
+      "min_level": 2
+    }
   ]
 }

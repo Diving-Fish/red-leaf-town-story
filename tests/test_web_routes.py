@@ -493,3 +493,50 @@ async def test_deleted_player_starts_over_on_the_next_login(admin_client, servic
     assert recreated.player_id != player.player_id
     assert recreated.seen_story_ids == []
     assert recreated.owned_partners == []
+
+
+@runs
+async def test_tribute_delivery_api(client, service):
+    from red_leaf_town.domain.economy import add_item
+
+    player = service.repository.get_by_sub("route-sub")
+    service.repository.update(player.player_id, lambda state: setattr(state, "experience", 20))
+    service.repository.update(player.player_id, lambda state: add_item(state, "carrot", 12))
+    authenticate(client)
+
+    response = await client.post(
+        "/api/red-leaf-town/portals/first_gate/tributes/first_gate_carrot/deliver",
+        json={"quantity": 12},
+    )
+    body = await response.get_json()
+
+    assert response.status_code == 200
+    assert body["data"]["result"]["tribute_completed"] is True
+    assert body["data"]["result"]["rewards"][0]["coins"] == 70
+    portal = next(
+        entry for entry in body["data"]["state"]["portals"] if entry["portal_id"] == "first_gate"
+    )
+    assert portal["completed_tribute_count"] == 1
+    assert portal["completed"] is False
+
+
+@runs
+async def test_tribute_delivery_api_rejects_a_locked_portal(client, service):
+    authenticate(client)
+    response = await client.post(
+        "/api/red-leaf-town/portals/maple_gate/tributes/maple_gate_plank/deliver",
+        json={"quantity": 1},
+    )
+    body = await response.get_json()
+
+    assert response.status_code == 409
+    assert body["code"] == "portal_locked"
+
+
+@runs
+async def test_tribute_delivery_api_requires_login(client):
+    response = await client.post(
+        "/api/red-leaf-town/portals/first_gate/tributes/first_gate_carrot/deliver",
+        json={"quantity": 1},
+    )
+    assert response.status_code == 401

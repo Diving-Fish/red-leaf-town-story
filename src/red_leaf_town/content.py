@@ -200,6 +200,64 @@ class MiningTaskDefinition(BaseModel):
         return self
 
 
+class RewardItemDefinition(BaseModel):
+    item_id: str = Field(min_length=1)
+    quantity: int = Field(ge=1)
+    quality: int = Field(default=0, ge=0, le=5)
+
+
+class RewardDefinition(BaseModel):
+    """一次性发放的奖励，贡品和传送门全完成共用同一个结构。"""
+
+    coins: int = Field(default=0, ge=0)
+    experience: int = Field(default=0, ge=0)
+    talent_points: int = Field(default=0, ge=0)
+    items: list[RewardItemDefinition] = Field(default_factory=list, max_length=8)
+    partner_ids: list[str] = Field(default_factory=list, max_length=4)
+
+    @model_validator(mode="after")
+    def validate_reward(self):
+        if len(self.partner_ids) != len(set(self.partner_ids)):
+            raise ValueError("reward cannot grant the same partner twice")
+        return self
+
+    @property
+    def empty(self) -> bool:
+        return not (self.coins or self.experience or self.talent_points or self.items or self.partner_ids)
+
+
+class PortalTributeDefinition(BaseModel):
+    """传送门要求的一项贡品。玩家可以分次交，交满结算这一项的奖励。"""
+
+    id: str = Field(min_length=1)
+    item_id: str = Field(min_length=1)
+    quantity: int = Field(ge=1)
+    min_quality: int = Field(default=0, ge=0, le=5)
+    reward: RewardDefinition = Field(default_factory=RewardDefinition)
+
+
+class PortalDefinition(BaseModel):
+    id: str = Field(min_length=1)
+    name: str = Field(min_length=1)
+    description: str = ""
+    accent: str
+    min_level: int = Field(default=1, ge=1)
+    prerequisites: list[str] = Field(default_factory=list, max_length=4)
+    tributes: list[PortalTributeDefinition] = Field(min_length=1, max_length=8)
+    completion_reward: RewardDefinition = Field(default_factory=RewardDefinition)
+
+    @model_validator(mode="after")
+    def validate_portal(self):
+        if self.id in self.prerequisites:
+            raise ValueError(f"portal {self.id} cannot require itself")
+        if len(self.prerequisites) != len(set(self.prerequisites)):
+            raise ValueError(f"portal {self.id} repeats a prerequisite")
+        tribute_ids = [tribute.id for tribute in self.tributes]
+        if len(tribute_ids) != len(set(tribute_ids)):
+            raise ValueError(f"portal {self.id} repeats a tribute id")
+        return self
+
+
 class ShopEntry(BaseModel):
     id: str
     item_id: str
@@ -224,6 +282,7 @@ class GameContent(BaseModel):
     recipes: list[RecipeDefinition] = Field(default_factory=list)
     mining_sites: list[MiningSiteDefinition] = Field(default_factory=list)
     mining_tasks: list[MiningTaskDefinition] = Field(default_factory=list)
+    portals: list[PortalDefinition] = Field(default_factory=list)
     shop: list[ShopEntry]
 
     @model_validator(mode="after")
@@ -242,6 +301,8 @@ class GameContent(BaseModel):
         unique([entry.id for entry in self.recipes], "recipe")
         unique([entry.id for entry in self.mining_sites], "mining site")
         unique([entry.id for entry in self.mining_tasks], "mining task")
+        unique([entry.id for entry in self.portals], "portal")
+        unique([tribute.id for portal in self.portals for tribute in portal.tributes], "portal tribute")
         levels = [entry.level for entry in self.levels]
         unique([str(level) for level in levels], "level")
         if levels != sorted(levels) or not levels or levels[0] != 1:
@@ -300,10 +361,49 @@ class GameContent(BaseModel):
                 raise ValueError(f"mining task {task.id} references an unknown item")
             if not self.item_map[task.produce_item_id].has_quality:
                 raise ValueError(f"mining task {task.id} output must support quality")
+        self._validate_portals(items)
         for entry in self.shop:
             if entry.item_id not in items:
                 raise ValueError(f"shop {entry.id} references an unknown item")
         return self
+
+    def _validate_portals(self, items: set[str]) -> None:
+        portal_ids = {portal.id for portal in self.portals}
+        for portal in self.portals:
+            unknown = [entry for entry in portal.prerequisites if entry not in portal_ids]
+            if unknown:
+                raise ValueError(f"portal {portal.id} references unknown prerequisites: {', '.join(unknown)}")
+            for tribute in portal.tributes:
+                if tribute.item_id not in items:
+                    raise ValueError(f"portal tribute {tribute.id} references an unknown item")
+                if tribute.min_quality and not self.item_map[tribute.item_id].has_quality:
+                    raise ValueError(f"portal tribute {tribute.id} demands a quality the item cannot have")
+                self._validate_reward(tribute.reward, items, f"portal tribute {tribute.id}")
+            self._validate_reward(portal.completion_reward, items, f"portal {portal.id}")
+        self._validate_portal_graph()
+
+    def _validate_reward(self, reward: RewardDefinition, items: set[str], label: str) -> None:
+        for entry in reward.items:
+            if entry.item_id not in items:
+                raise ValueError(f"{label} rewards an unknown item")
+            if entry.quality and not self.item_map[entry.item_id].has_quality:
+                raise ValueError(f"{label} rewards a quality the item cannot have")
+
+    def _validate_portal_graph(self) -> None:
+        """解锁是树状的，成环会让整棵子树永远打不开，所以加载时就拦下来。"""
+        prerequisites = {portal.id: list(portal.prerequisites) for portal in self.portals}
+        resolved: set[str] = set()
+        pending = set(prerequisites)
+        while pending:
+            ready = {
+                portal_id
+                for portal_id in pending
+                if all(entry in resolved for entry in prerequisites[portal_id])
+            }
+            if not ready:
+                raise ValueError(f"portal prerequisites form a cycle: {', '.join(sorted(pending))}")
+            resolved |= ready
+            pending -= ready
 
     @property
     def item_map(self) -> dict[str, ItemDefinition]:
@@ -344,6 +444,18 @@ class GameContent(BaseModel):
     @property
     def mining_task_map(self) -> dict[str, MiningTaskDefinition]:
         return {entry.id: entry for entry in self.mining_tasks}
+
+    @property
+    def portal_map(self) -> dict[str, PortalDefinition]:
+        return {entry.id: entry for entry in self.portals}
+
+    @property
+    def portal_tribute_map(self) -> dict[str, tuple[PortalDefinition, PortalTributeDefinition]]:
+        return {
+            tribute.id: (portal, tribute)
+            for portal in self.portals
+            for tribute in portal.tributes
+        }
 
     def level_for_xp(self, experience: int) -> LevelDefinition:
         current = self.levels[0]

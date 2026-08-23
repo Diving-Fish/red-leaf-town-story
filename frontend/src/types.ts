@@ -174,6 +174,81 @@ export interface TalentState {
   nodes: TalentNode[]
 }
 
+export interface RewardItem {
+  item_id: string
+  name: string
+  icon: string
+  quantity: number
+  quality: number
+  quality_name: string | null
+}
+
+export interface RewardPartner {
+  partner_id: string
+  name: string
+}
+
+export interface Reward {
+  coins: number
+  experience: number
+  talent_points: number
+  items: RewardItem[]
+  partners: RewardPartner[]
+  empty: boolean
+}
+
+export interface PortalTribute {
+  id: string
+  item_id: string
+  name: string
+  icon: string
+  quantity: number
+  min_quality: number | null
+  min_quality_name: string | null
+  delivered: number
+  remaining: number
+  deliverable: number
+  owned: number
+  completed: boolean
+  reward: Reward
+}
+
+export interface PortalPrerequisite {
+  portal_id: string
+  name: string
+  completed: boolean
+}
+
+export interface PortalState {
+  portal_id: string
+  name: string
+  description: string
+  accent: string
+  min_level: number
+  prerequisites: PortalPrerequisite[]
+  unlocked: boolean
+  locked_reason: string | null
+  completed: boolean
+  completed_at: number
+  tributes: PortalTribute[]
+  tribute_count: number
+  completed_tribute_count: number
+  completion_reward: Reward
+}
+
+export interface TributeDeliveryResult {
+  portal_id: string
+  portal_name: string
+  tribute_id: string
+  delivered: number
+  total_delivered: number
+  required: number
+  tribute_completed: boolean
+  portal_completed: boolean
+  rewards: (Reward & { source: 'tribute' | 'portal'; label: string; levels: number[] })[]
+  unlocked_portals: { portal_id: string; name: string }[]
+}
+
 export interface RecipeInputState {
   item_id: string
   quantity: number
@@ -296,6 +371,7 @@ export interface GameState {
   partner_count: number
   industry_rules: Record<string, IndustryRules>
   talents: TalentState
+  portals: PortalState[]
   shop: ShopEntry[]
 }
 
@@ -476,11 +552,6 @@ export interface StoryDialogueStep {
 
 export type StoryStep = StoryBackgroundStep | StoryPortraitStep | StoryDialogueStep
 
-export interface StoryRewards {
-  partner_ids: string[]
-  partner_names: string[]
-}
-
 export interface StoryScript {
   id: string
   title: string
@@ -488,7 +559,7 @@ export interface StoryScript {
   priority: number
   repeatable: boolean
   trigger_description: string
-  rewards: StoryRewards
+  rewards: Reward
   steps: StoryStep[]
 }
 

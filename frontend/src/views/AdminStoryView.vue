@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { ArrowLeft, Check, ImageUp, Leaf, LockKeyhole, Move, Play, RefreshCw, RotateCcw, Trash2, X } from 'lucide-vue-next'
 
 import { api, ApiError } from '@/api'
+import RewardChips from '@/components/RewardChips.vue'
 import StoryOverlay from '@/components/story/StoryOverlay.vue'
 import { useStoryStore } from '@/stores/story'
 import type {
@@ -213,7 +214,7 @@ function restartLayoutPreview() {
       mode: layoutMode.value,
       priority: 0,
       repeatable: true,
-      rewards: { partner_ids: [], partner_names: [] },
+      rewards: { coins: 0, experience: 0, talent_points: 0, items: [], partners: [], empty: true },
       trigger_description: '',
       steps,
     },
@@ -378,9 +379,10 @@ async function saveLayout() {
             </div>
             <span class="mode-chip" :class="`mode-chip--${script.mode}`">{{ script.mode === 'stage' ? '全屏舞台' : '就地插话' }}</span>
             <span v-if="script.repeatable" class="mode-chip">可重复</span>
-            <span v-if="script.rewards?.partner_names.length" class="mode-chip mode-chip--reward">
-              播完加入 {{ script.rewards.partner_names.join('、') }}
-            </span>
+            <div v-if="!script.rewards?.empty" class="script-rewards">
+              <small>播完发放</small>
+              <RewardChips :reward="script.rewards" />
+            </div>
             <button class="preview-button" @click="preview(script)"><Play :size="14" />预览</button>
           </article>
           <p v-if="!(payload?.scripts || []).length" class="empty-hint">剧本目录还是空的。</p>
@@ -474,7 +476,8 @@ button { color: inherit; }
 .empty-hint { padding: 22px 10px; text-align: center; color: #657168; font-size: 12px; }
 .script-list { display: grid; gap: 8px; }
 .script-card { display: grid; grid-template-columns: 1fr auto auto auto; align-items: center; gap: 10px; padding: 14px; border: 1px solid #ffffff11; border-radius: 14px 5px; background: #17211b; }.script-card strong,.script-card small { display: block; }.script-card small { margin-top: 4px; color: #748077; font-size: 12px; }
-.mode-chip { padding: 4px 10px; color: #9db982; font-size: 12px; border-radius: 99px; background: #9db98214; }.mode-chip--stage { color: #d99177; background: #d9917714; }.mode-chip--reward { color: #e0bd72; background: #e0bd7214; }
+.mode-chip { padding: 4px 10px; color: #9db982; font-size: 12px; border-radius: 99px; background: #9db98214; }.mode-chip--stage { color: #d99177; background: #d9917714; }
+.script-rewards { grid-column: 1 / -1; display: flex; align-items: center; gap: 7px; flex-wrap: wrap; padding-top: 4px; }.script-rewards small { color: #7f8b81; font-size: 12px; }
 .pending-hint { color: #d9917799; }
 .overwrite-row { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; margin-top: 11px; padding: 9px 11px; color: #c2c9bd; font-size: 12px; line-height: 1.6; border: 1px solid #d9917733; border-radius: 9px; background: #d991770d; cursor: pointer; }.overwrite-row input { accent-color: #d99177; }.overwrite-row strong { color: #e6d3a6; }.overwrite-row.blocked { color: #efa08f; border-color: #dc806d44; cursor: not-allowed; }
 .preview-button { min-height: 34px; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; color: #cfd8c9; border: 1px solid #ffffff16; border-radius: 9px; background: transparent; cursor: pointer; }.preview-button:hover { border-color: #9cbe7c55; }

@@ -30,13 +30,19 @@
 }
 ```
 
-`rewards` 是可选的，剧本第一次播完时结算一次：
+`rewards` 是可选的，剧本第一次播完时结算一次，用的是和传送门同一套 `RewardDefinition`：
 
 ```json
-"rewards": { "partner_ids": ["fein"] }
+"rewards": {
+  "coins": 40,
+  "experience": 10,
+  "talent_points": 0,
+  "items": [{ "item_id": "carrot_seed", "quantity": 5 }],
+  "partner_ids": ["fein"]
+}
 ```
 
-目前只支持让伙伴加入。奖励在 `POST /api/red-leaf-town/story/<id>/seen` 里发放，同一个剧本重复上报不会再发一次，玩家已经拥有的伙伴会跳过；`repeatable: true` 的剧本不允许带奖励。发放走的是存档写入，接口会把新的存档一起返回，前端直接采用，不用等下一次轮询。奖励引用的伙伴必须存在，否则内容加载失败。
+字段都可以省略。奖励在 `POST /api/red-leaf-town/story/<id>/seen` 里发放，同一个剧本重复上报不会再发一次（第二次起 `granted` 为 `null`），玩家已经拥有的伙伴会跳过；`repeatable: true` 的剧本不允许带奖励。发放走的是存档写入，接口会把结算结果和新存档一起返回，前端直接采用并弹一条"获得 …"，不用等下一次轮询。奖励引用的物品和伙伴都必须存在，否则内容加载失败——所以剧本的加载现在也依赖 `data/game.json`。
 
 步骤只有三种：
 

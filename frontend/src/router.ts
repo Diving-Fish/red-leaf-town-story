@@ -8,6 +8,7 @@ import GatheringView from '@/views/GatheringView.vue'
 import CraftingView from '@/views/CraftingView.vue'
 import MiningView from '@/views/MiningView.vue'
 import DashboardView from '@/views/DashboardView.vue'
+import PortalsView from '@/views/PortalsView.vue'
 
 export default createRouter({
   history: createWebHistory('/red-leaf-town/'),
@@ -29,6 +30,7 @@ export default createRouter({
     { path: '/gathering', name: 'gathering', component: GatheringView, meta: { title: '采集' } },
     { path: '/crafting', name: 'crafting', component: CraftingView, meta: { title: '加工' } },
     { path: '/mining', name: 'mining', component: MiningView, meta: { title: '矿产' } },
+    { path: '/portals', name: 'portals', component: PortalsView, meta: { title: '传送门' } },
     { path: '/shop', name: 'shop', component: ShopView, meta: { title: '种子商店' } },
     { path: '/inventory', name: 'inventory', component: InventoryView, meta: { title: '仓库' } },
     { path: '/partners/:partnerId?', name: 'partners', component: PartnersView, meta: { title: '伙伴仓库' } },

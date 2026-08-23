@@ -4,7 +4,6 @@ import { defineStore } from 'pinia'
 import { api } from '@/api'
 import type {
   ActionResult,
-  GameState,
   StoryAsset,
   StoryCueResult,
   StoryDialogueStep,
@@ -36,11 +35,11 @@ export const useStoryStore = defineStore('story', () => {
   const locked = ref(false)
   const requested = new Set<string>()
   let cursor = 0
-  // 剧情播完可能带来奖励（比如伙伴加入），上报时服务端会回一份新的存档。
-  let onState: ((next: GameState) => void) | null = null
+  // 剧情播完可能带来奖励（伙伴加入、种子到手），上报时服务端会回结算结果和新存档。
+  let onSettled: ((result: ActionResult) => void) | null = null
 
-  function bindState(handler: (next: GameState) => void) {
-    onState = handler
+  function bindState(handler: (result: ActionResult) => void) {
+    onSettled = handler
   }
 
   const active = computed(() => script.value !== null)
@@ -140,7 +139,7 @@ export const useStoryStore = defineStore('story', () => {
     clearStage()
     if (finished && !wasPreview) {
       api<ActionResult>(`${API_ROOT}/story/${encodeURIComponent(finished.id)}/seen`, { method: 'POST' })
-        .then((result) => onState?.(result.state))
+        .then((result) => onSettled?.(result))
         .catch(() => undefined)
     }
     startNext()

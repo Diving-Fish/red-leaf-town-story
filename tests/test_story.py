@@ -77,12 +77,12 @@ def partner_definition(partner_id="fein", name="绯恩"):
     })
 
 
-def reward_script(script_id="joining", partner_id="fein", **trigger):
+def reward_script(script_id="joining", rewards=None, partner_id="fein", **trigger):
     return StoryScript.model_validate({
         "id": script_id,
         "title": "她跟上来了",
         "trigger": {"hook": "cue", "params": {"cue": "view:dashboard"}, **trigger},
-        "rewards": {"partner_ids": [partner_id]},
+        "rewards": {"partner_ids": [partner_id]} if rewards is None else rewards,
         "steps": [{"type": "dialogue", "speaker": "绯恩", "text": "明天早上我来找你。"}],
     })
 
@@ -354,7 +354,7 @@ def test_missing_partner_artwork_degrades_to_no_portrait():
     assert payload["steps"][0]["asset"] is None
 
 
-def test_legacy_save_migrates_to_schema_nine():
+def test_legacy_save_migrates_to_the_current_schema():
     player = PlayerState.model_validate({
         "schema_version": 8,
         "player_id": "player-1",
@@ -364,7 +364,7 @@ def test_legacy_save_migrates_to_schema_nine():
         "created_at": 0,
         "updated_at": 0,
     })
-    assert player.schema_version == 10
+    assert player.schema_version == 11
     assert player.seen_story_ids == []
 
 
@@ -393,7 +393,7 @@ def test_story_reward_grants_the_partner_when_it_is_first_finished(service):
     service.story_catalog_loader = lambda: StoryCatalog(scripts=[reward_script()])
     result = service.mark_story_seen("story-sub", "joining")
 
-    assert result["result"]["granted_partners"] == [{"partner_id": "fein", "name": "绯恩"}]
+    assert result["result"]["granted"]["partners"] == [{"partner_id": "fein", "name": "绯恩"}]
     player = service.repository.get_by_sub("story-sub")
     assert [owned.partner_id for owned in player.owned_partners] == ["fein"]
     assert player.owned_partners[0].acquired_at == 1_700_000_000
@@ -405,7 +405,7 @@ def test_story_reward_is_not_granted_twice(service):
     service.mark_story_seen("story-sub", "joining")
     repeated = service.mark_story_seen("story-sub", "joining")
 
-    assert repeated["result"]["granted_partners"] == []
+    assert repeated["result"]["granted"] is None
     player = service.repository.get_by_sub("story-sub")
     assert [owned.partner_id for owned in player.owned_partners] == ["fein"]
 
@@ -416,7 +416,7 @@ def test_story_reward_skips_a_partner_the_player_already_owns(service):
     service.story_catalog_loader = lambda: StoryCatalog(scripts=[reward_script()])
 
     result = service.mark_story_seen("story-sub", "joining")
-    assert result["result"]["granted_partners"] == []
+    assert result["result"]["granted"]["partners"] == []
     assert len(service.repository.get_by_sub("story-sub").owned_partners) == 1
 
 
@@ -427,7 +427,7 @@ def test_repeatable_story_cannot_carry_rewards():
 
 def test_reward_partner_must_exist():
     catalog = StoryCatalog(scripts=[reward_script(partner_id="ghost")])
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="unknown partners"):
         validate_story_references(catalog, StoryAssetCatalog(), PartnerCatalog(partners=[partner_definition()]))
     validate_story_references(
         StoryCatalog(scripts=[reward_script()]),
@@ -436,13 +436,56 @@ def test_reward_partner_must_exist():
     )
 
 
-def test_serialized_script_names_the_partners_it_grants():
+def test_serialized_script_describes_everything_it_grants():
     payload = serialize_script(
-        reward_script(),
+        reward_script(rewards={"coins": 40, "items": [{"item_id": "carrot_seed", "quantity": 3}], "partner_ids": ["fein"]}),
         StoryAssetCatalog(),
         PartnerCatalog(partners=[partner_definition()]),
     )
-    assert payload["rewards"] == {"partner_ids": ["fein"], "partner_names": ["绯恩"]}
+    rewards = payload["rewards"]
+
+    assert rewards["coins"] == 40
+    assert rewards["empty"] is False
+    assert rewards["items"] == [{
+        "item_id": "carrot_seed",
+        "quantity": 3,
+        "quality": 0,
+        "name": "胡萝卜种子",
+        "icon": "sprout",
+        "quality_name": None,
+    }]
+    assert rewards["partners"] == [{"partner_id": "fein", "name": "绯恩"}]
+
+
+def test_story_reward_hands_over_coins_experience_and_items(service):
+    service.story_catalog_loader = lambda: StoryCatalog(scripts=[reward_script(rewards={
+        "coins": 60,
+        "experience": 25,
+        "talent_points": 1,
+        "items": [{"item_id": "carrot_seed", "quantity": 4}],
+    })])
+    before = service.snapshot_by_sub("story-sub")["player"]
+
+    granted = service.mark_story_seen("story-sub", "joining")["result"]["granted"]
+    state = service.snapshot_by_sub("story-sub")
+
+    assert (granted["coins"], granted["experience"], granted["talent_points"]) == (60, 25, 1)
+    assert granted["items"][0]["name"] == "胡萝卜种子"
+    assert state["player"]["coins"] == before["coins"] + 60
+    assert state["player"]["experience"] == before["experience"] + 25
+    assert next(entry["quantity"] for entry in state["inventory"] if entry["item_id"] == "carrot_seed") == 4
+    assert service.repository.get_by_sub("story-sub").bonus_talent_points == 1
+
+
+def test_story_without_rewards_grants_nothing(service):
+    granted = service.mark_story_seen("story-sub", "hello")["result"]["granted"]
+    assert granted is None
+
+
+def test_story_reward_items_must_exist():
+    catalog = StoryCatalog(scripts=[reward_script(rewards={"items": [{"item_id": "ghost", "quantity": 1}]})])
+    with pytest.raises(ValueError, match="unknown items"):
+        validate_story_references(catalog, StoryAssetCatalog(), PartnerCatalog(partners=[partner_definition()]))
 
 
 def test_placeholder_asset_carries_no_image():
@@ -514,7 +557,7 @@ def test_renamed_partner_id_migrates_everywhere():
         }],
     })
 
-    assert player.schema_version == 10
+    assert player.schema_version == 11
     assert [owned.partner_id for owned in player.owned_partners] == ["fein"]
     site = player.gathering_sites[0]
     assert site.assigned_partner_ids == ["fein"]
