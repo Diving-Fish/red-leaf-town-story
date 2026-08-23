@@ -12,6 +12,15 @@ from quart import Blueprint, jsonify, make_response, redirect, request, send_fro
 from pydantic import ValidationError
 
 from red_leaf_town.application import GameError
+from red_leaf_town.content import (
+    DEFAULT_CONTENT_PATH,
+    CropDefinition,
+    GameContent,
+    ItemDefinition,
+    ShopEntry,
+    load_content,
+    save_content,
+)
 from red_leaf_town.runtime import get_service
 from red_leaf_town.partner_content import (
     BREAKTHROUGH_LEVEL_CAPS,
@@ -226,11 +235,13 @@ def login_required(handler):
 
 def create_blueprint(
     *,
+    game_content_path: str | Path = DEFAULT_CONTENT_PATH,
     partner_catalog_path: str | Path = DEFAULT_PARTNER_CONTENT_PATH,
     story_asset_path: str | Path = DEFAULT_STORY_ASSET_PATH,
     story_script_dir: str | Path = DEFAULT_STORY_SCRIPT_DIR,
 ) -> Blueprint:
     blueprint = Blueprint("red_leaf_town", __name__)
+    content_path = Path(game_content_path)
     catalog_path = Path(partner_catalog_path)
     story_asset_catalog_path = Path(story_asset_path)
     story_script_path = Path(story_script_dir)
@@ -300,6 +311,80 @@ def create_blueprint(
             },
         }
 
+    def crop_admin_payload(content: GameContent) -> dict:
+        shop_by_seed = {entry.item_id: entry for entry in content.shop}
+        items = content.item_map
+        return {
+            "schema_version": content.schema_version,
+            "quality_grades": [grade.model_dump() for grade in content.quality.grades],
+            "crops": [
+                {
+                    **crop.model_dump(),
+                    "seed_price": shop_by_seed[crop.seed_item_id].price if crop.seed_item_id in shop_by_seed else None,
+                    "shop_id": shop_by_seed[crop.seed_item_id].id if crop.seed_item_id in shop_by_seed else None,
+                    "produce_sell_price": items[crop.produce_item_id].sell_price,
+                    "chart_enabled": crop.seed_item_id in shop_by_seed,
+                }
+                for crop in content.crops
+            ],
+        }
+
+    def update_crop_balance(content: GameContent, records: object) -> GameContent:
+        if not isinstance(records, list) or not records:
+            raise ValueError("crops must be a non-empty list")
+        if any(not isinstance(record, dict) for record in records):
+            raise ValueError("each crop update must be an object")
+        ids = [str(record.get("id", "")) for record in records]
+        if len(ids) != len(set(ids)):
+            raise ValueError("crop updates must have unique ids")
+
+        crop_map = content.crop_map
+        item_map = content.item_map
+        shop_by_seed = {entry.item_id: entry for entry in content.shop}
+        crop_fields = {
+            "growth_seconds",
+            "time_difficulty",
+            "yield_min",
+            "yield_max",
+            "stamina_cost",
+            "plant_xp",
+            "harvest_xp",
+            "quality",
+        }
+        updated_crops = {crop.id: crop for crop in content.crops}
+        updated_items = {item.id: item for item in content.items}
+        updated_shop = {entry.id: entry for entry in content.shop}
+
+        for record in records:
+            crop_id = str(record.get("id", ""))
+            current = crop_map.get(crop_id)
+            if current is None:
+                raise ValueError(f"unknown crop: {crop_id}")
+            crop_data = current.model_dump()
+            crop_data.update({field: record[field] for field in crop_fields if field in record})
+            updated_crops[crop_id] = CropDefinition.model_validate(crop_data)
+
+            if "produce_sell_price" in record:
+                item = item_map[current.produce_item_id]
+                updated_items[item.id] = ItemDefinition.model_validate({
+                    **item.model_dump(),
+                    "sell_price": record["produce_sell_price"],
+                })
+            if "seed_price" in record and record["seed_price"] is not None:
+                shop_entry = shop_by_seed.get(current.seed_item_id)
+                if shop_entry is None:
+                    raise ValueError(f"crop {crop_id} does not have a purchasable seed")
+                updated_shop[shop_entry.id] = ShopEntry.model_validate({
+                    **shop_entry.model_dump(),
+                    "price": record["seed_price"],
+                })
+
+        payload = content.model_dump()
+        payload["crops"] = [updated_crops[crop.id].model_dump() for crop in content.crops]
+        payload["items"] = [updated_items[item.id].model_dump() for item in content.items]
+        payload["shop"] = [updated_shop[entry.id].model_dump() for entry in content.shop]
+        return GameContent.model_validate(payload)
+
     def replace_partner(catalog: PartnerCatalog, partner: PartnerDefinition) -> PartnerCatalog:
         records = [entry for entry in catalog.partners if entry.id != partner.id]
         records.append(partner)
@@ -319,6 +404,29 @@ def create_blueprint(
         if not _is_admin_request():
             return _admin_error()
         return jsonify({"code": 0, "data": admin_payload(load_partner_catalog(catalog_path))})
+
+    @blueprint.get("/api/red-leaf-town/admin/crops")
+    async def admin_crop_list():
+        if not _is_admin_request():
+            return _admin_error()
+        return jsonify({"code": 0, "data": crop_admin_payload(load_content(content_path))})
+
+    @blueprint.put("/api/red-leaf-town/admin/crops")
+    async def admin_crop_update():
+        if not _is_admin_request():
+            return _admin_error()
+        payload = await request.get_json(silent=True) or {}
+        try:
+            content = update_crop_balance(load_content(content_path), payload.get("crops"))
+        except (ValidationError, ValueError) as exc:
+            message = "; ".join(item["msg"] for item in exc.errors()) if isinstance(exc, ValidationError) else str(exc)
+            return _error(message, 400, "invalid_crop_balance")
+        save_content(content, content_path)
+        service = get_service()
+        service.content = content
+        if hasattr(service.repository, "content"):
+            service.repository.content = content
+        return jsonify({"code": 0, "data": crop_admin_payload(content)})
 
     @blueprint.post("/api/red-leaf-town/admin/partners")
     async def admin_partner_create():

@@ -339,6 +339,7 @@ onMounted(() => {
         </nav>
         <div class="header-actions">
           <span v-if="notice" class="notice"><Check :size="15" />{{ notice }}</span>
+          <RouterLink :to="{ name: 'admin-crops' }">作物数值</RouterLink>
           <a href="/red-leaf-town/"><ArrowLeft :size="16" />玩家前台</a>
           <button v-if="adminSection === 'cards'" class="save-button" :disabled="busy" @click="save"><Save :size="16" />保存卡片</button>
         </div>

@@ -82,7 +82,6 @@
       "plot_slots": 3,
       "stamina_cap": 22,
       "unlocks": [
-        "crop:potato",
         "system:mining",
         "mining:copper_foothill"
       ]
@@ -93,7 +92,7 @@
       "plot_slots": 4,
       "stamina_cap": 24,
       "unlocks": [
-        "crop:wheat",
+        "crop:potato",
         "system:crafting"
       ]
     },
@@ -103,7 +102,6 @@
       "plot_slots": 4,
       "stamina_cap": 26,
       "unlocks": [
-        "crop:pumpkin",
         "system:livestock",
         "mining:moonstone_depths"
       ]
@@ -114,7 +112,31 @@
       "plot_slots": 5,
       "stamina_cap": 28,
       "unlocks": [
+        "crop:wheat",
         "system:gacha"
+      ]
+    },
+    {
+      "level": 6,
+      "total_xp": 400,
+      "plot_slots": 5,
+      "stamina_cap": 30,
+      "unlocks": []
+    },
+    {
+      "level": 7,
+      "total_xp": 620,
+      "plot_slots": 6,
+      "stamina_cap": 32,
+      "unlocks": []
+    },
+    {
+      "level": 8,
+      "total_xp": 910,
+      "plot_slots": 6,
+      "stamina_cap": 34,
+      "unlocks": [
+        "crop:pumpkin"
       ]
     }
   ],
@@ -124,7 +146,8 @@
       "name": "橙橙果种子",
       "icon": "sprout",
       "kind": "seed",
-      "sell_price": 0
+      "sell_price": 0,
+      "has_quality": false
     },
     {
       "id": "orange_berry",
@@ -139,14 +162,15 @@
       "name": "胡萝卜种子",
       "icon": "sprout",
       "kind": "seed",
-      "sell_price": 0
+      "sell_price": 0,
+      "has_quality": false
     },
     {
       "id": "carrot",
       "name": "胡萝卜",
       "icon": "carrot",
       "kind": "produce",
-      "sell_price": 8,
+      "sell_price": 10,
       "has_quality": true
     },
     {
@@ -154,7 +178,8 @@
       "name": "土豆种子",
       "icon": "sprout",
       "kind": "seed",
-      "sell_price": 0
+      "sell_price": 0,
+      "has_quality": false
     },
     {
       "id": "potato",
@@ -169,14 +194,15 @@
       "name": "小麦种子",
       "icon": "sprout",
       "kind": "seed",
-      "sell_price": 0
+      "sell_price": 0,
+      "has_quality": false
     },
     {
       "id": "wheat",
       "name": "小麦",
       "icon": "wheat",
       "kind": "produce",
-      "sell_price": 19,
+      "sell_price": 17,
       "has_quality": true
     },
     {
@@ -184,14 +210,15 @@
       "name": "南瓜种子",
       "icon": "sprout",
       "kind": "seed",
-      "sell_price": 0
+      "sell_price": 0,
+      "has_quality": false
     },
     {
       "id": "pumpkin",
       "name": "南瓜",
       "icon": "vegan",
       "kind": "produce",
-      "sell_price": 44,
+      "sell_price": 50,
       "has_quality": true
     },
     {
@@ -325,13 +352,13 @@
       "accent": "#ef9b3d",
       "quality": {
         "thresholds": [
-          1000,
-          1100,
-          1200,
-          1300
+          1000.0,
+          1100.0,
+          1200.0,
+          1300.0
         ],
-        "width": 10,
-        "miracle_probability_cap": 0,
+        "width": 10.0,
+        "miracle_probability_cap": 0.0,
         "miracle_eligible": false
       }
     },
@@ -352,12 +379,12 @@
       "accent": "#e97845",
       "quality": {
         "thresholds": [
-          0,
-          20,
-          40,
-          140
+          30.0,
+          50.0,
+          120.0,
+          320.0
         ],
-        "width": 12,
+        "width": 24.0,
         "miracle_probability_cap": 0.003,
         "miracle_eligible": true
       }
@@ -375,16 +402,16 @@
       "stamina_cost": 0,
       "plant_xp": 2,
       "harvest_xp": 6,
-      "min_level": 2,
+      "min_level": 3,
       "accent": "#b88955",
       "quality": {
         "thresholds": [
-          10,
-          30,
-          50,
-          170
+          40.0,
+          90.0,
+          140.0,
+          300.0
         ],
-        "width": 12,
+        "width": 24.0,
         "miracle_probability_cap": 0.003,
         "miracle_eligible": true
       }
@@ -395,23 +422,23 @@
       "icon": "wheat",
       "seed_item_id": "wheat_seed",
       "produce_item_id": "wheat",
-      "growth_seconds": 18000,
+      "growth_seconds": 21600,
       "time_difficulty": 120,
       "yield_min": 3,
       "yield_max": 5,
       "stamina_cost": 0,
       "plant_xp": 2,
       "harvest_xp": 8,
-      "min_level": 3,
+      "min_level": 5,
       "accent": "#d5a83e",
       "quality": {
         "thresholds": [
-          25,
-          50,
-          75,
-          200
+          40.0,
+          80.0,
+          150.0,
+          300.0
         ],
-        "width": 14,
+        "width": 20.0,
         "miracle_probability_cap": 0.003,
         "miracle_eligible": true
       }
@@ -422,23 +449,23 @@
       "icon": "vegan",
       "seed_item_id": "pumpkin_seed",
       "produce_item_id": "pumpkin",
-      "growth_seconds": 21600,
+      "growth_seconds": 43200,
       "time_difficulty": 120,
       "yield_min": 2,
       "yield_max": 4,
       "stamina_cost": 0,
       "plant_xp": 3,
       "harvest_xp": 9,
-      "min_level": 4,
+      "min_level": 8,
       "accent": "#d56f32",
       "quality": {
         "thresholds": [
-          45,
-          70,
-          95,
-          230
+          45.0,
+          90.0,
+          200.0,
+          500.0
         ],
-        "width": 16,
+        "width": 30.0,
         "miracle_probability_cap": 0.003,
         "miracle_eligible": true
       }
@@ -471,7 +498,7 @@
       "outputs": [
         {
           "item_id": "maple_wood",
-          "chance": 1,
+          "chance": 1.0,
           "quantity_min": 6,
           "quantity_max": 9
         },
@@ -499,12 +526,12 @@
       "min_level": 1,
       "quality": {
         "thresholds": [
-          25,
-          55,
-          90,
-          210
+          25.0,
+          55.0,
+          90.0,
+          210.0
         ],
-        "width": 16,
+        "width": 16.0,
         "miracle_probability_cap": 0.003,
         "miracle_eligible": true
       }
@@ -519,7 +546,7 @@
       "outputs": [
         {
           "item_id": "tough_fodder",
-          "chance": 1,
+          "chance": 1.0,
           "quantity_min": 7,
           "quantity_max": 11
         },
@@ -547,12 +574,12 @@
       "min_level": 2,
       "quality": {
         "thresholds": [
-          35,
-          65,
-          100,
-          230
+          35.0,
+          65.0,
+          100.0,
+          230.0
         ],
-        "width": 17,
+        "width": 17.0,
         "miracle_probability_cap": 0.003,
         "miracle_eligible": true
       }
@@ -610,12 +637,12 @@
       "collect_xp": 6,
       "quality": {
         "thresholds": [
-          45,
-          90,
-          150,
-          230
+          45.0,
+          90.0,
+          150.0,
+          230.0
         ],
-        "width": 16,
+        "width": 16.0,
         "miracle_probability_cap": 0.003,
         "miracle_eligible": false
       },
@@ -644,12 +671,12 @@
       "collect_xp": 8,
       "quality": {
         "thresholds": [
-          55,
-          105,
-          170,
-          255
+          55.0,
+          105.0,
+          170.0,
+          255.0
         ],
-        "width": 18,
+        "width": 18.0,
         "miracle_probability_cap": 0.003,
         "miracle_eligible": false
       },
@@ -678,12 +705,12 @@
       "collect_xp": 7,
       "quality": {
         "thresholds": [
-          50,
-          100,
-          165,
-          250
+          50.0,
+          100.0,
+          165.0,
+          250.0
         ],
-        "width": 17,
+        "width": 17.0,
         "miracle_probability_cap": 0.003,
         "miracle_eligible": false
       },
@@ -712,12 +739,12 @@
       "collect_xp": 10,
       "quality": {
         "thresholds": [
-          65,
-          120,
-          190,
-          280
+          65.0,
+          120.0,
+          190.0,
+          280.0
         ],
-        "width": 20,
+        "width": 20.0,
         "miracle_probability_cap": 0.003,
         "miracle_eligible": false
       },
@@ -760,12 +787,12 @@
       "min_level": 2,
       "quality": {
         "thresholds": [
-          50,
-          100,
-          165,
-          250
+          50.0,
+          100.0,
+          165.0,
+          250.0
         ],
-        "width": 17,
+        "width": 17.0,
         "miracle_probability_cap": 0.003,
         "miracle_eligible": false
       }
@@ -784,12 +811,12 @@
       "min_level": 4,
       "quality": {
         "thresholds": [
-          75,
-          140,
-          215,
-          310
+          75.0,
+          140.0,
+          215.0,
+          310.0
         ],
-        "width": 21,
+        "width": 21.0,
         "miracle_probability_cap": 0.003,
         "miracle_eligible": false
       }
@@ -808,30 +835,41 @@
           "id": "first_gate_carrot",
           "item_id": "carrot",
           "quantity": 12,
+          "min_quality": 0,
           "reward": {
             "coins": 70,
-            "experience": 12
+            "experience": 12,
+            "talent_points": 0,
+            "items": [],
+            "partner_ids": []
           }
         },
         {
           "id": "first_gate_maple_wood",
           "item_id": "maple_wood",
           "quantity": 10,
+          "min_quality": 0,
           "reward": {
             "coins": 80,
-            "experience": 15
+            "experience": 15,
+            "talent_points": 0,
+            "items": [],
+            "partner_ids": []
           }
         }
       ],
       "completion_reward": {
         "coins": 220,
         "experience": 45,
+        "talent_points": 0,
         "items": [
           {
             "item_id": "wheat_seed",
-            "quantity": 5
+            "quantity": 5,
+            "quality": 0
           }
-        ]
+        ],
+        "partner_ids": []
       }
     },
     {
@@ -848,9 +886,13 @@
           "id": "maple_gate_plank",
           "item_id": "maple_plank",
           "quantity": 6,
+          "min_quality": 0,
           "reward": {
             "coins": 150,
-            "experience": 25
+            "experience": 25,
+            "talent_points": 0,
+            "items": [],
+            "partner_ids": []
           }
         },
         {
@@ -860,14 +902,19 @@
           "min_quality": 2,
           "reward": {
             "coins": 160,
-            "experience": 25
+            "experience": 25,
+            "talent_points": 0,
+            "items": [],
+            "partner_ids": []
           }
         }
       ],
       "completion_reward": {
         "coins": 380,
         "experience": 80,
-        "talent_points": 1
+        "talent_points": 1,
+        "items": [],
+        "partner_ids": []
       }
     },
     {
@@ -884,30 +931,41 @@
           "id": "copper_gate_ore",
           "item_id": "red_copper_ore",
           "quantity": 15,
+          "min_quality": 0,
           "reward": {
             "coins": 170,
-            "experience": 25
+            "experience": 25,
+            "talent_points": 0,
+            "items": [],
+            "partner_ids": []
           }
         },
         {
           "id": "copper_gate_wheat",
           "item_id": "wheat",
           "quantity": 16,
+          "min_quality": 0,
           "reward": {
             "coins": 140,
-            "experience": 20
+            "experience": 20,
+            "talent_points": 0,
+            "items": [],
+            "partner_ids": []
           }
         }
       ],
       "completion_reward": {
         "coins": 400,
         "experience": 85,
+        "talent_points": 0,
         "items": [
           {
             "item_id": "moon_silver_ore",
-            "quantity": 3
+            "quantity": 3,
+            "quality": 0
           }
-        ]
+        ],
+        "partner_ids": []
       }
     },
     {
@@ -924,31 +982,41 @@
           "id": "hearth_gate_flour",
           "item_id": "flour",
           "quantity": 8,
+          "min_quality": 0,
           "reward": {
             "coins": 220,
-            "experience": 30
+            "experience": 30,
+            "talent_points": 0,
+            "items": [],
+            "partner_ids": []
           }
         },
         {
           "id": "hearth_gate_pickle",
           "item_id": "pickled_carrot",
           "quantity": 6,
+          "min_quality": 0,
           "reward": {
             "coins": 220,
-            "experience": 30
+            "experience": 30,
+            "talent_points": 0,
+            "items": [],
+            "partner_ids": []
           }
         }
       ],
       "completion_reward": {
         "coins": 500,
         "experience": 120,
+        "talent_points": 0,
         "items": [
           {
             "item_id": "herbal_salve",
             "quantity": 3,
             "quality": 3
           }
-        ]
+        ],
+        "partner_ids": []
       }
     },
     {
@@ -969,7 +1037,10 @@
           "min_quality": 2,
           "reward": {
             "coins": 320,
-            "experience": 45
+            "experience": 45,
+            "talent_points": 0,
+            "items": [],
+            "partner_ids": []
           }
         },
         {
@@ -979,23 +1050,32 @@
           "min_quality": 3,
           "reward": {
             "coins": 300,
-            "experience": 45
+            "experience": 45,
+            "talent_points": 0,
+            "items": [],
+            "partner_ids": []
           }
         },
         {
           "id": "moonlit_gate_plank",
           "item_id": "maple_plank",
           "quantity": 10,
+          "min_quality": 0,
           "reward": {
             "coins": 260,
-            "experience": 40
+            "experience": 40,
+            "talent_points": 0,
+            "items": [],
+            "partner_ids": []
           }
         }
       ],
       "completion_reward": {
         "coins": 900,
         "experience": 220,
-        "talent_points": 1
+        "talent_points": 1,
+        "items": [],
+        "partner_ids": []
       }
     }
   ],
@@ -1003,30 +1083,30 @@
     {
       "id": "carrot_seed",
       "item_id": "carrot_seed",
-      "price": 6,
+      "price": 10,
       "currency": "coins",
       "min_level": 1
     },
     {
       "id": "potato_seed",
       "item_id": "potato_seed",
-      "price": 20,
-      "currency": "coins",
-      "min_level": 2
-    },
-    {
-      "id": "wheat_seed",
-      "item_id": "wheat_seed",
-      "price": 50,
+      "price": 15,
       "currency": "coins",
       "min_level": 3
     },
     {
+      "id": "wheat_seed",
+      "item_id": "wheat_seed",
+      "price": 30,
+      "currency": "coins",
+      "min_level": 5
+    },
+    {
       "id": "pumpkin_seed",
       "item_id": "pumpkin_seed",
-      "price": 105,
+      "price": 80,
       "currency": "coins",
-      "min_level": 4
+      "min_level": 8
     }
   ]
 }

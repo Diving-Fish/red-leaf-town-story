@@ -11,12 +11,12 @@
         {
           "industry": "gathering",
           "level_1": 40,
-          "level_60": 300
+          "level_60": 245
         },
         {
           "industry": "farming",
           "level_1": 30,
-          "level_60": 243
+          "level_60": 164
         }
       ],
       "trait_codes": [],

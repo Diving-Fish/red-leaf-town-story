@@ -34,6 +34,29 @@ export interface QualityCurveDefinition {
   miracle_eligible: boolean
 }
 
+export interface QualityGradeDefinition {
+  level: number
+  name: string
+  sale_multiplier: number
+}
+
+export interface CropAdminDefinition extends CropDefinition {
+  yield_min: number
+  yield_max: number
+  plant_xp: number
+  harvest_xp: number
+  seed_price: number | null
+  shop_id: string | null
+  produce_sell_price: number
+  chart_enabled: boolean
+}
+
+export interface CropAdminPayload {
+  schema_version: number
+  quality_grades: QualityGradeDefinition[]
+  crops: CropAdminDefinition[]
+}
+
 export interface TaskQualitySnapshot extends QualityCurveDefinition {
   ability: number
   probabilities: number[]

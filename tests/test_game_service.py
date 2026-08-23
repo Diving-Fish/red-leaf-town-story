@@ -45,7 +45,7 @@ def test_oauth_account_has_exactly_one_player(game):
 def test_buy_plant_wait_harvest_and_sell_is_a_closed_loop(game):
     service, repository, clock, _ = game
     bought = service.buy("oauth-sub-1", "carrot_seed", 1)
-    assert bought["state"]["player"]["coins"] == 74
+    assert bought["state"]["player"]["coins"] == 70
     assert bought["state"]["inventory"][0]["item_id"] == "carrot_seed"
 
     planted = service.plant("oauth-sub-1", 0, "carrot")
@@ -72,7 +72,7 @@ def test_locked_plot_and_crop_are_enforced(game):
     service.buy("oauth-sub-1", "carrot_seed", 1)
     with pytest.raises(GameError, match="土地尚未解锁"):
         service.plant("oauth-sub-1", 3, "carrot")
-    with pytest.raises(GameError, match="达到 3 级"):
+    with pytest.raises(GameError, match="达到 5 级"):
         service.buy("oauth-sub-1", "wheat_seed", 1)
 
 

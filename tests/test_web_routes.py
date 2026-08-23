@@ -66,9 +66,11 @@ def valid_partner_payload():
 def admin_client(service, tmp_path, monkeypatch):
     monkeypatch.setenv("RED_LEAF_TOWN_ADMIN_TOKEN", "test-admin-token")
     catalog_path = tmp_path / "partners.json"
+    content_path = tmp_path / "game.json"
+    content_path.write_text(f"{load_content().model_dump_json(indent=2)}\n", encoding="utf-8")
     service.partner_catalog_loader = lambda: load_partner_catalog(catalog_path)
     app = Quart(f"{__name__}.admin")
-    app.register_blueprint(create_blueprint(partner_catalog_path=catalog_path))
+    app.register_blueprint(create_blueprint(game_content_path=content_path, partner_catalog_path=catalog_path))
     return app.test_client()
 
 
@@ -88,7 +90,7 @@ async def test_shop_and_plant_api(client):
     authenticate(client)
     bought = await client.post("/api/red-leaf-town/shop/buy", json={"shop_id": "carrot_seed", "quantity": 2})
     assert bought.status_code == 200
-    assert (await bought.get_json())["data"]["state"]["player"]["coins"] == 68
+    assert (await bought.get_json())["data"]["state"]["player"]["coins"] == 60
 
     planted = await client.post("/api/red-leaf-town/plots/0/plant", json={"crop_id": "carrot"})
     body = await planted.get_json()
@@ -121,7 +123,7 @@ async def test_sell_api_accepts_exact_quality_bucket(client, service):
     body = await response.get_json()
     assert response.status_code == 200
     assert body["data"]["result"]["quality_name"] == "上品"
-    assert body["data"]["result"]["unit_price"] == 12
+    assert body["data"]["result"]["unit_price"] == 15
 
 
 @runs
@@ -270,6 +272,48 @@ async def test_partner_admin_requires_token(admin_client):
     response = await admin_client.get("/api/red-leaf-town/admin/partners")
     assert response.status_code == 403
     assert (await response.get_json())["code"] == "forbidden"
+
+
+@runs
+async def test_crop_admin_updates_content_and_live_service(admin_client, service):
+    forbidden = await admin_client.get("/api/red-leaf-town/admin/crops")
+    assert forbidden.status_code == 403
+
+    listed = await admin_client.get("/api/red-leaf-town/admin/crops", headers=admin_headers())
+    payload = (await listed.get_json())["data"]
+    carrot = next(crop for crop in payload["crops"] if crop["id"] == "carrot")
+    tutorial = next(crop for crop in payload["crops"] if crop["id"] == "orange_berry")
+    assert carrot["chart_enabled"] is True
+    assert tutorial["seed_price"] is None
+
+    updated = await admin_client.put(
+        "/api/red-leaf-town/admin/crops",
+        json={"crops": [{
+            "id": "carrot",
+            "seed_price": 9,
+            "produce_sell_price": 11,
+            "growth_seconds": 7200,
+            "quality": {
+                "thresholds": [5, 25, 45, 160],
+                "width": 10,
+                "miracle_probability_cap": 0.002,
+                "miracle_eligible": True,
+            },
+        }]},
+        headers=admin_headers(),
+    )
+    assert updated.status_code == 200
+    assert service.content.crop_map["carrot"].growth_seconds == 7200
+    assert service.content.item_map["carrot"].sell_price == 11
+    assert service.content.shop_map["carrot_seed"].price == 9
+
+    invalid = await admin_client.put(
+        "/api/red-leaf-town/admin/crops",
+        json={"crops": [{"id": "carrot", "quality": {"thresholds": [5, 5, 45, 160], "width": 10}}]},
+        headers=admin_headers(),
+    )
+    assert invalid.status_code == 400
+    assert (await invalid.get_json())["code"] == "invalid_crop_balance"
 
 
 @runs

@@ -283,6 +283,7 @@ async function saveLayout() {
         <div class="brand"><span><Leaf :size="22" /></span><div><strong>红叶镇后台</strong><small>剧情素材与剧本</small></div></div>
         <div class="header-actions">
           <span v-if="notice" class="notice"><Check :size="15" />{{ notice }}</span>
+          <RouterLink :to="{ name: 'admin-crops' }">作物数值</RouterLink>
           <a href="/red-leaf-town/"><ArrowLeft :size="16" />玩家前台</a>
           <button class="save-button" :disabled="busy" @click="reload"><RefreshCw :size="16" />重新读取剧本</button>
         </div>

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from functools import lru_cache
 from pathlib import Path
+from threading import Lock
 from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
@@ -489,9 +490,21 @@ class GameContent(BaseModel):
 
 
 DEFAULT_CONTENT_PATH = Path(__file__).resolve().parents[2] / "data" / "game.json"
+_SAVE_LOCK = Lock()
 
 
 @lru_cache(maxsize=4)
 def load_content(path: str | Path = DEFAULT_CONTENT_PATH) -> GameContent:
     content_path = Path(path)
     return GameContent.model_validate(json.loads(content_path.read_text(encoding="utf-8")))
+
+
+def save_content(content: GameContent, path: str | Path = DEFAULT_CONTENT_PATH) -> None:
+    content_path = Path(path)
+    payload = content.model_dump_json(indent=2)
+    with _SAVE_LOCK:
+        content_path.parent.mkdir(parents=True, exist_ok=True)
+        temporary = content_path.with_suffix(f"{content_path.suffix}.tmp")
+        temporary.write_text(f"{payload}\n", encoding="utf-8")
+        temporary.replace(content_path)
+        load_content.cache_clear()

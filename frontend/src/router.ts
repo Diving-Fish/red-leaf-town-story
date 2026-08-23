@@ -13,6 +13,12 @@ export default createRouter({
   history: createWebHistory('/red-leaf-town/'),
   routes: [
     {
+      path: '/admin/crops',
+      name: 'admin-crops',
+      component: () => import('@/views/AdminCropsView.vue'),
+      meta: { title: '作物数值', admin: true },
+    },
+    {
       path: '/admin/partners',
       name: 'admin-partners',
       component: () => import('@/views/AdminPartnersView.vue'),
