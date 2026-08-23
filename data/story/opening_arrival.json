@@ -29,6 +29,12 @@
     }
   },
   "rewards": {
+    "items": [
+      {
+        "item_id": "orange_berry_seed",
+        "quantity": 1
+      }
+    ],
     "partner_ids": [
       "fein"
     ]
@@ -386,6 +392,11 @@
       "type": "dialogue",
       "speaker": "",
       "text": "【伙伴「绯恩」加入了你的队伍】"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "",
+      "text": "【获得「橙橙果种子」×1】"
     }
   ]
 }

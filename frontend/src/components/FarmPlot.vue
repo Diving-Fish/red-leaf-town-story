@@ -75,7 +75,7 @@ function selectPartner(partnerId: string | null) {
   >
     <div class="crop-orb">
       <Sparkles v-if="ready" class="ready-sparkle" :size="18" />
-      <GameIcon :name="plot.crop_id === 'wheat' ? 'wheat' : 'carrot'" :size="42" />
+      <GameIcon :name="plot.crop?.icon" :size="42" />
     </div>
     <div class="plot-heading"><strong>{{ plot.crop?.name }}</strong><small>土地 {{ plot.slot + 1 }}</small></div>
 

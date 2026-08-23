@@ -78,6 +78,7 @@ class QualityCurveDefinition(BaseModel):
 class CropDefinition(BaseModel):
     id: str
     name: str
+    icon: str
     seed_item_id: str
     produce_item_id: str
     growth_seconds: int = Field(gt=0)

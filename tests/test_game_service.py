@@ -45,25 +45,25 @@ def test_oauth_account_has_exactly_one_player(game):
 def test_buy_plant_wait_harvest_and_sell_is_a_closed_loop(game):
     service, repository, clock, _ = game
     bought = service.buy("oauth-sub-1", "carrot_seed", 1)
-    assert bought["state"]["player"]["coins"] == 72
+    assert bought["state"]["player"]["coins"] == 74
     assert bought["state"]["inventory"][0]["item_id"] == "carrot_seed"
 
     planted = service.plant("oauth-sub-1", 0, "carrot")
-    assert planted["state"]["player"]["stamina"] == 19
-    assert planted["state"]["plots"][0]["remaining_seconds"] == 30
+    assert planted["state"]["player"]["stamina"] == 20
+    assert planted["state"]["plots"][0]["remaining_seconds"] == 10_800
 
     with pytest.raises(GameError, match="还没有成熟"):
         service.harvest("oauth-sub-1", 0)
 
-    clock.advance(30)
+    clock.advance(10_800)
     harvested = service.harvest("oauth-sub-1", 0)
     reward = harvested["result"]
     assert reward["item_id"] == "carrot"
-    assert 2 <= reward["quantity"] <= 3
+    assert 2 <= reward["quantity"] <= 4
     assert harvested["state"]["plots"][0]["empty"] is True
 
     sold = service.sell("oauth-sub-1", "carrot", reward["quantity"])
-    assert sold["state"]["player"]["coins"] > 72
+    assert sold["state"]["player"]["coins"] > 74
     assert repository.get_by_sub("oauth-sub-1").inventory.get("carrot", 0) == 0
 
 
@@ -72,8 +72,23 @@ def test_locked_plot_and_crop_are_enforced(game):
     service.buy("oauth-sub-1", "carrot_seed", 1)
     with pytest.raises(GameError, match="土地尚未解锁"):
         service.plant("oauth-sub-1", 3, "carrot")
-    with pytest.raises(GameError, match="达到 2 级"):
+    with pytest.raises(GameError, match="达到 3 级"):
         service.buy("oauth-sub-1", "wheat_seed", 1)
+
+
+def test_story_only_tutorial_crop_is_fast_and_free(game):
+    service, repository, clock, player = game
+    repository.update(player.player_id, lambda state: setattr(state, "inventory", {"orange_berry_seed": {0: 1}}))
+
+    planted = service.plant("oauth-sub-1", 0, "orange_berry")
+    assert planted["result"]["final_duration"] == 30
+    assert planted["state"]["player"]["stamina"] == 20
+
+    clock.advance(30)
+    harvested = service.harvest("oauth-sub-1", 0)
+    assert harvested["result"]["item_id"] == "orange_berry"
+    assert harvested["result"]["quantity"] == 1
+    assert repository.get(player.player_id).inventory.get("orange_berry_seed") is None
 
 
 def test_stamina_recovers_lazily(game):
@@ -246,8 +261,8 @@ def test_partner_assignment_creates_immutable_farming_task_snapshot(game):
     assert task["assigned_partner_ids"] == ["farm_partner"]
     assert task["partner_snapshots"][0]["ability"] == 40
     assert task["total_ability"] == 40
-    assert task["base_duration"] == 30
-    assert task["final_duration"] == 20
+    assert task["base_duration"] == 10_800
+    assert task["final_duration"] == 7_200
     assert planted["state"]["plots"][0]["assignment_locked"] is True
 
     with pytest.raises(GameError) as locked:
@@ -261,7 +276,7 @@ def test_partner_assignment_creates_immutable_farming_task_snapshot(game):
     assert moved["state"]["plots"][0]["assigned_partner_ids"] == []
     assert moved["state"]["plots"][1]["assigned_partner_ids"] == ["farm_partner"]
     harvested = service.harvest("oauth-sub-1", 0)
-    assert 2 <= harvested["result"]["quantity"] <= 3
+    assert 2 <= harvested["result"]["quantity"] <= 4
 
 
 def test_partner_assignment_enforces_tendency_ownership_and_capacity(game):

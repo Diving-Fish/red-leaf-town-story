@@ -16,6 +16,7 @@ export interface PlayerSummary {
 export interface CropDefinition {
   id: string
   name: string
+  icon: string
   seed_item_id: string
   produce_item_id: string
   growth_seconds: number
@@ -372,6 +373,7 @@ export interface GameState {
   industry_rules: Record<string, IndustryRules>
   talents: TalentState
   portals: PortalState[]
+  crops: CropDefinition[]
   shop: ShopEntry[]
 }
 

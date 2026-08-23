@@ -1337,6 +1337,11 @@ class GameService:
             },
             "talents": self._talent_snapshot(player),
             "portals": self._portal_snapshot(player),
+            "crops": [
+                crop.model_dump()
+                for crop in self.content.crops
+                if player.level >= crop.min_level
+            ],
             "shop": [
                 {
                     **entry.model_dump(),

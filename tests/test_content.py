@@ -30,6 +30,27 @@ def test_default_content_is_consistent():
     assert content.item_map["red_copper_ore"].has_quality is True
 
 
+def test_crop_roster_separates_tutorial_and_regular_economy():
+    content = load_content()
+    tutorial = content.crop_map["orange_berry"]
+    regular_ids = ["carrot", "potato", "wheat", "pumpkin"]
+    regular = [content.crop_map[crop_id] for crop_id in regular_ids]
+
+    assert tutorial.growth_seconds == 30
+    assert tutorial.stamina_cost == 0
+    assert content.item_map[tutorial.produce_item_id].sell_price == 300
+    assert tutorial.seed_item_id not in {entry.item_id for entry in content.shop}
+    assert [crop.min_level for crop in regular] == [1, 2, 3, 4]
+    assert all(crop.stamina_cost == 0 for crop in regular)
+    assert all(crop.growth_seconds >= 3 * 3600 for crop in regular)
+    assert [crop.quality.thresholds for crop in regular] == [
+        [0, 20, 40, 140],
+        [10, 30, 50, 170],
+        [25, 50, 75, 200],
+        [45, 70, 95, 230],
+    ]
+
+
 def test_unknown_crop_item_is_rejected():
     payload = load_content().model_dump()
     payload["crops"][0]["seed_item_id"] = "missing_seed"

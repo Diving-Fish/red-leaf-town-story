@@ -11,9 +11,7 @@ const game = useGameStore()
 
 const availableCrops = computed(() => {
   if (!game.state) return []
-  return game.state.shop
-    .filter((entry) => !entry.locked && entry.crop && (game.inventoryMap.get(entry.item_id)?.quantity || 0) > 0)
-    .map((entry) => entry.crop!)
+  return game.state.crops.filter((crop) => (game.inventoryMap.get(crop.seed_item_id)?.quantity || 0) > 0)
 })
 </script>
 

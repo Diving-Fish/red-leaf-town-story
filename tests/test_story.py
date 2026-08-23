@@ -511,8 +511,9 @@ def test_shipped_opening_hands_over_the_farm_and_fein():
 
     assert script.mode == "stage"
     assert script.rewards.partner_ids == ["fein"]
+    assert [(entry.item_id, entry.quantity) for entry in script.rewards.items] == [("orange_berry_seed", 1)]
     assert script.trigger.description == "同时满足：收到信号 view:dashboard、均不满足：已经拥有伙伴 fein"
-    assert [step.text for step in script.steps if step.type == "dialogue"][-1] == "【伙伴「绯恩」加入了你的队伍】"
+    assert [step.text for step in script.steps if step.type == "dialogue"][-1] == "【获得「橙橙果种子」×1】"
     load_story_catalog.cache_clear()
 
 

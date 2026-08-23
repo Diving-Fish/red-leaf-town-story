@@ -1,5 +1,5 @@
 {
-  "schema_version": 7,
+  "schema_version": 8,
   "game": {
     "title": "红叶镇物语",
     "starting_coins": 80,
@@ -82,7 +82,7 @@
       "plot_slots": 3,
       "stamina_cap": 22,
       "unlocks": [
-        "crop:wheat",
+        "crop:potato",
         "system:mining",
         "mining:copper_foothill"
       ]
@@ -93,6 +93,7 @@
       "plot_slots": 4,
       "stamina_cap": 24,
       "unlocks": [
+        "crop:wheat",
         "system:crafting"
       ]
     },
@@ -102,6 +103,7 @@
       "plot_slots": 4,
       "stamina_cap": 26,
       "unlocks": [
+        "crop:pumpkin",
         "system:livestock",
         "mining:moonstone_depths"
       ]
@@ -118,6 +120,21 @@
   ],
   "items": [
     {
+      "id": "orange_berry_seed",
+      "name": "橙橙果种子",
+      "icon": "sprout",
+      "kind": "seed",
+      "sell_price": 0
+    },
+    {
+      "id": "orange_berry",
+      "name": "橙橙果",
+      "icon": "citrus",
+      "kind": "produce",
+      "sell_price": 300,
+      "has_quality": true
+    },
+    {
       "id": "carrot_seed",
       "name": "胡萝卜种子",
       "icon": "sprout",
@@ -129,7 +146,22 @@
       "name": "胡萝卜",
       "icon": "carrot",
       "kind": "produce",
-      "sell_price": 5,
+      "sell_price": 8,
+      "has_quality": true
+    },
+    {
+      "id": "potato_seed",
+      "name": "土豆种子",
+      "icon": "sprout",
+      "kind": "seed",
+      "sell_price": 0
+    },
+    {
+      "id": "potato",
+      "name": "土豆",
+      "icon": "bean",
+      "kind": "produce",
+      "sell_price": 12,
       "has_quality": true
     },
     {
@@ -144,7 +176,22 @@
       "name": "小麦",
       "icon": "wheat",
       "kind": "produce",
-      "sell_price": 9,
+      "sell_price": 19,
+      "has_quality": true
+    },
+    {
+      "id": "pumpkin_seed",
+      "name": "南瓜种子",
+      "icon": "sprout",
+      "kind": "seed",
+      "sell_price": 0
+    },
+    {
+      "id": "pumpkin",
+      "name": "南瓜",
+      "icon": "vegan",
+      "kind": "produce",
+      "sell_price": 44,
       "has_quality": true
     },
     {
@@ -214,55 +261,138 @@
   ],
   "crops": [
     {
+      "id": "orange_berry",
+      "name": "橙橙果",
+      "icon": "citrus",
+      "seed_item_id": "orange_berry_seed",
+      "produce_item_id": "orange_berry",
+      "growth_seconds": 30,
+      "time_difficulty": 120,
+      "yield_min": 1,
+      "yield_max": 1,
+      "stamina_cost": 0,
+      "plant_xp": 0,
+      "harvest_xp": 1,
+      "min_level": 1,
+      "accent": "#ef9b3d",
+      "quality": {
+        "thresholds": [
+          1000,
+          1100,
+          1200,
+          1300
+        ],
+        "width": 10,
+        "miracle_probability_cap": 0,
+        "miracle_eligible": false
+      }
+    },
+    {
       "id": "carrot",
       "name": "胡萝卜",
+      "icon": "carrot",
       "seed_item_id": "carrot_seed",
       "produce_item_id": "carrot",
-      "growth_seconds": 30,
-      "time_difficulty": 100,
+      "growth_seconds": 10800,
+      "time_difficulty": 120,
       "yield_min": 2,
-      "yield_max": 3,
-      "stamina_cost": 1,
+      "yield_max": 4,
+      "stamina_cost": 0,
       "plant_xp": 1,
-      "harvest_xp": 4,
+      "harvest_xp": 5,
       "min_level": 1,
       "accent": "#e97845",
       "quality": {
         "thresholds": [
+          0,
+          20,
           40,
-          80,
-          140,
-          220
+          140
         ],
-        "width": 15,
+        "width": 12,
         "miracle_probability_cap": 0.003,
-        "miracle_eligible": false
+        "miracle_eligible": true
+      }
+    },
+    {
+      "id": "potato",
+      "name": "土豆",
+      "icon": "bean",
+      "seed_item_id": "potato_seed",
+      "produce_item_id": "potato",
+      "growth_seconds": 14400,
+      "time_difficulty": 120,
+      "yield_min": 3,
+      "yield_max": 4,
+      "stamina_cost": 0,
+      "plant_xp": 2,
+      "harvest_xp": 6,
+      "min_level": 2,
+      "accent": "#b88955",
+      "quality": {
+        "thresholds": [
+          10,
+          30,
+          50,
+          170
+        ],
+        "width": 12,
+        "miracle_probability_cap": 0.003,
+        "miracle_eligible": true
       }
     },
     {
       "id": "wheat",
       "name": "小麦",
+      "icon": "wheat",
       "seed_item_id": "wheat_seed",
       "produce_item_id": "wheat",
-      "growth_seconds": 90,
-      "time_difficulty": 150,
-      "yield_min": 2,
-      "yield_max": 4,
-      "stamina_cost": 2,
+      "growth_seconds": 18000,
+      "time_difficulty": 120,
+      "yield_min": 3,
+      "yield_max": 5,
+      "stamina_cost": 0,
       "plant_xp": 2,
-      "harvest_xp": 7,
-      "min_level": 2,
+      "harvest_xp": 8,
+      "min_level": 3,
       "accent": "#d5a83e",
       "quality": {
         "thresholds": [
-          55,
-          105,
-          175,
-          260
+          25,
+          50,
+          75,
+          200
         ],
-        "width": 18,
+        "width": 14,
         "miracle_probability_cap": 0.003,
-        "miracle_eligible": false
+        "miracle_eligible": true
+      }
+    },
+    {
+      "id": "pumpkin",
+      "name": "南瓜",
+      "icon": "vegan",
+      "seed_item_id": "pumpkin_seed",
+      "produce_item_id": "pumpkin",
+      "growth_seconds": 21600,
+      "time_difficulty": 120,
+      "yield_min": 2,
+      "yield_max": 4,
+      "stamina_cost": 0,
+      "plant_xp": 3,
+      "harvest_xp": 9,
+      "min_level": 4,
+      "accent": "#d56f32",
+      "quality": {
+        "thresholds": [
+          45,
+          70,
+          95,
+          230
+        ],
+        "width": 16,
+        "miracle_probability_cap": 0.003,
+        "miracle_eligible": true
       }
     }
   ],
@@ -777,16 +907,30 @@
     {
       "id": "carrot_seed",
       "item_id": "carrot_seed",
-      "price": 8,
+      "price": 6,
       "currency": "coins",
       "min_level": 1
     },
     {
-      "id": "wheat_seed",
-      "item_id": "wheat_seed",
-      "price": 13,
+      "id": "potato_seed",
+      "item_id": "potato_seed",
+      "price": 20,
       "currency": "coins",
       "min_level": 2
+    },
+    {
+      "id": "wheat_seed",
+      "item_id": "wheat_seed",
+      "price": 50,
+      "currency": "coins",
+      "min_level": 3
+    },
+    {
+      "id": "pumpkin_seed",
+      "item_id": "pumpkin_seed",
+      "price": 105,
+      "currency": "coins",
+      "min_level": 4
     }
   ]
 }

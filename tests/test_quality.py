@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from math import floor
+
 import pytest
 
 from red_leaf_town.application import GameService
@@ -99,7 +101,37 @@ def test_quality_sale_uses_grade_multiplier_and_exact_inventory_bucket():
     repository.update(player.player_id, lambda state: add_item(state, "carrot", 3, 3))
 
     sold = service.sell("sale-sub", "carrot", 2, 3)
-    assert sold["result"]["unit_price"] == 8
-    assert sold["result"]["coins"] == 16
-    assert sold["state"]["player"]["coins"] == 96
+    assert sold["result"]["unit_price"] == 12
+    assert sold["result"]["coins"] == 24
+    assert sold["state"]["player"]["coins"] == 104
     assert repository.get(player.player_id).inventory["carrot"] == {3: 1}
+
+
+def test_regular_crop_hourly_profit_winner_advances_with_farming_ability():
+    content = load_content()
+    crop_ids = ["carrot", "potato", "wheat", "pumpkin"]
+    seed_prices = {entry.item_id: entry.price for entry in content.shop}
+
+    def hourly_profit(crop_id: str, ability: int) -> float:
+        crop = content.crop_map[crop_id]
+        item = content.item_map[crop.produce_item_id]
+        probabilities = quality_probabilities(
+            ability,
+            crop.quality.thresholds,
+            crop.quality.width,
+            crop.quality.miracle_probability_cap,
+            crop.quality.miracle_eligible,
+        )
+        expected_unit_price = sum(
+            probability * floor(item.sell_price * grade.sale_multiplier + 0.5)
+            for probability, grade in zip(probabilities, content.quality.grades, strict=True)
+        )
+        expected_quantity = (crop.yield_min + crop.yield_max) / 2
+        efficiency = 1 + 2 * ability / (ability + crop.time_difficulty)
+        duration_hours = crop.growth_seconds / efficiency / 3600
+        return (expected_quantity * expected_unit_price - seed_prices[crop.seed_item_id]) / duration_hours
+
+    assert [
+        max(crop_ids, key=lambda crop_id: hourly_profit(crop_id, ability))
+        for ability in [0, 50, 75, 90]
+    ] == crop_ids

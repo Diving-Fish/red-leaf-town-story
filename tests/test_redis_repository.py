@@ -34,7 +34,7 @@ def test_oauth_player_actions_and_openid_binding_persist(repository):
     service.buy("redis-oauth-sub", "carrot_seed", 2)
     reloaded = repository.get(first.player_id)
     assert reloaded.inventory["carrot_seed"][0] == 2
-    assert reloaded.coins == 64
+    assert reloaded.coins == 68
 
     identity = QQIdentity(platform="QQ", bot_id="official-bot", subject="opaque-openid")
     code = service.create_binding_code("redis-oauth-sub")

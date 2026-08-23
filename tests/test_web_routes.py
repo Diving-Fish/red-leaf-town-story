@@ -88,13 +88,23 @@ async def test_shop_and_plant_api(client):
     authenticate(client)
     bought = await client.post("/api/red-leaf-town/shop/buy", json={"shop_id": "carrot_seed", "quantity": 2})
     assert bought.status_code == 200
-    assert (await bought.get_json())["data"]["state"]["player"]["coins"] == 64
+    assert (await bought.get_json())["data"]["state"]["player"]["coins"] == 68
 
     planted = await client.post("/api/red-leaf-town/plots/0/plant", json={"crop_id": "carrot"})
     body = await planted.get_json()
     assert planted.status_code == 200
     assert body["data"]["state"]["plots"][0]["crop_id"] == "carrot"
     assert len(body["data"]["state"]["plots"][0]["task_snapshot"]["quality_parameters"]["probabilities"]) == 5
+
+
+@runs
+async def test_state_lists_story_crop_without_putting_its_seed_in_shop(client):
+    authenticate(client)
+    response = await client.get("/api/red-leaf-town/state")
+    state = (await response.get_json())["data"]
+
+    assert "orange_berry" in {crop["id"] for crop in state["crops"]}
+    assert "orange_berry_seed" not in {entry["item_id"] for entry in state["shop"]}
 
 
 @runs
@@ -111,7 +121,7 @@ async def test_sell_api_accepts_exact_quality_bucket(client, service):
     body = await response.get_json()
     assert response.status_code == 200
     assert body["data"]["result"]["quality_name"] == "上品"
-    assert body["data"]["result"]["unit_price"] == 8
+    assert body["data"]["result"]["unit_price"] == 12
 
 
 @runs
