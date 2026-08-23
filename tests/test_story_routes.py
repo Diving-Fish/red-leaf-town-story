@@ -314,3 +314,107 @@ async def test_broken_script_reports_invalid_content(client, story_paths):
     response = await client.get("/api/red-leaf-town/admin/story", headers=admin_headers())
     assert response.status_code == 400
     assert (await response.get_json())["code"] == "invalid_story_content"
+
+
+def stub_cdn(monkeypatch):
+    from src.libraries import cdn_client
+
+    monkeypatch.setattr(cdn_client, "upload_bytes_at", lambda path, data, content_type: True)
+    monkeypatch.setattr(cdn_client, "cdn_url_at", lambda path: f"https://cdn.example/{path}")
+
+
+async def upload_asset(client, asset_id, kind="background", size=(1600, 900), **form):
+    return await client.post(
+        "/api/red-leaf-town/admin/story/assets",
+        files={"file": FileStorage(
+            stream=io.BytesIO(png_bytes(size)),
+            filename=f"{asset_id}.png",
+            content_type="image/png",
+        )},
+        form={"id": asset_id, "kind": kind, **form},
+        headers=admin_headers(),
+    )
+
+
+@runs
+async def test_upload_refuses_to_replace_an_asset_without_the_overwrite_flag(client, monkeypatch):
+    stub_cdn(monkeypatch)
+    first = await upload_asset(client, "autumn_gate", name="镇口")
+    assert first.status_code == 201
+    original_key = (await first.get_json())["data"]["asset_key"]
+
+    conflict = await upload_asset(client, "autumn_gate", name="别的图")
+    body = await conflict.get_json()
+    assert conflict.status_code == 409
+    assert body["code"] == "asset_exists"
+
+    listed = await client.get("/api/red-leaf-town/admin/story", headers=admin_headers())
+    assets = (await listed.get_json())["data"]["assets"]
+    assert [(entry["id"], entry["name"], entry["asset_key"]) for entry in assets] == [
+        ("autumn_gate", "镇口", original_key),
+    ]
+
+
+@runs
+async def test_overwrite_replaces_the_image_and_keeps_the_portrait_layout(client, monkeypatch):
+    stub_cdn(monkeypatch)
+    await upload_asset(client, "maple_smile", kind="portrait", size=(900, 1600), name="枫糖")
+    await client.patch(
+        "/api/red-leaf-town/admin/story/assets/maple_smile",
+        json={"inline_layout": {"scale": 2.4, "offset_x": -0.1, "offset_y": 0.3}},
+        headers=admin_headers(),
+    )
+
+    replaced = await upload_asset(
+        client,
+        "maple_smile",
+        kind="portrait",
+        size=(450, 800),
+        overwrite="true",
+    )
+    body = await replaced.get_json()
+
+    assert replaced.status_code == 201
+    assert body["data"]["width"] == 450
+    # 没填名字就沿用原来的，调好的站位也不会被上传重置。
+    assert body["data"]["name"] == "枫糖"
+    assert body["data"]["inline_layout"] == {"scale": 2.4, "offset_x": -0.1, "offset_y": 0.3}
+
+
+@runs
+async def test_overwrite_cannot_change_the_asset_kind(client, monkeypatch):
+    stub_cdn(monkeypatch)
+    await upload_asset(client, "autumn_gate", name="镇口")
+
+    swapped = await upload_asset(
+        client,
+        "autumn_gate",
+        kind="portrait",
+        size=(900, 1600),
+        overwrite="true",
+    )
+    body = await swapped.get_json()
+
+    assert swapped.status_code == 409
+    assert body["code"] == "asset_kind_mismatch"
+
+
+@runs
+async def test_overwrite_fills_in_a_placeholder_asset(client, monkeypatch, story_paths):
+    stub_cdn(monkeypatch)
+    asset_path, _, _ = story_paths
+    asset_path.write_text(
+        json.dumps({"schema_version": 1, "assets": [
+            {"id": "portal_hollow", "kind": "background", "name": "TODO 传送门空地"},
+        ]}),
+        encoding="utf-8",
+    )
+    load_story_asset_catalog.cache_clear()
+
+    filled = await upload_asset(client, "portal_hollow", overwrite="true")
+    body = await filled.get_json()
+
+    assert filled.status_code == 201
+    assert body["data"]["asset_key"].startswith("red-leaf-town/story/background/portal_hollow-")
+    assert body["data"]["name"] == "TODO 传送门空地"
+    assert body["data"]["url"].startswith("https://cdn.example/")

@@ -27,7 +27,7 @@ const notice = ref('')
 const payload = ref<StoryAdminPayload | null>(null)
 const file = ref<File | null>(null)
 const fileName = ref('')
-const draft = ref({ id: '', name: '', kind: 'background' as StoryAssetKind })
+const draft = ref({ id: '', name: '', kind: 'background' as StoryAssetKind, overwrite: false })
 const layoutAsset = ref<StoryAsset | null>(null)
 const layouts = ref<Record<StoryMode, StoryAssetLayout>>(blankLayouts())
 const layoutSlot = ref<StoryPortraitSlot>('left')
@@ -45,7 +45,15 @@ function blankLayouts(): Record<StoryMode, StoryAssetLayout> {
 const backgrounds = computed(() => (payload.value?.assets || []).filter((asset) => asset.kind === 'background'))
 const portraits = computed(() => (payload.value?.assets || []).filter((asset) => asset.kind === 'portrait'))
 const cdnReady = computed(() => payload.value?.options.cdn.configured !== false)
-const uploadReady = computed(() => Boolean(file.value && /^[a-z][a-z0-9_-]{1,63}$/.test(draft.value.id.trim())))
+// 同 ID 上传会顶掉剧本正在用的那张图，所以要先勾选覆盖才放行。
+const replacing = computed(() => (payload.value?.assets || []).find((asset) => asset.id === draft.value.id.trim()) || null)
+const kindConflict = computed(() => Boolean(replacing.value && replacing.value.kind !== draft.value.kind))
+const uploadReady = computed(() => Boolean(
+  file.value
+  && /^[a-z][a-z0-9_-]{1,63}$/.test(draft.value.id.trim())
+  && !kindConflict.value
+  && (!replacing.value || draft.value.overwrite),
+))
 
 function headers(json = true): Record<string, string> {
   return { 'X-Admin-Token': token.value, ...(json ? { 'Content-Type': 'application/json' } : {}) }
@@ -93,6 +101,7 @@ async function upload() {
     form.append('id', draft.value.id.trim())
     form.append('name', draft.value.name.trim() || draft.value.id.trim())
     form.append('kind', draft.value.kind)
+    if (draft.value.overwrite) form.append('overwrite', 'true')
     const response = await fetch('/api/red-leaf-town/admin/story/assets', {
       method: 'POST',
       headers: headers(false),
@@ -100,16 +109,22 @@ async function upload() {
     })
     const body = await response.json().catch(() => ({}))
     if (!response.ok) throw new ApiError(body.message || '素材上传失败', response.status, body.code)
-    flash(`${draft.value.id} 已转码为 WebP 并上传到 CDN`)
+    flash(draft.value.overwrite ? `${draft.value.id} 已替换为新图` : `${draft.value.id} 已转码为 WebP 并上传到 CDN`)
     file.value = null
     fileName.value = ''
-    draft.value = { id: '', name: '', kind: draft.value.kind }
+    draft.value = { id: '', name: '', kind: draft.value.kind, overwrite: false }
     await load()
   } catch (caught) {
     error.value = caught instanceof Error ? caught.message : '素材上传失败'
   } finally {
     busy.value = false
   }
+}
+
+function replaceAsset(asset: StoryAsset) {
+  draft.value = { id: asset.id, name: asset.name, kind: asset.kind || 'background', overwrite: true }
+  error.value = ''
+  document.querySelector('.upload-card')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
 }
 
 async function remove(asset: StoryAsset) {
@@ -298,9 +313,18 @@ async function saveLayout() {
               </select>
             </label>
             <button class="upload-button" :disabled="!uploadReady || busy" @click="upload">
-              <ImageUp :size="15" />上传素材
+              <ImageUp :size="15" />{{ draft.overwrite ? '覆盖上传' : '上传素材' }}
             </button>
           </div>
+          <label v-if="replacing" class="overwrite-row" :class="{ blocked: kindConflict }">
+            <input v-model="draft.overwrite" type="checkbox" :disabled="kindConflict" />
+            <span v-if="kindConflict">
+              <strong>{{ replacing.id }}</strong> 已经是{{ replacing.kind === 'background' ? '背景' : '立绘' }}素材，不能改成另一种类型。换个 ID，或者先删掉原素材。
+            </span>
+            <span v-else>
+              覆盖上传：替换已有素材 <strong>{{ replacing.name }}</strong>，剧本引用不受影响{{ replacing.kind === 'portrait' ? '，调好的立绘站位也会保留' : '' }}。
+            </span>
+          </label>
         </section>
 
         <div class="asset-columns">
@@ -311,9 +335,12 @@ async function saveLayout() {
               <div class="asset-meta">
                 <strong>{{ asset.name }}</strong>
                 <small v-if="asset.asset_key">{{ asset.id }} · {{ asset.width }}×{{ asset.height }}</small>
-                <small v-else class="pending-hint">{{ asset.id }} · 占位，用同一个 ID 上传即可补图</small>
+                <small v-else class="pending-hint">{{ asset.id }} · 占位，补图即可</small>
               </div>
-              <button class="delete-button" @click="remove(asset)"><Trash2 :size="14" /></button>
+              <div class="asset-actions">
+                <button class="layout-button" @click="replaceAsset(asset)"><ImageUp :size="14" />{{ asset.asset_key ? '替换' : '补图' }}</button>
+                <button class="delete-button" @click="remove(asset)"><Trash2 :size="14" /></button>
+              </div>
             </article>
             <p v-if="!backgrounds.length" class="empty-hint">还没有背景素材。</p>
           </section>
@@ -325,10 +352,11 @@ async function saveLayout() {
               <div class="asset-meta">
                 <strong>{{ asset.name }}</strong>
                 <small v-if="asset.asset_key">{{ asset.id }} · {{ asset.width }}×{{ asset.height }}</small>
-                <small v-else class="pending-hint">{{ asset.id }} · 占位，用同一个 ID 上传即可补图</small>
+                <small v-else class="pending-hint">{{ asset.id }} · 占位，补图即可</small>
                 <em>插话 ×{{ (asset.layouts?.inline.scale ?? 1).toFixed(2) }} · 舞台 ×{{ (asset.layouts?.stage.scale ?? 1).toFixed(2) }}</em>
               </div>
               <div class="asset-actions">
+                <button class="layout-button" @click="replaceAsset(asset)"><ImageUp :size="14" />{{ asset.asset_key ? '替换' : '补图' }}</button>
                 <button class="layout-button" @click="openLayout(asset)"><Move :size="14" />位置</button>
                 <button class="delete-button" @click="remove(asset)"><Trash2 :size="14" /></button>
               </div>
@@ -448,6 +476,7 @@ button { color: inherit; }
 .script-card { display: grid; grid-template-columns: 1fr auto auto auto; align-items: center; gap: 10px; padding: 14px; border: 1px solid #ffffff11; border-radius: 14px 5px; background: #17211b; }.script-card strong,.script-card small { display: block; }.script-card small { margin-top: 4px; color: #748077; font-size: 12px; }
 .mode-chip { padding: 4px 10px; color: #9db982; font-size: 12px; border-radius: 99px; background: #9db98214; }.mode-chip--stage { color: #d99177; background: #d9917714; }.mode-chip--reward { color: #e0bd72; background: #e0bd7214; }
 .pending-hint { color: #d9917799; }
+.overwrite-row { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; margin-top: 11px; padding: 9px 11px; color: #c2c9bd; font-size: 12px; line-height: 1.6; border: 1px solid #d9917733; border-radius: 9px; background: #d991770d; cursor: pointer; }.overwrite-row input { accent-color: #d99177; }.overwrite-row strong { color: #e6d3a6; }.overwrite-row.blocked { color: #efa08f; border-color: #dc806d44; cursor: not-allowed; }
 .preview-button { min-height: 34px; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; color: #cfd8c9; border: 1px solid #ffffff16; border-radius: 9px; background: transparent; cursor: pointer; }.preview-button:hover { border-color: #9cbe7c55; }
 @media (max-width: 900px) { .upload-card { grid-template-columns: 1fr; }.asset-columns { grid-template-columns: 1fr; } }
 @media (max-width: 760px) { .admin-header { height: auto; min-height: 66px; padding: 10px 14px; }.brand small,.header-actions > a,.notice { display: none; }.admin-body { padding: 22px 14px 80px; }.section-heading { display: block; }.section-heading p { max-width: none; margin-top: 6px; }.upload-fields { grid-template-columns: 1fr; }.script-card { grid-template-columns: 1fr auto; }.preview-button { grid-column: 2; } }

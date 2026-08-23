@@ -30,6 +30,7 @@ from red_leaf_town.story_assets import (
     STORY_ASSET_KIND_NAMES,
     StoryAsset,
     StoryAssetCatalog,
+    StoryAssetLayout,
     load_story_asset_catalog,
     save_story_asset_catalog,
 )
@@ -177,6 +178,10 @@ def _default_avatar_crop(breakthrough: int, width: int, height: int) -> dict:
         "w": side,
         "h": side,
     }
+
+
+def _form_flag(form, key: str) -> bool:
+    return str(form.get(key, "")).strip().lower() in ("1", "true", "on", "yes")
 
 
 def _attach_cdn_urls(value):
@@ -459,6 +464,20 @@ def create_blueprint(
             return _error("图片内容为空", 400, "empty_file")
         if len(data) > MAX_STORY_ASSET_SIZE:
             return _error("图片不能超过 12 MB", 413, "file_too_large")
+
+        asset_id = str(form.get("id", "")).strip()
+        catalog = load_story_asset_catalog(story_asset_catalog_path)
+        current = catalog.asset_map.get(asset_id)
+        # 覆盖会顶掉剧本正在用的素材，所以要显式勾选，避免手滑写错 ID 就把别的图换掉。
+        if current and not _form_flag(form, "overwrite"):
+            return _error(f"素材 ID {asset_id} 已存在，勾选覆盖上传才能替换", 409, "asset_exists")
+        if current and current.kind != kind:
+            return _error(
+                f"原素材是{STORY_ASSET_KIND_NAMES[current.kind]}，不能覆盖成{STORY_ASSET_KIND_NAMES[kind]}",
+                409,
+                "asset_kind_mismatch",
+            )
+
         try:
             webp_data, width, height = _prepare_story_image(data, kind)
         except ValueError as exc:
@@ -467,16 +486,19 @@ def create_blueprint(
             return _error("无法识别图片内容", 400, "invalid_image")
 
         digest = hashlib.sha256(webp_data).hexdigest()[:16]
-        asset_id = str(form.get("id", "")).strip()
         try:
             asset = StoryAsset(
                 id=asset_id,
                 kind=kind,
-                name=str(form.get("name", "")).strip() or asset_id,
+                name=str(form.get("name", "")).strip() or (current.name if current else "") or asset_id,
                 asset_key=f"red-leaf-town/story/{kind}/{asset_id}-{digest}.webp",
                 width=width,
                 height=height,
                 content_type="image/webp",
+                # 覆盖只换图，调好的立绘站位和创建时间留着。
+                inline_layout=current.inline_layout if current else StoryAssetLayout(),
+                stage_layout=current.stage_layout if current else StoryAssetLayout(),
+                created_at=current.created_at if current else 0,
             )
         except ValidationError as exc:
             return _error("; ".join(item["msg"] for item in exc.errors()), 400, "invalid_asset")
@@ -484,7 +506,6 @@ def create_blueprint(
 
         if not cdn_client.upload_bytes_at(asset.asset_key, webp_data, asset.content_type):
             return _error("CDN 上传失败，请检查底层 provider 配置", 503, "cdn_upload_failed")
-        catalog = load_story_asset_catalog(story_asset_catalog_path)
         records = [entry for entry in catalog.assets if entry.id != asset.id]
         records.append(asset)
         save_story_asset_catalog(

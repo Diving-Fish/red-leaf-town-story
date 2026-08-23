@@ -87,4 +87,6 @@
 
 背景和立绘在 `/red-leaf-town/admin/story` 上传，沿用宿主统一的 CDN provider：服务端校验格式、按类型限制长边（背景 2560、立绘 1920）、统一转码 WebP（保留 PNG 透明通道），只把 object key 存进 `data/story_assets.json`。剧本引用素材 ID，不引用 URL。仍被剧本引用的素材不允许删除。
 
+换图要显式覆盖：上传时 ID 已存在会直接报 `asset_exists`，带上 `overwrite` 才会替换，素材卡上的「替换」/「补图」按钮就是把表单填好并勾上这个选项。覆盖只换图——名称留空时沿用原名，立绘调好的 `inline_layout` / `stage_layout` 也会保留，所以补完图不用重新调站位。素材类型不能被覆盖改掉（剧本会因此失效），要改类型只能换 ID 或先删掉原素材。旧的 CDN object 不会被删除：object key 带内容摘要，覆盖后是一个新对象，旧文件留在 CDN 上。
+
 剧本 JSON 和素材目录都有进程内缓存，改完文件后在后台点"重新读取剧本"（`POST /api/red-leaf-town/admin/story/reload`）即可生效，不需要重启服务。
