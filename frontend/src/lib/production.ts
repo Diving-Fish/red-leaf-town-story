@@ -31,9 +31,6 @@ export interface ProductionNode {
 export interface ProductionCopy {
   partnerLabel: string
   soloLabel: string
-  soloHint: string
-  requiresPartner: boolean
-  missingPartnerHint: string
   lockedLabel: string
   readyTitle: string
   collectLabel: string
@@ -47,9 +44,6 @@ export const PRODUCTION_COPY: Record<ProductionIndustry, ProductionCopy> = {
   gathering: {
     partnerLabel: '派驻伙伴',
     soloLabel: '未派驻',
-    soloHint: '采集必须由伙伴执行',
-    requiresPartner: true,
-    missingPartnerHint: '必须先派一名采集伙伴前往',
     lockedLabel: '采集任务中 · 已锁定',
     readyTitle: '采集完成',
     collectLabel: '领取采集物',
@@ -61,9 +55,6 @@ export const PRODUCTION_COPY: Record<ProductionIndustry, ProductionCopy> = {
   mining: {
     partnerLabel: '协助伙伴（可选）',
     soloLabel: '玩家独自采矿',
-    soloHint: '不派伙伴也可以开采',
-    requiresPartner: false,
-    missingPartnerHint: '',
     lockedLabel: '采矿任务中 · 已锁定',
     readyTitle: '开采完成',
     collectLabel: '收取矿石',
@@ -75,9 +66,6 @@ export const PRODUCTION_COPY: Record<ProductionIndustry, ProductionCopy> = {
   crafting: {
     partnerLabel: '协助伙伴（可选）',
     soloLabel: '玩家独自加工',
-    soloHint: '不派伙伴也可以开工',
-    requiresPartner: false,
-    missingPartnerHint: '',
     lockedLabel: '加工任务中 · 已锁定',
     readyTitle: '加工完成',
     collectLabel: '领取成品',
@@ -146,4 +134,20 @@ export function fromCraftingStation(station: CraftingStationState): ProductionNo
     activeItemName: station.recipe?.item.name || '',
     activeItemIcon: station.recipe?.item.icon || '',
   }
+}
+
+export function estimateDuration(
+  baseDuration: number,
+  timeDifficulty: number,
+  totalAbility: number,
+  minimumDuration = 1,
+): number {
+  const denominator = totalAbility + timeDifficulty
+  const efficiency = denominator > 0 ? 1 + (2 * totalAbility) / denominator : 1
+  return Math.max(minimumDuration, Math.ceil(baseDuration / efficiency))
+}
+
+export function partnerAbility(partner: OwnedPartner | null | undefined, industry: string): number {
+  const tendency = partner?.tendencies?.find((entry) => entry.industry === industry)
+  return tendency?.effective_ability ?? tendency?.current_ability ?? 0
 }

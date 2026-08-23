@@ -7,14 +7,20 @@ import CostChip from '@/components/CostChip.vue'
 import GameIcon from '@/components/GameIcon.vue'
 import ItemTile from '@/components/ItemTile.vue'
 import { formatDuration } from '@/lib/format'
+import { estimateDuration } from '@/lib/production'
 import { useGameStore } from '@/stores/game'
 import type { RecipeState } from '@/types'
 
-const props = defineProps<{ recipe: RecipeState; actionKey: string; group?: string; accent?: string }>()
+const props = defineProps<{ recipe: RecipeState; actionKey: string; group?: string; accent?: string; ability?: number }>()
 const emit = defineEmits<{ (event: 'start'): void }>()
 const game = useGameStore()
 
 const affordable = computed(() => game.liveStamina >= props.recipe.stamina_cost)
+const duration = computed(() => estimateDuration(
+  props.recipe.duration_seconds,
+  props.recipe.time_difficulty,
+  props.ability || 0,
+))
 const label = computed(() => {
   if (!props.recipe.unlocked) return '配方未解锁'
   if (!props.recipe.ingredients_available) return '原料不足'
@@ -46,7 +52,7 @@ const reason = computed(() =>
     </div>
     <p v-if="!recipe.unlocked" class="unlock-copy">{{ recipe.unlock_description }}</p>
     <p v-else class="recipe-meta">
-      {{ formatDuration(recipe.duration_seconds) }} · 品质加工
+      约 {{ formatDuration(duration) }}
       <CostChip kind="stamina" :amount="recipe.stamina_cost" :affordable="affordable" signed />
     </p>
     <ActionButton

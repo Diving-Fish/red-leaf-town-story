@@ -13,12 +13,9 @@ const props = defineProps<{
   actionKey: string
   assigned?: OwnedPartner | null
   placeholder?: string
-  placeholderHint?: string
   soloLabel?: string
-  soloHint?: string
   locked?: boolean
   lockedLabel?: string
-  emptyHint?: string
   dialogTitle?: string
   elevated?: boolean
 }>()
@@ -33,7 +30,7 @@ const pending = computed(() => game.isPending(props.actionKey))
 const subtitle = computed(() => {
   if (props.locked) return props.lockedLabel || '任务中 · 已锁定'
   if (props.assigned) return `能力 ${ability(props.assigned)}`
-  return props.placeholderHint || ''
+  return ''
 })
 
 function toggle() {
@@ -61,8 +58,6 @@ function toggle() {
       :assigned="assigned"
       :title="dialogTitle"
       :solo-label="soloLabel"
-      :solo-hint="soloHint"
-      :empty-hint="emptyHint"
       :elevated="elevated"
       @select="(partnerId) => emit('select', partnerId)"
       @close="open = false"

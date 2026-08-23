@@ -114,7 +114,7 @@ async function copyBindingCommand() {
 
       <div class="coming-soon">
         <Map :size="18" />
-        <div><strong>小镇还在扩建</strong><span>畜牧产业将在后续开放</span></div>
+        <div><strong>小镇还在扩建</strong></div>
       </div>
       <button class="profile-button" @click="ui.accountOpen = true; ui.navOpen = false">
         <span class="avatar">{{ game.player.display_name.slice(0, 1) }}</span>

@@ -10,6 +10,7 @@ import ModalSheet from '@/components/ModalSheet.vue'
 import PartnerPicker from '@/components/PartnerPicker.vue'
 import { usePartnerRoster } from '@/composables/usePartnerRoster'
 import { formatDuration } from '@/lib/format'
+import { estimateDuration } from '@/lib/production'
 import { useGameStore } from '@/stores/game'
 import type { CropDefinition, PlotState } from '@/types'
 
@@ -38,9 +39,7 @@ function seedCount(crop: CropDefinition) {
 
 function estimatedDuration(crop: CropDefinition) {
   const baseAbility = game.state?.industry_rules.farming?.character_base_ability || 0
-  const total = baseAbility + ability(assignedPartner.value)
-  const efficiency = 1 + (2 * total) / (total + crop.time_difficulty)
-  return Math.max(1, Math.ceil(crop.growth_seconds / efficiency))
+  return estimateDuration(crop.growth_seconds, crop.time_difficulty, baseAbility + ability(assignedPartner.value))
 }
 
 function selectPartner(partnerId: string | null) {
@@ -59,7 +58,7 @@ async function confirmPlant() {
   <ModalSheet
     :open="open"
     title="选择种子"
-    :subtitle="`土地 ${plot.slot + 1} · 选好后再确认才会开始种植`"
+    :subtitle="`土地 ${plot.slot + 1}`"
     @close="emit('close')"
   >
     <template #toolbar>
@@ -70,10 +69,7 @@ async function confirmPlant() {
         :action-key="`plot:${plot.slot}:partner`"
         :assigned="assignedPartner"
         placeholder="安排伙伴"
-        placeholder-hint="可缩短生产时间"
         solo-label="不安排伙伴"
-        solo-hint="撤下当前伙伴"
-        empty-hint="仓库里还没有具有农作倾向的伙伴。"
         dialog-title="选择驻场伙伴"
         elevated
         @select="selectPartner"
@@ -103,7 +99,7 @@ async function confirmPlant() {
         <Check v-if="crop.id === selectedId" :size="16" class="seed-check" />
       </button>
 
-      <p v-if="!crops.length" class="seed-empty">仓库里没有可用种子，先去种子商店买一些吧。</p>
+      <p v-if="!crops.length" class="seed-empty">仓库里没有可用种子</p>
     </div>
 
     <template #footer>

@@ -50,10 +50,7 @@ function selectPartner(partnerId: string | null) {
       :action-key="`plot:${plot.slot}:partner`"
       :assigned="assignedPartner"
       placeholder="安排伙伴"
-      placeholder-hint="可缩短生产时间"
       solo-label="不安排伙伴"
-      solo-hint="撤下当前伙伴"
-      empty-hint="仓库里还没有具有农作倾向的伙伴。"
       dialog-title="选择驻场伙伴"
       @select="selectPartner"
     />
@@ -84,12 +81,9 @@ function selectPartner(partnerId: string | null) {
       :action-key="`plot:${plot.slot}:partner`"
       :assigned="assignedPartner"
       placeholder="没有驻场伙伴"
-      placeholder-hint="任务未使用伙伴"
       solo-label="撤下伙伴"
-      solo-hint="只影响下一次任务"
       :locked="plot.assignment_locked"
       locked-label="任务中 · 已锁定"
-      empty-hint="仓库里还没有具有农作倾向的伙伴。"
       dialog-title="选择驻场伙伴"
       @select="selectPartner"
     />

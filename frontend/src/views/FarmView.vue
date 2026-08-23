@@ -3,7 +3,6 @@ import { computed } from 'vue'
 import { Tractor } from 'lucide-vue-next'
 
 import FarmPlot from '@/components/FarmPlot.vue'
-import TipCard from '@/components/TipCard.vue'
 import ViewHeader from '@/components/ViewHeader.vue'
 import { useGameStore } from '@/stores/game'
 
@@ -17,20 +16,9 @@ const availableCrops = computed(() => {
 
 <template>
   <section v-if="game.state" class="view-section">
-    <ViewHeader
-      eyebrow="AUTUMN FARM"
-      title="我的农场"
-      description="安排具有农作倾向的伙伴驻场，可以缩短下一次种植时间。"
-    >
+    <ViewHeader eyebrow="AUTUMN FARM" title="我的农场">
       <template #chip><Tractor :size="18" /> 农作编制 {{ game.state.industry_rules.farming?.partner_capacity || 0 }}</template>
     </ViewHeader>
-
-    <TipCard
-      v-if="!availableCrops.length"
-      text="先去种子商店购买种子，就可以开始第一轮种植。"
-      to="/shop"
-      action-label="前往商店"
-    />
 
     <div class="plot-grid">
       <FarmPlot v-for="plot in game.state.plots" :key="plot.slot" :plot="plot" :crops="availableCrops" />

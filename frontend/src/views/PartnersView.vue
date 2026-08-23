@@ -49,7 +49,7 @@ function rosterSubtitle(partner: OwnedPartner) {
 
 <template>
   <section v-if="game.state" class="view-section partner-view">
-    <ViewHeader eyebrow="PARTNER ARCHIVE" title="伙伴仓库" description="查看已经与你结缘的伙伴。每位伙伴只能持有一次。">
+    <ViewHeader eyebrow="PARTNER ARCHIVE" title="伙伴仓库">
       <template #chip><Sparkles :size="18" /> {{ game.state.partner_count }} 位伙伴</template>
     </ViewHeader>
 
@@ -57,7 +57,6 @@ function rosterSubtitle(partner: OwnedPartner) {
       v-if="!game.state.partners.length"
       :icon="WandSparkles"
       title="还没有伙伴来到这里"
-      description="完成招募或活动后，已经拥有的伙伴会出现在仓库中。"
     />
 
     <div v-else class="partner-warehouse">

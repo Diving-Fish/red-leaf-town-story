@@ -2,16 +2,17 @@
 import { computed } from 'vue'
 import { Menu } from 'lucide-vue-next'
 
-import { NAV_ITEMS, type NavItem } from '@/lib/navigation'
+import { unlockedNavItems, type NavItem } from '@/lib/navigation'
 import { useGameStore } from '@/stores/game'
 
 const props = defineProps<{ variant: 'rail' | 'bar' }>()
 const emit = defineEmits<{ (event: 'navigate'): void; (event: 'more'): void }>()
 const game = useGameStore()
 
-const items = computed(() => (props.variant === 'bar' ? NAV_ITEMS.filter((item) => item.primary) : NAV_ITEMS))
+const available = computed(() => unlockedNavItems(game.state || null))
+const items = computed(() => (props.variant === 'bar' ? available.value.filter((item) => item.primary) : available.value))
 const hiddenReady = computed(() =>
-  NAV_ITEMS.filter((item) => !item.primary).reduce(
+  available.value.filter((item) => !item.primary).reduce(
     (total, item) => total + (item.readyGroup ? game.readyCounts[item.readyGroup] : 0),
     0,
   ),

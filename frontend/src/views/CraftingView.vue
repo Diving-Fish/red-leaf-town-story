@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Hammer, PackageCheck } from 'lucide-vue-next'
+import { Hammer } from 'lucide-vue-next'
 
 import ProductionCard from '@/components/ProductionCard.vue'
 import RecipeCard from '@/components/RecipeCard.vue'
 import StateBlock from '@/components/StateBlock.vue'
-import TipCard from '@/components/TipCard.vue'
 import ViewHeader from '@/components/ViewHeader.vue'
 import { qualityName } from '@/lib/quality'
 import { fromCraftingStation } from '@/lib/production'
@@ -25,18 +24,9 @@ function inputName(station: CraftingStationState, itemId: string) {
 
 <template>
   <section v-if="game.state" class="view-section">
-    <ViewHeader
-      eyebrow="TOWN WORKSHOP"
-      title="加工工坊"
-      description="把农作物和采集物制成更有价值的商品。每份配方都由服务器条件钩子独立解锁。"
-    >
+    <ViewHeader eyebrow="TOWN WORKSHOP" title="加工工坊">
       <template #chip><Hammer :size="18" /> 加工编制 {{ game.state.industry_rules.crafting?.partner_capacity || 0 }}</template>
     </ViewHeader>
-
-    <TipCard
-      :icon="PackageCheck"
-      text="加工允许玩家独自操作；派驻具有加工倾向的伙伴可以缩短时间并提高品质能力。开工默认优先消耗低品质原料。"
-    />
 
     <StateBlock
       v-if="!stations.length"
@@ -46,13 +36,14 @@ function inputName(station: CraftingStationState, itemId: string) {
 
     <div v-else class="station-list">
       <ProductionCard v-for="entry in stations" :key="entry.node.nodeId" :node="entry.node">
-        <template #tasks>
+        <template #tasks="{ ability }">
           <div class="recipe-grid">
             <RecipeCard
               v-for="recipe in entry.station.recipes"
               :key="recipe.id"
               :recipe="recipe"
               :accent="entry.node.accent"
+              :ability="ability"
               :action-key="`crafting:${entry.node.nodeId}:start:${recipe.id}`"
               :group="`crafting:${entry.node.nodeId}:start`"
               @start="game.startProduction('crafting', entry.node.nodeId, recipe.id)"

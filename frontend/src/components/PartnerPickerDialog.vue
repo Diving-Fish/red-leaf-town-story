@@ -16,8 +16,6 @@ const props = defineProps<{
   assigned?: OwnedPartner | null
   title?: string
   soloLabel?: string
-  soloHint?: string
-  emptyHint?: string
   elevated?: boolean
 }>()
 
@@ -145,7 +143,6 @@ function statusText(partner: OwnedPartner) {
         <span class="option-mark"><UserRoundX :size="18" /></span>
         <span class="option-copy">
           <strong>{{ soloLabel || '撤下伙伴' }}</strong>
-          <small>{{ soloHint || '这个岗位改为不安排伙伴' }}</small>
         </span>
       </button>
 
@@ -168,7 +165,7 @@ function statusText(partner: OwnedPartner) {
       </button>
 
       <p v-if="!visible.length" class="option-empty">
-        {{ partners.length ? '没有符合当前筛选条件的伙伴。' : emptyHint || '仓库里还没有适合这个产业的伙伴。' }}
+        {{ partners.length ? '没有符合筛选条件的伙伴' : '还没有适合这个产业的伙伴' }}
       </p>
     </div>
   </ModalSheet>

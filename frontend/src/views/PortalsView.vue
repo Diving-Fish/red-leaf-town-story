@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Check, DoorOpen, Lock, Sparkles } from 'lucide-vue-next'
+import { Check, DoorOpen, Lock } from 'lucide-vue-next'
 
 import ActionButton from '@/components/ActionButton.vue'
 import GameIcon from '@/components/GameIcon.vue'
@@ -8,7 +8,6 @@ import ProgressBar from '@/components/ProgressBar.vue'
 import QualityTag from '@/components/QualityTag.vue'
 import RewardChips from '@/components/RewardChips.vue'
 import StateBlock from '@/components/StateBlock.vue'
-import TipCard from '@/components/TipCard.vue'
 import ViewHeader from '@/components/ViewHeader.vue'
 import { useGameStore } from '@/stores/game'
 import type { PortalState, PortalTribute } from '@/types'
@@ -36,17 +35,11 @@ function deliver(portal: PortalState, tribute: PortalTribute) {
 
 <template>
   <section v-if="game.state" class="view-section">
-    <ViewHeader
-      eyebrow="PORTALS"
-      title="传送门"
-      description="向传送门交付贡品，每交齐一项就有回礼。整座门喂饱之后会开启，并在山谷里带出新的门。"
-    >
+    <ViewHeader eyebrow="PORTALS" title="传送门">
       <template #chip><DoorOpen :size="18" /> 已开启 {{ openedCount }} / {{ portals.length }}</template>
     </ViewHeader>
 
-    <TipCard :icon="Sparkles" text="贡品可以分几次交，交多少算多少。门与门之间不是一条线：有的门要同时完成好几道才会出现。" />
-
-    <StateBlock v-if="!portals.length" title="山谷里还没有传送门" description="继续经营，裂口自己会来找你。" />
+    <StateBlock v-if="!portals.length" title="山谷里还没有传送门" />
 
     <div v-else class="portal-grid">
       <article

@@ -4,7 +4,6 @@ import { LockKeyhole, ShoppingBasket } from 'lucide-vue-next'
 
 import ActionButton from '@/components/ActionButton.vue'
 import ItemTile from '@/components/ItemTile.vue'
-import TipCard from '@/components/TipCard.vue'
 import ViewHeader from '@/components/ViewHeader.vue'
 import { useGameStore } from '@/stores/game'
 import type { ShopEntry } from '@/types'
@@ -26,11 +25,9 @@ function reason(entry: ShopEntry, quantity: number) {
 
 <template>
   <section v-if="game.state" class="view-section">
-    <ViewHeader eyebrow="MAPLE SEED CO." title="种子商店" description="精选当季种子，收获后可以在仓库出售农产品。">
+    <ViewHeader eyebrow="MAPLE SEED CO." title="种子商店">
       <template #chip><ShoppingBasket :size="18" /> 今日营业中</template>
     </ViewHeader>
-
-    <TipCard text="买好种子就可以回农场开工了。" to="/farm" action-label="回农场种植" />
 
     <div class="catalog-grid">
       <article v-for="entry in game.state.shop" :key="entry.id" class="catalog-card" :class="{ locked: entry.locked }">

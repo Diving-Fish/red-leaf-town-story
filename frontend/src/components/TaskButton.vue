@@ -5,6 +5,7 @@ import ActionButton from '@/components/ActionButton.vue'
 import CostChip from '@/components/CostChip.vue'
 import ItemTile from '@/components/ItemTile.vue'
 import { formatDuration } from '@/lib/format'
+import { estimateDuration } from '@/lib/production'
 import { useGameStore } from '@/stores/game'
 import type { GatheringTaskDefinition, MiningTaskDefinition } from '@/types'
 
@@ -15,6 +16,7 @@ const props = defineProps<{
   accent?: string
   disabled?: boolean
   reason?: string
+  ability?: number
 }>()
 
 const emit = defineEmits<{ (event: 'start'): void }>()
@@ -26,6 +28,12 @@ const reasonText = computed(() => props.reason || (affordable.value ? undefined 
 const gatheringTask = computed(() => ('outputs' in props.task ? props.task : null))
 const singleOutputTask = computed<MiningTaskDefinition | null>(() => (
   'yield_min' in props.task ? props.task as MiningTaskDefinition : null
+))
+const duration = computed(() => estimateDuration(
+  props.task.duration_seconds,
+  props.task.time_difficulty,
+  props.ability || 0,
+  'minimum_duration_seconds' in props.task ? props.task.minimum_duration_seconds : 1,
 ))
 </script>
 
@@ -43,8 +51,7 @@ const singleOutputTask = computed<MiningTaskDefinition | null>(() => (
     <span class="task-copy">
       <strong>{{ task.name }}</strong>
       <small v-if="gatheringTask">
-        {{ gatheringTask.outputs.length }} 种可能材料 · {{ formatDuration(gatheringTask.duration_seconds) }} · 最短
-        {{ formatDuration(gatheringTask.minimum_duration_seconds) }}
+        {{ gatheringTask.outputs.length }} 种材料 · 约 {{ formatDuration(duration) }}
       </small>
       <span v-if="gatheringTask" class="loot-preview">
         <i v-for="output in gatheringTask.outputs" :key="output.item_id">
@@ -52,7 +59,7 @@ const singleOutputTask = computed<MiningTaskDefinition | null>(() => (
         </i>
       </span>
       <small v-else-if="singleOutputTask">
-        {{ singleOutputTask.yield_min }}—{{ singleOutputTask.yield_max }} 个 · {{ formatDuration(singleOutputTask.duration_seconds) }}
+        {{ singleOutputTask.yield_min }}—{{ singleOutputTask.yield_max }} 个 · 约 {{ formatDuration(duration) }}
       </small>
     </span>
     <CostChip v-if="task.stamina_cost" kind="stamina" :amount="task.stamina_cost" :affordable="affordable" signed />

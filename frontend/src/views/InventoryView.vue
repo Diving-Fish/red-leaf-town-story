@@ -27,11 +27,7 @@ async function sellAll(item: InventoryItem) {
 
 <template>
   <section v-if="game.state" class="view-section">
-    <ViewHeader
-      eyebrow="TOWN BARN"
-      title="仓库"
-      description="种子和收获物都保存在这里。出售农产品，为下一轮生产积累资金。"
-    >
+    <ViewHeader eyebrow="TOWN BARN" title="仓库">
       <template #chip><Archive :size="18" /> {{ game.state.inventory.length }} 类物品</template>
     </ViewHeader>
 
@@ -39,7 +35,6 @@ async function sellAll(item: InventoryItem) {
       v-if="!game.state.inventory.length"
       :icon="PackageOpen"
       title="仓库还是空的"
-      description="购买种子、完成种植后，收获物会出现在这里。"
     >
       <RouterLink class="primary-button" to="/shop">去买种子</RouterLink>
     </StateBlock>

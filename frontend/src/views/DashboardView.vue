@@ -28,10 +28,10 @@ const game = useGameStore()
 const ui = useUiStore()
 
 const weatherOptions = [
-  { name: '晴朗', description: '阳光穿过红叶，适合处理镇上的日常事务。', icon: Sun, accent: '#e0b45d' },
-  { name: '多云', description: '云层缓慢经过山谷，空气十分舒适。', icon: CloudSun, accent: '#a9b6a8' },
-  { name: '小雨', description: '细雨落在屋檐与田埂上，山路略显湿润。', icon: CloudRain, accent: '#7fa4b7' },
-  { name: '山风', description: '来自北面山谷的风吹过整座小镇。', icon: Wind, accent: '#91ad9b' },
+  { name: '晴朗', icon: Sun, accent: '#e0b45d' },
+  { name: '多云', icon: CloudSun, accent: '#a9b6a8' },
+  { name: '小雨', icon: CloudRain, accent: '#7fa4b7' },
+  { name: '山风', icon: Wind, accent: '#91ad9b' },
 ]
 
 const weather = computed(() => {
@@ -66,7 +66,6 @@ async function unlock(node: TalentNode) {
     <ViewHeader
       eyebrow="TOWN DASHBOARD"
       :title="`早上好，${game.player.display_name}`"
-      description="查看今天的状态，安排产业任务与成长方向。"
     >
       <template #chip><Leaf :size="18" /> 红叶镇日常</template>
     </ViewHeader>
@@ -81,13 +80,12 @@ async function unlock(node: TalentNode) {
             <b>{{ game.player.next_level_xp === null ? '当前等级已满' : `${game.player.experience} / ${game.player.next_level_xp}` }}</b>
           </span>
           <ProgressBar class="xp-progress" :value="experienceProgress" :height="8" track="#28332b" color="linear-gradient(90deg, var(--leaf), var(--gold))" />
-          <small>每次升级获得 1 个公共天赋点</small>
         </div>
       </article>
 
       <article class="surface-card weather-card" :style="{ '--weather-accent': weather.accent }">
         <component :is="weather.icon" :size="36" />
-        <div><small>今日天气</small><strong>{{ weather.name }}</strong><p>{{ weather.description }}</p></div>
+        <div><small>今日天气</small><strong>{{ weather.name }}</strong></div>
       </article>
     </div>
 
@@ -98,16 +96,16 @@ async function unlock(node: TalentNode) {
       </header>
       <div class="quick-grid">
         <RouterLink class="surface-card quick-card" to="/farm">
-          <Sprout :size="24" /><span><strong>管理农场</strong><small>种植与收获作物</small></span>
+          <Sprout :size="24" /><span><strong>管理农场</strong></span>
         </RouterLink>
         <RouterLink class="surface-card quick-card" to="/inventory">
-          <Archive :size="24" /><span><strong>打开仓库</strong><small>查看品质与出售物品</small></span>
+          <Archive :size="24" /><span><strong>打开仓库</strong></span>
         </RouterLink>
         <button class="surface-card quick-card reserved" disabled>
-          <PackageCheck :size="24" /><span><strong>一键收取</strong><small>功能位置已预留</small></span><Lock :size="16" />
+          <PackageCheck :size="24" /><span><strong>一键收取</strong></span><Lock :size="16" />
         </button>
         <button class="surface-card quick-card reserved" disabled>
-          <Gem :size="24" /><span><strong>今日委托</strong><small>功能位置已预留</small></span><Lock :size="16" />
+          <Gem :size="24" /><span><strong>今日委托</strong></span><Lock :size="16" />
         </button>
       </div>
     </section>
@@ -117,7 +115,6 @@ async function unlock(node: TalentNode) {
         <div>
           <p class="eyebrow">SEVEN PATHS</p>
           <h2>产业天赋树</h2>
-          <p>七个方向共享升级获得的天赋点，请根据自己的生产路线进行分配。</p>
         </div>
         <span class="talent-points"><Sparkles :size="18" /><strong>{{ game.state.talents.available_points }}</strong> 点可用</span>
       </header>
@@ -126,7 +123,7 @@ async function unlock(node: TalentNode) {
         <article v-for="direction in INDUSTRIES" :key="direction.id" class="surface-card talent-direction">
           <header>
             <ItemTile :size="39" :accent="direction.accent"><component :is="direction.icon" :size="21" /></ItemTile>
-            <div><h3>{{ direction.name }}</h3><p>{{ direction.description }}</p></div>
+            <div><h3>{{ direction.name }}</h3></div>
           </header>
           <div v-if="talentNodes(direction.id).length" class="talent-node-list">
             <ActionButton
@@ -164,11 +161,9 @@ async function unlock(node: TalentNode) {
 .xp-copy { min-width: 0; }
 .xp-copy > span { display: flex; justify-content: space-between; gap: 12px; color: #abb5ac; }
 .xp-progress { margin: 11px 0 8px; }
-.xp-copy small { color: #849087; }
 .weather-card { --weather-accent: #e0b45d; display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 18px; }
 .weather-card > svg { color: var(--weather-accent); }
 .weather-card strong { margin-top: 4px; color: var(--weather-accent); font: 700 25px Georgia, 'Noto Serif SC', serif; }
-.weather-card p { margin: 8px 0 0; color: #919c93; line-height: 1.65; }
 .dashboard-section { margin-top: 34px; }
 .dashboard-section > header { display: flex; align-items: end; justify-content: space-between; gap: 18px; margin-bottom: 14px; }
 .dashboard-section h2 { margin: 4px 0 0; font: 700 23px Georgia, 'Noto Serif SC', serif; }
@@ -177,17 +172,14 @@ async function unlock(node: TalentNode) {
 .quick-card { min-height: 94px; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 11px; padding: 15px; text-align: left; color: #d6ddd3; }
 .quick-card > svg:first-child { color: var(--leaf-bright); }
 .quick-card strong,.quick-card small { display: block; }
-.quick-card small { margin-top: 4px; color: #849087; }
 .quick-card.reserved { opacity: .55; }
 .talent-tree-section > header { align-items: center; }
-.talent-tree-section > header p:last-child { max-width: 670px; margin: 7px 0 0; color: #8e9990; line-height: 1.6; }
 .talent-points { display: flex; align-items: center; gap: 7px; padding: 10px 14px; color: #d8c17e !important; border: 1px solid #d7ad5833; border-radius: 99px; background: #d7ad580b; white-space: nowrap; }
 .talent-points strong { font-size: 20px; }
 .talent-directions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px; }
 .talent-direction { padding: 16px; }
 .talent-direction > header { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 10px; padding-bottom: 12px; border-bottom: 1px solid #ffffff0d; }
 .talent-direction h3 { margin: 0; }
-.talent-direction header p { margin: 3px 0 0; color: #7e8981; font-size: 12px; }
 .talent-node-list { display: grid; gap: 8px; margin-top: 12px; }
 .talent-node { display: grid; grid-template-columns: auto 1fr; gap: 10px; padding: 11px; text-align: left; color: #a1aba3; border: 1px solid #ffffff0e; border-radius: 10px; background: #0e1511aa; }
 .talent-node:not(:disabled) { cursor: pointer; }
