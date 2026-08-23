@@ -6,7 +6,7 @@ import { useRoute, useRouter } from 'vue-router'
 import PartnerAvatar from '@/components/PartnerAvatar.vue'
 import StateBlock from '@/components/StateBlock.vue'
 import ViewHeader from '@/components/ViewHeader.vue'
-import { industryName } from '@/lib/industries'
+import { partnerAssignmentLabel } from '@/lib/partners'
 import { useGameStore } from '@/stores/game'
 import type { OwnedPartner } from '@/types'
 
@@ -38,30 +38,12 @@ function breakthroughName(stage: number) {
 }
 
 function assignmentLabel(partner: OwnedPartner) {
-  const suffix = partner.locked ? ' · 任务中' : ''
-  if (partner.assigned_plot_slot !== null) return `${industryName('farming')} · 土地 ${partner.assigned_plot_slot + 1}${suffix}`
-  if (partner.assigned_gathering_site_id) {
-    const site = game.state?.gathering_sites.find((entry) => entry.site_id === partner.assigned_gathering_site_id)
-    return `${industryName('gathering')} · ${site?.definition?.name || partner.assigned_gathering_site_id}${suffix}`
-  }
-  if (partner.assigned_crafting_station_id) {
-    const station = game.state?.crafting_stations.find((entry) => entry.station_id === partner.assigned_crafting_station_id)
-    return `${industryName('crafting')} · ${station?.definition?.name || partner.assigned_crafting_station_id}${suffix}`
-  }
-  if (partner.assigned_mining_site_id) {
-    const site = game.state?.mining_sites.find((entry) => entry.site_id === partner.assigned_mining_site_id)
-    return `${industryName('mining')} · ${site?.definition?.name || partner.assigned_mining_site_id}${suffix}`
-  }
-  return '未派驻'
+  return partnerAssignmentLabel(partner, game.state || null) || '未派驻'
 }
 
 function rosterSubtitle(partner: OwnedPartner) {
-  const assigned =
-    partner.assigned_plot_slot !== null ||
-    partner.assigned_gathering_site_id ||
-    partner.assigned_crafting_station_id ||
-    partner.assigned_mining_site_id
-  return `Lv.${partner.level} · ${assigned ? assignmentLabel(partner) : breakthroughName(partner.breakthrough)}`
+  const assignment = partnerAssignmentLabel(partner, game.state || null)
+  return `Lv.${partner.level} · ${assignment || breakthroughName(partner.breakthrough)}`
 }
 </script>
 

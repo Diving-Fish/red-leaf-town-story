@@ -32,7 +32,6 @@ const { progress, label } = useCountdown(
     </header>
 
     <PartnerPicker
-      :picker-id="scope"
       :industry="node.industry"
       :action-key="`${scope}:partner`"
       :assigned="node.assignedPartner"
@@ -41,6 +40,7 @@ const { progress, label } = useCountdown(
       :solo-label="copy.soloLabel"
       :locked="node.assignmentLocked"
       :locked-label="copy.lockedLabel"
+      dialog-title="选择驻场伙伴"
       @select="(partnerId) => game.assignProductionPartner(node.industry, node.nodeId, partnerId)"
     />
 

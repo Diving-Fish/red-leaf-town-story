@@ -1,26 +1,22 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { Clock3, LockKeyhole, Sparkles } from 'lucide-vue-next'
+import { computed, ref } from 'vue'
+import { ChevronRight, Clock3, LockKeyhole, Sparkles } from 'lucide-vue-next'
 
 import ActionButton from '@/components/ActionButton.vue'
-import CostChip from '@/components/CostChip.vue'
 import GameIcon from '@/components/GameIcon.vue'
 import PartnerPicker from '@/components/PartnerPicker.vue'
+import PlantSeedDialog from '@/components/PlantSeedDialog.vue'
 import ProgressBar from '@/components/ProgressBar.vue'
 import QualityTag from '@/components/QualityTag.vue'
 import StateBlock from '@/components/StateBlock.vue'
 import { useCountdown } from '@/composables/useCountdown'
-import { usePartnerRoster } from '@/composables/usePartnerRoster'
-import { formatDuration } from '@/lib/format'
 import { useGameStore } from '@/stores/game'
-import { useUiStore } from '@/stores/ui'
 import type { CropDefinition, PlotState } from '@/types'
 
 const props = defineProps<{ plot?: PlotState; lockedLevel?: number | null; crops?: CropDefinition[] }>()
 
 const game = useGameStore()
-const ui = useUiStore()
-const { ability } = usePartnerRoster('farming')
+const plantOpen = ref(false)
 
 const { progress, label, elapsed } = useCountdown(
   () => props.plot?.ready_at,
@@ -29,15 +25,6 @@ const { progress, label, elapsed } = useCountdown(
 
 const ready = computed(() => Boolean(props.plot?.crop) && (props.plot?.ready || elapsed.value))
 const assignedPartner = computed(() => props.plot?.assigned_partners[0] || null)
-const pickerId = computed(() => `plot:${props.plot?.slot}`)
-const pickerOpen = computed(() => ui.openPickerId === pickerId.value)
-
-function estimatedDuration(crop: CropDefinition) {
-  const baseAbility = game.state?.industry_rules.farming?.character_base_ability || 0
-  const total = baseAbility + ability(assignedPartner.value)
-  const efficiency = 1 + (2 * total) / (total + crop.time_difficulty)
-  return Math.max(1, Math.ceil(crop.growth_seconds / efficiency))
-}
 
 function selectPartner(partnerId: string | null) {
   if (!props.plot) return
@@ -54,12 +41,11 @@ function selectPartner(partnerId: string | null) {
     :description="`等级 ${lockedLevel || '?'} 解锁`"
   />
 
-  <article v-else-if="plot.empty" class="farm-plot farm-plot--empty" :class="{ 'picker-open': pickerOpen }">
+  <article v-else-if="plot.empty" class="farm-plot farm-plot--empty">
     <div class="soil-lines" aria-hidden="true"><i /><i /><i /></div>
     <div class="plot-heading"><span>土地 {{ plot.slot + 1 }}</span><small>空闲</small></div>
 
     <PartnerPicker
-      :picker-id="pickerId"
       industry="farming"
       :action-key="`plot:${plot.slot}:partner`"
       :assigned="assignedPartner"
@@ -68,36 +54,23 @@ function selectPartner(partnerId: string | null) {
       solo-label="不安排伙伴"
       solo-hint="撤下当前伙伴"
       empty-hint="仓库里还没有具有农作倾向的伙伴。"
+      dialog-title="选择驻场伙伴"
       @select="selectPartner"
     />
 
-    <div v-if="crops?.length" class="seed-actions">
-      <ActionButton
-        v-for="crop in crops"
-        :key="crop.id"
-        variant="bare"
-        class="seed-button"
-        :action-key="`plot:${plot.slot}:plant:${crop.id}`"
-        :group="`plot:${plot.slot}:plant`"
-        :disabled="game.liveStamina < crop.stamina_cost"
-        :reason="game.liveStamina < crop.stamina_cost ? '体力不足' : undefined"
-        @click="game.plant(plot.slot, crop.id)"
-      >
-        <GameIcon :name="crop.id === 'wheat' ? 'wheat' : 'carrot'" :size="18" />
-        <span>种{{ crop.name }}</span>
-        <small>
-          <CostChip kind="stamina" :amount="crop.stamina_cost" :affordable="game.liveStamina >= crop.stamina_cost" signed />
-          · {{ formatDuration(estimatedDuration(crop)) }}
-        </small>
-      </ActionButton>
-    </div>
-    <p v-else class="plot-hint">仓库里没有可用种子</p>
+    <button class="plant-button" :disabled="!crops?.length" @click="plantOpen = true">
+      <GameIcon name="sprout" :size="18" />
+      <span>{{ crops?.length ? '选择种子播种' : '仓库里没有可用种子' }}</span>
+      <ChevronRight v-if="crops?.length" :size="16" />
+    </button>
+
+    <PlantSeedDialog :open="plantOpen" :plot="plot" :crops="crops || []" @close="plantOpen = false" />
   </article>
 
   <article
     v-else
     class="farm-plot farm-plot--growing"
-    :class="{ 'farm-plot--ready': ready, 'picker-open': pickerOpen }"
+    :class="{ 'farm-plot--ready': ready }"
     :style="{ '--crop-accent': plot.crop?.accent }"
   >
     <div class="crop-orb">
@@ -107,7 +80,6 @@ function selectPartner(partnerId: string | null) {
     <div class="plot-heading"><strong>{{ plot.crop?.name }}</strong><small>土地 {{ plot.slot + 1 }}</small></div>
 
     <PartnerPicker
-      :picker-id="pickerId"
       industry="farming"
       :action-key="`plot:${plot.slot}:partner`"
       :assigned="assignedPartner"
@@ -118,6 +90,7 @@ function selectPartner(partnerId: string | null) {
       :locked="plot.assignment_locked"
       locked-label="任务中 · 已锁定"
       empty-hint="仓库里还没有具有农作倾向的伙伴。"
+      dialog-title="选择驻场伙伴"
       @select="selectPartner"
     />
 
@@ -145,8 +118,23 @@ function selectPartner(partnerId: string | null) {
 </template>
 
 <style scoped>
-.farm-plot.picker-open { z-index: 12; overflow: visible; }
 .task-boost { color: #91aa7d; font-size: 12px; margin-bottom: 7px; }
 .plot-progress { width: 100%; margin-top: auto; }
-.seed-button small { display: flex; align-items: center; gap: 4px; color: #829081; font-size: 12px; }
+.plant-button {
+  position: relative;
+  width: 100%;
+  min-height: 42px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  text-align: left;
+  color: #dbe6d6;
+  border: 1px solid rgba(135, 169, 107, .28);
+  border-radius: 10px;
+  background: rgba(135, 169, 107, .12);
+  cursor: pointer;
+}
+.plant-button:disabled { color: #7e8a80; border-color: #ffffff12; background: #ffffff05; }
 </style>

@@ -12,18 +12,8 @@ export interface ConfirmOptions {
 export const useUiStore = defineStore('ui', () => {
   const navOpen = ref(false)
   const accountOpen = ref(false)
-  const openPickerId = ref<string | null>(null)
   const confirmRequest = ref<ConfirmOptions | null>(null)
   let resolveConfirm: ((accepted: boolean) => void) | null = null
-
-  function togglePicker(id: string, open: boolean) {
-    if (open) openPickerId.value = id
-    else if (openPickerId.value === id) openPickerId.value = null
-  }
-
-  function closePicker() {
-    openPickerId.value = null
-  }
 
   function confirm(options: ConfirmOptions) {
     resolveConfirm?.(false)
@@ -39,5 +29,5 @@ export const useUiStore = defineStore('ui', () => {
     resolveConfirm = null
   }
 
-  return { navOpen, accountOpen, openPickerId, confirmRequest, togglePicker, closePicker, confirm, settleConfirm }
+  return { navOpen, accountOpen, confirmRequest, confirm, settleConfirm }
 })
