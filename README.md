@@ -15,7 +15,7 @@
 
 设计约束和后续系统扩展方式见 [`docs/architecture.md`](docs/architecture.md)，伙伴、主角天赋、逐格生产和品质公式见 [`docs/game-design-foundations.md`](docs/game-design-foundations.md)。
 
-玩家首页 `/red-leaf-town/` 是经营 Dashboard，集中展示居民等级、经验、当日天气、快捷入口和七个产业方向共享的天赋树。农场位于 `/red-leaf-town/farm`；采集页只负责派驻与采集任务，不再重复展示天赋树。
+玩家首页 `/red-leaf-town/` 是经营 Dashboard，集中展示居民等级、经验、当日天气、快捷入口和七个产业方向共享的天赋树。农场位于 `/red-leaf-town/farm`；采集页只负责派驻与采集任务，不再重复展示天赋树。购买和出售合并在 `/red-leaf-town/market`，桌面端左右分栏、移动端用标签页切换，商品与库存物品共用 `MarketItem` 组件；出售侧按 `item_id` 折叠品质分桶（多品质的物品点开才列出各桶），两侧在条目超过 6 个或出现多种物品类型时自动显示搜索框与种类筛选；旧的 `/shop` 与 `/inventory` 会重定向过去。
 
 ## 本地测试
 

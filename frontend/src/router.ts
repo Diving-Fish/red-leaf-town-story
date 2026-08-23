@@ -1,8 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
 import FarmView from '@/views/FarmView.vue'
-import InventoryView from '@/views/InventoryView.vue'
-import ShopView from '@/views/ShopView.vue'
+import MarketView from '@/views/MarketView.vue'
 import PartnersView from '@/views/PartnersView.vue'
 import GatheringView from '@/views/GatheringView.vue'
 import CraftingView from '@/views/CraftingView.vue'
@@ -31,8 +30,9 @@ export default createRouter({
     { path: '/crafting', name: 'crafting', component: CraftingView, meta: { title: '加工' } },
     { path: '/mining', name: 'mining', component: MiningView, meta: { title: '矿产' } },
     { path: '/portals', name: 'portals', component: PortalsView, meta: { title: '传送门' } },
-    { path: '/shop', name: 'shop', component: ShopView, meta: { title: '种子商店' } },
-    { path: '/inventory', name: 'inventory', component: InventoryView, meta: { title: '仓库' } },
+    { path: '/market', name: 'market', component: MarketView, meta: { title: '商店' } },
+    { path: '/shop', redirect: { name: 'market' } },
+    { path: '/inventory', redirect: { name: 'market', query: { tab: 'sell' } } },
     { path: '/partners/:partnerId?', name: 'partners', component: PartnersView, meta: { title: '伙伴仓库' } },
     { path: '/spirits/:partnerId?', redirect: (to) => ({ name: 'partners', params: { partnerId: to.params.partnerId } }) },
     { path: '/admin/spirits', redirect: { name: 'admin-partners' } },

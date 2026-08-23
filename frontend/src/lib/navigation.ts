@@ -1,5 +1,5 @@
 import type { Component } from 'vue'
-import { Archive, DoorOpen, Hammer, LayoutDashboard, Pickaxe, ShoppingBasket, Sparkles, Sprout, Trees } from 'lucide-vue-next'
+import { DoorOpen, Hammer, LayoutDashboard, Pickaxe, Sparkles, Sprout, Store, Trees } from 'lucide-vue-next'
 
 import type { GameState } from '@/types'
 
@@ -48,8 +48,7 @@ export const NAV_ITEMS: NavItem[] = [
     primary: false,
     unlocked: (state) => state.portals.some((portal) => portal.unlocked),
   },
-  { to: '/shop', label: '种子商店', icon: ShoppingBasket, primary: false },
-  { to: '/inventory', label: '仓库', icon: Archive, primary: true },
+  { to: '/market', label: '商店', icon: Store, primary: true },
   { to: '/partners', label: '伙伴', icon: Sparkles, primary: false },
 ]
 

@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import {
-  Archive,
   CloudRain,
   CloudSun,
   Gem,
@@ -10,6 +9,7 @@ import {
   PackageCheck,
   Sparkles,
   Sprout,
+  Store,
   Sun,
   Wind,
 } from 'lucide-vue-next'
@@ -98,8 +98,8 @@ async function unlock(node: TalentNode) {
         <RouterLink class="surface-card quick-card" to="/farm">
           <Sprout :size="24" /><span><strong>管理农场</strong></span>
         </RouterLink>
-        <RouterLink class="surface-card quick-card" to="/inventory">
-          <Archive :size="24" /><span><strong>打开仓库</strong></span>
+        <RouterLink class="surface-card quick-card" to="/market">
+          <Store :size="24" /><span><strong>去商店</strong></span>
         </RouterLink>
         <button class="surface-card quick-card reserved" disabled>
           <PackageCheck :size="24" /><span><strong>一键收取</strong></span><Lock :size="16" />
