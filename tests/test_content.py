@@ -20,7 +20,7 @@ def test_default_content_is_consistent():
     assert [grade.name for grade in content.quality.grades] == ["普通", "良品", "上品", "臻品", "奇迹"]
     assert content.crop_map["carrot"].quality.thresholds == sorted(content.crop_map["carrot"].quality.thresholds)
     assert content.industries["gathering"].partner_capacity == 1
-    assert content.gathering_task_map["collect_maple_wood"].produce_item_id == "maple_wood"
+    assert content.gathering_task_map["collect_maple_wood"].outputs[0].item_id == "maple_wood"
     assert content.item_map["maple_wood"].has_quality is True
     assert content.talent_map["gathering_roster_1"].partner_capacity_bonus == 1
     assert content.recipe_map["saw_maple_plank"].unlock_condition.hook == "player_level"
@@ -28,6 +28,65 @@ def test_default_content_is_consistent():
     assert content.mining_site_map["copper_foothill"].min_level == 2
     assert content.mining_task_map["mine_red_copper"].produce_item_id == "red_copper_ore"
     assert content.item_map["red_copper_ore"].has_quality is True
+
+
+def test_gathering_tasks_have_frozen_multi_drop_pools_and_eight_hour_floor():
+    content = load_content()
+    forest = content.gathering_task_map["collect_maple_wood"]
+    meadow = content.gathering_task_map["collect_autumn_herb"]
+
+    assert forest.stamina_cost == meadow.stamina_cost == 0
+    assert forest.minimum_duration_seconds == meadow.minimum_duration_seconds == 8 * 3600
+    assert [output.item_id for output in forest.outputs] == [
+        "maple_wood",
+        "woodland_mushroom",
+        "maple_resin",
+        "amber_beeswax",
+    ]
+    assert [output.item_id for output in meadow.outputs] == [
+        "tough_fodder",
+        "autumn_herb",
+        "morning_dew_flower",
+        "silver_star_moss",
+    ]
+    assert [(output.chance, output.quantity_min, output.quantity_max) for output in forest.outputs] == [
+        (1, 6, 9),
+        (0.75, 2, 4),
+        (0.4, 1, 3),
+        (0.15, 1, 2),
+    ]
+    assert [(output.chance, output.quantity_min, output.quantity_max) for output in meadow.outputs] == [
+        (1, 7, 11),
+        (0.8, 3, 5),
+        (0.35, 1, 3),
+        (0.1, 1, 1),
+    ]
+    assert {output.item_id: content.item_map[output.item_id].sell_price for output in [*forest.outputs, *meadow.outputs]} == {
+        "maple_wood": 6,
+        "woodland_mushroom": 7,
+        "maple_resin": 10,
+        "amber_beeswax": 16,
+        "tough_fodder": 5,
+        "autumn_herb": 10,
+        "morning_dew_flower": 14,
+        "silver_star_moss": 30,
+    }
+    assert forest.quality.thresholds == [25, 55, 90, 210]
+    assert meadow.quality.thresholds == [35, 65, 100, 230]
+    assert forest.outputs[0].chance == meadow.outputs[0].chance == 1
+    assert all(content.item_map[output.item_id].has_quality for task in (forest, meadow) for output in task.outputs)
+
+
+def test_gathering_pool_requires_unique_items_and_a_guaranteed_drop():
+    payload = load_content().model_dump()
+    payload["gathering_tasks"][0]["outputs"][0]["chance"] = 0.5
+    with pytest.raises(ValidationError, match="guaranteed"):
+        GameContent.model_validate(payload)
+
+    payload = load_content().model_dump()
+    payload["gathering_tasks"][0]["outputs"][1]["item_id"] = "maple_wood"
+    with pytest.raises(ValidationError, match="unique"):
+        GameContent.model_validate(payload)
 
 
 def test_crop_roster_separates_tutorial_and_regular_economy():

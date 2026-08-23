@@ -19,6 +19,7 @@ from red_leaf_town.domain import (
     QQIdentity,
     TaskPartnerSnapshot,
     TaskInputSnapshot,
+    TaskOutputSnapshot,
     TaskQualitySnapshot,
 )
 from red_leaf_town.domain.economy import EconomyError, add_item, grant_coins, remove_item, spend_coins
@@ -248,6 +249,7 @@ class GameService:
                 raise GameError("gathering_partner_required", "必须先派一名具有采集倾向的伙伴前往", 409)
             if self._industry_assigned_count(player, "gathering") > self._industry_partner_capacity(player, "gathering"):
                 raise GameError("partner_capacity_reached", "当前采集伙伴编制已满", 409)
+            primary_output = next(output for output in task.outputs if output.chance == 1)
             snapshot = self._build_production_task_snapshot(
                 player=player,
                 assigned_partner_ids=site.assigned_partner_ids,
@@ -256,19 +258,21 @@ class GameService:
                 production_slot_id=f"gathering:site:{site.site_id}",
                 now=now,
                 base_duration=task.duration_seconds,
+                minimum_duration=task.minimum_duration_seconds,
                 time_difficulty=task.time_difficulty,
-                produce_item_id=task.produce_item_id,
-                yield_min=task.yield_min,
-                yield_max=task.yield_max,
+                produce_item_id=primary_output.item_id,
+                yield_min=primary_output.quantity_min,
+                yield_max=primary_output.quantity_max,
                 harvest_xp=task.collect_xp,
                 quality=task.quality,
+                output_pool=[TaskOutputSnapshot.model_validate(output.model_dump()) for output in task.outputs],
             )
             try:
                 consume_stamina(player, task.stamina_cost, self.content, now)
             except ValueError as exc:
                 raise GameError("resource_insufficient", str(exc)) from exc
             site.task_snapshot = snapshot
-            site.task_result = None
+            site.task_results = []
             return {
                 "site_id": site_id,
                 "task_id": task_id,
@@ -292,20 +296,18 @@ class GameService:
                 raise GameError("gathering_site_empty", "这个采集点没有进行中的任务")
             if site.task_snapshot.ready_at > now:
                 raise GameError("gathering_not_ready", "伙伴还没有完成采集")
-            result = site.task_result
-            if result is None:
+            results = site.task_results
+            if not results:
                 raise GameError("task_content_missing", "采集任务配置缺失，请联系管理员", 409)
             harvest_xp = site.task_snapshot.harvest_xp
-            add_item(player, result.item_id, result.quantity, result.quality)
+            for result in results:
+                add_item(player, result.item_id, result.quantity, result.quality)
             levels = grant_experience(player, harvest_xp, self.content)
             site.task_snapshot = None
-            site.task_result = None
+            site.task_results = []
             return {
                 "site_id": site_id,
-                "item_id": result.item_id,
-                "quantity": result.quantity,
-                "quality": result.quality,
-                "quality_name": QUALITY_NAMES[result.quality],
+                "drops": [self._gathering_result_snapshot(result) for result in results],
                 "experience": harvest_xp,
                 "levels": levels,
             }
@@ -969,8 +971,8 @@ class GameService:
             if not plot.empty and plot.ready_at <= now and plot.task_result is None:
                 self._resolve_output(plot, now, self.content.crop_map.get(plot.crop_id))
         for site in player.gathering_sites:
-            if site.task_snapshot and site.task_snapshot.ready_at <= now and site.task_result is None:
-                self._resolve_output(site, now)
+            if site.task_snapshot and site.task_snapshot.ready_at <= now and not site.task_results:
+                self._resolve_gathering_outputs(site, now)
         for station in player.crafting_stations:
             if station.task_snapshot and station.task_snapshot.ready_at <= now and station.task_result is None:
                 self._resolve_output(station, now)
@@ -1036,7 +1038,9 @@ class GameService:
         yield_max: int,
         harvest_xp: int,
         quality,
+        minimum_duration: int = 1,
         consumed_inputs: list[TaskInputSnapshot] | None = None,
+        output_pool: list[TaskOutputSnapshot] | None = None,
     ) -> ProductionTaskSnapshot:
         rules = self.content.industries[industry]
         if len(assigned_partner_ids) > rules.collaborator_slots:
@@ -1071,7 +1075,7 @@ class GameService:
         character_ability = rules.character_base_ability
         total_ability = character_ability + sum(entry.ability for entry in partner_snapshots)
         time_efficiency = 1 + 2 * total_ability / (total_ability + time_difficulty)
-        final_duration = max(1, ceil(base_duration / time_efficiency))
+        final_duration = max(minimum_duration, ceil(base_duration / time_efficiency))
         probabilities = quality_probabilities(
             total_ability,
             quality.thresholds,
@@ -1093,12 +1097,14 @@ class GameService:
             total_ability=total_ability,
             time_efficiency=time_efficiency,
             base_duration=base_duration,
+            minimum_duration=minimum_duration,
             final_duration=final_duration,
             produce_item_id=produce_item_id,
             yield_min=yield_min,
             yield_max=yield_max,
             harvest_xp=harvest_xp,
             consumed_inputs=consumed_inputs or [],
+            output_pool=output_pool or [],
             quality_parameters=TaskQualitySnapshot(
                 ability=total_ability,
                 thresholds=quality.thresholds,
@@ -1192,16 +1198,28 @@ class GameService:
             )
             gathering_sites.append({
                 **site.model_dump(),
+                "task_results": [self._gathering_result_snapshot(result) for result in site.task_results],
                 "empty": site.empty,
                 "ready": bool(task_snapshot and task_snapshot.ready_at <= now),
                 "remaining_seconds": max(0, task_snapshot.ready_at - now) if task_snapshot else 0,
                 "definition": definition.model_dump() if definition else None,
                 "task": {
                     **gathering_task_map[task_snapshot.content_id].model_dump(),
-                    "item": items[gathering_task_map[task_snapshot.content_id].produce_item_id].model_dump(),
+                    "item": items[gathering_task_map[task_snapshot.content_id].outputs[0].item_id].model_dump(),
+                    "outputs": [
+                        {**output.model_dump(), "item": items[output.item_id].model_dump()}
+                        for output in gathering_task_map[task_snapshot.content_id].outputs
+                    ],
                 } if task_snapshot and task_snapshot.content_id in gathering_task_map else None,
                 "available_tasks": [
-                    {**entry.model_dump(), "item": items[entry.produce_item_id].model_dump()}
+                    {
+                        **entry.model_dump(),
+                        "item": items[entry.outputs[0].item_id].model_dump(),
+                        "outputs": [
+                            {**output.model_dump(), "item": items[output.item_id].model_dump()}
+                            for output in entry.outputs
+                        ],
+                    }
                     for entry in self.content.gathering_tasks
                     if entry.site_id == site.site_id and entry.min_level <= player.level
                 ],
@@ -1660,6 +1678,36 @@ class GameService:
             quality=roll_quality(self.rng, probabilities),
             resolved_at=now,
         )
+
+    def _resolve_gathering_outputs(self, site: GatheringSiteState, now: int) -> None:
+        task = site.task_snapshot
+        if task is None:
+            return
+        output_pool = task.output_pool or [TaskOutputSnapshot(
+            item_id=task.produce_item_id,
+            chance=1,
+            quantity_min=task.yield_min,
+            quantity_max=task.yield_max,
+        )]
+        probabilities = task.quality_parameters.probabilities
+        site.task_results = [
+            ProductionResultSnapshot(
+                item_id=output.item_id,
+                quantity=self.rng.randint(output.quantity_min, output.quantity_max),
+                quality=roll_quality(self.rng, probabilities),
+                resolved_at=now,
+            )
+            for output in output_pool
+            if output.chance == 1 or self.rng.random() < output.chance
+        ]
+
+    def _gathering_result_snapshot(self, result: ProductionResultSnapshot) -> dict:
+        item = self.content.item_map.get(result.item_id)
+        return {
+            **result.model_dump(),
+            "quality_name": QUALITY_NAMES[result.quality],
+            "item": item.model_dump() if item else None,
+        }
 
     def _quality_unit_price(self, base_price: int, quality: int) -> int:
         grade = self.content.quality.grade_map.get(quality)

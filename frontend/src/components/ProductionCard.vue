@@ -53,9 +53,11 @@ const { progress, label } = useCountdown(
       <ItemTile :icon="node.activeItemIcon" :size="46" :accent="node.accent" />
       <div>
         <strong>{{ copy.readyTitle }}</strong>
-        <small v-if="node.taskResult">
-          <QualityTag :quality="node.taskResult.quality" /> {{ node.taskResult.quantity }} 个{{ node.activeItemName }}
-        </small>
+        <div v-if="node.taskResults.length" class="result-list">
+          <small v-for="result in node.taskResults" :key="`${result.item_id}:${result.quality}`">
+            <QualityTag :quality="result.quality" /> {{ result.quantity }} 个{{ result.item?.name || node.activeItemName }}
+          </small>
+        </div>
       </div>
       <ActionButton
         :action-key="`${scope}:collect`"
@@ -81,5 +83,7 @@ const { progress, label } = useCountdown(
 <style scoped>
 .production-tasks { display: grid; gap: 8px; margin-top: 4px; }
 .node-hint { margin: 9px 0 0; text-align: center; color: #778178; font-size: 12px; }
+.result-list { display: grid; gap: 3px; margin-top: 4px; }
+.result-list small { color: #aab5aa; }
 .running-progress { margin-top: 12px; }
 </style>

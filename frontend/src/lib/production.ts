@@ -22,6 +22,7 @@ export interface ProductionNode {
   assignmentLocked: boolean
   taskSnapshot: ProductionTaskSnapshot | null
   taskResult: ProductionResultSnapshot | null
+  taskResults: ProductionResultSnapshot[]
   activeName: string
   activeItemName: string
   activeItemIcon: string
@@ -98,7 +99,8 @@ function baseNode(
     assigned_partners: OwnedPartner[]
     assignment_locked: boolean
     task_snapshot: ProductionTaskSnapshot | null
-    task_result: ProductionResultSnapshot | null
+    task_result?: ProductionResultSnapshot | null
+    task_results?: ProductionResultSnapshot[]
   },
   fallbackAccent: string,
 ): Omit<ProductionNode, 'activeName' | 'activeItemName' | 'activeItemIcon'> {
@@ -114,7 +116,8 @@ function baseNode(
     assignedPartner: source.assigned_partners[0] || null,
     assignmentLocked: source.assignment_locked,
     taskSnapshot: source.task_snapshot,
-    taskResult: source.task_result,
+    taskResult: source.task_result || null,
+    taskResults: source.task_results || (source.task_result ? [source.task_result] : []),
   }
 }
 

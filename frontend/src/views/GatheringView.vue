@@ -22,7 +22,7 @@ const sites = computed(() => (game.state?.gathering_sites || []).map((site) => (
     <ViewHeader
       eyebrow="WOODLAND FORAGING"
       title="林野采集"
-      description="玩家无法亲自完成采集。派遣具有采集倾向的伙伴，让他们从镇外带回带品质的素材。"
+      description="玩家无法亲自完成采集。派遣具有采集倾向的伙伴，让他们从当地的掉落池中一次带回多种随机素材。"
     >
       <template #chip><UsersRound :size="18" /> 采集编制 {{ game.state.industry_rules.gathering?.partner_capacity || 0 }}</template>
     </ViewHeader>

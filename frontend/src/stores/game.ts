@@ -12,6 +12,13 @@ export interface ProductionOutcome {
   quantity?: number
   quality?: number
   quality_name?: string
+  drops?: Array<{
+    item_id: string
+    quantity: number
+    quality: number
+    quality_name: string
+    item?: { name: string } | null
+  }>
 }
 
 interface ActionOptions {
@@ -187,6 +194,12 @@ export const useGameStore = defineStore('game', () => {
 
   function outcomeText(result: ProductionOutcome | undefined, verb: string, noun: string) {
     if (!result) return ''
+    if (result.drops?.length) {
+      const summary = result.drops
+        .map((drop) => `${drop.quality_name || qualityName(drop.quality)}${drop.item?.name || drop.item_id}×${drop.quantity}`)
+        .join('、')
+      return `${verb}${summary}`
+    }
     const quality = result.quality_name || qualityName(result.quality)
     return `${verb} ${result.quantity} 个${quality}${noun}`
   }

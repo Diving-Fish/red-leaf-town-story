@@ -56,7 +56,7 @@ def test_flat_legacy_inventory_migrates_and_produce_becomes_normal():
         "created_at": 1,
         "updated_at": 1,
     })
-    assert player.schema_version == 11
+    assert player.schema_version == 12
     assert player.inventory == {"carrot_seed": {0: 2}, "carrot": {0: 3}}
     repository.players[player.player_id] = player
     repository.oauth_index[player.oauth_sub] = player.player_id

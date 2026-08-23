@@ -61,6 +61,15 @@ export interface ProductionResultSnapshot {
   quantity: number
   quality: number
   resolved_at: number
+  quality_name?: string
+  item?: {
+    id: string
+    name: string
+    icon: string
+    kind: string
+    sell_price: number
+    has_quality: boolean
+  } | null
 }
 
 export interface TaskPartnerSnapshot {
@@ -113,11 +122,10 @@ export interface GatheringTaskDefinition {
   id: string
   site_id: string
   name: string
-  produce_item_id: string
   duration_seconds: number
+  minimum_duration_seconds: number
   time_difficulty: number
-  yield_min: number
-  yield_max: number
+  outputs: GatheringOutputDefinition[]
   stamina_cost: number
   collect_xp: number
   min_level: number
@@ -132,11 +140,26 @@ export interface GatheringTaskDefinition {
   }
 }
 
+export interface GatheringOutputDefinition {
+  item_id: string
+  chance: number
+  quantity_min: number
+  quantity_max: number
+  item: {
+    id: string
+    name: string
+    icon: string
+    kind: string
+    sell_price: number
+    has_quality: boolean
+  }
+}
+
 export interface GatheringSiteState {
   site_id: string
   assigned_partner_ids: string[]
   task_snapshot: ProductionTaskSnapshot | null
-  task_result: ProductionResultSnapshot | null
+  task_results: ProductionResultSnapshot[]
   empty: boolean
   ready: boolean
   remaining_seconds: number
@@ -299,8 +322,20 @@ export interface CraftingStationState {
   assignment_locked_until: number | null
 }
 
-export interface MiningTaskDefinition extends Omit<GatheringTaskDefinition, 'site_id'> {
+export interface MiningTaskDefinition {
+  id: string
   site_id: string
+  name: string
+  produce_item_id: string
+  duration_seconds: number
+  time_difficulty: number
+  yield_min: number
+  yield_max: number
+  stamina_cost: number
+  collect_xp: number
+  min_level: number
+  quality: QualityCurveDefinition
+  item: GatheringTaskDefinition['item']
 }
 
 export interface MiningSiteState {

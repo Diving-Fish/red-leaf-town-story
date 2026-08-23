@@ -12,6 +12,7 @@ from .models import (
     QQIdentity,
     TaskPartnerSnapshot,
     TaskInputSnapshot,
+    TaskOutputSnapshot,
     TaskQualitySnapshot,
 )
 
@@ -29,5 +30,6 @@ __all__ = [
     "QQIdentity",
     "TaskPartnerSnapshot",
     "TaskInputSnapshot",
+    "TaskOutputSnapshot",
     "TaskQualitySnapshot",
 ]

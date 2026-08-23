@@ -107,24 +107,41 @@ class GatheringSiteDefinition(BaseModel):
     min_level: int = Field(default=1, ge=1)
 
 
+class GatheringOutputDefinition(BaseModel):
+    item_id: str = Field(min_length=1)
+    chance: float = Field(gt=0, le=1)
+    quantity_min: int = Field(ge=1)
+    quantity_max: int = Field(ge=1)
+
+    @model_validator(mode="after")
+    def validate_quantity(self):
+        if self.quantity_max < self.quantity_min:
+            raise ValueError("gathering output quantity_max must be >= quantity_min")
+        return self
+
+
 class GatheringTaskDefinition(BaseModel):
     id: str = Field(min_length=1)
     site_id: str = Field(min_length=1)
     name: str = Field(min_length=1)
-    produce_item_id: str = Field(min_length=1)
     duration_seconds: int = Field(gt=0)
+    minimum_duration_seconds: int = Field(gt=0)
     time_difficulty: int = Field(gt=0)
-    yield_min: int = Field(ge=1)
-    yield_max: int = Field(ge=1)
+    outputs: list[GatheringOutputDefinition] = Field(min_length=4, max_length=5)
     stamina_cost: int = Field(ge=0)
     collect_xp: int = Field(ge=0)
     min_level: int = Field(ge=1)
     quality: QualityCurveDefinition
 
     @model_validator(mode="after")
-    def validate_yield(self):
-        if self.yield_max < self.yield_min:
-            raise ValueError(f"gathering task {self.id}: yield_max must be >= yield_min")
+    def validate_outputs(self):
+        if self.minimum_duration_seconds > self.duration_seconds:
+            raise ValueError(f"gathering task {self.id}: minimum duration cannot exceed base duration")
+        item_ids = [entry.item_id for entry in self.outputs]
+        if len(item_ids) != len(set(item_ids)):
+            raise ValueError(f"gathering task {self.id}: output items must be unique")
+        if not any(entry.chance == 1 for entry in self.outputs):
+            raise ValueError(f"gathering task {self.id}: at least one output must be guaranteed")
         return self
 
 
@@ -330,9 +347,9 @@ class GameContent(BaseModel):
         for task in self.gathering_tasks:
             if task.site_id not in gathering_site_ids:
                 raise ValueError(f"gathering task {task.id} references an unknown site")
-            if task.produce_item_id not in items:
+            if any(output.item_id not in items for output in task.outputs):
                 raise ValueError(f"gathering task {task.id} references an unknown item")
-            if not self.item_map[task.produce_item_id].has_quality:
+            if any(not self.item_map[output.item_id].has_quality for output in task.outputs):
                 raise ValueError(f"gathering task {task.id} output must support quality")
         talent_ids = {talent.id for talent in self.talents}
         for talent in self.talents:

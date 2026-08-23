@@ -23,6 +23,17 @@ class Clock:
         self.now += seconds
 
 
+class FixedRandom:
+    def __init__(self, draw: float):
+        self.draw = draw
+
+    def randint(self, lower: int, upper: int) -> int:
+        return lower
+
+    def random(self) -> float:
+        return self.draw
+
+
 def partner(partner_id: str, industry: str = "gathering") -> PartnerDefinition:
     return PartnerDefinition.model_validate({
         "id": partner_id,
@@ -72,6 +83,10 @@ def test_gathering_requires_partner_and_locks_it_until_ready(gathering_game):
     assert site["task_snapshot"]["industry"] == "gathering"
     assert site["task_snapshot"]["partner_snapshots"][0]["ability"] == 40
     assert site["task_snapshot"]["quality_parameters"]["ability"] == 40
+    assert site["task_snapshot"]["minimum_duration"] == 8 * 3600
+    assert site["task_snapshot"]["final_duration"] >= 8 * 3600
+    assert len(site["task_snapshot"]["output_pool"]) == 4
+    assert started["state"]["player"]["stamina"] == 20
     assert site["assignment_locked"] is True
     assert next(entry for entry in started["state"]["partners"] if entry["partner_id"] == "gather_one")["locked"] is True
 
@@ -81,13 +96,16 @@ def test_gathering_requires_partner_and_locks_it_until_ready(gathering_game):
         service.assign_partner("gather-sub", 0, "gather_one")
 
     clock.advance(site["task_snapshot"]["final_duration"])
-    first_result = service.snapshot_by_sub("gather-sub")["gathering_sites"][0]["task_result"]
-    second_result = service.snapshot_by_sub("gather-sub")["gathering_sites"][0]["task_result"]
-    assert first_result == second_result
-    assert 1 <= first_result["quality"] <= 4
+    first_results = service.snapshot_by_sub("gather-sub")["gathering_sites"][0]["task_results"]
+    second_results = service.snapshot_by_sub("gather-sub")["gathering_sites"][0]["task_results"]
+    assert first_results == second_results
+    assert first_results[0]["item_id"] == "maple_wood"
+    assert all(1 <= result["quality"] <= 5 for result in first_results)
     collected = service.collect_gathering("gather-sub", "maple_forest")
-    assert collected["result"]["quality"] == first_result["quality"]
-    assert repository.get(player.player_id).inventory["maple_wood"][first_result["quality"]] == first_result["quantity"]
+    assert collected["result"]["drops"] == first_results
+    inventory = repository.get(player.player_id).inventory
+    for result in first_results:
+        assert inventory[result["item_id"]][result["quality"]] == result["quantity"]
     assert collected["state"]["gathering_sites"][0]["empty"] is True
 
 
@@ -111,12 +129,62 @@ def test_gathering_capacity_is_derived_from_talent_tree(gathering_game):
     assert len([site for site in assigned["state"]["gathering_sites"] if site["assigned_partner_ids"]]) == 2
 
 
+@pytest.mark.parametrize(("draw", "expected_ids"), [
+    (0, ["maple_wood", "woodland_mushroom", "maple_resin", "amber_beeswax"]),
+    (0.999999, ["maple_wood"]),
+])
+def test_each_optional_gathering_drop_rolls_independently(gathering_game, draw, expected_ids):
+    service, _, clock, _ = gathering_game
+    service.rng = FixedRandom(draw)
+    service.assign_gathering_partner("gather-sub", "maple_forest", "gather_one")
+    started = service.start_gathering("gather-sub", "maple_forest", "collect_maple_wood")
+
+    clock.advance(started["result"]["final_duration"])
+    results = service.snapshot_by_sub("gather-sub")["gathering_sites"][0]["task_results"]
+
+    assert [result["item_id"] for result in results] == expected_ids
+
+
 def test_quality_gathering_material_can_be_sold_by_exact_grade(gathering_game):
     service, repository, _, player = gathering_game
     repository.update(player.player_id, lambda state: state.inventory.update({"maple_wood": {3: 2}}))
     sold = service.sell("gather-sub", "maple_wood", 1, 3)
     assert sold["result"]["quality_name"] == "上品"
-    assert sold["result"]["unit_price"] == 11
+    assert sold["result"]["unit_price"] == 9
+
+
+def test_legacy_single_gathering_result_migrates_to_drop_list():
+    player = PlayerState.model_validate({
+        "schema_version": 11,
+        "player_id": "legacy-gathering-result",
+        "oauth_sub": "legacy-gathering-result-sub",
+        "display_name": "旧采集居民",
+        "stamina_updated_at": 1,
+        "created_at": 1,
+        "updated_at": 1,
+        "gathering_sites": [{
+            "site_id": "maple_forest",
+            "task_result": {"item_id": "maple_wood", "quantity": 2, "quality": 3, "resolved_at": 1},
+        }],
+    })
+
+    assert player.schema_version == 12
+    assert [result.model_dump() for result in player.gathering_sites[0].task_results] == [
+        {"item_id": "maple_wood", "quantity": 2, "quality": 3, "resolved_at": 1},
+    ]
+
+
+def test_legacy_running_gathering_task_without_pool_still_resolves(gathering_game):
+    service, repository, clock, player = gathering_game
+    service.rng = FixedRandom(0)
+    service.assign_gathering_partner("gather-sub", "maple_forest", "gather_one")
+    started = service.start_gathering("gather-sub", "maple_forest", "collect_maple_wood")
+    repository.update(player.player_id, lambda state: setattr(state.gathering_sites[0].task_snapshot, "output_pool", []))
+
+    clock.advance(started["result"]["final_duration"])
+    results = service.snapshot_by_sub("gather-sub")["gathering_sites"][0]["task_results"]
+
+    assert [result["item_id"] for result in results] == ["maple_wood"]
 
 
 def test_player_rejects_partner_assigned_across_farm_and_gathering():

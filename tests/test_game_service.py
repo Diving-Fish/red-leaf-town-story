@@ -127,7 +127,7 @@ def test_old_player_save_migrates_to_empty_partner_warehouse():
         "created_at": 1,
         "updated_at": 1,
     })
-    assert player.schema_version == 11
+    assert player.schema_version == 12
     assert player.owned_partners == []
 
 
@@ -142,7 +142,7 @@ def test_schema_two_spirit_fields_migrate_to_partner_fields():
         "updated_at": 1,
         "owned_spirits": [{"spirit_id": "maple_sprite", "acquired_at": 2}],
     })
-    assert player.schema_version == 11
+    assert player.schema_version == 12
     assert player.owned_partners[0].partner_id == "maple_sprite"
     assert "owned_spirits" not in player.model_dump()
 
@@ -158,7 +158,7 @@ def test_schema_three_plots_migrate_to_partner_assignment_structure():
         "updated_at": 1,
         "plots": [{"slot": 0}],
     })
-    assert player.schema_version == 11
+    assert player.schema_version == 12
     assert player.plots[0].assigned_partner_ids == []
     assert player.plots[0].task_snapshot is None
 

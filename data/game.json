@@ -1,5 +1,5 @@
 {
-  "schema_version": 8,
+  "schema_version": 9,
   "game": {
     "title": "红叶镇物语",
     "starting_coins": 80,
@@ -199,7 +199,39 @@
       "name": "枫木",
       "icon": "trees",
       "kind": "material",
+      "sell_price": 6,
+      "has_quality": true
+    },
+    {
+      "id": "woodland_mushroom",
+      "name": "林间菌菇",
+      "icon": "vegan",
+      "kind": "material",
       "sell_price": 7,
+      "has_quality": true
+    },
+    {
+      "id": "maple_resin",
+      "name": "红枫树脂",
+      "icon": "droplets",
+      "kind": "material",
+      "sell_price": 10,
+      "has_quality": true
+    },
+    {
+      "id": "amber_beeswax",
+      "name": "琥珀蜂蜡",
+      "icon": "shell",
+      "kind": "material",
+      "sell_price": 16,
+      "has_quality": true
+    },
+    {
+      "id": "tough_fodder",
+      "name": "柔韧牧草",
+      "icon": "wheat",
+      "kind": "material",
+      "sell_price": 5,
       "has_quality": true
     },
     {
@@ -208,6 +240,22 @@
       "icon": "leaf",
       "kind": "material",
       "sell_price": 10,
+      "has_quality": true
+    },
+    {
+      "id": "morning_dew_flower",
+      "name": "晨露花",
+      "icon": "flower-2",
+      "kind": "material",
+      "sell_price": 14,
+      "has_quality": true
+    },
+    {
+      "id": "silver_star_moss",
+      "name": "银星苔",
+      "icon": "gem",
+      "kind": "material",
+      "sell_price": 30,
       "has_quality": true
     },
     {
@@ -416,49 +464,97 @@
     {
       "id": "collect_maple_wood",
       "site_id": "maple_forest",
-      "name": "拾取枫木",
-      "produce_item_id": "maple_wood",
-      "duration_seconds": 45,
-      "time_difficulty": 90,
-      "yield_min": 2,
-      "yield_max": 3,
-      "stamina_cost": 1,
-      "collect_xp": 4,
+      "name": "探索红枫林缘",
+      "duration_seconds": 43200,
+      "minimum_duration_seconds": 28800,
+      "time_difficulty": 180,
+      "outputs": [
+        {
+          "item_id": "maple_wood",
+          "chance": 1,
+          "quantity_min": 6,
+          "quantity_max": 9
+        },
+        {
+          "item_id": "woodland_mushroom",
+          "chance": 0.75,
+          "quantity_min": 2,
+          "quantity_max": 4
+        },
+        {
+          "item_id": "maple_resin",
+          "chance": 0.4,
+          "quantity_min": 1,
+          "quantity_max": 3
+        },
+        {
+          "item_id": "amber_beeswax",
+          "chance": 0.15,
+          "quantity_min": 1,
+          "quantity_max": 2
+        }
+      ],
+      "stamina_cost": 0,
+      "collect_xp": 10,
       "min_level": 1,
       "quality": {
         "thresholds": [
-          45,
+          25,
+          55,
           90,
-          150,
-          230
+          210
         ],
         "width": 16,
         "miracle_probability_cap": 0.003,
-        "miracle_eligible": false
+        "miracle_eligible": true
       }
     },
     {
       "id": "collect_autumn_herb",
       "site_id": "dew_meadow",
-      "name": "采集秋露草",
-      "produce_item_id": "autumn_herb",
-      "duration_seconds": 90,
-      "time_difficulty": 135,
-      "yield_min": 1,
-      "yield_max": 3,
-      "stamina_cost": 2,
-      "collect_xp": 7,
+      "name": "探索秋露草场",
+      "duration_seconds": 50400,
+      "minimum_duration_seconds": 28800,
+      "time_difficulty": 180,
+      "outputs": [
+        {
+          "item_id": "tough_fodder",
+          "chance": 1,
+          "quantity_min": 7,
+          "quantity_max": 11
+        },
+        {
+          "item_id": "autumn_herb",
+          "chance": 0.8,
+          "quantity_min": 3,
+          "quantity_max": 5
+        },
+        {
+          "item_id": "morning_dew_flower",
+          "chance": 0.35,
+          "quantity_min": 1,
+          "quantity_max": 3
+        },
+        {
+          "item_id": "silver_star_moss",
+          "chance": 0.1,
+          "quantity_min": 1,
+          "quantity_max": 1
+        }
+      ],
+      "stamina_cost": 0,
+      "collect_xp": 12,
       "min_level": 2,
       "quality": {
         "thresholds": [
-          60,
-          115,
-          180,
-          270
+          35,
+          65,
+          100,
+          230
         ],
-        "width": 19,
+        "width": 17,
         "miracle_probability_cap": 0.003,
-        "miracle_eligible": false
+        "miracle_eligible": true
       }
     }
   ],

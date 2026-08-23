@@ -146,6 +146,22 @@ async def test_gathering_partner_start_and_talent_apis(client, service):
     assert body["data"]["state"]["gathering_sites"][0]["task_snapshot"]["industry"] == "gathering"
     assert body["data"]["state"]["partners"][0]["locked"] is True
 
+    def finish_gathering(state):
+        task = state.gathering_sites[0].task_snapshot
+        task.started_at = 1_700_000_000 - task.final_duration
+        task.ready_at = 1_700_000_000
+
+    service.repository.update(player.player_id, finish_gathering)
+    ready_response = await client.get("/api/red-leaf-town/state")
+    ready_site = (await ready_response.get_json())["data"]["gathering_sites"][0]
+    assert ready_site["task_results"][0]["item_id"] == "maple_wood"
+
+    collected = await client.post("/api/red-leaf-town/gathering/sites/maple_forest/collect")
+    collected_body = await collected.get_json()
+    assert collected.status_code == 200
+    assert collected_body["data"]["result"]["drops"][0]["item_id"] == "maple_wood"
+    assert collected_body["data"]["state"]["gathering_sites"][0]["task_results"] == []
+
     service.repository.update(player.player_id, lambda state: setattr(state, "experience", 20))
     unlocked = await client.post("/api/red-leaf-town/talents/gathering_roster_1/unlock")
     unlocked_body = await unlocked.get_json()

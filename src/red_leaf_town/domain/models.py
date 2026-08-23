@@ -22,6 +22,19 @@ class TaskInputSnapshot(BaseModel):
     quantity: int = Field(ge=1)
 
 
+class TaskOutputSnapshot(BaseModel):
+    item_id: str = Field(min_length=1)
+    chance: float = Field(gt=0, le=1)
+    quantity_min: int = Field(ge=1)
+    quantity_max: int = Field(ge=1)
+
+    @model_validator(mode="after")
+    def validate_quantity(self):
+        if self.quantity_max < self.quantity_min:
+            raise ValueError("task output quantity_max must be greater than or equal to quantity_min")
+        return self
+
+
 class TaskQualitySnapshot(BaseModel):
     ability: int = Field(default=0, ge=0)
     thresholds: list[float] = Field(default_factory=lambda: [1, 2, 3, 4], min_length=4, max_length=4)
@@ -56,12 +69,14 @@ class ProductionTaskSnapshot(BaseModel):
     total_ability: int = Field(ge=0)
     time_efficiency: float = Field(ge=1, le=3)
     base_duration: int = Field(gt=0)
+    minimum_duration: int = Field(default=1, gt=0)
     final_duration: int = Field(gt=0)
     produce_item_id: str = Field(min_length=1)
     yield_min: int = Field(ge=1)
     yield_max: int = Field(ge=1)
     harvest_xp: int = Field(ge=0)
     consumed_inputs: list[TaskInputSnapshot] = Field(default_factory=list)
+    output_pool: list[TaskOutputSnapshot] = Field(default_factory=list, max_length=5)
     quality_parameters: TaskQualitySnapshot = Field(default_factory=TaskQualitySnapshot)
 
     @model_validator(mode="after")
@@ -70,10 +85,17 @@ class ProductionTaskSnapshot(BaseModel):
             raise ValueError("task ready_at must equal started_at plus final_duration")
         if self.final_duration > self.base_duration:
             raise ValueError("task final_duration cannot exceed base_duration")
+        if self.minimum_duration > self.final_duration:
+            raise ValueError("task final_duration cannot be shorter than minimum_duration")
         if self.yield_max < self.yield_min:
             raise ValueError("task yield_max must be greater than or equal to yield_min")
         if self.assigned_partner_ids != [entry.partner_id for entry in self.partner_snapshots]:
             raise ValueError("task partner snapshots must match assigned partner ids")
+        output_ids = [entry.item_id for entry in self.output_pool]
+        if len(output_ids) != len(set(output_ids)):
+            raise ValueError("task output pool items must be unique")
+        if self.output_pool and not any(entry.chance == 1 for entry in self.output_pool):
+            raise ValueError("task output pool must contain a guaranteed output")
         return self
 
 
@@ -102,7 +124,7 @@ class GatheringSiteState(BaseModel):
     site_id: str = Field(min_length=1)
     assigned_partner_ids: list[str] = Field(default_factory=list, max_length=1)
     task_snapshot: ProductionTaskSnapshot | None = None
-    task_result: ProductionResultSnapshot | None = None
+    task_results: list[ProductionResultSnapshot] = Field(default_factory=list, max_length=5)
 
     @property
     def empty(self) -> bool:
@@ -202,7 +224,7 @@ class PortalProgressState(BaseModel):
 
 
 class PlayerState(BaseModel):
-    schema_version: int = 11
+    schema_version: int = 12
     version: int = 1
     player_id: str
     oauth_sub: str
@@ -262,7 +284,13 @@ class PlayerState(BaseModel):
         if schema_version < 11:
             migrated.setdefault("portals", [])
             migrated.setdefault("bonus_talent_points", 0)
-        migrated["schema_version"] = 11
+        if schema_version < 12:
+            for site in migrated.get("gathering_sites") or []:
+                if not isinstance(site, dict):
+                    continue
+                legacy_result = site.pop("task_result", None)
+                site.setdefault("task_results", [legacy_result] if legacy_result else [])
+        migrated["schema_version"] = 12
         return migrated
 
     @model_validator(mode="after")
