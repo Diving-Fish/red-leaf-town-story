@@ -115,11 +115,11 @@ async def test_gacha_and_partner_growth_apis_commit_domain_actions(client, servi
 
     pulled = await client.post(
         "/api/red-leaf-town/gacha/pull",
-        json={"count": 10, "request_id": "route-recruit-request"},
+        json={"count": 10, "request_id": "route-recruit-request", "pool_id": "standard-1"},
     )
     replayed = await client.post(
         "/api/red-leaf-town/gacha/pull",
-        json={"count": 10, "request_id": "route-recruit-request"},
+        json={"count": 10, "request_id": "route-recruit-request", "pool_id": "standard-1"},
     )
     pulled_body = (await pulled.get_json())["data"]
     replayed_body = (await replayed.get_json())["data"]

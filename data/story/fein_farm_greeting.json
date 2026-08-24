@@ -10,7 +10,7 @@
     { "type": "dialogue", "speaker": "", "text": "翻过来的泥土还带着夜里的凉气。" },
     { "type": "portrait", "slot": "left", "asset_id": "fein_story" },
     { "type": "dialogue", "speaker": "绯恩", "text": "这块地空了一整个冬天啦，你打算先种点什么？", "focus": "left" },
-    { "type": "dialogue", "speaker": "绯恩", "text": "昨晚给你的橙橙果种子正合适。选一块空地种下去，三十秒就能收获。", "focus": "left" },
-    { "type": "dialogue", "speaker": "绯恩", "text": "别急着一次翻完，红叶镇的时间比你想象得慢。", "focus": "left" }
+    { "type": "dialogue", "speaker": "绯恩", "text": "正好，昨晚给你的橙橙果种子想找个家。挑块空地埋下去，转眼就能收——顺便也替我种一份。", "focus": "left" },
+    { "type": "dialogue", "speaker": "绯恩", "text": "不要着急，这里时间很慢，说不定某一天你就能想起来你自己的事情了。", "focus": "left" }
   ]
 }

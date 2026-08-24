@@ -3,9 +3,7 @@ import { Sparkles } from 'lucide-vue-next'
 
 withDefaults(
   defineProps<{
-    eyebrow?: string
     title?: string
-    description?: string
     backgroundUrl?: string | null
     pityTags?: string[]
   }>(),
@@ -22,9 +20,7 @@ withDefaults(
     <div class="gacha-poster-frame" />
 
     <div class="gacha-poster-copy">
-      <p v-if="eyebrow" class="eyebrow">{{ eyebrow }}</p>
       <h2 v-if="title">{{ title }}</h2>
-      <p v-if="description" class="gacha-poster-desc">{{ description }}</p>
       <div v-if="pityTags.length" class="gacha-poster-pity">
         <span v-for="tag in pityTags" :key="tag">{{ tag }}</span>
       </div>
@@ -68,10 +64,17 @@ withDefaults(
 }
 
 .gacha-poster-copy { position: relative; z-index: 1; max-width: min(70%, 520px); padding: clamp(20px, 4vw, 40px); }
-.gacha-poster-copy h2 { max-width: 460px; margin: 8px 0 10px; font: 700 clamp(1.5rem, 3.6vw, 2.6rem) Georgia, 'Noto Serif SC', serif; }
-.gacha-poster-desc { margin: 0; color: #b6c0b6; font-size: 13px; line-height: 1.7; }
+.gacha-poster-copy h2 {
+  max-width: 460px;
+  margin: 0 0 14px;
+  color: #f8f2df;
+  font: 700 clamp(1.8rem, 4.4vw, 3.2rem) Georgia, 'Noto Serif SC', serif;
+  -webkit-text-stroke: 1.6px #000;
+  paint-order: stroke fill;
+  text-shadow: 0 3px 12px rgba(0, 0, 0, .4);
+}
 .gacha-poster-pity { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
-.gacha-poster-pity span { padding: 5px 9px; color: #c6b488; font-size: 11px; border-radius: 99px; background: #d7b46b16; border: 1px solid #d7b46b26; }
+.gacha-poster-pity span { padding: 5px 9px; color: #f0dfa8; font-size: 11px; font-weight: 600; border-radius: 99px; background: #3a2e14e0; border: 1px solid #d7b46b8c; }
 
 .gacha-poster-glass {
   position: absolute;
@@ -93,7 +96,6 @@ withDefaults(
 @media (max-width: 720px) {
   .gacha-poster { border-radius: 26px 8px 26px 8px; }
   .gacha-poster-copy { max-width: 100%; padding: 14px; }
-  .gacha-poster-desc { display: none; }
   .gacha-poster-pity { margin-top: 8px; }
   .gacha-poster-glass { right: 10px; bottom: 10px; min-width: 0; padding: 10px; gap: 6px; }
 }

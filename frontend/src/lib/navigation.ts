@@ -50,7 +50,7 @@ export const NAV_ITEMS: NavItem[] = [
   },
   { to: '/market', label: '商店', icon: Store, primary: true },
   { to: '/partners', label: '伙伴', icon: Sparkles, primary: false },
-  { to: '/gacha', label: '招募', icon: Flame, primary: false, unlocked: (state) => state.gacha.unlocked },
+  { to: '/gacha', label: '招募', icon: Flame, primary: false, unlocked: (state) => state.gacha_pools.some((pool) => pool.unlocked) },
 ]
 
 export function unlockedNavItems(state: GameState | null): NavItem[] {

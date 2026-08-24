@@ -85,12 +85,17 @@ async def recruit_partner(bot: Bot, event: Event, message: Message = CommandArg(
             identity,
             int(raw),
             f"qq-{secrets.token_hex(8)}",
+            "standard-1",
         )
     except GameError as exc:
         await _reply(event, exc.message).send()
         return
-    catalog = {entry["partner_id"]: entry for entry in result["state"]["gacha"]["catalog"]}
-    task_items = {entry["id"]: entry for entry in result["state"]["gacha"]["task_items"]}
+    pool_state = next(
+        (pool for pool in result["state"]["gacha_pools"] if pool["pool_id"] == "standard-1"),
+        {"catalog": [], "task_items": []},
+    )
+    catalog = {entry["partner_id"]: entry for entry in pool_state["catalog"]}
+    task_items = {entry["id"]: entry for entry in pool_state["task_items"]}
     lines = []
     for drop in result["result"]["results"]:
         if drop["kind"] == "partner":

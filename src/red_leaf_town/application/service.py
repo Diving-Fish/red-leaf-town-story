@@ -9,6 +9,7 @@ from red_leaf_town.content import GameContent, GatheringDrawDefinition
 from red_leaf_town.domain import (
     CraftingStationState,
     GachaDropRecord,
+    GachaPoolProgressState,
     GachaRequestRecord,
     GatheringSiteState,
     MiningSiteState,
@@ -36,11 +37,13 @@ from red_leaf_town.domain.progression import (
 )
 from red_leaf_town.domain.production import build_results, draw_count, pick_weighted
 from red_leaf_town.domain.quality import QUALITY_NAMES, quality_probabilities
+from red_leaf_town.gacha_pools import GachaDefinition, load_gacha_pools
 from red_leaf_town.recipe_unlocks import describe_recipe_unlock, evaluate_recipe_unlock
 from red_leaf_town.partner_content import (
     GROWTH_CURVE_NAMES,
     INDUSTRY_NAMES,
     PartnerCatalog,
+    PartnerDefinition,
     level_cap_for_breakthrough,
     load_partner_catalog,
 )
@@ -72,6 +75,7 @@ class GameService:
         partner_catalog_loader: Callable[[], PartnerCatalog] = load_partner_catalog,
         story_catalog_loader: Callable[[], StoryCatalog] = load_story_catalog,
         story_asset_loader: Callable[[], StoryAssetCatalog] = load_story_asset_catalog,
+        gacha_pool_loader: Callable[[], dict[str, GachaDefinition]] = load_gacha_pools,
     ):
         self.content = content
         self.repository = repository
@@ -80,6 +84,13 @@ class GameService:
         self.partner_catalog_loader = partner_catalog_loader
         self.story_catalog_loader = story_catalog_loader
         self.story_asset_loader = story_asset_loader
+        self.gacha_pool_loader = gacha_pool_loader
+
+    def _gacha_pool(self, pool_id: str) -> GachaDefinition:
+        pool = self.gacha_pool_loader().get(pool_id)
+        if pool is None:
+            raise GameError("gacha_pool_not_found", "招募池不存在", 404)
+        return pool
 
     def ensure_player(self, oauth_sub: str, display_name: str) -> PlayerState:
         return self.repository.ensure_player(oauth_sub, display_name or "红叶镇居民", self._now())
@@ -601,7 +612,7 @@ class GameService:
         quantity = int(quantity)
         if quantity < 1:
             raise GameError("invalid_quantity", "兑换数量必须为正数")
-        cost = quantity * self.content.gacha.maple_flame_per_leaf
+        cost = quantity * self.content.gacha_economy.maple_flame_per_leaf
 
         def mutation(player: PlayerState):
             if player.maple_flame < cost:
@@ -613,14 +624,15 @@ class GameService:
         player, result = self._update_by_sub(oauth_sub, mutation)
         return {"result": result, "state": self._snapshot(player)}
 
-    def recruit(self, oauth_sub: str, count: int, request_id: str) -> dict:
+    def recruit(self, oauth_sub: str, count: int, request_id: str, pool_id: str) -> dict:
         if count not in (1, 10):
             raise GameError("invalid_pull_count", "只能单次或十次招募")
         request_id = str(request_id or "").strip()
         if len(request_id) < 8 or len(request_id) > 128:
             raise GameError("invalid_request_id", "招募请求标识不正确")
         now = self._now()
-        gacha = self.content.gacha
+        gacha = self._gacha_pool(pool_id)
+        economy = self.content.gacha_economy
         catalog = self.partner_catalog_loader()
         partners_by_rarity = {
             rarity: [entry for entry in catalog.partners if entry.rarity == rarity]
@@ -636,28 +648,35 @@ class GameService:
                 return {**previous.model_dump(), "replayed": True}
             if player.guide_leaves < count:
                 raise GameError("resource_insufficient", "引路枫叶不足")
+            progress = player.gacha_progress.get(pool_id)
+            if progress is None:
+                progress = GachaPoolProgressState()
+                player.gacha_progress[pool_id] = progress
+            if gacha.max_pulls_per_player is not None and progress.total_pulls + count > gacha.max_pulls_per_player:
+                remaining = max(0, gacha.max_pulls_per_player - progress.total_pulls)
+                raise GameError("gacha_pool_exhausted", f"这个招募池最多能招募 {gacha.max_pulls_per_player} 次，你还剩 {remaining} 次")
 
             player.guide_leaves -= count
             results: list[GachaDropRecord] = []
             for _ in range(count):
-                force_five = player.gacha_five_pity + 1 >= gacha.five_star_pity
-                force_four = player.gacha_four_pity + 1 >= gacha.four_star_guarantee
-                rarity = 5 if force_five else 4 if force_four else self._roll_gacha_rarity(player)
+                force_five = progress.five_pity + 1 >= gacha.five_star_pity
+                force_four = progress.four_pity + 1 >= gacha.four_star_guarantee
+                rarity = 5 if force_five else 4 if force_four else self._roll_gacha_rarity(gacha, progress)
                 if rarity is None:
-                    drop = self._roll_gacha_item(player)
+                    drop = self._roll_gacha_item(gacha, player)
                     results.append(drop)
-                    player.gacha_four_pity += 1
-                    player.gacha_five_pity += 1
+                    progress.four_pity += 1
+                    progress.five_pity += 1
                 else:
                     candidates = partners_by_rarity[rarity]
                     if not candidates:
-                        raise GameError("gacha_pool_invalid", f"常驻池没有 {rarity} 星伙伴", 500)
-                    definition = candidates[self.rng.randrange(len(candidates))]
+                        raise GameError("gacha_pool_invalid", f"招募池没有 {rarity} 星伙伴", 500)
+                    definition = self._pick_gacha_partner(gacha, candidates, rarity)
                     owned = next(
                         (entry for entry in player.owned_partners if entry.partner_id == definition.id),
                         None,
                     )
-                    marks = gacha.duplicate_marks[rarity] if owned else 0
+                    marks = economy.duplicate_marks[rarity] if owned else 0
                     if owned:
                         player.companion_marks += marks
                     else:
@@ -673,13 +692,13 @@ class GameService:
                         duplicate=owned is not None,
                         companion_marks=marks,
                     ))
-                    player.gacha_four_pity = 0 if rarity >= 4 else player.gacha_four_pity + 1
-                    player.gacha_five_pity = 0 if rarity == 5 else player.gacha_five_pity + 1
-                player.gacha_total_pulls += 1
+                    progress.four_pity = 0 if rarity >= 4 else progress.four_pity + 1
+                    progress.five_pity = 0 if rarity == 5 else progress.five_pity + 1
+                progress.total_pulls += 1
 
             record = GachaRequestRecord(
                 request_id=request_id,
-                pool_id=gacha.pool_id,
+                pool_id=pool_id,
                 count=count,
                 created_at=now,
                 results=results,
@@ -690,12 +709,12 @@ class GameService:
         player, result = self._update_by_sub(oauth_sub, mutation)
         return {"result": result, "state": self._snapshot(player, now)}
 
-    def recruit_by_identity(self, identity: QQIdentity, count: int, request_id: str) -> dict:
+    def recruit_by_identity(self, identity: QQIdentity, count: int, request_id: str, pool_id: str) -> dict:
         player_id = self.repository.player_id_for_identity(identity)
         player = self.repository.get(player_id) if player_id else None
         if player is None:
             raise GameError("identity_not_bound", "这个 QQ 身份尚未绑定红叶镇角色", 404)
-        return self.recruit(player.oauth_sub, count, request_id)
+        return self.recruit(player.oauth_sub, count, request_id, pool_id)
 
     def train_partner(self, oauth_sub: str, partner_id: str, item_id: str, quantity: int) -> dict:
         quantity = int(quantity)
@@ -722,7 +741,7 @@ class GameService:
             owned = self._owned_partner(player, partner_id)
             if owned.stars >= 5:
                 raise GameError("partner_max_stars", "伙伴已经达到五星")
-            cost = self.content.gacha.star_up_costs[owned.stars]
+            cost = self.content.gacha_economy.star_up_costs[owned.stars]
             if player.companion_marks < cost:
                 raise GameError("resource_insufficient", "同行印记不足")
             player.companion_marks -= cost
@@ -1237,10 +1256,9 @@ class GameService:
             raise GameError("player_not_found", "角色不存在", 404)
         return self.repository.update(player.player_id, mutation)
 
-    def _roll_gacha_rarity(self, player: PlayerState) -> int | None:
-        gacha = self.content.gacha
+    def _roll_gacha_rarity(self, gacha: GachaDefinition, progress: GachaPoolProgressState) -> int | None:
         probabilities = gacha.rarity_probabilities
-        if player.gacha_total_pulls < gacha.first_pulls_without_items:
+        if progress.total_pulls < gacha.first_pulls_without_items:
             total = sum(probabilities.values())
             draw = self.rng.random() * total
             for rarity in (5, 4, 3):
@@ -1255,8 +1273,21 @@ class GameService:
                 return rarity
         return None
 
-    def _roll_gacha_item(self, player: PlayerState) -> GachaDropRecord:
-        drops = self.content.gacha.item_drops
+    def _pick_gacha_partner(self, gacha: GachaDefinition, candidates: list[PartnerDefinition], rarity: int) -> PartnerDefinition:
+        """五星的 up 池：featured_rate 概率抽中 featured_partner_id，否则在同星级里均匀抽其它角色。"""
+        if rarity == 5 and gacha.featured_partner_id:
+            featured = next((entry for entry in candidates if entry.id == gacha.featured_partner_id), None)
+            if featured is not None:
+                if self.rng.random() < gacha.featured_rate:
+                    return featured
+                others = [entry for entry in candidates if entry.id != gacha.featured_partner_id]
+                if others:
+                    return others[self.rng.randrange(len(others))]
+                return featured
+        return candidates[self.rng.randrange(len(candidates))]
+
+    def _roll_gacha_item(self, gacha: GachaDefinition, player: PlayerState) -> GachaDropRecord:
+        drops = gacha.item_drops
         total = sum(entry.weight for entry in drops)
         draw = self.rng.random() * total
         selected = drops[-1]
@@ -1850,7 +1881,7 @@ class GameService:
                     for item_id, experience in self.content.partner_growth.experience_books.items()
                 ],
             },
-            "gacha": self._gacha_snapshot(player),
+            "gacha_pools": self._gacha_pools_snapshot(player),
             "industry_rules": {
                 industry: {
                     **rules.model_dump(),
@@ -1961,7 +1992,7 @@ class GameService:
                 ],
                 "upgrade_available": owned.level < level_cap_for_breakthrough(owned.breakthrough),
                 "star_up_available": owned.stars < 5,
-                "star_up_cost": self.content.gacha.star_up_costs.get(owned.stars),
+                "star_up_cost": self.content.gacha_economy.star_up_costs.get(owned.stars),
                 **self._partner_breakthrough_snapshot(player, definition, owned),
                 "assigned_plot_slot": assigned_slots.get(owned.partner_id),
                 "assigned_gathering_site_id": assigned_gathering_sites.get(owned.partner_id),
@@ -2017,39 +2048,62 @@ class GameService:
             "ascension": {"breakthrough": target, "coins": ascension.coins, "items": items},
         }
 
-    def _gacha_snapshot(self, player: PlayerState) -> dict:
-        gacha = self.content.gacha
+    def _gacha_pools_snapshot(self, player: PlayerState) -> list[dict]:
         catalog = self.partner_catalog_loader()
-        return {
-            "pool_id": gacha.pool_id,
-            "unlocked": player.level >= gacha.min_level,
-            "min_level": gacha.min_level,
-            "maple_flame_per_leaf": gacha.maple_flame_per_leaf,
-            "rarity_probabilities": gacha.rarity_probabilities,
-            "item_probability": gacha.item_probability,
-            "four_star_guarantee": gacha.four_star_guarantee,
-            "five_star_pity": gacha.five_star_pity,
-            "pulls_until_four_star": gacha.four_star_guarantee - player.gacha_four_pity,
-            "pulls_until_five_star": gacha.five_star_pity - player.gacha_five_pity,
-            "catalog": [
-                {
-                    "partner_id": definition.id,
-                    "name": definition.name,
-                    "rarity": definition.rarity,
-                    "artwork": (
-                        definition.artwork_for(0).model_dump()
-                        if definition.artwork_for(0)
-                        else None
-                    ),
-                    "avatar_crop": next(
-                        (entry.model_dump() for entry in definition.avatar_crops if entry.breakthrough == 0),
-                        None,
-                    ),
-                }
-                for definition in catalog.partners
-            ],
-            "task_items": [entry.model_dump() for entry in self.content.task_items],
-        }
+        catalog_payload = [
+            {
+                "partner_id": definition.id,
+                "name": definition.name,
+                "rarity": definition.rarity,
+                "artwork": (
+                    definition.artwork_for(0).model_dump()
+                    if definition.artwork_for(0)
+                    else None
+                ),
+                "avatar_crop": next(
+                    (entry.model_dump() for entry in definition.avatar_crops if entry.breakthrough == 0),
+                    None,
+                ),
+            }
+            for definition in catalog.partners
+        ]
+        task_items_payload = [entry.model_dump() for entry in self.content.task_items]
+        story_assets = self.story_asset_loader().asset_map
+        pools = sorted(self.gacha_pool_loader().values(), key=lambda entry: (entry.min_level, entry.pool_id))
+        snapshots = []
+        for gacha in pools:
+            progress = player.gacha_progress.get(gacha.pool_id)
+            total_pulls = progress.total_pulls if progress else 0
+            four_pity = progress.four_pity if progress else 0
+            five_pity = progress.five_pity if progress else 0
+            remaining_pulls = (
+                max(0, gacha.max_pulls_per_player - total_pulls)
+                if gacha.max_pulls_per_player is not None
+                else None
+            )
+            background_asset = story_assets.get(gacha.background_asset_id) if gacha.background_asset_id else None
+            snapshots.append({
+                "pool_id": gacha.pool_id,
+                "title": gacha.title,
+                "unlocked": player.level >= gacha.min_level,
+                "min_level": gacha.min_level,
+                "maple_flame_per_leaf": self.content.gacha_economy.maple_flame_per_leaf,
+                "rarity_probabilities": gacha.rarity_probabilities,
+                "item_probability": gacha.item_probability,
+                "four_star_guarantee": gacha.four_star_guarantee,
+                "five_star_pity": gacha.five_star_pity,
+                "pulls_until_four_star": gacha.four_star_guarantee - four_pity,
+                "pulls_until_five_star": gacha.five_star_pity - five_pity,
+                "max_pulls_per_player": gacha.max_pulls_per_player,
+                "total_pulls": total_pulls,
+                "remaining_pulls": remaining_pulls,
+                "background": background_asset.model_dump() if background_asset else None,
+                "featured_partner_id": gacha.featured_partner_id,
+                "featured_rate": gacha.featured_rate,
+                "catalog": catalog_payload,
+                "task_items": task_items_payload,
+            })
+        return snapshots
 
     @staticmethod
     def _clear_partner_assignment(player: PlayerState, partner_id: str) -> None:

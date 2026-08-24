@@ -311,10 +311,10 @@ export const useGameStore = defineStore('game', () => {
     })
   }
 
-  async function recruit(count: 1 | 10) {
+  async function recruit(count: 1 | 10, poolId: string) {
     const requestId = crypto.randomUUID()
     const result = await action(`gacha:pull:${requestId}`, `${API_ROOT}/gacha/pull`, {
-      payload: { count, request_id: requestId },
+      payload: { count, request_id: requestId, pool_id: poolId },
     })
     return result as unknown as GachaResult | undefined
   }

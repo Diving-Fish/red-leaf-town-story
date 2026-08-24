@@ -373,7 +373,7 @@
       "yield_max": 1,
       "stamina_cost": 0,
       "plant_xp": 0,
-      "harvest_xp": 1,
+      "harvest_xp": 20,
       "min_level": 1,
       "accent": "#ef9b3d",
       "quality": {
@@ -408,7 +408,7 @@
           30.0,
           50.0,
           120.0,
-          320.0
+          200.0
         ],
         "width": 24.0,
         "miracle_probability_cap": 0.003,
@@ -435,7 +435,7 @@
           40.0,
           90.0,
           140.0,
-          300.0
+          240.0
         ],
         "width": 24.0,
         "miracle_probability_cap": 0.003,
@@ -462,7 +462,7 @@
           40.0,
           80.0,
           150.0,
-          300.0
+          240.0
         ],
         "width": 20.0,
         "miracle_probability_cap": 0.003,
@@ -489,7 +489,7 @@
           45.0,
           90.0,
           200.0,
-          500.0
+          320.0
         ],
         "width": 30.0,
         "miracle_probability_cap": 0.003,
@@ -524,25 +524,25 @@
       "outputs": [
         {
           "item_id": "maple_wood",
-          "weight": 50,
+          "weight": 50.0,
           "quantity_min": 1,
           "quantity_max": 2
         },
         {
           "item_id": "woodland_mushroom",
-          "weight": 30,
+          "weight": 30.0,
           "quantity_min": 1,
           "quantity_max": 1
         },
         {
           "item_id": "maple_resin",
-          "weight": 15,
+          "weight": 15.0,
           "quantity_min": 1,
           "quantity_max": 1
         },
         {
           "item_id": "amber_beeswax",
-          "weight": 5,
+          "weight": 5.0,
           "quantity_min": 1,
           "quantity_max": 1
         }
@@ -577,25 +577,25 @@
       "outputs": [
         {
           "item_id": "tough_fodder",
-          "weight": 50,
+          "weight": 50.0,
           "quantity_min": 1,
           "quantity_max": 2
         },
         {
           "item_id": "autumn_herb",
-          "weight": 30,
+          "weight": 30.0,
           "quantity_min": 1,
           "quantity_max": 1
         },
         {
           "item_id": "morning_dew_flower",
-          "weight": 15,
+          "weight": 15.0,
           "quantity_min": 1,
           "quantity_max": 1
         },
         {
           "item_id": "silver_star_moss",
-          "weight": 5,
+          "weight": 5.0,
           "quantity_min": 1,
           "quantity_max": 1
         }
@@ -867,9 +867,14 @@
       "description": "开工时使用，本次任务的品质能力提高。",
       "icon": "sprout",
       "effect": "quality_boost",
-      "value": 40,
+      "value": 40.0,
       "timing": "start",
-      "eligible_industries": ["farming", "gathering", "crafting", "mining"]
+      "eligible_industries": [
+        "farming",
+        "gathering",
+        "crafting",
+        "mining"
+      ]
     },
     {
       "id": "maple_wind_whistle",
@@ -879,7 +884,12 @@
       "effect": "duration_multiplier",
       "value": 0.7,
       "timing": "start",
-      "eligible_industries": ["farming", "gathering", "crafting", "mining"]
+      "eligible_industries": [
+        "farming",
+        "gathering",
+        "crafting",
+        "mining"
+      ]
     },
     {
       "id": "harvest_knot",
@@ -887,9 +897,14 @@
       "description": "开工时使用，本次生产额外获得一次产出。",
       "icon": "wheat",
       "effect": "yield_bonus",
-      "value": 1,
+      "value": 1.0,
       "timing": "start",
-      "eligible_industries": ["farming", "gathering", "crafting", "mining"]
+      "eligible_industries": [
+        "farming",
+        "gathering",
+        "crafting",
+        "mining"
+      ]
     },
     {
       "id": "handover_order",
@@ -897,9 +912,14 @@
       "description": "开工时使用，本次任务不会锁定协助伙伴。",
       "icon": "repeat-2",
       "effect": "release_partner",
-      "value": 1,
+      "value": 1.0,
       "timing": "start",
-      "eligible_industries": ["farming", "gathering", "crafting", "mining"]
+      "eligible_industries": [
+        "farming",
+        "gathering",
+        "crafting",
+        "mining"
+      ]
     },
     {
       "id": "night_lamp_tea",
@@ -907,9 +927,14 @@
       "description": "用于剩余时间不超过两小时的任务，使其立即完成。",
       "icon": "lamp-desk",
       "effect": "instant_finish",
-      "value": 7200,
+      "value": 7200.0,
       "timing": "active",
-      "eligible_industries": ["farming", "gathering", "crafting", "mining"]
+      "eligible_industries": [
+        "farming",
+        "gathering",
+        "crafting",
+        "mining"
+      ]
     },
     {
       "id": "golden_leaf",
@@ -917,30 +942,27 @@
       "description": "开工时使用，本次任务可按两倍宽度的完整曲线获得奇迹品质。",
       "icon": "leaf",
       "effect": "unlock_miracle",
-      "value": 2,
+      "value": 2.0,
       "timing": "start",
-      "eligible_industries": ["farming", "gathering", "crafting", "mining"]
+      "eligible_industries": [
+        "farming",
+        "gathering",
+        "crafting",
+        "mining"
+      ]
     }
   ],
-  "gacha": {
-    "pool_id": "standard-1",
-    "min_level": 2,
+  "gacha_economy": {
     "maple_flame_per_leaf": 100,
-    "rarity_probabilities": {"3": 0.4, "4": 0.125, "5": 0.025},
-    "item_probability": 0.45,
-    "first_pulls_without_items": 30,
-    "four_star_guarantee": 10,
-    "five_star_pity": 50,
-    "duplicate_marks": {"3": 25, "4": 80, "5": 250},
-    "star_up_costs": {"3": 500, "4": 1500},
-    "item_drops": [
-      {"task_item_id": "thick_soil_fertilizer", "weight": 35, "quantity": 2},
-      {"task_item_id": "maple_wind_whistle", "weight": 35, "quantity": 2},
-      {"task_item_id": "harvest_knot", "weight": 20, "quantity": 2},
-      {"task_item_id": "handover_order", "weight": 5, "quantity": 1},
-      {"task_item_id": "night_lamp_tea", "weight": 4, "quantity": 1},
-      {"task_item_id": "golden_leaf", "weight": 1, "quantity": 1}
-    ]
+    "duplicate_marks": {
+      "3": 25,
+      "4": 80,
+      "5": 250
+    },
+    "star_up_costs": {
+      "3": 500,
+      "4": 1500
+    }
   },
   "partner_growth": {
     "experience_per_minute": 1,

@@ -909,6 +909,7 @@ def create_blueprint(
             subject,
             int(payload.get("count", 1)),
             str(payload.get("request_id", "")),
+            str(payload.get("pool_id", "")),
         )
         return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
 

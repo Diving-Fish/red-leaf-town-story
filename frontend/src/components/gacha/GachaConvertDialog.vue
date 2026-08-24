@@ -7,14 +7,14 @@ import ModalSheet from '@/components/ModalSheet.vue'
 import { useGameStore } from '@/stores/game'
 import type { GachaDrop } from '@/types'
 
-const props = defineProps<{ open: boolean; count: 1 | 10 }>()
+const props = defineProps<{ open: boolean; count: 1 | 10; poolId: string }>()
 const emit = defineEmits<{ (event: 'close'): void; (event: 'pulled', results: GachaDrop[]): void }>()
 
 const game = useGameStore()
-const gacha = computed(() => game.state?.gacha)
+const pool = computed(() => game.state?.gacha_pools.find((entry) => entry.pool_id === props.poolId))
 const mapleFlame = computed(() => game.player?.maple_flame || 0)
 const guideLeaves = computed(() => game.player?.guide_leaves || 0)
-const rate = computed(() => gacha.value?.maple_flame_per_leaf || 1)
+const rate = computed(() => pool.value?.maple_flame_per_leaf || 1)
 
 const shortfall = computed(() => Math.max(props.count - guideLeaves.value, 0))
 const maxAffordable = computed(() => Math.floor(mapleFlame.value / rate.value))
@@ -51,7 +51,7 @@ async function confirmPull() {
   if (!enough.value || pulling.value) return
   pulling.value = true
   try {
-    const outcome = await game.recruit(props.count)
+    const outcome = await game.recruit(props.count, props.poolId)
     if (outcome) emit('pulled', outcome.results)
   } finally {
     pulling.value = false

@@ -445,7 +445,7 @@ export interface GameState {
   partners: OwnedPartner[]
   partner_count: number
   partner_growth: PartnerGrowthState
-  gacha: GachaState
+  gacha_pools: GachaPoolState[]
   industry_rules: Record<string, IndustryRules>
   talents: TalentState
   portals: PortalState[]
@@ -617,8 +617,17 @@ export interface GachaCatalogPartner {
   avatar_crop: AvatarCrop | null
 }
 
-export interface GachaState {
+export interface GachaPoolBackground {
+  asset_key: string
+  width: number
+  height: number
+  content_type: string
+  url?: string | null
+}
+
+export interface GachaPoolState {
   pool_id: string
+  title: string
   unlocked: boolean
   min_level: number
   maple_flame_per_leaf: number
@@ -628,6 +637,12 @@ export interface GachaState {
   five_star_pity: number
   pulls_until_four_star: number
   pulls_until_five_star: number
+  max_pulls_per_player: number | null
+  total_pulls: number
+  remaining_pulls: number | null
+  background: GachaPoolBackground | null
+  featured_partner_id: string | null
+  featured_rate: number
   catalog: GachaCatalogPartner[]
   task_items: Omit<TaskItemState, 'quantity'>[]
 }

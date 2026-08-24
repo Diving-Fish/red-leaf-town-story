@@ -5,10 +5,10 @@
       "id": "farm_house_night",
       "kind": "background",
       "name": "TODO 空屋与农田 · 入夜",
-      "asset_key": "",
-      "width": 0,
-      "height": 0,
-      "content_type": "",
+      "asset_key": "red-leaf-town/story/background/farm_house_night-6fa916a78383b500.webp",
+      "width": 1672,
+      "height": 941,
+      "content_type": "image/webp",
       "inline_layout": {
         "scale": 1.0,
         "offset_x": 0.0,
@@ -25,9 +25,9 @@
       "id": "fein_story",
       "kind": "portrait",
       "name": "绯恩",
-      "asset_key": "red-leaf-town/story/portrait/fein_story-482a3c147e485c66.webp",
-      "width": 941,
-      "height": 1672,
+      "asset_key": "red-leaf-town/story/portrait/fein_story-d1e6063253388b09.webp",
+      "width": 1008,
+      "height": 1792,
       "content_type": "image/webp",
       "inline_layout": {
         "scale": 3.0,
@@ -42,13 +42,53 @@
       "created_at": 0
     },
     {
+      "id": "guqii_gacha",
+      "kind": "background",
+      "name": "guqii_gacha",
+      "asset_key": "red-leaf-town/story/background/guqii_gacha-80adb59a0e15ba6e.webp",
+      "width": 1792,
+      "height": 1008,
+      "content_type": "image/webp",
+      "inline_layout": {
+        "scale": 1.0,
+        "offset_x": 0.0,
+        "offset_y": 0.0
+      },
+      "stage_layout": {
+        "scale": 1.0,
+        "offset_x": 0.0,
+        "offset_y": 0.0
+      },
+      "created_at": 0
+    },
+    {
       "id": "portal_hollow",
       "kind": "background",
       "name": "TODO 传送门空地 · 黄昏",
-      "asset_key": "",
-      "width": 0,
-      "height": 0,
-      "content_type": "",
+      "asset_key": "red-leaf-town/story/background/portal_hollow-13e505784a666a0f.webp",
+      "width": 1672,
+      "height": 941,
+      "content_type": "image/webp",
+      "inline_layout": {
+        "scale": 1.0,
+        "offset_x": 0.0,
+        "offset_y": 0.0
+      },
+      "stage_layout": {
+        "scale": 1.0,
+        "offset_x": 0.0,
+        "offset_y": 0.0
+      },
+      "created_at": 0
+    },
+    {
+      "id": "starter_gacha",
+      "kind": "background",
+      "name": "starter_gacha",
+      "asset_key": "red-leaf-town/story/background/starter_gacha-593a0b166931726f.webp",
+      "width": 1792,
+      "height": 1008,
+      "content_type": "image/webp",
       "inline_layout": {
         "scale": 1.0,
         "offset_x": 0.0,
@@ -65,10 +105,10 @@
       "id": "town_gate_dusk",
       "kind": "background",
       "name": "TODO 红叶镇镇口 · 黄昏",
-      "asset_key": "",
-      "width": 0,
-      "height": 0,
-      "content_type": "",
+      "asset_key": "red-leaf-town/story/background/town_gate_dusk-53c4b56e6b21da00.webp",
+      "width": 1672,
+      "height": 941,
+      "content_type": "image/webp",
       "inline_layout": {
         "scale": 1.0,
         "offset_x": 0.0,

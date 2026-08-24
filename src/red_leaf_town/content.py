@@ -255,33 +255,15 @@ class TaskItemDefinition(BaseModel):
     eligible_industries: list[str] = Field(default_factory=list)
 
 
-class GachaItemDropDefinition(BaseModel):
-    task_item_id: str = Field(min_length=1)
-    weight: float = Field(gt=0)
-    quantity: int = Field(default=1, ge=1)
+class GachaEconomyDefinition(BaseModel):
+    """所有招募池共用的经济参数：兑换汇率、重复伙伴印记、升星消耗。跟具体池子无关。"""
 
-
-class GachaDefinition(BaseModel):
-    pool_id: str = Field(min_length=1)
-    min_level: int = Field(default=1, ge=1)
     maple_flame_per_leaf: int = Field(gt=0)
-    rarity_probabilities: dict[int, float]
-    item_probability: float = Field(ge=0, lt=1)
-    first_pulls_without_items: int = Field(default=0, ge=0)
-    four_star_guarantee: int = Field(gt=0)
-    five_star_pity: int = Field(gt=0)
     duplicate_marks: dict[int, int]
     star_up_costs: dict[int, int]
-    item_drops: list[GachaItemDropDefinition] = Field(min_length=1)
 
     @model_validator(mode="after")
-    def validate_probabilities(self):
-        if set(self.rarity_probabilities) != {3, 4, 5}:
-            raise ValueError("gacha rarity probabilities must define 3, 4 and 5 stars")
-        if any(probability < 0 for probability in self.rarity_probabilities.values()):
-            raise ValueError("gacha rarity probabilities cannot be negative")
-        if abs(sum(self.rarity_probabilities.values()) + self.item_probability - 1) > 1e-8:
-            raise ValueError("gacha probabilities must sum to one")
+    def validate_economy(self):
         if set(self.duplicate_marks) != {3, 4, 5}:
             raise ValueError("gacha duplicate marks must define 3, 4 and 5 stars")
         if set(self.star_up_costs) != {3, 4}:
@@ -382,7 +364,7 @@ class GameContent(BaseModel):
     mining_sites: list[MiningSiteDefinition] = Field(default_factory=list)
     mining_tasks: list[MiningTaskDefinition] = Field(default_factory=list)
     task_items: list[TaskItemDefinition] = Field(default_factory=list)
-    gacha: GachaDefinition
+    gacha_economy: GachaEconomyDefinition
     partner_growth: PartnerGrowthDefinition
     portals: list[PortalDefinition] = Field(default_factory=list)
     shop: list[ShopEntry]
@@ -466,7 +448,6 @@ class GameContent(BaseModel):
                 raise ValueError(f"mining task {task.id} output must support quality")
             if task.duration_seconds != task.stamina_cost * self.stamina.restore_seconds:
                 raise ValueError(f"mining task {task.id} duration must equal stamina recovery time")
-        task_item_ids = {entry.id for entry in self.task_items}
         for entry in self.task_items:
             if entry.effect == "instant_finish" and entry.timing != "active":
                 raise ValueError(f"task item {entry.id} must be used on an active task")
@@ -474,8 +455,6 @@ class GameContent(BaseModel):
                 raise ValueError(f"task item {entry.id} must be used when a task starts")
             if any(industry not in self.industries for industry in entry.eligible_industries):
                 raise ValueError(f"task item {entry.id} references an unknown industry")
-        if any(entry.task_item_id not in task_item_ids for entry in self.gacha.item_drops):
-            raise ValueError("gacha item drops reference an unknown task item")
         if any(item_id not in items for item_id in self.partner_growth.experience_books):
             raise ValueError("partner growth references an unknown experience book")
         self._validate_portals(items)

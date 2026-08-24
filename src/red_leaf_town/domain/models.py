@@ -201,6 +201,14 @@ class GachaRequestRecord(BaseModel):
     results: list[GachaDropRecord] = Field(min_length=1, max_length=10)
 
 
+class GachaPoolProgressState(BaseModel):
+    """玩家在某一个招募池里的进度：累计抽数、四星/五星保底计数器。按 pool_id 分别记录。"""
+
+    total_pulls: int = Field(default=0, ge=0)
+    four_pity: int = Field(default=0, ge=0)
+    five_pity: int = Field(default=0, ge=0)
+
+
 def _rename_partner_ids(migrated: dict) -> dict:
     """伙伴改 ID 之后，存档里所有引用它的地方都要跟着改，包括进行中的任务快照。"""
     migrated = deepcopy(migrated)
@@ -255,7 +263,7 @@ class PortalProgressState(BaseModel):
 
 
 class PlayerState(BaseModel):
-    schema_version: int = 14
+    schema_version: int = 15
     version: int = 1
     player_id: str
     oauth_sub: str
@@ -279,9 +287,7 @@ class PlayerState(BaseModel):
     seen_story_ids: list[str] = Field(default_factory=list)
     portals: list[PortalProgressState] = Field(default_factory=list)
     bonus_talent_points: int = Field(default=0, ge=0)
-    gacha_total_pulls: int = Field(default=0, ge=0)
-    gacha_four_pity: int = Field(default=0, ge=0)
-    gacha_five_pity: int = Field(default=0, ge=0)
+    gacha_progress: dict[str, GachaPoolProgressState] = Field(default_factory=dict)
     gacha_history: list[GachaRequestRecord] = Field(default_factory=list)
     created_at: int
     updated_at: int
@@ -345,7 +351,23 @@ class PlayerState(BaseModel):
             migrated.setdefault("gacha_four_pity", 0)
             migrated.setdefault("gacha_five_pity", 0)
             migrated.setdefault("gacha_history", [])
-        migrated["schema_version"] = 14
+        if schema_version < 15:
+            # 招募池从单一常驻池拆成多池，保底计数器改成按 pool_id 分开存。
+            # 老存档的进度只可能来自当时唯一的常驻池，原样迁移过去。
+            legacy_total = migrated.pop("gacha_total_pulls", 0)
+            legacy_four = migrated.pop("gacha_four_pity", 0)
+            legacy_five = migrated.pop("gacha_five_pity", 0)
+            if legacy_total or legacy_four or legacy_five:
+                migrated["gacha_progress"] = {
+                    "standard-1": {
+                        "total_pulls": legacy_total,
+                        "four_pity": legacy_four,
+                        "five_pity": legacy_five,
+                    }
+                }
+            else:
+                migrated.setdefault("gacha_progress", {})
+        migrated["schema_version"] = 15
         return migrated
 
     @model_validator(mode="after")
