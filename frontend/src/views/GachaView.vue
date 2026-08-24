@@ -1,30 +1,87 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { Flame, Leaf, Sparkles, Stamp, Star } from 'lucide-vue-next'
+import { Flame, Leaf, Sparkles, Stamp } from 'lucide-vue-next'
 
 import ActionButton from '@/components/ActionButton.vue'
-import PartnerAvatar from '@/components/PartnerAvatar.vue'
 import StateBlock from '@/components/StateBlock.vue'
 import ViewHeader from '@/components/ViewHeader.vue'
+import GachaConvertDialog from '@/components/gacha/GachaConvertDialog.vue'
+import GachaPoolSidebar from '@/components/gacha/GachaPoolSidebar.vue'
+import type { GachaPoolSummary } from '@/components/gacha/GachaPoolCard.vue'
+import GachaPoster from '@/components/gacha/GachaPoster.vue'
+import GachaPullOverlay from '@/components/gacha/GachaPullOverlay.vue'
+import GachaResultCard from '@/components/gacha/GachaResultCard.vue'
+import type { GachaResultMeta } from '@/components/gacha/GachaResultCard.vue'
+import { poolDisplayName } from '@/lib/gacha'
 import { useGameStore } from '@/stores/game'
 import type { GachaDrop } from '@/types'
 
 const game = useGameStore()
-const results = ref<GachaDrop[]>([])
 const gacha = computed(() => game.state?.gacha)
 
-function partner(drop: GachaDrop) {
-  return gacha.value?.catalog.find((entry) => entry.partner_id === drop.content_id)
+const results = ref<GachaDrop[]>([])
+const overlayOpen = ref(false)
+const convertDialogOpen = ref(false)
+const pendingPullCount = ref<1 | 10>(1)
+const selectedPoolId = ref<string | null>(null)
+const activePoolId = computed(() => selectedPoolId.value || gacha.value?.pool_id || '')
+
+const pools = computed<GachaPoolSummary[]>(() => {
+  if (!gacha.value) return []
+  return [
+    {
+      id: gacha.value.pool_id,
+      title: poolDisplayName(gacha.value.pool_id),
+      subtitle: `${gacha.value.catalog.length} 位常驻伙伴`,
+      unlocked: gacha.value.unlocked,
+      fiveStarRate: `5★ ${((gacha.value.rarity_probabilities[5] || 0) * 100).toFixed(1)}%`,
+    },
+  ]
+})
+
+function selectPool(id: string) {
+  selectedPoolId.value = id
 }
 
-function taskItem(drop: GachaDrop) {
-  return gacha.value?.task_items.find((entry) => entry.id === drop.content_id)
+const posterBackground = computed(() => {
+  const catalog = gacha.value?.catalog || []
+  const featured = [...catalog].sort((a, b) => b.rarity - a.rarity).find((entry) => entry.artwork?.url)
+  return featured?.artwork?.url || null
+})
+
+const pityTags = computed(() => {
+  if (!gacha.value) return []
+  return [`至多 ${gacha.value.pulls_until_four_star} 抽出现 4★+`, `至多 ${gacha.value.pulls_until_five_star} 抽出现 5★`]
+})
+
+function recapMeta(drop: GachaDrop): GachaResultMeta {
+  if (drop.kind === 'partner') {
+    const entry = gacha.value?.catalog.find((item) => item.partner_id === drop.content_id)
+    return { name: entry?.name || drop.content_id, rarity: drop.rarity ?? entry?.rarity ?? null, artwork: entry?.artwork, crop: entry?.avatar_crop }
+  }
+  const entry = gacha.value?.task_items.find((item) => item.id === drop.content_id)
+  return { name: entry?.name || drop.content_id, rarity: null }
 }
 
 async function pull(count: 1 | 10) {
+  if ((game.player?.guide_leaves || 0) < count) {
+    pendingPullCount.value = count
+    convertDialogOpen.value = true
+    return
+  }
   const outcome = await game.recruit(count)
-  if (outcome) results.value = outcome.results
+  if (outcome) {
+    results.value = outcome.results
+    overlayOpen.value = true
+  }
 }
+
+function onDialogPulled(pulled: GachaDrop[]) {
+  results.value = pulled
+  convertDialogOpen.value = false
+  overlayOpen.value = true
+}
+
 </script>
 
 <template>
@@ -53,47 +110,79 @@ async function pull(count: 1 | 10) {
         >{{ gacha.maple_flame_per_leaf }} 枫火兑换 1 片</ActionButton>
       </div>
 
-      <article class="gacha-banner">
-        <div>
-          <p class="eyebrow">{{ gacha.pool_id }}</p>
-          <h2>把点亮的红叶送进裂口</h2>
-          <p>伙伴与只在招募中出现的特殊工作道具，都可能从另一边回应。</p>
-          <div class="pity-row">
-            <span>至多 {{ gacha.pulls_until_four_star }} 抽出现 4★+</span>
-            <span>至多 {{ gacha.pulls_until_five_star }} 抽出现 5★</span>
-          </div>
-        </div>
-        <div class="pull-actions">
-          <ActionButton action-key="gacha:single" :disabled="(game.player?.guide_leaves || 0) < 1" reason="引路枫叶不足" @click="pull(1)">
-            单次招募 · 1 片
-          </ActionButton>
-          <ActionButton action-key="gacha:ten" :disabled="(game.player?.guide_leaves || 0) < 10" reason="引路枫叶不足" @click="pull(10)">
-            十次招募 · 10 片
-          </ActionButton>
-        </div>
-      </article>
+      <div class="gacha-layout">
+        <GachaPoolSidebar :pools="pools" :active-id="activePoolId" @select="selectPool">
+          <template #footer>
+            <p class="pool-sidebar-note">常驻招募池不会下架，可放心攒引路枫叶。</p>
+          </template>
+        </GachaPoolSidebar>
 
-      <div v-if="results.length" class="pull-results">
-        <article v-for="(drop, index) in results" :key="`${index}:${drop.content_id}`" :class="[`drop-${drop.rarity || 'item'}`]">
-          <template v-if="drop.kind === 'partner'">
-            <PartnerAvatar :artwork="partner(drop)?.artwork" :crop="partner(drop)?.avatar_crop" :name="partner(drop)?.name || drop.content_id" :size="64" />
-            <strong>{{ partner(drop)?.name || drop.content_id }}</strong>
-            <span><Star v-for="star in drop.rarity || 0" :key="star" :size="12" fill="currentColor" /></span>
-            <small v-if="drop.duplicate">已同行 · 印记 +{{ drop.companion_marks }}</small>
-            <small v-else>新伙伴</small>
+        <GachaPoster
+          :eyebrow="gacha.pool_id"
+          title="把点亮的红叶送进裂口"
+          description="伙伴与只在招募中出现的特殊工作道具，都可能从另一边回应。"
+          :background-url="posterBackground"
+          :pity-tags="pityTags"
+        >
+          <template #actions>
+            <span class="poster-balance"><Leaf :size="14" />引路枫叶 ×{{ game.player?.guide_leaves || 0 }}</span>
+            <ActionButton action-key="gacha:single" @click="pull(1)">单次招募 · 1 片</ActionButton>
+            <ActionButton action-key="gacha:ten" @click="pull(10)">十次招募 · 10 片</ActionButton>
           </template>
-          <template v-else>
-            <Sparkles :size="42" />
-            <strong>{{ taskItem(drop)?.name || drop.content_id }}</strong>
-            <small>特殊道具 ×{{ drop.quantity }}</small>
-          </template>
-        </article>
+        </GachaPoster>
+      </div>
+
+      <div v-if="results.length" class="gacha-recap">
+        <p class="gacha-recap-heading">最近获得</p>
+        <div class="gacha-recap-grid">
+          <GachaResultCard
+            v-for="(drop, index) in results"
+            :key="`recap:${index}:${drop.content_id}`"
+            :drop="drop"
+            :meta="recapMeta(drop)"
+            revealed
+            instant
+          />
+        </div>
       </div>
     </template>
+
+    <GachaPullOverlay
+      :open="overlayOpen"
+      :results="results"
+      :catalog="gacha.catalog"
+      :task-items="gacha.task_items"
+      @close="overlayOpen = false"
+    />
+    <GachaConvertDialog
+      :open="convertDialogOpen"
+      :count="pendingPullCount"
+      @close="convertDialogOpen = false"
+      @pulled="onDialogPulled"
+    />
   </section>
 </template>
 
 <style scoped>
-.gacha-wallet { display: grid; grid-template-columns: repeat(3, minmax(130px, 1fr)) auto; gap: 9px; margin-bottom: 14px; }.gacha-wallet > span { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }.gacha-wallet svg { color: var(--gold); }.gacha-wallet small { color: #849087; }.gacha-banner { min-height: 310px; display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 30px; padding: clamp(24px, 5vw, 58px); border: 1px solid #d8b76b33; border-radius: 28px 8px; background: radial-gradient(circle at 75% 25%, #d3a64a2b, transparent 34%), linear-gradient(135deg, #1f2c23, #111914); }.gacha-banner h2 { max-width: 620px; margin: 8px 0; font: 700 clamp(2rem, 5vw, 4rem) Georgia, 'Noto Serif SC', serif; }.gacha-banner p { color: #9aa69c; }.pity-row { display: flex; flex-wrap: wrap; gap: 8px; }.pity-row span { padding: 5px 8px; color: #c6b488; font-size: 12px; border-radius: 99px; background: #d7b46b12; }.pull-actions { min-width: 190px; display: grid; gap: 9px; }.pull-results { display: grid; grid-template-columns: repeat(5, minmax(120px, 1fr)); gap: 8px; margin-top: 14px; }.pull-results article { min-height: 160px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px; padding: 12px; text-align: center; border: 1px solid var(--line); border-radius: 15px 5px; background: #141d18; }.pull-results article > span { display: flex; color: var(--gold); }.pull-results small { color: #849087; }.pull-results .drop-5 { border-color: #d9b65c88; background: linear-gradient(145deg, #3a2b19, #171d17); }.pull-results .drop-4 { border-color: #9b82d866; background: linear-gradient(145deg, #28223b, #171d17); }
-@media (max-width: 800px) { .gacha-wallet { grid-template-columns: 1fr 1fr; }.gacha-banner { grid-template-columns: 1fr; }.pull-results { grid-template-columns: repeat(2, 1fr); } }
+.gacha-wallet { display: grid; grid-template-columns: repeat(3, minmax(130px, 1fr)) auto; gap: 9px; margin-bottom: 14px; }
+.gacha-wallet > span { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.gacha-wallet svg { color: var(--gold); }
+.gacha-wallet small { color: #849087; }
+
+.gacha-layout { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 16px; align-items: start; }
+.pool-sidebar-note { color: #7c877e; font-size: 11px; line-height: 1.6; }
+
+.poster-balance { display: flex; align-items: center; gap: 6px; color: #c9d3c6; font-size: 12px; }
+.poster-balance svg { color: var(--leaf-bright); }
+
+.gacha-recap { margin-top: 20px; }
+.gacha-recap-heading { margin: 0 0 10px; color: #77837a; font-size: 12px; font-weight: 800; letter-spacing: .12em; }
+.gacha-recap-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 10px; }
+
+@media (max-width: 900px) {
+  .gacha-layout { grid-template-columns: 1fr; }
+}
+@media (max-width: 760px) {
+  .gacha-wallet { grid-template-columns: 1fr 1fr; }
+}
 </style>
