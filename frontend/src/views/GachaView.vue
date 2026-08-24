@@ -5,7 +5,6 @@ import { Flame, Leaf, Percent, Sparkles, Stamp } from 'lucide-vue-next'
 import ActionButton from '@/components/ActionButton.vue'
 import StateBlock from '@/components/StateBlock.vue'
 import ViewHeader from '@/components/ViewHeader.vue'
-import GachaConvertDialog from '@/components/gacha/GachaConvertDialog.vue'
 import GachaPoolDetailsDialog from '@/components/gacha/GachaPoolDetailsDialog.vue'
 import GachaPoolSidebar from '@/components/gacha/GachaPoolSidebar.vue'
 import type { GachaPoolSummary } from '@/components/gacha/GachaPoolCard.vue'
@@ -14,18 +13,18 @@ import GachaPullOverlay from '@/components/gacha/GachaPullOverlay.vue'
 import GachaResultCard from '@/components/gacha/GachaResultCard.vue'
 import type { GachaResultMeta } from '@/components/gacha/GachaResultCard.vue'
 import { useGameStore } from '@/stores/game'
+import { useUiStore } from '@/stores/ui'
 import type { GachaDrop } from '@/types'
 
 const game = useGameStore()
+const ui = useUiStore()
 const pools = computed(() => game.state?.gacha_pools || [])
 const anyUnlocked = computed(() => pools.value.some((pool) => pool.unlocked))
 const lowestMinLevel = computed(() => pools.value[0]?.min_level ?? 1)
 
 const results = ref<GachaDrop[]>([])
 const overlayOpen = ref(false)
-const convertDialogOpen = ref(false)
 const detailsDialogOpen = ref(false)
-const pendingPullCount = ref<1 | 10>(1)
 const selectedPoolId = ref<string | null>(null)
 const activePool = computed(() => {
   const requested = pools.value.find((pool) => pool.pool_id === selectedPoolId.value)
@@ -95,22 +94,38 @@ async function pull(count: 1 | 10) {
     game.showNotice('这个招募池的次数已经用完啦')
     return
   }
-  if ((game.player?.guide_leaves || 0) < count) {
-    pendingPullCount.value = count
-    convertDialogOpen.value = true
-    return
+
+  const times = count === 1 ? '一' : '十'
+  const leaves = game.player?.guide_leaves || 0
+  /* 缺多少就兑多少，在同一个确认框里问清楚，确认后自动兑换并开抽 */
+  const shortfall = count - leaves
+  const cost = shortfall * pool.maple_flame_per_leaf
+
+  if (shortfall > 0) {
+    const flame = game.player?.maple_flame || 0
+    if (flame < cost) {
+      game.showNotice(`枫火也不够了，还差 ${cost - flame} 枫火`)
+      return
+    }
   }
+
+  const accepted = await ui.confirm({
+    title: count === 1 ? '进行单次招募？' : '进行十连招募？',
+    description: shortfall > 0
+      ? `引路枫叶还差 ${shortfall} 片，将用 ${cost} 枫火兑换 ${shortfall} 片引路枫叶，并招募${times}次。`
+      : `将消耗 ${count} 片引路枫叶招募${times}次，招募后剩余 ${leaves - count} 片。`,
+    confirmLabel: '确定',
+    cancelLabel: '取消',
+  })
+  if (!accepted) return
+
+  if (shortfall > 0 && !(await game.convertMapleFlame(shortfall))) return
+
   const outcome = await game.recruit(count, pool.pool_id)
   if (outcome) {
     results.value = outcome.results
     overlayOpen.value = true
   }
-}
-
-function onDialogPulled(pulled: GachaDrop[]) {
-  results.value = pulled
-  convertDialogOpen.value = false
-  overlayOpen.value = true
 }
 
 </script>
@@ -195,13 +210,6 @@ function onDialogPulled(pulled: GachaDrop[]) {
       :catalog="activePool.catalog"
       :task-items="activePool.task_items"
       @close="overlayOpen = false"
-    />
-    <GachaConvertDialog
-      :open="convertDialogOpen"
-      :count="pendingPullCount"
-      :pool-id="activePool.pool_id"
-      @close="convertDialogOpen = false"
-      @pulled="onDialogPulled"
     />
     <GachaPoolDetailsDialog
       :open="detailsDialogOpen"

@@ -105,7 +105,7 @@ async function confirmPlant() {
       <p v-if="!crops.length" class="seed-empty">仓库里没有可用种子</p>
     </div>
 
-    <TaskItemSelect v-model="taskItemId" industry="farming" />
+    <TaskItemSelect v-model="taskItemId" industry="farming" elevated />
 
     <template #footer>
       <p class="footer-summary">
