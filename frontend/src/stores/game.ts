@@ -6,7 +6,15 @@ import { PRODUCTION_COPY, type ProductionIndustry } from '@/lib/production'
 import { qualityName } from '@/lib/quality'
 import { useStoryStore } from '@/stores/story'
 import { useTickerStore } from '@/stores/ticker'
-import type { AccountState, ActionResult, GachaResult, GameState, Reward, TributeDeliveryResult } from '@/types'
+import type {
+  AccountState,
+  ActionResult,
+  CommissionBoard,
+  GachaResult,
+  GameState,
+  Reward,
+  TributeDeliveryResult,
+} from '@/types'
 
 export interface ProductionOutcome {
   quantity?: number
@@ -272,6 +280,45 @@ export const useGameStore = defineStore('game', () => {
     return `交付了 ${result.delivered} 个，还差 ${result.required - result.total_delivered} 个`
   }
 
+  async function loadCommissionBoard() {
+    if (isPending('commissions:board')) return undefined
+    pending.value.add('commissions:board')
+    try {
+      return await api<CommissionBoard>(`${API_ROOT}/commissions/board`)
+    } catch (caught) {
+      fail(caught)
+      return undefined
+    } finally {
+      pending.value.delete('commissions:board')
+    }
+  }
+
+  function submitCommission() {
+    return action('commissions:submit', `${API_ROOT}/commissions/submit`, {
+      successMessage: '委托已经交付',
+      cue: 'action:submit_commission',
+    })
+  }
+
+  function forwardCommission() {
+    return action('commissions:forward', `${API_ROOT}/commissions/forward`, {
+      successMessage: '委托已经放进公共转发池',
+    })
+  }
+
+  function withdrawCommission() {
+    return action('commissions:withdraw', `${API_ROOT}/commissions/withdraw`, {
+      successMessage: '委托已经收回',
+    })
+  }
+
+  function takeCommission(commissionId: string) {
+    return action(`commissions:take:${commissionId}`, `${API_ROOT}/commissions/${commissionId}/take`, {
+      successMessage: '你替对方跑完了这一趟',
+      cue: 'action:submit_commission',
+    })
+  }
+
   function productionBase(industry: ProductionIndustry, nodeId: string) {
     return `${API_ROOT}/${PRODUCTION_COPY[industry].endpoint}/${nodeId}`
   }
@@ -428,6 +475,11 @@ export const useGameStore = defineStore('game', () => {
     useActiveTaskItem,
     cancelTask,
     deliverTribute,
+    loadCommissionBoard,
+    submitCommission,
+    forwardCommission,
+    withdrawCommission,
+    takeCommission,
     createBindingCode,
     logout,
     effectiveNow,

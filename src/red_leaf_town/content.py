@@ -350,6 +350,124 @@ class PortalDefinition(BaseModel):
         return self
 
 
+COMMISSIONABLE_KINDS = ("produce", "material", "product")
+
+
+class CommissionTierDefinition(BaseModel):
+    """一个难度档：平日和幸运日各自的抽取权重，以及这一档要求的件数区间。"""
+
+    tier: int = Field(ge=1, le=9)
+    name: str = Field(min_length=1)
+    weight: float = Field(ge=0)
+    lucky_weight: float = Field(ge=0)
+    quantity_min: int = Field(ge=1)
+    quantity_max: int = Field(ge=1)
+
+    @model_validator(mode="after")
+    def validate_tier(self):
+        if self.quantity_max < self.quantity_min:
+            raise ValueError(f"commission tier {self.tier}: quantity_max must be >= quantity_min")
+        return self
+
+
+class CommissionItemDefinition(BaseModel):
+    """把一个物品挂到某个难度档上。件数默认跟随档位，个别物品可以单独覆盖。"""
+
+    item_id: str = Field(min_length=1)
+    tier: int = Field(ge=1, le=9)
+    quantity_min: int | None = Field(default=None, ge=1)
+    quantity_max: int | None = Field(default=None, ge=1)
+
+    @model_validator(mode="after")
+    def validate_override(self):
+        if (self.quantity_min is None) != (self.quantity_max is None):
+            raise ValueError(f"commission entry {self.item_id}: quantity override needs both bounds")
+        if self.quantity_min is not None and self.quantity_max < self.quantity_min:
+            raise ValueError(f"commission entry {self.item_id}: quantity_max must be >= quantity_min")
+        return self
+
+    def quantity_range(self, tier: CommissionTierDefinition) -> tuple[int, int]:
+        if self.quantity_min is None:
+            return tier.quantity_min, tier.quantity_max
+        return self.quantity_min, self.quantity_max
+
+
+class CommissionNpcDefinition(BaseModel):
+    """委托人只是包装，line 里必须留出物品和件数的占位。"""
+
+    id: str = Field(pattern=r"^[a-z][a-z0-9_-]{1,63}$")
+    name: str = Field(min_length=1)
+    title: str = Field(min_length=1)
+    line: str = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def validate_line(self):
+        for placeholder in ("{item}", "{quantity}"):
+            if placeholder not in self.line:
+                raise ValueError(f"commission npc {self.id}: line must contain {placeholder}")
+        return self
+
+    def render(self, item_name: str, quantity: int) -> str:
+        return self.line.replace("{item}", item_name).replace("{quantity}", str(quantity))
+
+
+class CommissionsDefinition(BaseModel):
+    reset_hour: int = Field(default=4, ge=0, le=23)
+    timezone: str = Field(default="Asia/Shanghai", min_length=1)
+    min_level: int = Field(default=1, ge=1)
+    reward_maple_flame: int = Field(gt=0)
+    lucky_reward_maple_flame: int = Field(gt=0)
+    forward_owner_share: float = Field(gt=0, le=1)
+    forward_taker_share: float = Field(gt=0, le=1)
+    daily_take_limit: int = Field(default=1, ge=1, le=10)
+    board_limit: int = Field(default=30, ge=1, le=200)
+    excluded_item_ids: list[str] = Field(default_factory=list)
+    tiers: list[CommissionTierDefinition] = Field(min_length=1, max_length=9)
+    entries: list[CommissionItemDefinition] = Field(min_length=1)
+    npcs: list[CommissionNpcDefinition] = Field(min_length=4)
+
+    @model_validator(mode="after")
+    def validate_commissions(self):
+        tiers = [entry.tier for entry in self.tiers]
+        if len(tiers) != len(set(tiers)):
+            raise ValueError("commission tiers must be unique")
+        if not any(entry.weight > 0 for entry in self.tiers):
+            raise ValueError("commissions need at least one tier with a positive weekday weight")
+        if not any(entry.lucky_weight > 0 for entry in self.tiers):
+            raise ValueError("commissions need at least one tier with a positive lucky-day weight")
+        item_ids = [entry.item_id for entry in self.entries]
+        if len(item_ids) != len(set(item_ids)):
+            raise ValueError("commission entries must not repeat an item")
+        unknown_tiers = {entry.tier for entry in self.entries} - set(tiers)
+        if unknown_tiers:
+            raise ValueError(f"commission entries reference unknown tiers: {sorted(unknown_tiers)}")
+        npc_ids = [entry.id for entry in self.npcs]
+        if len(npc_ids) != len(set(npc_ids)):
+            raise ValueError("commission npc ids must be unique")
+        return self
+
+    @property
+    def tier_map(self) -> dict[int, CommissionTierDefinition]:
+        return {entry.tier: entry for entry in self.tiers}
+
+    @property
+    def entry_map(self) -> dict[str, CommissionItemDefinition]:
+        return {entry.item_id: entry for entry in self.entries}
+
+    @property
+    def npc_map(self) -> dict[str, CommissionNpcDefinition]:
+        return {entry.id: entry for entry in self.npcs}
+
+    def reward_for(self, lucky: bool) -> int:
+        return self.lucky_reward_maple_flame if lucky else self.reward_maple_flame
+
+    def owner_share(self, reward: int) -> int:
+        return max(1, round(reward * self.forward_owner_share))
+
+    def taker_share(self, reward: int) -> int:
+        return max(1, round(reward * self.forward_taker_share))
+
+
 class ShopEntry(BaseModel):
     id: str
     item_id: str
@@ -378,6 +496,7 @@ class GameContent(BaseModel):
     gacha_economy: GachaEconomyDefinition
     partner_growth: PartnerGrowthDefinition
     portals: list[PortalDefinition] = Field(default_factory=list)
+    commissions: CommissionsDefinition
     shop: list[ShopEntry]
 
     @model_validator(mode="after")
@@ -469,6 +588,7 @@ class GameContent(BaseModel):
         if any(item_id not in items for item_id in self.partner_growth.experience_books):
             raise ValueError("partner growth references an unknown experience book")
         self._validate_portals(items)
+        self._validate_commissions()
         for entry in self.shop:
             if entry.item_id not in items:
                 raise ValueError(f"shop {entry.id} references an unknown item")
@@ -488,6 +608,32 @@ class GameContent(BaseModel):
                 self._validate_reward(tribute.reward, items, f"portal tribute {tribute.id}")
             self._validate_reward(portal.completion_reward, items, f"portal {portal.id}")
         self._validate_portal_graph()
+
+    def _validate_commissions(self) -> None:
+        """新加一个可生产的物品就必须给它定难度档，否则它永远不会出现在委托里。"""
+        commissions = self.commissions
+        item_map = self.item_map
+        unknown = {entry.item_id for entry in commissions.entries} - set(item_map)
+        if unknown:
+            raise ValueError(f"commissions reference unknown items: {', '.join(sorted(unknown))}")
+        excluded = set(commissions.excluded_item_ids)
+        unknown_excluded = excluded - set(item_map)
+        if unknown_excluded:
+            raise ValueError(f"commissions exclude unknown items: {', '.join(sorted(unknown_excluded))}")
+        listed = {entry.item_id for entry in commissions.entries}
+        overlap = listed & excluded
+        if overlap:
+            raise ValueError(f"commissions both list and exclude: {', '.join(sorted(overlap))}")
+        wrong_kind = [entry.item_id for entry in commissions.entries if item_map[entry.item_id].kind == "seed"]
+        if wrong_kind:
+            raise ValueError(f"commissions cannot ask for seeds: {', '.join(sorted(wrong_kind))}")
+        missing = sorted(
+            item.id
+            for item in self.items
+            if item.kind in COMMISSIONABLE_KINDS and item.id not in listed and item.id not in excluded
+        )
+        if missing:
+            raise ValueError(f"commissions do not grade these items: {', '.join(missing)}")
 
     def _validate_reward(self, reward: RewardDefinition, items: set[str], label: str) -> None:
         for entry in reward.items:

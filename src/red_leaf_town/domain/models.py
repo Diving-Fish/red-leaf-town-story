@@ -262,8 +262,87 @@ class PortalProgressState(BaseModel):
         return next((entry for entry in self.tributes if entry.tribute_id == tribute_id), None)
 
 
+CommissionStatus = Literal["open", "forwarded", "completed", "forward_completed"]
+
+
+class CommissionState(BaseModel):
+    """本人当天的委托。day 是按刷新时区算出来的自然日，换日时整条重掷。"""
+
+    day: str = Field(min_length=1)
+    commission_id: str = Field(min_length=8, max_length=64)
+    npc_id: str = Field(min_length=1)
+    npc_name: str = Field(min_length=1)
+    npc_title: str = ""
+    line: str = ""
+    item_id: str = Field(min_length=1)
+    quantity: int = Field(ge=1)
+    tier: int = Field(ge=1, le=9)
+    lucky: bool = False
+    reward_maple_flame: int = Field(ge=0)
+    status: CommissionStatus = "open"
+    forwarded_at: int = Field(default=0, ge=0)
+    completed_at: int = Field(default=0, ge=0)
+    completed_by_name: str = ""
+
+    @model_validator(mode="after")
+    def validate_commission(self):
+        if self.status == "forwarded" and not self.forwarded_at:
+            raise ValueError("forwarded commission must record when it was forwarded")
+        if self.status in ("completed", "forward_completed") and not self.completed_at:
+            raise ValueError("completed commission must record when it was completed")
+        return self
+
+    @property
+    def settled(self) -> bool:
+        return self.status in ("completed", "forward_completed")
+
+
+class TakenCommissionRecord(BaseModel):
+    """接走并完成的别人的委托。按天限次靠这份流水判断。"""
+
+    day: str = Field(min_length=1)
+    commission_id: str = Field(min_length=8, max_length=64)
+    owner_name: str = ""
+    item_id: str = Field(min_length=1)
+    quantity: int = Field(ge=1)
+    reward_maple_flame: int = Field(ge=0)
+    completed_at: int = Field(ge=0)
+
+
+class CommissionBoardEntry(BaseModel):
+    """公共转发池里的一条。发布之后内容不再改动，是否被接走由另一张表记录。"""
+
+    commission_id: str = Field(min_length=8, max_length=64)
+    day: str = Field(min_length=1)
+    owner_id: str = Field(min_length=1)
+    owner_name: str = ""
+    npc_name: str = ""
+    npc_title: str = ""
+    line: str = ""
+    item_id: str = Field(min_length=1)
+    quantity: int = Field(ge=1)
+    tier: int = Field(ge=1, le=9)
+    lucky: bool = False
+    reward_maple_flame: int = Field(ge=0)
+    owner_reward: int = Field(ge=0)
+    taker_reward: int = Field(ge=0)
+    forwarded_at: int = Field(ge=0)
+
+
+class CommissionPayout(BaseModel):
+    """别人替我完成之后回给我的那一份。收件人下次读档时入账。"""
+
+    commission_id: str = Field(min_length=8, max_length=64)
+    day: str = Field(min_length=1)
+    maple_flame: int = Field(ge=0)
+    taker_name: str = ""
+    item_id: str = Field(min_length=1)
+    quantity: int = Field(ge=1)
+    completed_at: int = Field(ge=0)
+
+
 class PlayerState(BaseModel):
-    schema_version: int = 15
+    schema_version: int = 16
     version: int = 1
     player_id: str
     oauth_sub: str
@@ -286,6 +365,8 @@ class PlayerState(BaseModel):
     owned_partners: list[OwnedPartnerState] = Field(default_factory=list)
     seen_story_ids: list[str] = Field(default_factory=list)
     portals: list[PortalProgressState] = Field(default_factory=list)
+    commission: CommissionState | None = None
+    commission_takes: list[TakenCommissionRecord] = Field(default_factory=list, max_length=30)
     bonus_talent_points: int = Field(default=0, ge=0)
     gacha_progress: dict[str, GachaPoolProgressState] = Field(default_factory=dict)
     gacha_history: list[GachaRequestRecord] = Field(default_factory=list)
@@ -367,7 +448,10 @@ class PlayerState(BaseModel):
                 }
             else:
                 migrated.setdefault("gacha_progress", {})
-        migrated["schema_version"] = 15
+        if schema_version < 16:
+            migrated.setdefault("commission", None)
+            migrated.setdefault("commission_takes", [])
+        migrated["schema_version"] = 16
         return migrated
 
     @model_validator(mode="after")
@@ -392,6 +476,11 @@ class PlayerState(BaseModel):
         portal_ids = [entry.portal_id for entry in self.portals]
         if len(portal_ids) != len(set(portal_ids)):
             raise ValueError("player cannot record the same portal more than once")
+        taken_ids = [entry.commission_id for entry in self.commission_takes]
+        if len(taken_ids) != len(set(taken_ids)):
+            raise ValueError("player cannot take the same commission more than once")
+        if self.commission and self.commission.commission_id in set(taken_ids):
+            raise ValueError("player cannot take their own commission")
         assigned_ids = [
             partner_id
             for production_slot in [*self.plots, *self.gathering_sites, *self.crafting_stations, *self.mining_sites]

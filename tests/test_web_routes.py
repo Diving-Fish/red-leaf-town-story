@@ -13,7 +13,8 @@ from private.libraries.jwt import AUD_RED_LEAF_TOWN, subject_encode
 from red_leaf_town.application import GameService
 from red_leaf_town.content import load_content
 from red_leaf_town.domain import QQIdentity
-from red_leaf_town.infrastructure import InMemoryPlayerRepository
+from red_leaf_town.domain.economy import add_item
+from red_leaf_town.infrastructure import InMemoryCommissionBoard, InMemoryPlayerRepository
 from red_leaf_town.runtime import set_service
 from red_leaf_town.partner_content import load_partner_catalog
 from red_leaf_town.web.routes import COOKIE_NAME, create_blueprint
@@ -30,7 +31,12 @@ def runs(function):
 @pytest.fixture
 def service():
     content = load_content()
-    game = GameService(content, InMemoryPlayerRepository(content), clock=lambda: 1_700_000_000)
+    game = GameService(
+        content,
+        InMemoryPlayerRepository(content),
+        commission_board=InMemoryCommissionBoard(),
+        clock=lambda: 1_700_000_000,
+    )
     game.ensure_player("route-sub", "小枫")
     set_service(game)
     yield game
@@ -659,3 +665,74 @@ async def test_tribute_delivery_api_requires_login(client):
         json={"quantity": 1},
     )
     assert response.status_code == 401
+
+
+@runs
+async def test_commission_board_api_lists_the_public_pool(client, service):
+    authenticate(client)
+    helper = service.ensure_player("helper-sub", "枫二")
+    commission = service.snapshot_by_sub("helper-sub")["commissions"]["commission"]
+    service.forward_commission("helper-sub")
+
+    response = await client.get("/api/red-leaf-town/commissions/board")
+    body = await response.get_json()
+
+    assert response.status_code == 200
+    assert body["code"] == 0
+    assert [entry["commission_id"] for entry in body["data"]["entries"]] == [commission["commission_id"]]
+    assert body["data"]["remaining_takes"] == service.content.commissions.daily_take_limit
+    assert helper.player_id not in str(body["data"]["entries"])
+
+
+@runs
+async def test_commission_submit_api_pays_the_reward(client, service):
+    authenticate(client)
+    player = service.repository.get_by_sub("route-sub")
+    commission = service.snapshot_by_sub("route-sub")["commissions"]["commission"]
+    service.repository.update(
+        player.player_id,
+        lambda state: add_item(state, commission["item_id"], commission["quantity"]),
+    )
+
+    response = await client.post("/api/red-leaf-town/commissions/submit")
+    body = await response.get_json()
+
+    assert response.status_code == 200
+    assert body["data"]["result"]["maple_flame"] == commission["reward_maple_flame"]
+    assert body["data"]["state"]["commissions"]["commission"]["status"] == "completed"
+
+
+@runs
+async def test_commission_forward_and_withdraw_api_round_trip(client, service):
+    authenticate(client)
+
+    forwarded = await client.post("/api/red-leaf-town/commissions/forward")
+    forwarded_body = await forwarded.get_json()
+    assert forwarded.status_code == 200
+    assert forwarded_body["data"]["state"]["commissions"]["commission"]["status"] == "forwarded"
+
+    withdrawn = await client.post("/api/red-leaf-town/commissions/withdraw")
+    withdrawn_body = await withdrawn.get_json()
+    assert withdrawn.status_code == 200
+    assert withdrawn_body["data"]["state"]["commissions"]["commission"]["status"] == "open"
+
+
+@runs
+async def test_commission_take_api_refuses_an_unknown_commission(client, service):
+    authenticate(client)
+    response = await client.post("/api/red-leaf-town/commissions/deadbeefdeadbeef/take")
+    body = await response.get_json()
+
+    assert response.status_code == 404
+    assert body["code"] == "commission_not_found"
+
+
+@runs
+async def test_commission_apis_require_login(client):
+    for path in (
+        "/api/red-leaf-town/commissions/submit",
+        "/api/red-leaf-town/commissions/forward",
+        "/api/red-leaf-town/commissions/withdraw",
+    ):
+        assert (await client.post(path)).status_code == 401
+    assert (await client.get("/api/red-leaf-town/commissions/board")).status_code == 401

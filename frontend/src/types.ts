@@ -315,6 +315,99 @@ export interface TributeDeliveryResult {
   unlocked_portals: { portal_id: string; name: string }[]
 }
 
+export interface CommissionItem {
+  id: string
+  name: string
+  icon: string
+  kind: string
+  sell_price: number
+  has_quality: boolean
+}
+
+export type CommissionStatus = 'open' | 'forwarded' | 'completed' | 'forward_completed'
+
+export interface CommissionState {
+  day: string
+  commission_id: string
+  npc_id: string
+  npc_name: string
+  npc_title: string
+  line: string
+  item_id: string
+  quantity: number
+  tier: number
+  tier_name: string
+  lucky: boolean
+  reward_maple_flame: number
+  status: CommissionStatus
+  forwarded_at: number
+  completed_at: number
+  completed_by_name: string
+  item: CommissionItem | null
+  owned: number
+  settled: boolean
+  can_submit: boolean
+  can_forward: boolean
+  can_withdraw: boolean
+  owner_reward: number
+  taker_reward: number
+}
+
+export interface CommissionTake {
+  day: string
+  commission_id: string
+  owner_name: string
+  item_id: string
+  quantity: number
+  reward_maple_flame: number
+  completed_at: number
+}
+
+export interface CommissionsState {
+  day: string
+  unlocked: boolean
+  min_level: number
+  board_available: boolean
+  refresh_at: number
+  lucky_weekday: number
+  lucky_today: boolean
+  reward_maple_flame: number
+  lucky_reward_maple_flame: number
+  daily_take_limit: number
+  remaining_takes: number
+  takes: CommissionTake[]
+  commission: CommissionState | null
+}
+
+export interface CommissionBoardEntry {
+  commission_id: string
+  day: string
+  owner_name: string
+  npc_name: string
+  npc_title: string
+  line: string
+  item_id: string
+  quantity: number
+  tier: number
+  lucky: boolean
+  reward_maple_flame: number
+  owner_reward: number
+  taker_reward: number
+  forwarded_at: number
+  item: CommissionItem | null
+  owned: number
+  can_take: boolean
+}
+
+export interface CommissionBoard {
+  day: string
+  available: boolean
+  refresh_at: number
+  remaining_takes: number
+  daily_take_limit: number
+  entries: CommissionBoardEntry[]
+}
+
 export interface RecipeInputState {
   item_id: string
   quantity: number
@@ -454,6 +547,7 @@ export interface GameState {
   industry_rules: Record<string, IndustryRules>
   talents: TalentState
   portals: PortalState[]
+  commissions: CommissionsState
   crops: CropDefinition[]
   shop: ShopEntry[]
 }

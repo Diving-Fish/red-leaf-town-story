@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import {
   CloudRain,
   CloudSun,
-  Gem,
+  HandHeart,
   Leaf,
   Lock,
   PackageCheck,
@@ -26,6 +26,17 @@ import type { IndustryId, TalentNode } from '@/types'
 
 const game = useGameStore()
 const ui = useUiStore()
+
+const commissions = computed(() => game.state?.commissions || null)
+const commissionHint = computed(() => {
+  const state = commissions.value
+  if (!state) return ''
+  const today = state.commission
+  if (!today) return '今天没人来找你'
+  if (today.settled) return '今天的已经交了'
+  if (today.status === 'forwarded') return '等人接手中'
+  return `${today.npc_name}要 ${today.item?.name || today.item_id} ×${today.quantity}`
+})
 
 const weatherOptions = [
   { name: '晴朗', icon: Sun, accent: '#e0b45d' },
@@ -104,8 +115,11 @@ async function unlock(node: TalentNode) {
         <button class="surface-card quick-card reserved" disabled>
           <PackageCheck :size="24" /><span><strong>一键收取</strong></span><Lock :size="16" />
         </button>
-        <button class="surface-card quick-card reserved" disabled>
-          <Gem :size="24" /><span><strong>今日委托</strong></span><Lock :size="16" />
+        <RouterLink v-if="commissions?.unlocked" class="surface-card quick-card" to="/commissions">
+          <HandHeart :size="24" /><span><strong>今日委托</strong><small>{{ commissionHint }}</small></span>
+        </RouterLink>
+        <button v-else class="surface-card quick-card reserved" disabled>
+          <HandHeart :size="24" /><span><strong>今日委托</strong></span><Lock :size="16" />
         </button>
       </div>
     </section>
@@ -172,6 +186,7 @@ async function unlock(node: TalentNode) {
 .quick-card { min-height: 94px; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 11px; padding: 15px; text-align: left; color: #d6ddd3; }
 .quick-card > svg:first-child { color: var(--leaf-bright); }
 .quick-card strong,.quick-card small { display: block; }
+.quick-card small { margin-top: 3px; overflow: hidden; color: #8b968c; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
 .quick-card.reserved { opacity: .55; }
 .talent-tree-section > header { align-items: center; }
 .talent-points { display: flex; align-items: center; gap: 7px; padding: 10px 14px; color: #d8c17e !important; border: 1px solid #d7ad5833; border-radius: 99px; background: #d7ad580b; white-space: nowrap; }

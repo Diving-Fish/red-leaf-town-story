@@ -7,8 +7,14 @@ import pytest
 
 from red_leaf_town.application import GameService
 from red_leaf_town.content import load_content
-from red_leaf_town.domain import OwnedPartnerState, PlayerState, QQIdentity
-from red_leaf_town.infrastructure import RedisPlayerRepository
+from red_leaf_town.domain import (
+    CommissionBoardEntry,
+    CommissionPayout,
+    OwnedPartnerState,
+    PlayerState,
+    QQIdentity,
+)
+from red_leaf_town.infrastructure import RedisCommissionBoard, RedisPlayerRepository
 from src.data_access.redis import redis_global
 
 
@@ -132,3 +138,97 @@ def test_mining_site_and_task_snapshot_persist(repository):
     assert reloaded.schema_version == PlayerState.model_fields["schema_version"].default
     assert reloaded.mining_sites[0].site_id == "copper_foothill"
     assert reloaded.mining_sites[0].task_snapshot.industry == "mining"
+
+
+@pytest.fixture
+def board():
+    prefix = f"test:rlt:commission:{uuid4().hex}:"
+
+    class IsolatedBoard(RedisCommissionBoard):
+        PREFIX = prefix
+
+    instance = IsolatedBoard(redis_global)
+    yield instance
+    for key in redis_global.scan_iter(match=f"{prefix}*"):
+        redis_global.delete(key)
+
+
+def board_entry(commission_id="commission-abcdef01", owner_id="owner-1"):
+    return CommissionBoardEntry(
+        commission_id=commission_id,
+        day="2026-08-24",
+        owner_id=owner_id,
+        owner_name="枫一",
+        item_id="carrot",
+        quantity=5,
+        tier=1,
+        reward_maple_flame=100,
+        owner_reward=80,
+        taker_reward=40,
+        forwarded_at=1_700_000_000,
+    )
+
+
+def payout_for(entry, taker_name="枫二"):
+    return CommissionPayout(
+        commission_id=entry.commission_id,
+        day=entry.day,
+        maple_flame=entry.owner_reward,
+        taker_name=taker_name,
+        item_id=entry.item_id,
+        quantity=entry.quantity,
+        completed_at=1_700_000_100,
+    )
+
+
+def test_commission_board_round_trips_through_redis(board):
+    entry = board_entry()
+    board.publish(entry)
+
+    assert board.get(entry.day, entry.commission_id) == entry
+    assert [item.commission_id for item in board.list_open(entry.day)] == [entry.commission_id]
+    assert board.list_open(entry.day, exclude_player_id=entry.owner_id) == []
+
+
+def test_only_the_first_taker_wins_the_same_commission(board):
+    entry = board_entry()
+    board.publish(entry)
+
+    first = board.take(entry.day, entry.commission_id, "helper-1", payout_for(entry))
+    second = board.take(entry.day, entry.commission_id, "helper-2", payout_for(entry))
+
+    assert first is not None
+    assert second is None
+    assert board.list_open(entry.day) == []
+    assert [item.maple_flame for item in board.drain_payouts(entry.owner_id)] == [entry.owner_reward]
+    assert board.drain_payouts(entry.owner_id) == []
+
+
+def test_releasing_a_take_puts_the_commission_back_and_cancels_the_payout(board):
+    entry = board_entry()
+    board.publish(entry)
+    payout = payout_for(entry)
+    board.take(entry.day, entry.commission_id, "helper-1", payout)
+
+    board.release(entry.day, entry.commission_id, "helper-1", payout)
+
+    assert [item.commission_id for item in board.list_open(entry.day)] == [entry.commission_id]
+    assert board.drain_payouts(entry.owner_id) == []
+
+
+def test_withdrawing_fails_once_the_commission_was_taken(board):
+    entry = board_entry()
+    board.publish(entry)
+
+    assert board.withdraw(entry.day, entry.commission_id, "someone-else") is None
+    board.take(entry.day, entry.commission_id, "helper-1", payout_for(entry))
+    assert board.withdraw(entry.day, entry.commission_id, entry.owner_id) is None
+
+
+def test_restoring_payouts_keeps_them_for_the_next_read(board):
+    entry = board_entry()
+    payouts = [payout_for(entry)]
+
+    board.restore_payouts(entry.owner_id, payouts)
+
+    assert board.drain_payouts(entry.owner_id) == payouts

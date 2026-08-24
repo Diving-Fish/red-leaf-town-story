@@ -7,7 +7,13 @@ from typing import TypeVar
 from uuid import uuid4
 
 from red_leaf_town.content import GameContent
-from red_leaf_town.domain import PlayerState, PlotState, QQIdentity
+from red_leaf_town.domain import (
+    CommissionBoardEntry,
+    CommissionPayout,
+    PlayerState,
+    PlotState,
+    QQIdentity,
+)
 
 T = TypeVar("T")
 
@@ -118,3 +124,63 @@ class InMemoryPlayerRepository:
     @staticmethod
     def _identity_key(identity: QQIdentity) -> str:
         return f"{identity.platform}:{identity.bot_id}:{identity.subject}"
+
+
+class InMemoryCommissionBoard:
+    def __init__(self):
+        self.entries: dict[tuple[str, str], CommissionBoardEntry] = {}
+        self.taken: dict[tuple[str, str], str] = {}
+        self.payouts: dict[str, list[CommissionPayout]] = {}
+
+    def publish(self, entry: CommissionBoardEntry) -> None:
+        self.entries[(entry.day, entry.commission_id)] = entry.model_copy(deep=True)
+
+    def get(self, day: str, commission_id: str) -> CommissionBoardEntry | None:
+        entry = self.entries.get((day, commission_id))
+        return entry.model_copy(deep=True) if entry else None
+
+    def list_open(self, day: str, exclude_player_id: str = "", limit: int = 30) -> list[CommissionBoardEntry]:
+        open_entries = [
+            entry.model_copy(deep=True)
+            for (entry_day, commission_id), entry in self.entries.items()
+            if entry_day == day
+            and (entry_day, commission_id) not in self.taken
+            and entry.owner_id != exclude_player_id
+        ]
+        open_entries.sort(key=lambda entry: (entry.forwarded_at, entry.commission_id))
+        return open_entries[:limit]
+
+    def withdraw(self, day: str, commission_id: str, owner_id: str) -> CommissionBoardEntry | None:
+        key = (day, commission_id)
+        entry = self.entries.get(key)
+        if not entry or entry.owner_id != owner_id or key in self.taken:
+            return None
+        return self.entries.pop(key)
+
+    def take(self, day: str, commission_id: str, taker_id: str, payout: CommissionPayout) -> CommissionBoardEntry | None:
+        key = (day, commission_id)
+        entry = self.entries.get(key)
+        if not entry or entry.owner_id == taker_id or key in self.taken:
+            return None
+        self.taken[key] = taker_id
+        self.payouts.setdefault(entry.owner_id, []).append(payout.model_copy(deep=True))
+        return entry.model_copy(deep=True)
+
+    def release(self, day: str, commission_id: str, taker_id: str, payout: CommissionPayout) -> None:
+        key = (day, commission_id)
+        if self.taken.get(key) != taker_id:
+            return
+        del self.taken[key]
+        entry = self.entries.get(key)
+        if not entry:
+            return
+        queued = self.payouts.get(entry.owner_id)
+        if queued is None:
+            return
+        self.payouts[entry.owner_id] = [item for item in queued if item.commission_id != payout.commission_id]
+
+    def drain_payouts(self, player_id: str) -> list[CommissionPayout]:
+        return self.payouts.pop(player_id, [])
+
+    def restore_payouts(self, player_id: str, payouts: list[CommissionPayout]) -> None:
+        self.payouts.setdefault(player_id, [])[:0] = [payout.model_copy(deep=True) for payout in payouts]

@@ -19,6 +19,8 @@ PLUGIN_META = {
     "help_text": """【红叶镇物语】
   红叶镇                  — 查看农场摘要
   红叶镇招募 [1/10]       — 使用引路枫叶招募伙伴
+  红叶镇委托              — 查看今日委托和公共转发池
+  红叶镇交委托            — 交付今日委托
   绑定红叶镇 [绑定码]     — 绑定水鱼账号中的红叶镇角色
 
 请先在 Web 端使用水鱼账号登录。""",
@@ -67,6 +69,8 @@ async def bind_player(bot: Bot, event: Event, message: Message = CommandArg()):
 
 summary_command = on_command("红叶镇", force_whitespace=True)
 recruit_command = on_command("红叶镇招募", aliases={"红叶镇抽卡"}, force_whitespace=True)
+commission_command = on_command("红叶镇委托", aliases={"红叶镇今日委托"}, force_whitespace=True)
+commission_submit_command = on_command("红叶镇交委托", aliases={"红叶镇提交委托"}, force_whitespace=True)
 
 
 @recruit_command.handle()
@@ -150,5 +154,66 @@ async def farm_summary(bot: Bot, event: Event):
         f"加工：{crafting_ready} 件可领取，{crafting_running} 件制作中\n"
         f"矿产：{mining_ready} 处可收取，{mining_running} 处开采中\n"
         f"传送门：已开启 {portals_opened} 座，{portals_active} 座待交贡品\n"
-        "前往 Web 页面管理农场：https://chiyuki.diving-fish.com/red-leaf-town/",
+        + "\n".join(_commission_lines(state))
+        + "\n前往 Web 页面管理农场：https://chiyuki.diving-fish.com/red-leaf-town/",
+    ).send()
+
+
+def _commission_lines(state: dict) -> list[str]:
+    commissions = state.get("commissions") or {}
+    if not commissions.get("unlocked"):
+        return [f"委托：居民等级达到 {commissions.get('min_level', 1)} 级后开放"]
+    today = commissions.get("commission")
+    if not today:
+        return ["委托：今天没有人来找你"]
+    mark = "🌟 幸运日 " if today["lucky"] else ""
+    item = (today.get("item") or {}).get("name") or today["item_id"]
+    status = {
+        "open": f"进度 {today['owned']}/{today['quantity']}",
+        "forwarded": "已转发，等人接手",
+        "completed": "已交付",
+        "forward_completed": f"{today['completed_by_name']} 替你完成了",
+    }[today["status"]]
+    return [
+        f"{mark}{today['npc_title']}{today['npc_name']}：{item} ×{today['quantity']}",
+        f"报酬 {today['reward_maple_flame']} 枫火 · {status}",
+    ]
+
+
+@commission_command.handle()
+async def commission_summary(bot: Bot, event: Event):
+    identity = resolve_identity(bot, event)
+    if not identity:
+        await _reply(event, "无法识别当前 QQ 身份。").send()
+        return
+    service = get_service()
+    try:
+        state = service.snapshot_by_identity(identity)
+        board = service.commission_board_by_identity(identity)
+    except GameError as exc:
+        await _reply(event, exc.message).send()
+        return
+    lines = _commission_lines(state)
+    lines.append(
+        f"转发池：{len(board['entries'])} 条待接 · 今天还能接 "
+        f"{board['remaining_takes']}/{board['daily_take_limit']} 单"
+    )
+    lines.append("接单和转发请到 Web 页面：https://chiyuki.diving-fish.com/red-leaf-town/commissions")
+    await _reply(event, "🍁 今日委托\n" + "\n".join(lines)).send()
+
+
+@commission_submit_command.handle()
+async def commission_submit(bot: Bot, event: Event):
+    identity = resolve_identity(bot, event)
+    if not identity:
+        await _reply(event, "无法识别当前 QQ 身份。").send()
+        return
+    try:
+        result = get_service().submit_commission_by_identity(identity)["result"]
+    except GameError as exc:
+        await _reply(event, exc.message).send()
+        return
+    await _reply(
+        event,
+        f"委托交付完成，{result['npc_name']}收下了东西，你获得 {result['maple_flame']} 枫火。",
     ).send()

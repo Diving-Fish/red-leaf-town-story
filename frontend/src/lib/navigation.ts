@@ -1,5 +1,5 @@
 import type { Component } from 'vue'
-import { DoorOpen, Flame, Hammer, LayoutDashboard, Pickaxe, Sparkles, Sprout, Store, Trees } from 'lucide-vue-next'
+import { DoorOpen, Flame, Hammer, HandHeart, LayoutDashboard, Pickaxe, Sparkles, Sprout, Store, Trees } from 'lucide-vue-next'
 
 import type { GameState } from '@/types'
 
@@ -40,6 +40,13 @@ export const NAV_ITEMS: NavItem[] = [
     primary: false,
     readyGroup: 'mining',
     unlocked: (state) => state.mining_sites.length > 0,
+  },
+  {
+    to: '/commissions',
+    label: '委托',
+    icon: HandHeart,
+    primary: false,
+    unlocked: (state) => state.commissions.unlocked,
   },
   {
     to: '/portals',

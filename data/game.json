@@ -1216,6 +1216,250 @@
       }
     }
   ],
+  "commissions": {
+    "reset_hour": 4,
+    "timezone": "Asia/Shanghai",
+    "min_level": 1,
+    "reward_maple_flame": 100,
+    "lucky_reward_maple_flame": 200,
+    "forward_owner_share": 0.8,
+    "forward_taker_share": 0.4,
+    "daily_take_limit": 1,
+    "board_limit": 30,
+    "excluded_item_ids": [
+      "orange_berry"
+    ],
+    "tiers": [
+      {
+        "tier": 1,
+        "name": "寻常物产",
+        "weight": 50,
+        "lucky_weight": 0,
+        "quantity_min": 4,
+        "quantity_max": 6
+      },
+      {
+        "tier": 2,
+        "name": "时令物产",
+        "weight": 30,
+        "lucky_weight": 20,
+        "quantity_min": 3,
+        "quantity_max": 4
+      },
+      {
+        "tier": 3,
+        "name": "精细物产",
+        "weight": 15,
+        "lucky_weight": 45,
+        "quantity_min": 2,
+        "quantity_max": 3
+      },
+      {
+        "tier": 4,
+        "name": "罕见物产",
+        "weight": 5,
+        "lucky_weight": 35,
+        "quantity_min": 1,
+        "quantity_max": 2
+      }
+    ],
+    "entries": [
+      {
+        "item_id": "carrot",
+        "tier": 1
+      },
+      {
+        "item_id": "potato",
+        "tier": 1
+      },
+      {
+        "item_id": "maple_wood",
+        "tier": 1
+      },
+      {
+        "item_id": "tough_fodder",
+        "tier": 1
+      },
+      {
+        "item_id": "red_copper_ore",
+        "tier": 1
+      },
+      {
+        "item_id": "wheat",
+        "tier": 2
+      },
+      {
+        "item_id": "woodland_mushroom",
+        "tier": 2
+      },
+      {
+        "item_id": "autumn_herb",
+        "tier": 2
+      },
+      {
+        "item_id": "moon_silver_ore",
+        "tier": 2
+      },
+      {
+        "item_id": "pumpkin",
+        "tier": 3
+      },
+      {
+        "item_id": "maple_resin",
+        "tier": 3
+      },
+      {
+        "item_id": "morning_dew_flower",
+        "tier": 3
+      },
+      {
+        "item_id": "maple_plank",
+        "tier": 3
+      },
+      {
+        "item_id": "herbal_salve",
+        "tier": 3
+      },
+      {
+        "item_id": "flour",
+        "tier": 3
+      },
+      {
+        "item_id": "pickled_carrot",
+        "tier": 3
+      },
+      {
+        "item_id": "amber_beeswax",
+        "tier": 4
+      },
+      {
+        "item_id": "silver_star_moss",
+        "tier": 4
+      }
+    ],
+    "npcs": [
+      {
+        "id": "keli",
+        "name": "柯莉",
+        "title": "面包房学徒",
+        "line": "灶还热着呢——{item}再给我 {quantity} 份，今天的炉子就不算白烧。"
+      },
+      {
+        "id": "laowen",
+        "name": "老温",
+        "title": "码头搬运工",
+        "line": "答应了别人的货，缺 {quantity} 份{item}。你要是有，我这条老腰就得救了。"
+      },
+      {
+        "id": "axing",
+        "name": "阿杏",
+        "title": "药铺看诊人",
+        "line": "病人等着呢，{item} 凑够 {quantity} 份我今晚就能配出药来。"
+      },
+      {
+        "id": "shizhu",
+        "name": "石竹",
+        "title": "石桥修补匠",
+        "line": "桥面还差一截。{quantity} 份{item}，我保证补得平平整整。"
+      },
+      {
+        "id": "mocheng",
+        "name": "墨澄",
+        "title": "镇志抄录员",
+        "line": "写到这一页，得有实物对照。借我 {quantity} 份{item}，我照着画完就还你——不，就不还了。"
+      },
+      {
+        "id": "tanger",
+        "name": "糖儿",
+        "title": "糖水铺小妹",
+        "line": "娘说今天可以自己配一锅。{item} 要 {quantity} 份，你别告诉她我加了糖。"
+      },
+      {
+        "id": "yanbo",
+        "name": "岩伯",
+        "title": "矿道守夜人",
+        "line": "下井前得备齐。{quantity} 份{item}，少一份我都不敢下去。"
+      },
+      {
+        "id": "luyi",
+        "name": "露伊",
+        "title": "染坊学徒",
+        "line": "这个颜色试了七回都不对。再来 {quantity} 份{item}，第八回准成。"
+      },
+      {
+        "id": "hetian",
+        "name": "禾田",
+        "title": "打谷场老把式",
+        "line": "谷场空着心里发慌。给我 {quantity} 份{item}，我给你留一袋新米。"
+      },
+      {
+        "id": "qinglu",
+        "name": "青芦",
+        "title": "渡口摆渡人",
+        "line": "河那边的人托我捎的，{item} 共 {quantity} 份。船钱我自己出。"
+      },
+      {
+        "id": "baiyu",
+        "name": "白榆",
+        "title": "木器行掌柜",
+        "line": "客人催了三回了。{quantity} 份{item}，送到我就能交差。"
+      },
+      {
+        "id": "xiaoman",
+        "name": "小满",
+        "title": "邻家小孩",
+        "line": "我攒了好久的零钱！{item}……{quantity} 份，够吗？不够我再攒。"
+      },
+      {
+        "id": "zhaipo",
+        "name": "翟婆",
+        "title": "巷口杂货铺",
+        "line": "老主顾要的，{quantity} 份{item}。你送来，我给你算便宜些。"
+      },
+      {
+        "id": "linshu",
+        "name": "林枢",
+        "title": "林道巡守",
+        "line": "巡到北边发现少了东西。{quantity} 份{item}，补上就当没这回事。"
+      },
+      {
+        "id": "yunqiao",
+        "name": "云樵",
+        "title": "山上砍柴人",
+        "line": "下山一趟不容易。{item} 给我留 {quantity} 份，我下回带蘑菇给你。"
+      },
+      {
+        "id": "suye",
+        "name": "苏叶",
+        "title": "茶棚老板娘",
+        "line": "秋天来的客人多。{quantity} 份{item}，我这棚子就能撑到落雪。"
+      },
+      {
+        "id": "gengzhi",
+        "name": "耕之",
+        "title": "农具铺铁匠",
+        "line": "炉火正旺，别让我等。{quantity} 份{item}，敲出来的东西给你先挑。"
+      },
+      {
+        "id": "wanzhou",
+        "name": "晚舟",
+        "title": "夜里写信的人",
+        "line": "别问我做什么用。{item}，{quantity} 份，谢谢你。"
+      },
+      {
+        "id": "chunhe",
+        "name": "春禾",
+        "title": "苗圃看护",
+        "line": "苗子要养起来。{quantity} 份{item}，开春你来看，绿得很好看。"
+      },
+      {
+        "id": "shanniang",
+        "name": "山娘",
+        "title": "山道客栈掌柜",
+        "line": "住店的客人点名要。{quantity} 份{item}，晚了他们该嚷嚷了。"
+      }
+    ]
+  },
   "shop": [
     {
       "id": "carrot_seed",

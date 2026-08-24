@@ -11,10 +11,14 @@ def get_service() -> GameService:
     if _service is None:
         from src.data_access.redis import redis_global
 
-        from red_leaf_town.infrastructure import RedisPlayerRepository
+        from red_leaf_town.infrastructure import RedisCommissionBoard, RedisPlayerRepository
 
         content = load_content()
-        _service = GameService(content, RedisPlayerRepository(redis_global, content))
+        _service = GameService(
+            content,
+            RedisPlayerRepository(redis_global, content),
+            commission_board=RedisCommissionBoard(redis_global),
+        )
     return _service
 
 

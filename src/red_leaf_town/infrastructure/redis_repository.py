@@ -10,7 +10,13 @@ from uuid import uuid4
 from redis.exceptions import WatchError
 
 from red_leaf_town.content import GameContent
-from red_leaf_town.domain import PlayerState, PlotState, QQIdentity
+from red_leaf_town.domain import (
+    CommissionBoardEntry,
+    CommissionPayout,
+    PlayerState,
+    PlotState,
+    QQIdentity,
+)
 
 T = TypeVar("T")
 
@@ -216,3 +222,127 @@ class RedisPlayerRepository:
 
     def _bindings_prefix(self) -> str:
         return f"{self.PREFIX}bindings:"
+
+
+_TAKE_COMMISSION_LUA = """
+if redis.call('HEXISTS', KEYS[1], ARGV[1]) == 0 then return 0 end
+if redis.call('HSETNX', KEYS[2], ARGV[1], ARGV[2]) == 0 then return 0 end
+redis.call('EXPIRE', KEYS[2], tonumber(ARGV[4]))
+redis.call('RPUSH', KEYS[3], ARGV[3])
+redis.call('EXPIRE', KEYS[3], tonumber(ARGV[5]))
+return 1
+"""
+
+_RELEASE_COMMISSION_LUA = """
+if redis.call('HGET', KEYS[1], ARGV[1]) ~= ARGV[2] then return 0 end
+redis.call('HDEL', KEYS[1], ARGV[1])
+redis.call('LREM', KEYS[2], 1, ARGV[3])
+return 1
+"""
+
+_WITHDRAW_COMMISSION_LUA = """
+if redis.call('HEXISTS', KEYS[2], ARGV[1]) == 1 then return 0 end
+if redis.call('HDEL', KEYS[1], ARGV[1]) == 0 then return 0 end
+return 1
+"""
+
+_DRAIN_PAYOUTS_LUA = """
+local queued = redis.call('LRANGE', KEYS[1], 0, -1)
+redis.call('DEL', KEYS[1])
+return queued
+"""
+
+
+class RedisCommissionBoard:
+    """公共转发池。发布的内容不可变，接单靠一张单独的 taken 表用 HSETNX 抢占。"""
+
+    PREFIX = "rlt:commission:"
+    BOARD_TTL = 3 * 24 * 3600
+    PAYOUT_TTL = 30 * 24 * 3600
+
+    def __init__(self, redis_client: Any):
+        self.redis = redis_client
+        self._take_script = redis_client.register_script(_TAKE_COMMISSION_LUA)
+        self._release_script = redis_client.register_script(_RELEASE_COMMISSION_LUA)
+        self._withdraw_script = redis_client.register_script(_WITHDRAW_COMMISSION_LUA)
+        self._drain_script = redis_client.register_script(_DRAIN_PAYOUTS_LUA)
+
+    def publish(self, entry: CommissionBoardEntry) -> None:
+        board_key = self._board_key(entry.day)
+        self.redis.hset(board_key, entry.commission_id, entry.model_dump_json())
+        self.redis.expire(board_key, self.BOARD_TTL)
+
+    def get(self, day: str, commission_id: str) -> CommissionBoardEntry | None:
+        raw = self.redis.hget(self._board_key(day), commission_id)
+        return CommissionBoardEntry.model_validate_json(raw) if raw else None
+
+    def list_open(self, day: str, exclude_player_id: str = "", limit: int = 30) -> list[CommissionBoardEntry]:
+        raw_entries = self.redis.hgetall(self._board_key(day)) or {}
+        taken = set(self.redis.hkeys(self._taken_key(day)) or [])
+        entries = []
+        for commission_id, raw in raw_entries.items():
+            if commission_id in taken:
+                continue
+            try:
+                entry = CommissionBoardEntry.model_validate_json(raw)
+            except (TypeError, ValueError):
+                continue
+            if entry.owner_id == exclude_player_id:
+                continue
+            entries.append(entry)
+        entries.sort(key=lambda entry: (entry.forwarded_at, entry.commission_id))
+        return entries[:limit]
+
+    def withdraw(self, day: str, commission_id: str, owner_id: str) -> CommissionBoardEntry | None:
+        entry = self.get(day, commission_id)
+        if not entry or entry.owner_id != owner_id:
+            return None
+        removed = self._withdraw_script(
+            keys=[self._board_key(day), self._taken_key(day)],
+            args=[commission_id],
+        )
+        return entry if int(removed or 0) else None
+
+    def take(self, day: str, commission_id: str, taker_id: str, payout: CommissionPayout) -> CommissionBoardEntry | None:
+        entry = self.get(day, commission_id)
+        if not entry or entry.owner_id == taker_id:
+            return None
+        claimed = self._take_script(
+            keys=[self._board_key(day), self._taken_key(day), self._payout_key(entry.owner_id)],
+            args=[commission_id, taker_id, payout.model_dump_json(), self.BOARD_TTL, self.PAYOUT_TTL],
+        )
+        return entry if int(claimed or 0) else None
+
+    def release(self, day: str, commission_id: str, taker_id: str, payout: CommissionPayout) -> None:
+        entry = self.get(day, commission_id)
+        if not entry:
+            return
+        self._release_script(
+            keys=[self._taken_key(day), self._payout_key(entry.owner_id)],
+            args=[commission_id, taker_id, payout.model_dump_json()],
+        )
+
+    def drain_payouts(self, player_id: str) -> list[CommissionPayout]:
+        payouts = []
+        for raw in self._drain_script(keys=[self._payout_key(player_id)]) or []:
+            try:
+                payouts.append(CommissionPayout.model_validate_json(raw))
+            except (TypeError, ValueError):
+                continue
+        return payouts
+
+    def restore_payouts(self, player_id: str, payouts: list[CommissionPayout]) -> None:
+        if not payouts:
+            return
+        key = self._payout_key(player_id)
+        self.redis.lpush(key, *[payout.model_dump_json() for payout in reversed(payouts)])
+        self.redis.expire(key, self.PAYOUT_TTL)
+
+    def _board_key(self, day: str) -> str:
+        return f"{self.PREFIX}board:{day}"
+
+    def _taken_key(self, day: str) -> str:
+        return f"{self.PREFIX}taken:{day}"
+
+    def _payout_key(self, player_id: str) -> str:
+        return f"{self.PREFIX}payout:{player_id}"

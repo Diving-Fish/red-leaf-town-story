@@ -7,6 +7,9 @@ from math import ceil, floor
 
 from red_leaf_town.content import GameContent, GatheringDrawDefinition
 from red_leaf_town.domain import (
+    CommissionBoardEntry,
+    CommissionPayout,
+    CommissionState,
     CraftingStationState,
     GachaDropRecord,
     GachaPoolProgressState,
@@ -20,10 +23,19 @@ from red_leaf_town.domain import (
     ProductionResultSnapshot,
     ProductionTaskSnapshot,
     QQIdentity,
+    TakenCommissionRecord,
     TaskPartnerSnapshot,
     TaskInputSnapshot,
     TaskOutputSnapshot,
     TaskQualitySnapshot,
+)
+from red_leaf_town.domain.commissions import (
+    commission_day,
+    commission_day_end,
+    commission_identifier,
+    commission_seed,
+    is_lucky_day,
+    lucky_weekday,
 )
 from red_leaf_town.domain.economy import EconomyError, add_item, grant_coins, remove_item, spend_coins
 from red_leaf_town.domain.progression import (
@@ -54,7 +66,7 @@ from red_leaf_town.story_assets import StoryAssetCatalog, load_story_asset_catal
 from red_leaf_town.story_content import StoryCatalog, load_story_catalog, serialize_script
 from red_leaf_town.story_triggers import StoryContext, validate_story_cue
 
-from .ports import PlayerRepository
+from .ports import CommissionBoardRepository, PlayerRepository
 
 
 class GameError(Exception):
@@ -71,6 +83,7 @@ class GameService:
         content: GameContent,
         repository: PlayerRepository,
         *,
+        commission_board: CommissionBoardRepository | None = None,
         clock: Callable[[], float] = time.time,
         rng: random.Random | random.SystemRandom | None = None,
         partner_catalog_loader: Callable[[], PartnerCatalog] = load_partner_catalog,
@@ -80,6 +93,8 @@ class GameService:
     ):
         self.content = content
         self.repository = repository
+        # 转发池是唯一的跨玩家状态。不接的话委托照常刷新和提交，只是转发功能不开放。
+        self.commission_board = commission_board
         self.clock = clock
         self.rng = rng or random.SystemRandom()
         self.partner_catalog_loader = partner_catalog_loader
@@ -1163,6 +1178,410 @@ class GameService:
             if completed.id in portal.prerequisites and self._portal_unlocked(player, portal)
         ]
 
+    # ---------------------------------------------------------------- 今日委托
+
+    def submit_commission(self, oauth_sub: str) -> dict:
+        """自己交自己的委托，拿全额枫火。"""
+        now = self._now()
+        player = self._require_player(oauth_sub)
+        self._apply_commission_payouts(player.player_id)
+
+        def mutation(state: PlayerState):
+            self._settle(state, now)
+            commission = self._require_commission(state)
+            if commission.status != "open":
+                raise GameError("commission_not_open", self._commission_status_reason(commission), 409)
+            consumed = self._consume_commission_items(state, commission)
+            commission.status = "completed"
+            commission.completed_at = now
+            commission.completed_by_name = state.display_name
+            state.maple_flame += commission.reward_maple_flame
+            return {
+                "commission_id": commission.commission_id,
+                "npc_name": commission.npc_name,
+                "item_id": commission.item_id,
+                "quantity": commission.quantity,
+                "lucky": commission.lucky,
+                "maple_flame": commission.reward_maple_flame,
+                "consumed": [snapshot.model_dump() for snapshot in consumed],
+            }
+
+        state, result = self.repository.update(player.player_id, mutation)
+        return {"result": result, "state": self._snapshot(state, now)}
+
+    def forward_commission(self, oauth_sub: str) -> dict:
+        """转发到公共池。别人交掉之后本人拿回配置里的那一份，剩下的归接单的人。"""
+        now = self._now()
+        board = self._board()
+        player = self._require_player(oauth_sub)
+        self._apply_commission_payouts(player.player_id)
+        published: dict[str, CommissionBoardEntry] = {}
+
+        def mutation(state: PlayerState):
+            self._settle(state, now)
+            commission = self._require_commission(state)
+            if commission.status != "open":
+                raise GameError("commission_not_open", self._commission_status_reason(commission), 409)
+            commission.status = "forwarded"
+            commission.forwarded_at = now
+            published["entry"] = self._board_entry(state, commission)
+            return {"commission_id": commission.commission_id}
+
+        state, result = self.repository.update(player.player_id, mutation)
+        entry = published["entry"]
+        try:
+            board.publish(entry)
+        except Exception:
+            # 池子里没有这一条的话，玩家会卡在“已转发”却谁也看不见的状态，必须回滚。
+            self.repository.update(player.player_id, lambda rollback: self._revert_forward(rollback, entry.commission_id))
+            raise
+        return {
+            "result": {**result, "owner_reward": entry.owner_reward, "taker_reward": entry.taker_reward},
+            "state": self._snapshot(state, now),
+        }
+
+    def withdraw_commission(self, oauth_sub: str) -> dict:
+        """还没被接走就能撤回，撤回之后自己交仍然是全额。"""
+        now = self._now()
+        board = self._board()
+        player = self._require_player(oauth_sub)
+        self._apply_commission_payouts(player.player_id)
+        # 回款可能刚刚入账，撤回资格要看结算之后的状态。
+        commission = self._require_commission(self._require_player(oauth_sub))
+        if commission.status == "forward_completed":
+            raise GameError("commission_already_taken", "这份委托已经有人替你完成了", 409)
+        if commission.status != "forwarded":
+            raise GameError("commission_not_forwarded", "这份委托没有在转发池里", 409)
+        entry = board.withdraw(commission.day, commission.commission_id, player.player_id)
+        if entry is None:
+            raise GameError("commission_already_taken", "这份委托已经被别人接走了", 409)
+        try:
+            state, result = self.repository.update(
+                player.player_id,
+                lambda target: self._revert_forward(target, commission.commission_id),
+            )
+        except Exception:
+            board.publish(entry)
+            raise
+        return {"result": result, "state": self._snapshot(state, now)}
+
+    def take_commission(self, oauth_sub: str, commission_id: str) -> dict:
+        """替别人交一份转发出来的委托。先抢占池子里的名额，再扣物品发奖励。"""
+        now = self._now()
+        board = self._board()
+        player = self._require_player(oauth_sub)
+        self._apply_commission_payouts(player.player_id)
+        day = self._commission_day(now)
+        entry = board.get(day, str(commission_id))
+        if entry is None:
+            raise GameError("commission_not_found", "这份委托不在转发池里", 404)
+        if entry.owner_id == player.player_id:
+            raise GameError("commission_own", "不能接自己的委托", 409)
+        self._check_take_eligibility(player, entry, day)
+        payout = CommissionPayout(
+            commission_id=entry.commission_id,
+            day=day,
+            maple_flame=entry.owner_reward,
+            taker_name=player.display_name,
+            item_id=entry.item_id,
+            quantity=entry.quantity,
+            completed_at=now,
+        )
+        if board.take(day, entry.commission_id, player.player_id, payout) is None:
+            raise GameError("commission_already_taken", "手慢了，这份委托刚被接走", 409)
+
+        def mutation(state: PlayerState):
+            self._settle(state, now)
+            self._check_take_eligibility(state, entry, day)
+            consumed = self._consume_commission_items(state, entry)
+            state.maple_flame += entry.taker_reward
+            state.commission_takes.append(TakenCommissionRecord(
+                day=day,
+                commission_id=entry.commission_id,
+                owner_name=entry.owner_name,
+                item_id=entry.item_id,
+                quantity=entry.quantity,
+                reward_maple_flame=entry.taker_reward,
+                completed_at=now,
+            ))
+            del state.commission_takes[:-30]
+            return {
+                "commission_id": entry.commission_id,
+                "owner_name": entry.owner_name,
+                "npc_name": entry.npc_name,
+                "item_id": entry.item_id,
+                "quantity": entry.quantity,
+                "lucky": entry.lucky,
+                "maple_flame": entry.taker_reward,
+                "consumed": [snapshot.model_dump() for snapshot in consumed],
+            }
+
+        try:
+            state, result = self.repository.update(player.player_id, mutation)
+        except Exception:
+            board.release(day, entry.commission_id, player.player_id, payout)
+            raise
+        return {"result": result, "state": self._snapshot(state, now)}
+
+    def submit_commission_by_identity(self, identity: QQIdentity) -> dict:
+        return self.submit_commission(self._sub_for_identity(identity))
+
+    def commission_board_by_identity(self, identity: QQIdentity) -> dict:
+        return self.commission_board_snapshot(self._sub_for_identity(identity))
+
+    def _sub_for_identity(self, identity: QQIdentity) -> str:
+        player_id = self.repository.player_id_for_identity(identity)
+        player = self.repository.get(player_id) if player_id else None
+        if player is None:
+            raise GameError("identity_not_bound", "这个 QQ 身份尚未绑定红叶镇角色", 404)
+        return player.oauth_sub
+
+    def commission_board_snapshot(self, oauth_sub: str) -> dict:
+        """公共转发池的当前内容。自己的那份不出现在列表里。"""
+        now = self._now()
+        player = self._require_player(oauth_sub)
+        self._apply_commission_payouts(player.player_id)
+        board = self.commission_board
+        day = self._commission_day(now)
+        entries = board.list_open(day, player.player_id, self.content.commissions.board_limit) if board else []
+        state = self.repository.get(player.player_id) or player
+        remaining = self._remaining_takes(state, day)
+        items = self.content.item_map
+        return {
+            "day": day,
+            "available": board is not None,
+            "refresh_at": self._commission_refresh_at(day),
+            "remaining_takes": remaining,
+            "daily_take_limit": self.content.commissions.daily_take_limit,
+            "entries": [
+                {
+                    **entry.model_dump(exclude={"owner_id"}),
+                    "item": items[entry.item_id].model_dump() if entry.item_id in items else None,
+                    "owned": self._owned_quantity(state, entry.item_id),
+                    "can_take": remaining > 0 and self._owned_quantity(state, entry.item_id) >= entry.quantity,
+                }
+                for entry in entries
+            ],
+        }
+
+    def _board(self) -> CommissionBoardRepository:
+        if self.commission_board is None:
+            raise GameError("commission_board_unavailable", "转发池暂时不可用", 503)
+        return self.commission_board
+
+    def _require_player(self, oauth_sub: str) -> PlayerState:
+        player = self.repository.get_by_sub(oauth_sub)
+        if not player:
+            raise GameError("player_not_found", "角色不存在", 404)
+        return player
+
+    def _require_commission(self, player: PlayerState) -> CommissionState:
+        if player.commission is None:
+            raise GameError("commission_unavailable", "今天还没有委托", 404)
+        return player.commission
+
+    def _commission_status_reason(self, commission: CommissionState) -> str:
+        if commission.status == "forwarded":
+            return "这份委托已经转发到公共池了"
+        return "今天的委托已经完成了"
+
+    def _commission_day(self, now: int) -> str:
+        commissions = self.content.commissions
+        return commission_day(now, commissions.reset_hour, commissions.timezone)
+
+    def _commission_refresh_at(self, day: str) -> int:
+        commissions = self.content.commissions
+        return commission_day_end(day, commissions.reset_hour, commissions.timezone)
+
+    def _owned_quantity(self, player: PlayerState, item_id: str) -> int:
+        return sum(player.inventory.get(item_id, {}).values())
+
+    def _remaining_takes(self, player: PlayerState, day: str) -> int:
+        taken = sum(1 for entry in player.commission_takes if entry.day == day)
+        return max(0, self.content.commissions.daily_take_limit - taken)
+
+    def _check_take_eligibility(self, player: PlayerState, entry: CommissionBoardEntry, day: str) -> None:
+        if self._remaining_takes(player, day) <= 0:
+            raise GameError("commission_take_limit", "今天已经替别人跑过一趟了", 409)
+        if any(record.commission_id == entry.commission_id for record in player.commission_takes):
+            raise GameError("commission_already_taken", "你已经接过这份委托了", 409)
+        if self._owned_quantity(player, entry.item_id) < entry.quantity:
+            item = self.content.item_map.get(entry.item_id)
+            raise GameError("resource_insufficient", f"{item.name if item else entry.item_id}数量不足")
+
+    def _consume_commission_items(self, player: PlayerState, request) -> list[TaskInputSnapshot]:
+        """委托暂时不看品质，所以从最低品质开始扣，不会吃掉玩家的臻品。"""
+        try:
+            return self._consume_minimum_quality_items(player, request.item_id, request.quantity, 0)
+        except EconomyError as exc:
+            item = self.content.item_map.get(request.item_id)
+            raise GameError("resource_insufficient", f"{item.name if item else request.item_id}数量不足") from exc
+
+    def _board_entry(self, player: PlayerState, commission: CommissionState) -> CommissionBoardEntry:
+        commissions = self.content.commissions
+        return CommissionBoardEntry(
+            commission_id=commission.commission_id,
+            day=commission.day,
+            owner_id=player.player_id,
+            owner_name=player.display_name,
+            npc_name=commission.npc_name,
+            npc_title=commission.npc_title,
+            line=commission.line,
+            item_id=commission.item_id,
+            quantity=commission.quantity,
+            tier=commission.tier,
+            lucky=commission.lucky,
+            reward_maple_flame=commission.reward_maple_flame,
+            owner_reward=commissions.owner_share(commission.reward_maple_flame),
+            taker_reward=commissions.taker_share(commission.reward_maple_flame),
+            forwarded_at=commission.forwarded_at,
+        )
+
+    def _revert_forward(self, player: PlayerState, commission_id: str) -> dict:
+        commission = player.commission
+        if commission and commission.commission_id == commission_id and commission.status == "forwarded":
+            commission.status = "open"
+            commission.forwarded_at = 0
+        return {"commission_id": commission_id}
+
+    def _apply_commission_payouts(self, player_id: str) -> None:
+        """别人替我交掉之后回给我的枫火。必须在玩家事务之外取出，否则 WATCH 重试会把它吞掉。"""
+        board = self.commission_board
+        if board is None:
+            return
+        payouts = board.drain_payouts(player_id)
+        if not payouts:
+            return
+        try:
+            self.repository.update(player_id, lambda player: self._credit_payouts(player, payouts))
+        except Exception:
+            board.restore_payouts(player_id, payouts)
+            raise
+
+    def _credit_payouts(self, player: PlayerState, payouts: list[CommissionPayout]) -> None:
+        for payout in payouts:
+            player.maple_flame += payout.maple_flame
+            commission = player.commission
+            if commission and commission.commission_id == payout.commission_id:
+                commission.status = "forward_completed"
+                commission.completed_at = payout.completed_at
+                commission.completed_by_name = payout.taker_name
+
+    def _settle_commission(self, player: PlayerState, now: int) -> None:
+        """换日就重掷。掷出的内容当场冻结，玩家中途升级不会改掉今天的委托。"""
+        if player.level < self.content.commissions.min_level:
+            return
+        day = self._commission_day(now)
+        if player.commission is not None and player.commission.day == day:
+            return
+        player.commission = self._roll_commission(player, day)
+        stale = [index for index, entry in enumerate(player.commission_takes) if entry.day < day]
+        for index in reversed(stale):
+            del player.commission_takes[index]
+
+    def _unlocked_commission_items(self, player: PlayerState) -> set[str]:
+        """能被要求的只有玩家已经能自己产出的东西，条件直接取自现有内容配置。"""
+        unlocked: set[str] = set()
+        for crop in self.content.crops:
+            if crop.min_level <= player.level:
+                unlocked.add(crop.produce_item_id)
+        gathering_sites = self.content.gathering_site_map
+        for task in self.content.gathering_tasks:
+            site = gathering_sites.get(task.site_id)
+            if site and task.min_level <= player.level and site.min_level <= player.level:
+                unlocked.update(output.item_id for output in task.outputs)
+        mining_sites = self.content.mining_site_map
+        for task in self.content.mining_tasks:
+            site = mining_sites.get(task.site_id)
+            if site and task.min_level <= player.level and site.min_level <= player.level:
+                unlocked.add(task.produce_item_id)
+        stations = self.content.crafting_station_map
+        for recipe in self.content.recipes:
+            station = stations.get(recipe.station_id)
+            if not station or station.min_level > player.level:
+                continue
+            if evaluate_recipe_unlock(player, recipe.unlock_condition.hook, recipe.unlock_condition.params):
+                unlocked.add(recipe.produce_item_id)
+        return unlocked
+
+    def _roll_commission(self, player: PlayerState, day: str) -> CommissionState | None:
+        commissions = self.content.commissions
+        entry_map = commissions.entry_map
+        candidates = [
+            entry_map[item_id]
+            for item_id in sorted(self._unlocked_commission_items(player))
+            if item_id in entry_map
+        ]
+        if not candidates:
+            return None
+        lucky = is_lucky_day(player.player_id, day)
+        tiers = commissions.tier_map
+        available = sorted({entry.tier for entry in candidates})
+        weights = [tiers[tier].lucky_weight if lucky else tiers[tier].weight for tier in available]
+        if not any(weights):
+            # 幸运日撞上低等级玩家时高难度档可能一个都没解锁，退回手上最难的一档。
+            weights = [1 if tier == available[-1] else 0 for tier in available]
+        rng = random.Random(commission_seed(player.player_id, day))
+        tier = rng.choices(available, weights=weights, k=1)[0]
+        item_id = rng.choice(sorted(entry.item_id for entry in candidates if entry.tier == tier))
+        entry = entry_map[item_id]
+        quantity_min, quantity_max = entry.quantity_range(tiers[tier])
+        quantity = rng.randint(quantity_min, quantity_max)
+        npc = commissions.npcs[rng.randrange(len(commissions.npcs))]
+        item = self.content.item_map[item_id]
+        return CommissionState(
+            day=day,
+            commission_id=commission_identifier(player.player_id, day),
+            npc_id=npc.id,
+            npc_name=npc.name,
+            npc_title=npc.title,
+            line=npc.render(item.name, quantity),
+            item_id=item_id,
+            quantity=quantity,
+            tier=tier,
+            lucky=lucky,
+            reward_maple_flame=commissions.reward_for(lucky),
+        )
+
+    def _commission_snapshot(self, player: PlayerState, now: int) -> dict:
+        commissions = self.content.commissions
+        day = self._commission_day(now)
+        items = self.content.item_map
+        commission = player.commission if player.commission and player.commission.day == day else None
+        tiers = commissions.tier_map
+        payload = None
+        if commission:
+            owned = self._owned_quantity(player, commission.item_id)
+            item = items.get(commission.item_id)
+            tier = tiers.get(commission.tier)
+            payload = {
+                **commission.model_dump(),
+                "item": item.model_dump() if item else None,
+                "tier_name": tier.name if tier else "",
+                "owned": owned,
+                "settled": commission.settled,
+                "can_submit": commission.status == "open" and owned >= commission.quantity,
+                "can_forward": commission.status == "open",
+                "can_withdraw": commission.status == "forwarded",
+                "owner_reward": commissions.owner_share(commission.reward_maple_flame),
+                "taker_reward": commissions.taker_share(commission.reward_maple_flame),
+            }
+        return {
+            "day": day,
+            "unlocked": player.level >= commissions.min_level,
+            "min_level": commissions.min_level,
+            "board_available": self.commission_board is not None,
+            "refresh_at": self._commission_refresh_at(day),
+            "lucky_weekday": lucky_weekday(player.player_id),
+            "lucky_today": is_lucky_day(player.player_id, day),
+            "reward_maple_flame": commissions.reward_maple_flame,
+            "lucky_reward_maple_flame": commissions.lucky_reward_maple_flame,
+            "daily_take_limit": commissions.daily_take_limit,
+            "remaining_takes": self._remaining_takes(player, day),
+            "takes": [entry.model_dump() for entry in player.commission_takes if entry.day == day],
+            "commission": payload,
+        }
+
     def story_cue(self, oauth_sub: str, cue: str) -> dict:
         """返回这个信号下应该立即播放的剧情，已经看过的一次性剧本不再返回。"""
         try:
@@ -1293,6 +1712,7 @@ class GameService:
 
     def _settled_snapshot(self, player_id: str) -> dict:
         now = self._now()
+        self._apply_commission_payouts(player_id)
 
         def mutation(player: PlayerState):
             self._settle(player, now)
@@ -1479,6 +1899,7 @@ class GameService:
         for site in player.mining_sites:
             if site.task_snapshot and site.task_snapshot.ready_at <= now and not site.task_results:
                 self._resolve_output(site, now)
+        self._settle_commission(player, now)
 
     def _plot(self, player: PlayerState, slot: int):
         if slot < 0 or slot >= len(player.plots):
@@ -1961,6 +2382,7 @@ class GameService:
             },
             "talents": self._talent_snapshot(player),
             "portals": self._portal_snapshot(player),
+            "commissions": self._commission_snapshot(player, now),
             "crops": [
                 crop.model_dump()
                 for crop in self.content.crops

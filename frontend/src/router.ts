@@ -7,6 +7,7 @@ import GatheringView from '@/views/GatheringView.vue'
 import CraftingView from '@/views/CraftingView.vue'
 import MiningView from '@/views/MiningView.vue'
 import DashboardView from '@/views/DashboardView.vue'
+import CommissionsView from '@/views/CommissionsView.vue'
 import PortalsView from '@/views/PortalsView.vue'
 import GachaView from '@/views/GachaView.vue'
 
@@ -36,6 +37,7 @@ export default createRouter({
     { path: '/gathering', name: 'gathering', component: GatheringView, meta: { title: '采集' } },
     { path: '/crafting', name: 'crafting', component: CraftingView, meta: { title: '加工' } },
     { path: '/mining', name: 'mining', component: MiningView, meta: { title: '矿产' } },
+    { path: '/commissions', name: 'commissions', component: CommissionsView, meta: { title: '今日委托' } },
     { path: '/portals', name: 'portals', component: PortalsView, meta: { title: '传送门' } },
     { path: '/gacha', name: 'gacha', component: GachaView, meta: { title: '异界招募' } },
     { path: '/market', name: 'market', component: MarketView, meta: { title: '商店' } },

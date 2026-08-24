@@ -989,6 +989,36 @@ def create_blueprint(
         result = get_service().deliver_tribute(subject, portal_id, tribute_id, quantity)
         return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
 
+    @blueprint.get("/api/red-leaf-town/commissions/board")
+    @login_required
+    async def commission_board(subject: str):
+        result = get_service().commission_board_snapshot(subject)
+        return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
+
+    @blueprint.post("/api/red-leaf-town/commissions/submit")
+    @login_required
+    async def submit_commission(subject: str):
+        result = get_service().submit_commission(subject)
+        return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
+
+    @blueprint.post("/api/red-leaf-town/commissions/forward")
+    @login_required
+    async def forward_commission(subject: str):
+        result = get_service().forward_commission(subject)
+        return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
+
+    @blueprint.post("/api/red-leaf-town/commissions/withdraw")
+    @login_required
+    async def withdraw_commission(subject: str):
+        result = get_service().withdraw_commission(subject)
+        return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
+
+    @blueprint.post("/api/red-leaf-town/commissions/<string:commission_id>/take")
+    @login_required
+    async def take_commission(subject: str, commission_id: str):
+        result = get_service().take_commission(subject, commission_id)
+        return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
+
     @blueprint.post("/api/red-leaf-town/story/cue")
     @login_required
     async def story_cue(subject: str):
