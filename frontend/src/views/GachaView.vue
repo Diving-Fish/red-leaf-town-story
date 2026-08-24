@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { Flame, Leaf, Sparkles, Stamp } from 'lucide-vue-next'
+import { Flame, Leaf, Percent, Sparkles, Stamp } from 'lucide-vue-next'
 
 import ActionButton from '@/components/ActionButton.vue'
 import StateBlock from '@/components/StateBlock.vue'
 import ViewHeader from '@/components/ViewHeader.vue'
 import GachaConvertDialog from '@/components/gacha/GachaConvertDialog.vue'
+import GachaPoolDetailsDialog from '@/components/gacha/GachaPoolDetailsDialog.vue'
 import GachaPoolSidebar from '@/components/gacha/GachaPoolSidebar.vue'
 import type { GachaPoolSummary } from '@/components/gacha/GachaPoolCard.vue'
 import GachaPoster from '@/components/gacha/GachaPoster.vue'
@@ -23,6 +24,7 @@ const lowestMinLevel = computed(() => pools.value[0]?.min_level ?? 1)
 const results = ref<GachaDrop[]>([])
 const overlayOpen = ref(false)
 const convertDialogOpen = ref(false)
+const detailsDialogOpen = ref(false)
 const pendingPullCount = ref<1 | 10>(1)
 const selectedPoolId = ref<string | null>(null)
 const activePool = computed(() => {
@@ -153,6 +155,9 @@ function onDialogPulled(pulled: GachaDrop[]) {
         >
           <template #actions>
             <span class="poster-balance"><Leaf :size="14" />引路枫叶 ×{{ game.player?.guide_leaves || 0 }}</span>
+            <button type="button" class="text-button gacha-details-trigger" @click="detailsDialogOpen = true">
+              <Percent :size="13" />查看概率详情
+            </button>
             <ActionButton
               action-key="gacha:single"
               :disabled="singlePullDisabled"
@@ -198,6 +203,11 @@ function onDialogPulled(pulled: GachaDrop[]) {
       @close="convertDialogOpen = false"
       @pulled="onDialogPulled"
     />
+    <GachaPoolDetailsDialog
+      :open="detailsDialogOpen"
+      :pool="activePool"
+      @close="detailsDialogOpen = false"
+    />
   </section>
 </template>
 
@@ -212,6 +222,9 @@ function onDialogPulled(pulled: GachaDrop[]) {
 
 .poster-balance { display: flex; align-items: center; gap: 6px; color: #c9d3c6; font-size: 12px; }
 .poster-balance svg { color: var(--leaf-bright); }
+
+.gacha-details-trigger { display: inline-flex; align-items: center; justify-content: center; gap: 5px; }
+.gacha-details-trigger svg { color: var(--gold); }
 
 .gacha-recap { margin-top: 20px; }
 .gacha-recap-heading { margin: 0 0 10px; color: #77837a; font-size: 12px; font-weight: 800; letter-spacing: .12em; }
