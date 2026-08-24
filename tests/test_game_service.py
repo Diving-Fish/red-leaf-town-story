@@ -60,9 +60,11 @@ def test_buy_plant_wait_harvest_and_sell_is_a_closed_loop(game):
     reward = harvested["result"]
     assert reward["item_id"] == "carrot"
     assert 2 <= reward["quantity"] <= 4
+    assert sum(drop["quantity"] for drop in reward["drops"]) == reward["quantity"]
     assert harvested["state"]["plots"][0]["empty"] is True
 
-    sold = service.sell("oauth-sub-1", "carrot", reward["quantity"])
+    for drop in reward["drops"]:
+        sold = service.sell("oauth-sub-1", "carrot", drop["quantity"], drop["quality"])
     assert sold["state"]["player"]["coins"] > 74
     assert repository.get_by_sub("oauth-sub-1").inventory.get("carrot", 0) == 0
 
@@ -127,7 +129,7 @@ def test_old_player_save_migrates_to_empty_partner_warehouse():
         "created_at": 1,
         "updated_at": 1,
     })
-    assert player.schema_version == 12
+    assert player.schema_version == 13
     assert player.owned_partners == []
 
 
@@ -142,7 +144,7 @@ def test_schema_two_spirit_fields_migrate_to_partner_fields():
         "updated_at": 1,
         "owned_spirits": [{"spirit_id": "maple_sprite", "acquired_at": 2}],
     })
-    assert player.schema_version == 12
+    assert player.schema_version == 13
     assert player.owned_partners[0].partner_id == "maple_sprite"
     assert "owned_spirits" not in player.model_dump()
 
@@ -158,7 +160,7 @@ def test_schema_three_plots_migrate_to_partner_assignment_structure():
         "updated_at": 1,
         "plots": [{"slot": 0}],
     })
-    assert player.schema_version == 12
+    assert player.schema_version == 13
     assert player.plots[0].assigned_partner_ids == []
     assert player.plots[0].task_snapshot is None
 

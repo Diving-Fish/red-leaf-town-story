@@ -76,15 +76,18 @@ def test_mining_unlocks_at_level_two_and_player_can_mine_alone(mining_game):
     service.content.mining_task_map["mine_red_copper"].yield_min = 99
     service.content.mining_task_map["mine_red_copper"].yield_max = 99
     clock.advance(task["final_duration"])
-    first_result = service.snapshot_by_sub("mining-sub")["mining_sites"][0]["task_result"]
-    second_result = service.snapshot_by_sub("mining-sub")["mining_sites"][0]["task_result"]
-    assert first_result == second_result
-    assert 1 <= first_result["quantity"] <= 3
-    assert 1 <= first_result["quality"] <= 4
+    first_results = service.snapshot_by_sub("mining-sub")["mining_sites"][0]["task_results"]
+    second_results = service.snapshot_by_sub("mining-sub")["mining_sites"][0]["task_results"]
+    assert first_results == second_results
+    assert sum(entry["quantity"] for entry in first_results) in (2, 3)
+    assert all(1 <= entry["quality"] <= 4 for entry in first_results)
+    assert [entry["item_id"] for entry in first_results] == ["red_copper_ore"] * len(first_results)
 
     collected = service.collect_mining("mining-sub", "copper_foothill")
-    assert collected["result"]["quality"] == first_result["quality"]
-    assert repository.get(player.player_id).inventory["red_copper_ore"][first_result["quality"]] == first_result["quantity"]
+    assert collected["result"]["drops"] == first_results
+    inventory = repository.get(player.player_id).inventory
+    for entry in first_results:
+        assert inventory["red_copper_ore"][entry["quality"]] == entry["quantity"]
     assert collected["state"]["mining_sites"][0]["empty"] is True
 
 

@@ -1,5 +1,5 @@
 {
-  "schema_version": 9,
+  "schema_version": 10,
   "game": {
     "title": "红叶镇物语",
     "starting_coins": 80,
@@ -498,29 +498,34 @@
       "outputs": [
         {
           "item_id": "maple_wood",
-          "chance": 1.0,
-          "quantity_min": 6,
-          "quantity_max": 9
+          "weight": 50,
+          "quantity_min": 1,
+          "quantity_max": 2
         },
         {
           "item_id": "woodland_mushroom",
-          "chance": 0.75,
-          "quantity_min": 2,
-          "quantity_max": 4
+          "weight": 30,
+          "quantity_min": 1,
+          "quantity_max": 1
         },
         {
           "item_id": "maple_resin",
-          "chance": 0.4,
+          "weight": 15,
           "quantity_min": 1,
-          "quantity_max": 3
+          "quantity_max": 1
         },
         {
           "item_id": "amber_beeswax",
-          "chance": 0.15,
+          "weight": 5,
           "quantity_min": 1,
-          "quantity_max": 2
+          "quantity_max": 1
         }
       ],
+      "draws": {
+        "base_draws": 6,
+        "ability_bonus": 1.5,
+        "difficulty": 120
+      },
       "stamina_cost": 0,
       "collect_xp": 10,
       "min_level": 1,
@@ -546,29 +551,34 @@
       "outputs": [
         {
           "item_id": "tough_fodder",
-          "chance": 1.0,
-          "quantity_min": 7,
-          "quantity_max": 11
+          "weight": 50,
+          "quantity_min": 1,
+          "quantity_max": 2
         },
         {
           "item_id": "autumn_herb",
-          "chance": 0.8,
-          "quantity_min": 3,
-          "quantity_max": 5
+          "weight": 30,
+          "quantity_min": 1,
+          "quantity_max": 1
         },
         {
           "item_id": "morning_dew_flower",
-          "chance": 0.35,
+          "weight": 15,
           "quantity_min": 1,
-          "quantity_max": 3
+          "quantity_max": 1
         },
         {
           "item_id": "silver_star_moss",
-          "chance": 0.1,
+          "weight": 5,
           "quantity_min": 1,
           "quantity_max": 1
         }
       ],
+      "draws": {
+        "base_draws": 6,
+        "ability_bonus": 1.5,
+        "difficulty": 120
+      },
       "stamina_cost": 0,
       "collect_xp": 12,
       "min_level": 2,

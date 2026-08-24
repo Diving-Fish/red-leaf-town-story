@@ -30,7 +30,7 @@ def test_default_content_is_consistent():
     assert content.item_map["red_copper_ore"].has_quality is True
 
 
-def test_gathering_tasks_have_frozen_multi_drop_pools_and_eight_hour_floor():
+def test_gathering_tasks_have_frozen_weighted_pools_and_eight_hour_floor():
     content = load_content()
     forest = content.gathering_task_map["collect_maple_wood"]
     meadow = content.gathering_task_map["collect_autumn_herb"]
@@ -49,18 +49,20 @@ def test_gathering_tasks_have_frozen_multi_drop_pools_and_eight_hour_floor():
         "morning_dew_flower",
         "silver_star_moss",
     ]
-    assert [(output.chance, output.quantity_min, output.quantity_max) for output in forest.outputs] == [
-        (1, 6, 9),
-        (0.75, 2, 4),
-        (0.4, 1, 3),
-        (0.15, 1, 2),
+    assert [(output.weight, output.quantity_min, output.quantity_max) for output in forest.outputs] == [
+        (50, 1, 2),
+        (30, 1, 1),
+        (15, 1, 1),
+        (5, 1, 1),
     ]
-    assert [(output.chance, output.quantity_min, output.quantity_max) for output in meadow.outputs] == [
-        (1, 7, 11),
-        (0.8, 3, 5),
-        (0.35, 1, 3),
-        (0.1, 1, 1),
+    assert [(output.weight, output.quantity_min, output.quantity_max) for output in meadow.outputs] == [
+        (50, 1, 2),
+        (30, 1, 1),
+        (15, 1, 1),
+        (5, 1, 1),
     ]
+    assert (forest.draws.base_draws, forest.draws.ability_bonus, forest.draws.difficulty) == (6, 1.5, 120)
+    assert (meadow.draws.base_draws, meadow.draws.ability_bonus, meadow.draws.difficulty) == (6, 1.5, 120)
     assert {output.item_id: content.item_map[output.item_id].sell_price for output in [*forest.outputs, *meadow.outputs]} == {
         "maple_wood": 6,
         "woodland_mushroom": 7,
@@ -73,14 +75,15 @@ def test_gathering_tasks_have_frozen_multi_drop_pools_and_eight_hour_floor():
     }
     assert forest.quality.thresholds == [25, 55, 90, 210]
     assert meadow.quality.thresholds == [35, 65, 100, 230]
-    assert forest.outputs[0].chance == meadow.outputs[0].chance == 1
+    assert forest.headline_output.item_id == "maple_wood"
+    assert meadow.headline_output.item_id == "tough_fodder"
     assert all(content.item_map[output.item_id].has_quality for task in (forest, meadow) for output in task.outputs)
 
 
-def test_gathering_pool_requires_unique_items_and_a_guaranteed_drop():
+def test_gathering_pool_requires_positive_weights_and_unique_items():
     payload = load_content().model_dump()
-    payload["gathering_tasks"][0]["outputs"][0]["chance"] = 0.5
-    with pytest.raises(ValidationError, match="guaranteed"):
+    payload["gathering_tasks"][0]["outputs"][0]["weight"] = 0
+    with pytest.raises(ValidationError, match="greater than 0"):
         GameContent.model_validate(payload)
 
     payload = load_content().model_dump()

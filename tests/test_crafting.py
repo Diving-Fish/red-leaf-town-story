@@ -100,11 +100,11 @@ def test_crafting_consumes_lowest_quality_inputs_and_freezes_task(crafting_game)
 
     service.content.recipe_map["saw_maple_plank"].produce_quantity = 99
     clock.advance(task["final_duration"])
-    result = service.snapshot_by_sub("craft-sub")["crafting_stations"][0]["task_result"]
-    assert result["quantity"] == 1
+    results = service.snapshot_by_sub("craft-sub")["crafting_stations"][0]["task_results"]
+    assert [entry["quantity"] for entry in results] == [1]
     collected = service.collect_crafting("craft-sub", "town_workbench")
     assert collected["result"]["item_id"] == "maple_plank"
-    assert repository.get(player.player_id).inventory["maple_plank"][result["quality"]] == 1
+    assert repository.get(player.player_id).inventory["maple_plank"][results[0]["quality"]] == 1
 
 
 def test_optional_crafting_partner_contributes_and_is_locked(crafting_game):

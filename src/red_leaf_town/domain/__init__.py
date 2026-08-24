@@ -15,8 +15,13 @@ from .models import (
     TaskOutputSnapshot,
     TaskQualitySnapshot,
 )
+from .production import build_results, draw_count, pick_weighted, roll_unit_qualities
 
 __all__ = [
+    "build_results",
+    "draw_count",
+    "pick_weighted",
+    "roll_unit_qualities",
     "CraftingStationState",
     "GatheringSiteState",
     "MiningSiteState",

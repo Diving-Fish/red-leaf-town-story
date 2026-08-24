@@ -6,10 +6,27 @@ import pytest
 
 from red_leaf_town.application import GameService
 from red_leaf_town.content import load_content
-from red_leaf_town.domain import PlayerState
+from red_leaf_town.domain import PlayerState, TaskOutputSnapshot
+from red_leaf_town.domain.production import draw_count, pick_weighted
 from red_leaf_town.domain.economy import add_item
 from red_leaf_town.domain.quality import quality_probabilities, roll_quality
 from red_leaf_town.infrastructure import InMemoryPlayerRepository
+
+
+class SequenceRandom:
+    """按序列返回随机数；randint 取上界，便于凑出固定件数的混合品质。"""
+
+    def __init__(self, draws: list[float]):
+        self.draws = list(draws)
+        self.index = 0
+
+    def randint(self, lower: int, upper: int) -> int:
+        return upper
+
+    def random(self) -> float:
+        value = self.draws[self.index % len(self.draws)]
+        self.index += 1
+        return value
 
 
 class FixedRandom:
@@ -56,7 +73,7 @@ def test_flat_legacy_inventory_migrates_and_produce_becomes_normal():
         "created_at": 1,
         "updated_at": 1,
     })
-    assert player.schema_version == 12
+    assert player.schema_version == 13
     assert player.inventory == {"carrot_seed": {0: 2}, "carrot": {0: 3}}
     repository.players[player.player_id] = player
     repository.oauth_index[player.oauth_sub] = player.player_id
@@ -68,7 +85,7 @@ def test_flat_legacy_inventory_migrates_and_produce_becomes_normal():
     assert repository.get(player.player_id).inventory["carrot"] == {1: 3}
 
 
-def test_task_freezes_quality_probabilities_and_harvest_stacks_one_quality():
+def test_task_freezes_quality_probabilities_and_harvest_rolls_every_unit():
     content = load_content().model_copy(deep=True)
     content.crop_map["carrot"].quality.thresholds = [-100, -50, 0, 50]
     content.crop_map["carrot"].quality.width = 1
@@ -83,14 +100,33 @@ def test_task_freezes_quality_probabilities_and_harvest_stacks_one_quality():
 
     repository.update(player.player_id, lambda state: setattr(state.plots[0], "ready_at", 100))
     content.crop_map["carrot"].quality.thresholds = [100, 200, 300, 400]
-    first_read = service.snapshot_by_sub("quality-sub")["plots"][0]["task_result"]
-    second_read = service.snapshot_by_sub("quality-sub")["plots"][0]["task_result"]
+    first_read = service.snapshot_by_sub("quality-sub")["plots"][0]["task_results"]
+    second_read = service.snapshot_by_sub("quality-sub")["plots"][0]["task_results"]
     assert first_read == second_read
-    assert first_read["quality"] == 4
+    assert [(entry["quality"], entry["quantity"]) for entry in first_read] == [(4, 2)]
     harvested = service.harvest("quality-sub", 0)
-    assert harvested["result"]["quality"] == 4
-    assert harvested["result"]["quality_name"] == "臻品"
+    assert harvested["result"]["drops"] == first_read
+    assert harvested["result"]["quantity"] == 2
     assert repository.get(player.player_id).inventory["carrot"] == {4: 2}
+
+
+def test_harvest_rolls_quality_for_each_produce_separately():
+    content = load_content().model_copy(deep=True)
+    content.crop_map["carrot"].quality.thresholds = [-100, -50, 0, 50]
+    content.crop_map["carrot"].quality.width = 1
+    repository = InMemoryPlayerRepository(content)
+    service = GameService(content, repository, clock=lambda: 100, rng=SequenceRandom([0.25, 0.75]))
+    player = service.ensure_player("mixed-sub", "混合品质居民")
+    service.buy("mixed-sub", "carrot_seed", 1)
+    service.plant("mixed-sub", 0, "carrot")
+
+    repository.update(player.player_id, lambda state: setattr(state.plots[0], "ready_at", 100))
+    harvested = service.harvest("mixed-sub", 0)
+
+    assert [(entry["quality"], entry["quantity"]) for entry in harvested["result"]["drops"]] == [(3, 2), (4, 2)]
+    assert [entry["quality_name"] for entry in harvested["result"]["drops"]] == ["上品", "臻品"]
+    assert harvested["result"]["quantity"] == 4
+    assert repository.get(player.player_id).inventory["carrot"] == {3: 2, 4: 2}
 
 
 def test_quality_sale_uses_grade_multiplier_and_exact_inventory_bucket():
@@ -135,3 +171,31 @@ def test_regular_crop_hourly_profit_winner_advances_with_farming_ability():
         max(crop_ids, key=lambda crop_id: hourly_profit(crop_id, ability))
         for ability in [0, 50, 75, 90]
     ] == crop_ids
+
+
+def test_draw_count_saturates_with_ability():
+    assert draw_count(0, 6, 1.5, 120) == 6
+    assert draw_count(40, 6, 1.5, 120) == 8
+    assert draw_count(120, 6, 1.5, 120) == 11
+    assert draw_count(240, 6, 1.5, 120) == 12
+    assert draw_count(10**9, 6, 1.5, 120) == 15
+
+
+def test_weighted_pick_follows_cumulative_weights():
+    pool = [
+        TaskOutputSnapshot(item_id="maple_wood", weight=50, quantity_min=1, quantity_max=1),
+        TaskOutputSnapshot(item_id="woodland_mushroom", weight=30, quantity_min=1, quantity_max=1),
+        TaskOutputSnapshot(item_id="maple_resin", weight=15, quantity_min=1, quantity_max=1),
+        TaskOutputSnapshot(item_id="amber_beeswax", weight=5, quantity_min=1, quantity_max=1),
+    ]
+    picked = [pick_weighted(FixedRandom(draw), pool).item_id for draw in (0.0, 0.49, 0.5, 0.79, 0.8, 0.94, 0.95, 0.999)]
+    assert picked == [
+        "maple_wood",
+        "maple_wood",
+        "woodland_mushroom",
+        "woodland_mushroom",
+        "maple_resin",
+        "maple_resin",
+        "amber_beeswax",
+        "amber_beeswax",
+    ]

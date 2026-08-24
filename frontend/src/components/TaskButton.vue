@@ -5,7 +5,7 @@ import ActionButton from '@/components/ActionButton.vue'
 import CostChip from '@/components/CostChip.vue'
 import ItemTile from '@/components/ItemTile.vue'
 import { formatDuration } from '@/lib/format'
-import { estimateDuration } from '@/lib/production'
+import { estimateDrawCount, estimateDuration } from '@/lib/production'
 import { useGameStore } from '@/stores/game'
 import type { GatheringTaskDefinition, MiningTaskDefinition } from '@/types'
 
@@ -29,6 +29,8 @@ const gatheringTask = computed(() => ('outputs' in props.task ? props.task : nul
 const singleOutputTask = computed<MiningTaskDefinition | null>(() => (
   'yield_min' in props.task ? props.task as MiningTaskDefinition : null
 ))
+const drawCount = computed(() => estimateDrawCount(gatheringTask.value?.draws, props.ability || 0))
+const poolWeight = computed(() => (gatheringTask.value?.outputs || []).reduce((total, entry) => total + entry.weight, 0))
 const duration = computed(() => estimateDuration(
   props.task.duration_seconds,
   props.task.time_difficulty,
@@ -51,11 +53,11 @@ const duration = computed(() => estimateDuration(
     <span class="task-copy">
       <strong>{{ task.name }}</strong>
       <small v-if="gatheringTask">
-        {{ gatheringTask.outputs.length }} 种材料 · 约 {{ formatDuration(duration) }}
+        抽取 {{ drawCount }} 次 · {{ gatheringTask.outputs.length }} 种材料 · 约 {{ formatDuration(duration) }}
       </small>
       <span v-if="gatheringTask" class="loot-preview">
         <i v-for="output in gatheringTask.outputs" :key="output.item_id">
-          {{ output.item.name }} {{ Math.round(output.chance * 100) }}%
+          {{ output.item.name }} {{ Math.round((output.weight / poolWeight) * 100) }}%
         </i>
       </span>
       <small v-else-if="singleOutputTask">

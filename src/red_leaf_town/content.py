@@ -109,8 +109,10 @@ class GatheringSiteDefinition(BaseModel):
 
 
 class GatheringOutputDefinition(BaseModel):
+    """探索产出池的一项。weight 是抽取权重，抽中后产出 quantity_min—quantity_max 件。"""
+
     item_id: str = Field(min_length=1)
-    chance: float = Field(gt=0, le=1)
+    weight: float = Field(gt=0)
     quantity_min: int = Field(ge=1)
     quantity_max: int = Field(ge=1)
 
@@ -121,6 +123,14 @@ class GatheringOutputDefinition(BaseModel):
         return self
 
 
+class GatheringDrawDefinition(BaseModel):
+    """抽取次数曲线：base_draws × (1 + ability_bonus × A/(A + difficulty))。"""
+
+    base_draws: int = Field(ge=1, le=30)
+    ability_bonus: float = Field(default=0, ge=0, le=5)
+    difficulty: int = Field(gt=0)
+
+
 class GatheringTaskDefinition(BaseModel):
     id: str = Field(min_length=1)
     site_id: str = Field(min_length=1)
@@ -128,7 +138,8 @@ class GatheringTaskDefinition(BaseModel):
     duration_seconds: int = Field(gt=0)
     minimum_duration_seconds: int = Field(gt=0)
     time_difficulty: int = Field(gt=0)
-    outputs: list[GatheringOutputDefinition] = Field(min_length=4, max_length=5)
+    outputs: list[GatheringOutputDefinition] = Field(min_length=2, max_length=5)
+    draws: GatheringDrawDefinition
     stamina_cost: int = Field(ge=0)
     collect_xp: int = Field(ge=0)
     min_level: int = Field(ge=1)
@@ -141,9 +152,13 @@ class GatheringTaskDefinition(BaseModel):
         item_ids = [entry.item_id for entry in self.outputs]
         if len(item_ids) != len(set(item_ids)):
             raise ValueError(f"gathering task {self.id}: output items must be unique")
-        if not any(entry.chance == 1 for entry in self.outputs):
-            raise ValueError(f"gathering task {self.id}: at least one output must be guaranteed")
         return self
+
+    @property
+    def headline_output(self) -> GatheringOutputDefinition:
+        """权重最高的一项，用于列表和任务快照里的代表产物。"""
+
+        return max(self.outputs, key=lambda entry: entry.weight)
 
 
 class TalentNodeDefinition(BaseModel):

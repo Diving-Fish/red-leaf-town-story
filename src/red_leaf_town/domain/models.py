@@ -23,8 +23,11 @@ class TaskInputSnapshot(BaseModel):
 
 
 class TaskOutputSnapshot(BaseModel):
+    """产出池的一项。weight 用于加权抽取；chance 只存在于旧快照里，按独立掉率结算。"""
+
     item_id: str = Field(min_length=1)
-    chance: float = Field(gt=0, le=1)
+    weight: float = Field(default=0, ge=0)
+    chance: float = Field(default=0, ge=0, le=1)
     quantity_min: int = Field(ge=1)
     quantity_max: int = Field(ge=1)
 
@@ -32,6 +35,8 @@ class TaskOutputSnapshot(BaseModel):
     def validate_quantity(self):
         if self.quantity_max < self.quantity_min:
             raise ValueError("task output quantity_max must be greater than or equal to quantity_min")
+        if self.weight <= 0 and self.chance <= 0:
+            raise ValueError("task output must carry either a draw weight or a legacy chance")
         return self
 
 
@@ -77,6 +82,7 @@ class ProductionTaskSnapshot(BaseModel):
     harvest_xp: int = Field(ge=0)
     consumed_inputs: list[TaskInputSnapshot] = Field(default_factory=list)
     output_pool: list[TaskOutputSnapshot] = Field(default_factory=list, max_length=5)
+    draw_count: int = Field(default=0, ge=0, le=60)
     quality_parameters: TaskQualitySnapshot = Field(default_factory=TaskQualitySnapshot)
 
     @model_validator(mode="after")
@@ -94,8 +100,10 @@ class ProductionTaskSnapshot(BaseModel):
         output_ids = [entry.item_id for entry in self.output_pool]
         if len(output_ids) != len(set(output_ids)):
             raise ValueError("task output pool items must be unique")
-        if self.output_pool and not any(entry.chance == 1 for entry in self.output_pool):
-            raise ValueError("task output pool must contain a guaranteed output")
+        if self.draw_count and self.output_pool and not any(entry.weight > 0 for entry in self.output_pool):
+            raise ValueError("weighted task must carry an output pool with positive weights")
+        if self.output_pool and not self.draw_count and not any(entry.chance == 1 for entry in self.output_pool):
+            raise ValueError("legacy chance pool must contain a guaranteed output")
         return self
 
 
@@ -113,7 +121,7 @@ class PlotState(BaseModel):
     ready_at: int = 0
     assigned_partner_ids: list[str] = Field(default_factory=list, max_length=1)
     task_snapshot: ProductionTaskSnapshot | None = None
-    task_result: ProductionResultSnapshot | None = None
+    task_results: list[ProductionResultSnapshot] = Field(default_factory=list, max_length=25)
 
     @property
     def empty(self) -> bool:
@@ -124,7 +132,7 @@ class GatheringSiteState(BaseModel):
     site_id: str = Field(min_length=1)
     assigned_partner_ids: list[str] = Field(default_factory=list, max_length=1)
     task_snapshot: ProductionTaskSnapshot | None = None
-    task_results: list[ProductionResultSnapshot] = Field(default_factory=list, max_length=5)
+    task_results: list[ProductionResultSnapshot] = Field(default_factory=list, max_length=25)
 
     @property
     def empty(self) -> bool:
@@ -135,7 +143,7 @@ class CraftingStationState(BaseModel):
     station_id: str = Field(min_length=1)
     assigned_partner_ids: list[str] = Field(default_factory=list, max_length=1)
     task_snapshot: ProductionTaskSnapshot | None = None
-    task_result: ProductionResultSnapshot | None = None
+    task_results: list[ProductionResultSnapshot] = Field(default_factory=list, max_length=25)
 
     @property
     def empty(self) -> bool:
@@ -146,7 +154,7 @@ class MiningSiteState(BaseModel):
     site_id: str = Field(min_length=1)
     assigned_partner_ids: list[str] = Field(default_factory=list, max_length=1)
     task_snapshot: ProductionTaskSnapshot | None = None
-    task_result: ProductionResultSnapshot | None = None
+    task_results: list[ProductionResultSnapshot] = Field(default_factory=list, max_length=25)
 
     @property
     def empty(self) -> bool:
@@ -224,7 +232,7 @@ class PortalProgressState(BaseModel):
 
 
 class PlayerState(BaseModel):
-    schema_version: int = 12
+    schema_version: int = 13
     version: int = 1
     player_id: str
     oauth_sub: str
@@ -290,7 +298,14 @@ class PlayerState(BaseModel):
                     continue
                 legacy_result = site.pop("task_result", None)
                 site.setdefault("task_results", [legacy_result] if legacy_result else [])
-        migrated["schema_version"] = 12
+        if schema_version < 13:
+            for key in ("plots", "crafting_stations", "mining_sites"):
+                for production_slot in migrated.get(key) or []:
+                    if not isinstance(production_slot, dict):
+                        continue
+                    legacy_result = production_slot.pop("task_result", None)
+                    production_slot.setdefault("task_results", [legacy_result] if legacy_result else [])
+        migrated["schema_version"] = 13
         return migrated
 
     @model_validator(mode="after")

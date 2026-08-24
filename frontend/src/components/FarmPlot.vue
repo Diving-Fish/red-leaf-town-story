@@ -94,12 +94,12 @@ function selectPartner(partnerId: string | null) {
     </span>
 
     <template v-if="ready">
-      <p class="ready-label">
-        <template v-if="plot.task_result">
-          <QualityTag :quality="plot.task_result.quality" /> {{ plot.task_result.quantity }} 个
-        </template>
-        <template v-else>已经成熟</template>
+      <p v-if="plot.task_results.length" class="ready-label harvest-list">
+        <span v-for="result in plot.task_results" :key="`${result.item_id}:${result.quality}`">
+          <QualityTag :quality="result.quality" /> {{ result.quantity }} 个
+        </span>
       </p>
+      <p v-else class="ready-label">已经成熟</p>
       <ActionButton class="harvest-button" :action-key="`plot:${plot.slot}:harvest`" @click="game.harvest(plot.slot)">
         收获
       </ActionButton>
@@ -113,6 +113,7 @@ function selectPartner(partnerId: string | null) {
 
 <style scoped>
 .task-boost { color: #91aa7d; font-size: 12px; margin-bottom: 7px; }
+.harvest-list { display: flex; flex-wrap: wrap; gap: 4px 10px; justify-content: center; }
 .plot-progress { width: 100%; margin-top: auto; }
 .plant-button {
   position: relative;

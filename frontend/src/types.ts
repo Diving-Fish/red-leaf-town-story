@@ -69,7 +69,7 @@ export interface PlotState {
   ready_at: number
   assigned_partner_ids: string[]
   task_snapshot: ProductionTaskSnapshot | null
-  task_result: ProductionResultSnapshot | null
+  task_results: ProductionResultSnapshot[]
   empty: boolean
   ready: boolean
   remaining_seconds: number
@@ -124,6 +124,7 @@ export interface ProductionTaskSnapshot {
   yield_max: number
   harvest_xp: number
   consumed_inputs: TaskInputSnapshot[]
+  draw_count: number
   quality_parameters: TaskQualitySnapshot
 }
 
@@ -149,6 +150,7 @@ export interface GatheringTaskDefinition {
   minimum_duration_seconds: number
   time_difficulty: number
   outputs: GatheringOutputDefinition[]
+  draws: GatheringDrawDefinition
   stamina_cost: number
   collect_xp: number
   min_level: number
@@ -163,9 +165,15 @@ export interface GatheringTaskDefinition {
   }
 }
 
+export interface GatheringDrawDefinition {
+  base_draws: number
+  ability_bonus: number
+  difficulty: number
+}
+
 export interface GatheringOutputDefinition {
   item_id: string
-  chance: number
+  weight: number
   quantity_min: number
   quantity_max: number
   item: {
@@ -327,7 +335,7 @@ export interface CraftingStationState {
   station_id: string
   assigned_partner_ids: string[]
   task_snapshot: ProductionTaskSnapshot | null
-  task_result: ProductionResultSnapshot | null
+  task_results: ProductionResultSnapshot[]
   empty: boolean
   ready: boolean
   remaining_seconds: number
@@ -365,7 +373,7 @@ export interface MiningSiteState {
   site_id: string
   assigned_partner_ids: string[]
   task_snapshot: ProductionTaskSnapshot | null
-  task_result: ProductionResultSnapshot | null
+  task_results: ProductionResultSnapshot[]
   empty: boolean
   ready: boolean
   remaining_seconds: number

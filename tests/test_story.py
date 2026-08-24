@@ -364,7 +364,7 @@ def test_legacy_save_migrates_to_the_current_schema():
         "created_at": 0,
         "updated_at": 0,
     })
-    assert player.schema_version == 12
+    assert player.schema_version == 13
     assert player.seen_story_ids == []
 
 
@@ -558,7 +558,7 @@ def test_renamed_partner_id_migrates_everywhere():
         }],
     })
 
-    assert player.schema_version == 12
+    assert player.schema_version == 13
     assert [owned.partner_id for owned in player.owned_partners] == ["fein"]
     site = player.gathering_sites[0]
     assert site.assigned_partner_ids == ["fein"]

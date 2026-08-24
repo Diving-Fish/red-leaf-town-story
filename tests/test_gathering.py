@@ -23,6 +23,22 @@ class Clock:
         self.now += seconds
 
 
+class SequenceRandom:
+    """按序列返回随机数；randint 取下界，方便断言加权抽取落在哪一项上。"""
+
+    def __init__(self, draws: list[float]):
+        self.draws = list(draws)
+        self.index = 0
+
+    def randint(self, lower: int, upper: int) -> int:
+        return lower
+
+    def random(self) -> float:
+        value = self.draws[self.index % len(self.draws)]
+        self.index += 1
+        return value
+
+
 class FixedRandom:
     def __init__(self, draw: float):
         self.draw = draw
@@ -86,6 +102,7 @@ def test_gathering_requires_partner_and_locks_it_until_ready(gathering_game):
     assert site["task_snapshot"]["minimum_duration"] == 8 * 3600
     assert site["task_snapshot"]["final_duration"] >= 8 * 3600
     assert len(site["task_snapshot"]["output_pool"]) == 4
+    assert site["task_snapshot"]["draw_count"] == 8
     assert started["state"]["player"]["stamina"] == 20
     assert site["assignment_locked"] is True
     assert next(entry for entry in started["state"]["partners"] if entry["partner_id"] == "gather_one")["locked"] is True
@@ -129,11 +146,13 @@ def test_gathering_capacity_is_derived_from_talent_tree(gathering_game):
     assert len([site for site in assigned["state"]["gathering_sites"] if site["assigned_partner_ids"]]) == 2
 
 
-@pytest.mark.parametrize(("draw", "expected_ids"), [
-    (0, ["maple_wood", "woodland_mushroom", "maple_resin", "amber_beeswax"]),
-    (0.999999, ["maple_wood"]),
+@pytest.mark.parametrize(("draw", "expected_id"), [
+    (0.0, "maple_wood"),
+    (0.6, "woodland_mushroom"),
+    (0.9, "maple_resin"),
+    (0.99, "amber_beeswax"),
 ])
-def test_each_optional_gathering_drop_rolls_independently(gathering_game, draw, expected_ids):
+def test_每次抽取按权重命中池中的一项(gathering_game, draw, expected_id):
     service, _, clock, _ = gathering_game
     service.rng = FixedRandom(draw)
     service.assign_gathering_partner("gather-sub", "maple_forest", "gather_one")
@@ -142,7 +161,40 @@ def test_each_optional_gathering_drop_rolls_independently(gathering_game, draw, 
     clock.advance(started["result"]["final_duration"])
     results = service.snapshot_by_sub("gather-sub")["gathering_sites"][0]["task_results"]
 
-    assert [result["item_id"] for result in results] == expected_ids
+    assert [result["item_id"] for result in results] == [expected_id]
+    assert sum(result["quantity"] for result in results) == started["result"]["draw_count"]
+
+
+def test_exploration_draw_count_and_quality_both_scale_with_ability(gathering_game):
+    service, repository, _, player = gathering_game
+
+    service.assign_gathering_partner("gather-sub", "maple_forest", "gather_one")
+    weak = service.start_gathering("gather-sub", "maple_forest", "collect_maple_wood")["result"]
+
+    repository.update(player.player_id, lambda state: setattr(state.owned_partners[0], "level", 60))
+    repository.update(player.player_id, lambda state: setattr(state.gathering_sites[0], "task_snapshot", None))
+    strong = service.start_gathering("gather-sub", "maple_forest", "collect_maple_wood")["result"]
+
+    assert weak["total_ability"] == 40
+    assert strong["total_ability"] == 66
+    assert weak["draw_count"] == 8
+    assert strong["draw_count"] == 9
+    assert strong["quality_ability"] > weak["quality_ability"]
+
+
+def test_gathering_draws_split_into_one_stack_per_item_and_quality(gathering_game):
+    service, _, clock, _ = gathering_game
+    service.rng = SequenceRandom([0.0, 0.6])
+    service.assign_gathering_partner("gather-sub", "maple_forest", "gather_one")
+    started = service.start_gathering("gather-sub", "maple_forest", "collect_maple_wood")
+
+    clock.advance(started["result"]["final_duration"])
+    results = service.snapshot_by_sub("gather-sub")["gathering_sites"][0]["task_results"]
+
+    stacks = [(result["item_id"], result["quality"]) for result in results]
+    assert {item_id for item_id, _ in stacks} == {"maple_wood", "woodland_mushroom"}
+    assert len(stacks) == len(set(stacks))
+    assert sum(result["quantity"] for result in results) == started["result"]["draw_count"]
 
 
 def test_quality_gathering_material_can_be_sold_by_exact_grade(gathering_game):
@@ -168,7 +220,7 @@ def test_legacy_single_gathering_result_migrates_to_drop_list():
         }],
     })
 
-    assert player.schema_version == 12
+    assert player.schema_version == 13
     assert [result.model_dump() for result in player.gathering_sites[0].task_results] == [
         {"item_id": "maple_wood", "quantity": 2, "quality": 3, "resolved_at": 1},
     ]

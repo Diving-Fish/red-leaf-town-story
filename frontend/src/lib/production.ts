@@ -21,7 +21,6 @@ export interface ProductionNode {
   assignedPartner: OwnedPartner | null
   assignmentLocked: boolean
   taskSnapshot: ProductionTaskSnapshot | null
-  taskResult: ProductionResultSnapshot | null
   taskResults: ProductionResultSnapshot[]
   activeName: string
   activeItemName: string
@@ -87,8 +86,7 @@ function baseNode(
     assigned_partners: OwnedPartner[]
     assignment_locked: boolean
     task_snapshot: ProductionTaskSnapshot | null
-    task_result?: ProductionResultSnapshot | null
-    task_results?: ProductionResultSnapshot[]
+    task_results: ProductionResultSnapshot[]
   },
   fallbackAccent: string,
 ): Omit<ProductionNode, 'activeName' | 'activeItemName' | 'activeItemIcon'> {
@@ -104,8 +102,7 @@ function baseNode(
     assignedPartner: source.assigned_partners[0] || null,
     assignmentLocked: source.assignment_locked,
     taskSnapshot: source.task_snapshot,
-    taskResult: source.task_result || null,
-    taskResults: source.task_results || (source.task_result ? [source.task_result] : []),
+    taskResults: source.task_results || [],
   }
 }
 
@@ -145,6 +142,16 @@ export function estimateDuration(
   const denominator = totalAbility + timeDifficulty
   const efficiency = denominator > 0 ? 1 + (2 * totalAbility) / denominator : 1
   return Math.max(minimumDuration, Math.ceil(baseDuration / efficiency))
+}
+
+export function estimateDrawCount(
+  draws: { base_draws: number; ability_bonus: number; difficulty: number } | undefined,
+  totalAbility: number,
+): number {
+  if (!draws) return 0
+  const ability = Math.max(0, totalAbility)
+  const multiplier = 1 + (draws.ability_bonus * ability) / (ability + draws.difficulty)
+  return Math.max(1, Math.floor(draws.base_draws * multiplier + 0.5))
 }
 
 export function partnerAbility(partner: OwnedPartner | null | undefined, industry: string): number {
