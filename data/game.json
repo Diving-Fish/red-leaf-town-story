@@ -869,7 +869,7 @@
       "unlock_condition": {
         "hook": "player_level",
         "params": {
-          "level": 3
+          "level": 5
         }
       }
     },
