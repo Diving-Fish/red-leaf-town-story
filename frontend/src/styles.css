@@ -19,7 +19,22 @@
   --quality-3: #70afd6;
   --quality-4: #b58add;
   --quality-5: #e9c267;
+  --scroll-thumb: rgba(135, 169, 107, .34);
+  --scroll-thumb-hover: rgba(168, 201, 133, .58);
 }
+
+/* 全局细滚动条：Firefox 走 scrollbar-color，Chromium/WebKit 走伪元素 */
+* { scrollbar-width: thin; scrollbar-color: var(--scroll-thumb) transparent; }
+::-webkit-scrollbar { width: 9px; height: 9px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  border: 2.5px solid transparent;
+  border-radius: 99px;
+  background-color: var(--scroll-thumb);
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover { background-color: var(--scroll-thumb-hover); }
+::-webkit-scrollbar-corner { background: transparent; }
 
 * { box-sizing: border-box; }
 html, body, #app { min-height: 100%; margin: 0; }

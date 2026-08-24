@@ -2,10 +2,347 @@
   "schema_version": 2,
   "partners": [
     {
+      "id": "ai_xinyu",
+      "name": "艾欣愉",
+      "rarity": 4,
+      "description": "",
+      "growth_curve": "linear",
+      "tendencies": [
+        {
+          "industry": "aquatic",
+          "level_1": 36,
+          "level_60": 220
+        },
+        {
+          "industry": "crafting",
+          "level_1": 30,
+          "level_60": 184
+        },
+        {
+          "industry": "gathering",
+          "level_1": 24,
+          "level_60": 147
+        }
+      ],
+      "trait_codes": [],
+      "artworks": [
+        {
+          "breakthrough": 0,
+          "asset_key": "red-leaf-town/partners/ai_xinyu/breakthrough-0-23b2494ee7d71b5c.webp",
+          "width": 1053,
+          "height": 1872,
+          "content_type": "image/webp"
+        }
+      ],
+      "avatar_crops": [
+        {
+          "breakthrough": 0,
+          "x": 406,
+          "y": 127,
+          "w": 339,
+          "h": 339
+        },
+        {
+          "breakthrough": 1,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        },
+        {
+          "breakthrough": 2,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        }
+      ]
+    },
+    {
+      "id": "aishen",
+      "name": "爱神",
+      "rarity": 5,
+      "description": "",
+      "growth_curve": "linear",
+      "tendencies": [
+        {
+          "industry": "exploration",
+          "level_1": 39,
+          "level_60": 240
+        },
+        {
+          "industry": "crafting",
+          "level_1": 33,
+          "level_60": 200
+        },
+        {
+          "industry": "livestock",
+          "level_1": 26,
+          "level_60": 160
+        }
+      ],
+      "trait_codes": [],
+      "artworks": [
+        {
+          "breakthrough": 0,
+          "asset_key": "red-leaf-town/partners/aishen/breakthrough-0-3a073db08c9a0bf3.webp",
+          "width": 936,
+          "height": 1664,
+          "content_type": "image/webp"
+        }
+      ],
+      "avatar_crops": [
+        {
+          "breakthrough": 0,
+          "x": 255,
+          "y": 80,
+          "w": 408,
+          "h": 408
+        },
+        {
+          "breakthrough": 1,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        },
+        {
+          "breakthrough": 2,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        }
+      ]
+    },
+    {
+      "id": "aiweier",
+      "name": "艾薇尔",
+      "rarity": 4,
+      "description": "",
+      "growth_curve": "linear",
+      "tendencies": [
+        {
+          "industry": "farming",
+          "level_1": 36,
+          "level_60": 220
+        },
+        {
+          "industry": "gathering",
+          "level_1": 30,
+          "level_60": 184
+        },
+        {
+          "industry": "livestock",
+          "level_1": 24,
+          "level_60": 147
+        }
+      ],
+      "trait_codes": [],
+      "artworks": [
+        {
+          "breakthrough": 0,
+          "asset_key": "red-leaf-town/partners/aiweier/breakthrough-0-0dac6071a0a98394.webp",
+          "width": 936,
+          "height": 1664,
+          "content_type": "image/webp"
+        }
+      ],
+      "avatar_crops": [
+        {
+          "breakthrough": 0,
+          "x": 293,
+          "y": 131,
+          "w": 344,
+          "h": 344
+        },
+        {
+          "breakthrough": 1,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        },
+        {
+          "breakthrough": 2,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        }
+      ]
+    },
+    {
+      "id": "banniang",
+      "name": "睡着的板娘",
+      "rarity": 4,
+      "description": "",
+      "growth_curve": "linear",
+      "tendencies": [
+        {
+          "industry": "gathering",
+          "level_1": 36,
+          "level_60": 220
+        },
+        {
+          "industry": "aquatic",
+          "level_1": 30,
+          "level_60": 184
+        },
+        {
+          "industry": "livestock",
+          "level_1": 24,
+          "level_60": 147
+        }
+      ],
+      "trait_codes": [],
+      "artworks": [
+        {
+          "breakthrough": 0,
+          "asset_key": "red-leaf-town/partners/banniang/breakthrough-0-4ad1b862b222e403.webp",
+          "width": 936,
+          "height": 1664,
+          "content_type": "image/webp"
+        }
+      ],
+      "avatar_crops": [
+        {
+          "breakthrough": 0,
+          "x": 274,
+          "y": 75,
+          "w": 478,
+          "h": 478
+        },
+        {
+          "breakthrough": 1,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        },
+        {
+          "breakthrough": 2,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        }
+      ]
+    },
+    {
+      "id": "bufeng_zhuoying",
+      "name": "捕风捉影",
+      "rarity": 4,
+      "description": "",
+      "growth_curve": "linear",
+      "tendencies": [
+        {
+          "industry": "mining",
+          "level_1": 36,
+          "level_60": 220
+        },
+        {
+          "industry": "crafting",
+          "level_1": 30,
+          "level_60": 184
+        },
+        {
+          "industry": "exploration",
+          "level_1": 24,
+          "level_60": 147
+        }
+      ],
+      "trait_codes": [],
+      "artworks": [
+        {
+          "breakthrough": 0,
+          "asset_key": "red-leaf-town/partners/bufeng_zhuoying/breakthrough-0-ace01fd9d2f6f5c0.webp",
+          "width": 936,
+          "height": 1664,
+          "content_type": "image/webp"
+        }
+      ],
+      "avatar_crops": [
+        {
+          "breakthrough": 0,
+          "x": 444,
+          "y": 379,
+          "w": 290,
+          "h": 290
+        },
+        {
+          "breakthrough": 1,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        },
+        {
+          "breakthrough": 2,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        }
+      ]
+    },
+    {
+      "id": "daian_zeer",
+      "name": "黛安泽尔",
+      "rarity": 3,
+      "description": "",
+      "growth_curve": "linear",
+      "tendencies": [
+        {
+          "industry": "farming",
+          "level_1": 36,
+          "level_60": 222
+        },
+        {
+          "industry": "aquatic",
+          "level_1": 27,
+          "level_60": 168
+        }
+      ],
+      "trait_codes": [],
+      "artworks": [
+        {
+          "breakthrough": 0,
+          "asset_key": "red-leaf-town/partners/daian_zeer/breakthrough-0-aaf762da1cd1b9d5.webp",
+          "width": 936,
+          "height": 1664,
+          "content_type": "image/webp"
+        }
+      ],
+      "avatar_crops": [
+        {
+          "breakthrough": 0,
+          "x": 308,
+          "y": 71,
+          "w": 302,
+          "h": 302
+        },
+        {
+          "breakthrough": 1,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        },
+        {
+          "breakthrough": 2,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        }
+      ]
+    },
+    {
       "id": "fein",
       "name": "绯恩",
       "rarity": 4,
-      "description": "最初的伙伴，向导和助手",
+      "description": "",
       "growth_curve": "linear",
       "tendencies": [
         {
@@ -32,10 +369,805 @@
       "avatar_crops": [
         {
           "breakthrough": 0,
-          "x": 276,
-          "y": 113,
-          "w": 346,
-          "h": 346
+          "x": 298,
+          "y": 125,
+          "w": 277,
+          "h": 277
+        },
+        {
+          "breakthrough": 1,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        },
+        {
+          "breakthrough": 2,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        }
+      ]
+    },
+    {
+      "id": "guidengdeng",
+      "name": "鬼灯灯",
+      "rarity": 5,
+      "description": "",
+      "growth_curve": "linear",
+      "tendencies": [
+        {
+          "industry": "farming",
+          "level_1": 43,
+          "level_60": 266
+        },
+        {
+          "industry": "crafting",
+          "level_1": 33,
+          "level_60": 201
+        }
+      ],
+      "trait_codes": [],
+      "artworks": [
+        {
+          "breakthrough": 0,
+          "asset_key": "red-leaf-town/partners/guidengdeng/breakthrough-0-e424509484651e89.webp",
+          "width": 1053,
+          "height": 1872,
+          "content_type": "image/webp"
+        }
+      ],
+      "avatar_crops": [
+        {
+          "breakthrough": 0,
+          "x": 359,
+          "y": 203,
+          "w": 366,
+          "h": 366
+        },
+        {
+          "breakthrough": 1,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        },
+        {
+          "breakthrough": 2,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        }
+      ]
+    },
+    {
+      "id": "gujian_bu",
+      "name": "古剑布",
+      "rarity": 3,
+      "description": "",
+      "growth_curve": "linear",
+      "tendencies": [
+        {
+          "industry": "farming",
+          "level_1": 33,
+          "level_60": 201
+        },
+        {
+          "industry": "mining",
+          "level_1": 27,
+          "level_60": 167
+        },
+        {
+          "industry": "gathering",
+          "level_1": 22,
+          "level_60": 134
+        }
+      ],
+      "trait_codes": [],
+      "artworks": [
+        {
+          "breakthrough": 0,
+          "asset_key": "red-leaf-town/partners/gujian_bu/breakthrough-0-254fe95cf77fb73c.webp",
+          "width": 864,
+          "height": 1536,
+          "content_type": "image/webp"
+        }
+      ],
+      "avatar_crops": [
+        {
+          "breakthrough": 0,
+          "x": 309,
+          "y": 275,
+          "w": 279,
+          "h": 279
+        },
+        {
+          "breakthrough": 1,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        },
+        {
+          "breakthrough": 2,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        }
+      ]
+    },
+    {
+      "id": "gujian_miao",
+      "name": "古剑喵",
+      "rarity": 5,
+      "description": "",
+      "growth_curve": "linear",
+      "tendencies": [
+        {
+          "industry": "exploration",
+          "level_1": 39,
+          "level_60": 240
+        },
+        {
+          "industry": "mining",
+          "level_1": 33,
+          "level_60": 200
+        },
+        {
+          "industry": "aquatic",
+          "level_1": 26,
+          "level_60": 160
+        }
+      ],
+      "trait_codes": [],
+      "artworks": [
+        {
+          "breakthrough": 0,
+          "asset_key": "red-leaf-town/partners/gujian_miao/breakthrough-0-29e633a066f98f2e.webp",
+          "width": 783,
+          "height": 1392,
+          "content_type": "image/webp"
+        }
+      ],
+      "avatar_crops": [
+        {
+          "breakthrough": 0,
+          "x": 216,
+          "y": 14,
+          "w": 414,
+          "h": 414
+        },
+        {
+          "breakthrough": 1,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        },
+        {
+          "breakthrough": 2,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        }
+      ]
+    },
+    {
+      "id": "guqi",
+      "name": "顾祇",
+      "rarity": 5,
+      "description": "",
+      "growth_curve": "linear",
+      "tendencies": [
+        {
+          "industry": "mining",
+          "level_1": 43,
+          "level_60": 270
+        },
+        {
+          "industry": "exploration",
+          "level_1": 32,
+          "level_60": 202
+        }
+      ],
+      "trait_codes": [],
+      "artworks": [
+        {
+          "breakthrough": 0,
+          "asset_key": "red-leaf-town/partners/guqi/breakthrough-0-a5a209ab96e9a900.webp",
+          "width": 1053,
+          "height": 1872,
+          "content_type": "image/webp"
+        }
+      ],
+      "avatar_crops": [
+        {
+          "breakthrough": 0,
+          "x": 414,
+          "y": 146,
+          "w": 281,
+          "h": 281
+        },
+        {
+          "breakthrough": 1,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        },
+        {
+          "breakthrough": 2,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        }
+      ]
+    },
+    {
+      "id": "hei_yuchuan",
+      "name": "黑羽川",
+      "rarity": 4,
+      "description": "",
+      "growth_curve": "linear",
+      "tendencies": [
+        {
+          "industry": "farming",
+          "level_1": 36,
+          "level_60": 220
+        },
+        {
+          "industry": "aquatic",
+          "level_1": 30,
+          "level_60": 184
+        },
+        {
+          "industry": "gathering",
+          "level_1": 24,
+          "level_60": 147
+        }
+      ],
+      "trait_codes": [],
+      "artworks": [
+        {
+          "breakthrough": 0,
+          "asset_key": "red-leaf-town/partners/hei_yuchuan/breakthrough-0-a6f5f09d11bb5f6b.webp",
+          "width": 936,
+          "height": 1664,
+          "content_type": "image/webp"
+        }
+      ],
+      "avatar_crops": [
+        {
+          "breakthrough": 0,
+          "x": 182,
+          "y": 214,
+          "w": 445,
+          "h": 445
+        },
+        {
+          "breakthrough": 1,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        },
+        {
+          "breakthrough": 2,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        }
+      ]
+    },
+    {
+      "id": "hongkai",
+      "name": "红凯",
+      "rarity": 4,
+      "description": "",
+      "growth_curve": "linear",
+      "tendencies": [
+        {
+          "industry": "exploration",
+          "level_1": 36,
+          "level_60": 220
+        },
+        {
+          "industry": "crafting",
+          "level_1": 30,
+          "level_60": 184
+        },
+        {
+          "industry": "gathering",
+          "level_1": 24,
+          "level_60": 147
+        }
+      ],
+      "trait_codes": [],
+      "artworks": [
+        {
+          "breakthrough": 0,
+          "asset_key": "red-leaf-town/partners/hongkai/breakthrough-0-f274fcfb4f8f45e0.webp",
+          "width": 1053,
+          "height": 1872,
+          "content_type": "image/webp"
+        }
+      ],
+      "avatar_crops": [
+        {
+          "breakthrough": 0,
+          "x": 333,
+          "y": 197,
+          "w": 438,
+          "h": 438
+        },
+        {
+          "breakthrough": 1,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        },
+        {
+          "breakthrough": 2,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        }
+      ]
+    },
+    {
+      "id": "lengyue",
+      "name": "冷悦",
+      "rarity": 3,
+      "description": "",
+      "growth_curve": "linear",
+      "tendencies": [
+        {
+          "industry": "livestock",
+          "level_1": 36,
+          "level_60": 222
+        },
+        {
+          "industry": "farming",
+          "level_1": 27,
+          "level_60": 168
+        }
+      ],
+      "trait_codes": [],
+      "artworks": [
+        {
+          "breakthrough": 0,
+          "asset_key": "red-leaf-town/partners/lengyue/breakthrough-0-1c2463e60d6743ac.webp",
+          "width": 936,
+          "height": 1664,
+          "content_type": "image/webp"
+        }
+      ],
+      "avatar_crops": [
+        {
+          "breakthrough": 0,
+          "x": 260,
+          "y": 85,
+          "w": 477,
+          "h": 477
+        },
+        {
+          "breakthrough": 1,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        },
+        {
+          "breakthrough": 2,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        }
+      ]
+    },
+    {
+      "id": "luo_nali",
+      "name": "洛纳莉",
+      "rarity": 5,
+      "description": "",
+      "growth_curve": "linear",
+      "tendencies": [
+        {
+          "industry": "gathering",
+          "level_1": 39,
+          "level_60": 240
+        },
+        {
+          "industry": "aquatic",
+          "level_1": 33,
+          "level_60": 200
+        },
+        {
+          "industry": "livestock",
+          "level_1": 26,
+          "level_60": 160
+        }
+      ],
+      "trait_codes": [],
+      "artworks": [
+        {
+          "breakthrough": 0,
+          "asset_key": "red-leaf-town/partners/luo_nali/breakthrough-0-7b8f885bef7c007a.webp",
+          "width": 936,
+          "height": 1664,
+          "content_type": "image/webp"
+        }
+      ],
+      "avatar_crops": [
+        {
+          "breakthrough": 0,
+          "x": 250,
+          "y": 63,
+          "w": 422,
+          "h": 422
+        },
+        {
+          "breakthrough": 1,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        },
+        {
+          "breakthrough": 2,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        }
+      ]
+    },
+    {
+      "id": "mami",
+      "name": "麻咪",
+      "rarity": 5,
+      "description": "",
+      "growth_curve": "linear",
+      "tendencies": [
+        {
+          "industry": "farming",
+          "level_1": 43,
+          "level_60": 266
+        },
+        {
+          "industry": "gathering",
+          "level_1": 33,
+          "level_60": 201
+        }
+      ],
+      "trait_codes": [],
+      "artworks": [
+        {
+          "breakthrough": 0,
+          "asset_key": "red-leaf-town/partners/mami/breakthrough-0-0d306e7c7d345902.webp",
+          "width": 972,
+          "height": 1728,
+          "content_type": "image/webp"
+        }
+      ],
+      "avatar_crops": [
+        {
+          "breakthrough": 0,
+          "x": 231,
+          "y": 242,
+          "w": 394,
+          "h": 394
+        },
+        {
+          "breakthrough": 1,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        },
+        {
+          "breakthrough": 2,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        }
+      ]
+    },
+    {
+      "id": "manlong",
+      "name": "慢龙",
+      "rarity": 3,
+      "description": "",
+      "growth_curve": "linear",
+      "tendencies": [
+        {
+          "industry": "livestock",
+          "level_1": 36,
+          "level_60": 223
+        }
+      ],
+      "trait_codes": [],
+      "artworks": [
+        {
+          "breakthrough": 0,
+          "asset_key": "red-leaf-town/partners/manlong/breakthrough-0-023d3720c24e3c67.webp",
+          "width": 936,
+          "height": 1664,
+          "content_type": "image/webp"
+        }
+      ],
+      "avatar_crops": [
+        {
+          "breakthrough": 0,
+          "x": 273,
+          "y": 106,
+          "w": 314,
+          "h": 314
+        },
+        {
+          "breakthrough": 1,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        },
+        {
+          "breakthrough": 2,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        }
+      ]
+    },
+    {
+      "id": "wujian",
+      "name": "雾剑",
+      "rarity": 3,
+      "description": "",
+      "growth_curve": "linear",
+      "tendencies": [
+        {
+          "industry": "exploration",
+          "level_1": 36,
+          "level_60": 223
+        }
+      ],
+      "trait_codes": [],
+      "artworks": [
+        {
+          "breakthrough": 0,
+          "asset_key": "red-leaf-town/partners/wujian/breakthrough-0-2beb392234ca0b75.webp",
+          "width": 936,
+          "height": 1664,
+          "content_type": "image/webp"
+        }
+      ],
+      "avatar_crops": [
+        {
+          "breakthrough": 0,
+          "x": 352,
+          "y": 190,
+          "w": 405,
+          "h": 405
+        },
+        {
+          "breakthrough": 1,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        },
+        {
+          "breakthrough": 2,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        }
+      ]
+    },
+    {
+      "id": "xiang_hanyang",
+      "name": "向含鸯",
+      "rarity": 3,
+      "description": "",
+      "growth_curve": "linear",
+      "tendencies": [
+        {
+          "industry": "mining",
+          "level_1": 36,
+          "level_60": 223
+        }
+      ],
+      "trait_codes": [],
+      "artworks": [
+        {
+          "breakthrough": 0,
+          "asset_key": "red-leaf-town/partners/xiang_hanyang/breakthrough-0-b8159a3d76b98597.webp",
+          "width": 1053,
+          "height": 1872,
+          "content_type": "image/webp"
+        }
+      ],
+      "avatar_crops": [
+        {
+          "breakthrough": 0,
+          "x": 293,
+          "y": 69,
+          "w": 514,
+          "h": 514
+        },
+        {
+          "breakthrough": 1,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        },
+        {
+          "breakthrough": 2,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        }
+      ]
+    },
+    {
+      "id": "xiyue_kanna",
+      "name": "夕月神奈",
+      "rarity": 5,
+      "description": "",
+      "growth_curve": "linear",
+      "tendencies": [
+        {
+          "industry": "gathering",
+          "level_1": 39,
+          "level_60": 240
+        },
+        {
+          "industry": "aquatic",
+          "level_1": 33,
+          "level_60": 200
+        },
+        {
+          "industry": "crafting",
+          "level_1": 26,
+          "level_60": 160
+        }
+      ],
+      "trait_codes": [],
+      "artworks": [
+        {
+          "breakthrough": 0,
+          "asset_key": "red-leaf-town/partners/xiyue_kanna/breakthrough-0-44d56e9e999be21c.webp",
+          "width": 936,
+          "height": 1664,
+          "content_type": "image/webp"
+        }
+      ],
+      "avatar_crops": [
+        {
+          "breakthrough": 0,
+          "x": 333,
+          "y": 187,
+          "w": 418,
+          "h": 418
+        },
+        {
+          "breakthrough": 1,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        },
+        {
+          "breakthrough": 2,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        }
+      ]
+    },
+    {
+      "id": "ye_lvsu",
+      "name": "叶律素",
+      "rarity": 3,
+      "description": "",
+      "growth_curve": "linear",
+      "tendencies": [
+        {
+          "industry": "farming",
+          "level_1": 33,
+          "level_60": 201
+        },
+        {
+          "industry": "gathering",
+          "level_1": 27,
+          "level_60": 167
+        },
+        {
+          "industry": "livestock",
+          "level_1": 22,
+          "level_60": 134
+        }
+      ],
+      "trait_codes": [],
+      "artworks": [
+        {
+          "breakthrough": 0,
+          "asset_key": "red-leaf-town/partners/ye_lvsu/breakthrough-0-ec3f38a3c46cc9d3.webp",
+          "width": 936,
+          "height": 1664,
+          "content_type": "image/webp"
+        }
+      ],
+      "avatar_crops": [
+        {
+          "breakthrough": 0,
+          "x": 286,
+          "y": 261,
+          "w": 299,
+          "h": 299
+        },
+        {
+          "breakthrough": 1,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        },
+        {
+          "breakthrough": 2,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        }
+      ]
+    },
+    {
+      "id": "zhuoyan",
+      "name": "灼焱",
+      "rarity": 5,
+      "description": "",
+      "growth_curve": "linear",
+      "tendencies": [
+        {
+          "industry": "exploration",
+          "level_1": 44,
+          "level_60": 267
+        }
+      ],
+      "trait_codes": [],
+      "artworks": [
+        {
+          "breakthrough": 0,
+          "asset_key": "red-leaf-town/partners/zhuoyan/breakthrough-0-5fd8f29aecbec020.webp",
+          "width": 936,
+          "height": 1664,
+          "content_type": "image/webp"
+        }
+      ],
+      "avatar_crops": [
+        {
+          "breakthrough": 0,
+          "x": 250,
+          "y": 143,
+          "w": 506,
+          "h": 506
         },
         {
           "breakthrough": 1,
