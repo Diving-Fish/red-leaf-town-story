@@ -69,7 +69,7 @@ function inputName(station: CraftingStationState, itemId: string) {
 <style scoped>
 .station-list { display: grid; gap: 18px; }
 .recipe-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-.consumed-list { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 12px; }
+.consumed-list { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .consumed-list small { color: #7b867d; }
 .consumed-list span { padding: 4px 7px; color: #a3aca4; font-size: 12px; border-radius: 5px; background: #ffffff05; }
 @media (max-width: 720px) { .recipe-grid { grid-template-columns: 1fr; } }

@@ -11,9 +11,11 @@ import { useCountdown } from '@/composables/useCountdown'
 import { industryMeta } from '@/lib/industries'
 import { PRODUCTION_COPY, partnerAbility, type ProductionNode } from '@/lib/production'
 import { useGameStore } from '@/stores/game'
+import { useUiStore } from '@/stores/ui'
 
 const props = defineProps<{ node: ProductionNode }>()
 const game = useGameStore()
+const ui = useUiStore()
 
 const copy = computed(() => PRODUCTION_COPY[props.node.industry])
 const meta = computed(() => industryMeta(props.node.industry))
@@ -31,6 +33,16 @@ const activeItems = computed(() => (game.state?.task_items || []).filter((item) 
   item.timing === 'active'
   && (!item.eligible_industries.length || item.eligible_industries.includes(props.node.industry))
 )))
+
+async function cancelTask() {
+  const accepted = await ui.confirm({
+    title: copy.value.cancelConfirmTitle,
+    description: copy.value.cancelConfirmDescription,
+    confirmLabel: copy.value.cancelLabel,
+    tone: 'danger',
+  })
+  if (accepted) game.cancelTask(props.node.industry, props.node.nodeId)
+}
 </script>
 
 <template>
@@ -91,6 +103,11 @@ const activeItems = computed(() => (game.state?.task_items || []).filter((item) 
         reason="剩余时间还太长"
         @click="game.useActiveTaskItem(node.industry, node.nodeId, item.id)"
       >{{ item.name }} ×{{ item.quantity }}</ActionButton>
+      <ActionButton
+        variant="secondary"
+        :action-key="`${scope}:cancel`"
+        @click="cancelTask"
+      >{{ copy.cancelLabel }}</ActionButton>
       <ProgressBar class="running-progress" :value="progress" :color="node.accent" smooth />
     </div>
   </article>
@@ -100,5 +117,5 @@ const activeItems = computed(() => (game.state?.task_items || []).filter((item) 
 .production-tasks { display: grid; gap: 8px; margin-top: 4px; }
 .result-list { display: grid; gap: 3px; margin-top: 4px; }
 .result-list small { color: #aab5aa; }
-.running-progress { margin-top: 12px; }
+.production-running { display: flex; flex-direction: column; gap: 12px; }
 </style>

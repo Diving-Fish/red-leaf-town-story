@@ -949,6 +949,17 @@ def create_blueprint(
         )
         return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
 
+    @blueprint.post("/api/red-leaf-town/tasks/cancel")
+    @login_required
+    async def cancel_task(subject: str):
+        payload = await request.get_json(silent=True) or {}
+        result = get_service().cancel_task(
+            subject,
+            str(payload.get("industry", "")),
+            str(payload.get("slot_id", "")),
+        )
+        return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
+
     @blueprint.post("/api/red-leaf-town/talents/<string:node_id>/unlock")
     @login_required
     async def unlock_talent(subject: str, node_id: str):

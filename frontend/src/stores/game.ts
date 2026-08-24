@@ -345,6 +345,14 @@ export const useGameStore = defineStore('game', () => {
     })
   }
 
+  function cancelTask(industry: ProductionIndustry | 'farming', slotId: string | number) {
+    return action(`${industry}:${slotId}:cancel`, `${API_ROOT}/tasks/cancel`, {
+      payload: { industry, slot_id: String(slotId) },
+      successMessage: '任务已经取消，消耗的资源已退回',
+      cue: `action:cancel_${industry}`,
+    })
+  }
+
   async function createBindingCode() {
     if (isPending('binding-code')) return null
     pending.value.add('binding-code')
@@ -418,6 +426,7 @@ export const useGameStore = defineStore('game', () => {
     starUpPartner,
     breakthroughPartner,
     useActiveTaskItem,
+    cancelTask,
     deliverTribute,
     createBindingCode,
     logout,

@@ -33,6 +33,7 @@ from red_leaf_town.domain.progression import (
     normalize_gathering_sites,
     normalize_mining_sites,
     normalize_plot_slots,
+    refund_stamina,
     settle_stamina,
 )
 from red_leaf_town.domain.production import build_results, draw_count, pick_weighted
@@ -829,6 +830,49 @@ class GameService:
         player, result = self._update_by_sub(oauth_sub, mutation)
         return {"result": result, "state": self._snapshot(player, now)}
 
+    def cancel_task(self, oauth_sub: str, industry: str, slot_id: str) -> dict:
+        now = self._now()
+
+        def mutation(player: PlayerState):
+            self._settle(player, now)
+            production_slot = self._production_slot(player, industry, slot_id)
+            task = production_slot.task_snapshot
+            if task is None:
+                raise GameError("task_not_active", "这里没有可以取消的任务")
+            if task.ready_at <= now:
+                raise GameError("task_already_ready", "任务已经完成，请直接收取产出")
+            # 各生产格目前彼此独立，取消只回滚这一格自身消耗的资源。
+            # 如果未来出现"某格效果会影响其他格子"的机制（例如跨格加成、连锁触发），
+            # 取消逻辑需要额外处理那些外溢效果，而不能只是清空这一格。
+            stamina_cost = self._task_stamina_cost(industry, task.content_id)
+            if stamina_cost:
+                refund_stamina(player, stamina_cost, self.content, now)
+            for entry in task.consumed_inputs:
+                add_item(player, entry.item_id, entry.quantity, entry.quality)
+            refunded_task_items: dict[str, int] = {}
+            for effect in task.applied_effects:
+                task_item_id = effect.get("task_item_id")
+                if not task_item_id:
+                    continue
+                player.task_items[task_item_id] = player.task_items.get(task_item_id, 0) + 1
+                refunded_task_items[task_item_id] = refunded_task_items.get(task_item_id, 0) + 1
+            production_slot.task_snapshot = None
+            production_slot.task_results = []
+            if industry == "farming":
+                production_slot.crop_id = ""
+                production_slot.planted_at = 0
+                production_slot.ready_at = 0
+            return {
+                "industry": industry,
+                "slot_id": slot_id,
+                "refunded_inputs": [entry.model_dump() for entry in task.consumed_inputs],
+                "refunded_stamina": stamina_cost,
+                "refunded_task_items": refunded_task_items,
+            }
+
+        player, result = self._update_by_sub(oauth_sub, mutation)
+        return {"result": result, "state": self._snapshot(player, now)}
+
     def unlock_talent(self, oauth_sub: str, node_id: str) -> dict:
         node = self.content.talent_map.get(node_id)
         if node is None:
@@ -1395,6 +1439,21 @@ class GameService:
             return self._mining_site(player, slot_id)
         raise GameError("industry_not_found", "产业不存在", 404)
 
+    def _task_stamina_cost(self, industry: str, content_id: str) -> int:
+        if industry == "farming":
+            crop = self.content.crop_map.get(content_id)
+            return crop.stamina_cost if crop else 0
+        if industry == "gathering":
+            task = self.content.gathering_task_map.get(content_id)
+            return task.stamina_cost if task else 0
+        if industry == "crafting":
+            recipe = self.content.recipe_map.get(content_id)
+            return recipe.stamina_cost if recipe else 0
+        if industry == "mining":
+            task = self.content.mining_task_map.get(content_id)
+            return task.stamina_cost if task else 0
+        return 0
+
     def _settle(self, player: PlayerState, now: int) -> None:
         self._normalize_inventory_quality(player)
         partner_map = self.partner_catalog_loader().partner_map
@@ -1468,6 +1527,7 @@ class GameService:
             yield_max=crop.yield_max,
             harvest_xp=crop.harvest_xp,
             quality=crop.quality,
+            consumed_inputs=[TaskInputSnapshot(item_id=crop.seed_item_id, quality=0, quantity=1)],
             task_item_id=task_item_id,
         )
 

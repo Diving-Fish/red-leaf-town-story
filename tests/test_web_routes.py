@@ -98,6 +98,15 @@ async def test_shop_and_plant_api(client):
     assert body["data"]["state"]["plots"][0]["crop_id"] == "carrot"
     assert len(body["data"]["state"]["plots"][0]["task_snapshot"]["quality_parameters"]["probabilities"]) == 5
 
+    cancelled = await client.post("/api/red-leaf-town/tasks/cancel", json={"industry": "farming", "slot_id": "0"})
+    cancelled_body = await cancelled.get_json()
+    assert cancelled.status_code == 200
+    assert cancelled_body["data"]["state"]["plots"][0]["empty"] is True
+    seed_entry = next(
+        item for item in cancelled_body["data"]["state"]["inventory"] if item["item_id"] == "carrot_seed"
+    )
+    assert seed_entry["quantity"] == 2
+
 
 @runs
 async def test_gacha_and_partner_growth_apis_commit_domain_actions(client, service):

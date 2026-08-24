@@ -35,6 +35,9 @@ export interface ProductionCopy {
   collectLabel: string
   collectVerb: string
   collectNoun: string
+  cancelLabel: string
+  cancelConfirmTitle: string
+  cancelConfirmDescription: string
   startPayloadKey: string
   endpoint: string
 }
@@ -48,6 +51,9 @@ export const PRODUCTION_COPY: Record<ProductionIndustry, ProductionCopy> = {
     collectLabel: '领取采集物',
     collectVerb: '带回了',
     collectNoun: '采集物',
+    cancelLabel: '取消采集',
+    cancelConfirmTitle: '取消这次采集？',
+    cancelConfirmDescription: '消耗的体力会退回，伙伴仍留在这个采集点。',
     startPayloadKey: 'task_id',
     endpoint: 'gathering/sites',
   },
@@ -59,6 +65,9 @@ export const PRODUCTION_COPY: Record<ProductionIndustry, ProductionCopy> = {
     collectLabel: '收取矿石',
     collectVerb: '取得了',
     collectNoun: '矿石',
+    cancelLabel: '取消采矿',
+    cancelConfirmTitle: '取消这次采矿？',
+    cancelConfirmDescription: '消耗的体力会退回，伙伴仍留在这个矿点。',
     startPayloadKey: 'task_id',
     endpoint: 'mining/sites',
   },
@@ -70,6 +79,9 @@ export const PRODUCTION_COPY: Record<ProductionIndustry, ProductionCopy> = {
     collectLabel: '领取成品',
     collectVerb: '制成了',
     collectNoun: '加工品',
+    cancelLabel: '取消加工',
+    cancelConfirmTitle: '取消这次加工？',
+    cancelConfirmDescription: '消耗的材料和体力会退回，伙伴仍留在这个工位。',
     startPayloadKey: 'recipe_id',
     endpoint: 'crafting/stations',
   },

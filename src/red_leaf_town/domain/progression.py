@@ -33,6 +33,14 @@ def consume_stamina(player: PlayerState, amount: int, content: GameContent, now:
         player.stamina_updated_at = now
 
 
+def refund_stamina(player: PlayerState, amount: int, content: GameContent, now: int) -> None:
+    if amount <= 0:
+        return
+    settle_stamina(player, content, now)
+    cap = content.level_definition(player.level).stamina_cap
+    player.stamina = min(cap, player.stamina + amount)
+
+
 def grant_experience(player: PlayerState, amount: int, content: GameContent) -> list[int]:
     if amount < 0:
         raise ValueError("经验值不能为负数")

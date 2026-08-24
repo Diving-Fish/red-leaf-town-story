@@ -11,12 +11,25 @@ import QualityTag from '@/components/QualityTag.vue'
 import StateBlock from '@/components/StateBlock.vue'
 import { useCountdown } from '@/composables/useCountdown'
 import { useGameStore } from '@/stores/game'
+import { useUiStore } from '@/stores/ui'
 import type { CropDefinition, PlotState } from '@/types'
 
 const props = defineProps<{ plot?: PlotState; lockedLevel?: number | null; crops?: CropDefinition[] }>()
 
 const game = useGameStore()
+const ui = useUiStore()
 const plantOpen = ref(false)
+
+async function cancelPlanting() {
+  if (!props.plot) return
+  const accepted = await ui.confirm({
+    title: '取消这次种植？',
+    description: '种下的种子会退回仓库，伙伴仍留在这块土地。',
+    confirmLabel: '取消种植',
+    tone: 'danger',
+  })
+  if (accepted) game.cancelTask('farming', props.plot.slot)
+}
 
 const { progress, label, elapsed } = useCountdown(
   () => props.plot?.ready_at,
@@ -109,15 +122,22 @@ function selectPartner(partnerId: string | null) {
       </ActionButton>
     </template>
     <template v-else>
-      <ActionButton
-        v-for="item in activeItems"
-        :key="item.id"
-        variant="secondary"
-        :action-key="`farming:${plot.slot}:item:${item.id}`"
-        :disabled="plot.ready_at - game.serverNow > item.value"
-        reason="剩余时间还太长"
-        @click="game.useActiveTaskItem('farming', plot.slot, item.id)"
-      >{{ item.name }} ×{{ item.quantity }}</ActionButton>
+      <div class="plot-actions">
+        <ActionButton
+          v-for="item in activeItems"
+          :key="item.id"
+          variant="secondary"
+          :action-key="`farming:${plot.slot}:item:${item.id}`"
+          :disabled="plot.ready_at - game.serverNow > item.value"
+          reason="剩余时间还太长"
+          @click="game.useActiveTaskItem('farming', plot.slot, item.id)"
+        >{{ item.name }} ×{{ item.quantity }}</ActionButton>
+        <ActionButton
+          variant="secondary"
+          :action-key="`plot:${plot.slot}:cancel`"
+          @click="cancelPlanting"
+        >取消种植</ActionButton>
+      </div>
       <ProgressBar class="plot-progress" :value="progress" :color="plot.crop?.accent" track="#111713" smooth />
       <span class="time-left"><Clock3 :size="14" /> {{ label }}</span>
     </template>
@@ -125,9 +145,10 @@ function selectPartner(partnerId: string | null) {
 </template>
 
 <style scoped>
-.task-boost { color: #91aa7d; font-size: 12px; margin-bottom: 7px; }
+.task-boost { color: #91aa7d; font-size: 12px; margin-top: auto; margin-bottom: 10px; }
 .harvest-list { display: flex; flex-wrap: wrap; gap: 4px 10px; justify-content: center; }
-.plot-progress { width: 100%; margin-top: auto; }
+.plot-actions { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+.plot-progress { width: 100%; margin-top: 10px; }
 .plant-button {
   position: relative;
   width: 100%;
