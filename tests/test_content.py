@@ -105,6 +105,36 @@ def test_crop_roster_separates_tutorial_and_regular_economy():
     assert all(crop.quality.thresholds == sorted(crop.quality.thresholds) for crop in regular)
 
 
+def test_crafting_prices_reflect_inputs_and_mining_stamina_value():
+    content = load_content()
+    mining_values_per_stamina = []
+    for task in content.mining_tasks:
+        item = content.item_map[task.produce_item_id]
+        average_yield = (task.yield_min + task.yield_max) / 2
+        mining_values_per_stamina.append(average_yield * item.sell_price / task.stamina_cost)
+
+    minimum_value = min(mining_values_per_stamina)
+    maximum_value = max(mining_values_per_stamina)
+    assert {
+        item_id: content.item_map[item_id].sell_price
+        for item_id in ("maple_plank", "herbal_salve", "flour", "pickled_carrot")
+    } == {
+        "maple_plank": 110,
+        "herbal_salve": 120,
+        "flour": 130,
+        "pickled_carrot": 130,
+    }
+    for recipe in content.recipes:
+        input_value = sum(
+            content.item_map[entry.item_id].sell_price * entry.quantity
+            for entry in recipe.inputs
+        )
+        output_value = content.item_map[recipe.produce_item_id].sell_price * recipe.produce_quantity
+        added_value_per_stamina = (output_value - input_value) / recipe.stamina_cost
+        assert recipe.stamina_cost == 10
+        assert minimum_value <= added_value_per_stamina <= maximum_value
+
+
 def test_unknown_crop_item_is_rejected():
     payload = load_content().model_dump()
     payload["crops"][0]["seed_item_id"] = "missing_seed"

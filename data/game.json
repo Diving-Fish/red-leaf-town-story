@@ -292,7 +292,7 @@
       "name": "枫木板",
       "icon": "panels-top-left",
       "kind": "product",
-      "sell_price": 18,
+      "sell_price": 110,
       "has_quality": true
     },
     {
@@ -300,7 +300,7 @@
       "name": "秋露药膏",
       "icon": "flask-conical",
       "kind": "product",
-      "sell_price": 28,
+      "sell_price": 120,
       "has_quality": true
     },
     {
@@ -308,7 +308,7 @@
       "name": "小麦粉",
       "icon": "package",
       "kind": "product",
-      "sell_price": 24,
+      "sell_price": 130,
       "has_quality": true
     },
     {
@@ -316,7 +316,7 @@
       "name": "腌渍胡萝卜",
       "icon": "cooking-pot",
       "kind": "product",
-      "sell_price": 22,
+      "sell_price": 130,
       "has_quality": true
     },
     {
@@ -785,7 +785,7 @@
       "produce_quantity": 1,
       "duration_seconds": 60,
       "time_difficulty": 100,
-      "stamina_cost": 1,
+      "stamina_cost": 10,
       "collect_xp": 6,
       "quality": {
         "thresholds": [
@@ -819,7 +819,7 @@
       "produce_quantity": 1,
       "duration_seconds": 90,
       "time_difficulty": 125,
-      "stamina_cost": 1,
+      "stamina_cost": 10,
       "collect_xp": 8,
       "quality": {
         "thresholds": [
@@ -853,7 +853,7 @@
       "produce_quantity": 1,
       "duration_seconds": 75,
       "time_difficulty": 115,
-      "stamina_cost": 1,
+      "stamina_cost": 10,
       "collect_xp": 7,
       "quality": {
         "thresholds": [
@@ -887,7 +887,7 @@
       "produce_quantity": 1,
       "duration_seconds": 120,
       "time_difficulty": 145,
-      "stamina_cost": 1,
+      "stamina_cost": 10,
       "collect_xp": 10,
       "quality": {
         "thresholds": [
