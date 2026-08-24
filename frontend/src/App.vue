@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { ChevronRight, Copy, Leaf, LogOut, Map, Menu, RefreshCw, RotateCw, UserRound, X } from 'lucide-vue-next'
+import { ChevronRight, Copy, Inbox, Leaf, LogOut, Map, Menu, RefreshCw, RotateCw, UserRound, X } from 'lucide-vue-next'
 
 import ActionButton from '@/components/ActionButton.vue'
 import AppNav from '@/components/AppNav.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
+import MailInbox from '@/components/mail/MailInbox.vue'
 import ProgressBar from '@/components/ProgressBar.vue'
 import ResourcePill from '@/components/ResourcePill.vue'
 import StoryOverlay from '@/components/story/StoryOverlay.vue'
@@ -23,6 +24,13 @@ let pollTimer = 0
 
 const isAdminRoute = computed(() => route.meta.admin === true)
 const routeTitle = computed(() => String(route.meta.title || '红叶镇'))
+// 未读优先，都读完了还留着没领的附件就换成金色提醒。
+const mailBadge = computed(() => {
+  const mail = game.state?.mail
+  if (!mail) return null
+  if (mail.unread) return { count: mail.unread, tone: 'unread' as const }
+  return mail.unclaimed ? { count: mail.unclaimed, tone: 'unclaimed' as const } : null
+})
 const loginUrl = computed(() => `/api/oauth/red-leaf-town/start?next=${encodeURIComponent('/red-leaf-town/')}`)
 const levelProgress = computed(() => {
   const player = game.player
@@ -131,6 +139,10 @@ async function copyBindingCommand() {
           <ResourcePill kind="coins" />
           <ResourcePill kind="stamina" />
         </div>
+        <button class="icon-button inbox-button" aria-label="收件箱" @click="ui.mailOpen = true">
+          <Inbox :size="18" />
+          <i v-if="mailBadge" class="inbox-badge" :class="mailBadge.tone">{{ mailBadge.count > 99 ? '99+' : mailBadge.count }}</i>
+        </button>
         <button class="icon-button refresh-button" :class="{ spinning: game.isPending('refresh') }" @click="game.refresh()">
           <RefreshCw :size="18" />
         </button>
@@ -177,6 +189,7 @@ async function copyBindingCommand() {
     </div>
   </div>
 
+  <MailInbox v-if="!isAdminRoute" />
   <StoryOverlay v-if="!isAdminRoute" />
   <ConfirmDialog />
   <Transition name="toast"><div v-if="game.notice" class="toast">{{ game.notice }}</div></Transition>

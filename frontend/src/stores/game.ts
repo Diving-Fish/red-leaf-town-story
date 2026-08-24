@@ -12,6 +12,8 @@ import type {
   CommissionBoard,
   GachaResult,
   GameState,
+  MailboxState,
+  MailClaimResult,
   Reward,
   TributeDeliveryResult,
 } from '@/types'
@@ -319,6 +321,31 @@ export const useGameStore = defineStore('game', () => {
     })
   }
 
+  async function loadMailbox() {
+    if (isPending('mail:list')) return undefined
+    pending.value.add('mail:list')
+    try {
+      return await api<MailboxState>(`${API_ROOT}/mail`)
+    } catch (caught) {
+      fail(caught)
+      return undefined
+    } finally {
+      pending.value.delete('mail:list')
+    }
+  }
+
+  function readMail(mailId: string) {
+    return action(`mail:read:${mailId}`, `${API_ROOT}/mail/${mailId}/read`)
+  }
+
+  async function claimMail(mailId: string) {
+    const result = (await action(`mail:claim:${mailId}`, `${API_ROOT}/mail/${mailId}/claim`)) as
+      | MailClaimResult
+      | undefined
+    if (result) showNotice(rewardText(result.granted) || '附件已经收下')
+    return result
+  }
+
   function productionBase(industry: ProductionIndustry, nodeId: string) {
     return `${API_ROOT}/${PRODUCTION_COPY[industry].endpoint}/${nodeId}`
   }
@@ -480,6 +507,9 @@ export const useGameStore = defineStore('game', () => {
     forwardCommission,
     withdrawCommission,
     takeCommission,
+    loadMailbox,
+    readMail,
+    claimMail,
     createBindingCode,
     logout,
     effectiveNow,

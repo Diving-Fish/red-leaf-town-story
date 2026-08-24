@@ -216,7 +216,7 @@ def test_schema_sixteen_rebalances_partner_progress_and_active_task_snapshots_on
 
     partner = player.owned_partners[0]
     task = player.mining_sites[0].task_snapshot
-    assert player.schema_version == 17
+    assert player.schema_version == 18
     assert (partner.level, partner.experience) == (3, 0)
     assert (task.partner_snapshots[0].level, task.partner_snapshots[0].effective_level) == (2, 2)
     assert task.rule_version == 2

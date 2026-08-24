@@ -14,7 +14,7 @@ from red_leaf_town.application import GameService
 from red_leaf_town.content import load_content
 from red_leaf_town.domain import QQIdentity
 from red_leaf_town.domain.economy import add_item
-from red_leaf_town.infrastructure import InMemoryCommissionBoard, InMemoryPlayerRepository
+from red_leaf_town.infrastructure import InMemoryCommissionBoard, InMemoryMailbox, InMemoryPlayerRepository
 from red_leaf_town.runtime import set_service
 from red_leaf_town.partner_content import load_partner_catalog
 from red_leaf_town.web.routes import COOKIE_NAME, create_blueprint
@@ -35,6 +35,7 @@ def service():
         content,
         InMemoryPlayerRepository(content),
         commission_board=InMemoryCommissionBoard(),
+        mailbox=InMemoryMailbox(),
         clock=lambda: 1_700_000_000,
     )
     game.ensure_player("route-sub", "小枫")
@@ -736,3 +737,81 @@ async def test_commission_apis_require_login(client):
     ):
         assert (await client.post(path)).status_code == 401
     assert (await client.get("/api/red-leaf-town/commissions/board")).status_code == 401
+
+
+@runs
+async def test_mail_apis_read_and_claim_a_global_letter(client, service):
+    service.admin_send_mail({
+        "scope": "global",
+        "title": "红叶镇邮局开张",
+        "sender": "镇长",
+        "body": "山下的信件从今天起直接送到你手上。",
+        "attachments": {"coins": 500},
+    })
+    authenticate(client)
+
+    listed = await client.get("/api/red-leaf-town/mail")
+    body = (await listed.get_json())["data"]
+    assert listed.status_code == 200
+    assert body["unread"] == 1 and body["unclaimed"] == 1
+    entry = body["entries"][0]
+    assert entry["sender"] == "镇长" and entry["claimable"] is True
+
+    read = await client.post(f"/api/red-leaf-town/mail/{entry['mail_id']}/read")
+    assert (await read.get_json())["data"]["state"]["mail"]["unread"] == 0
+
+    claimed = await client.post(f"/api/red-leaf-town/mail/{entry['mail_id']}/claim")
+    claimed_body = (await claimed.get_json())["data"]
+    assert claimed.status_code == 200
+    assert claimed_body["result"]["granted"]["coins"] == 500
+    assert claimed_body["state"]["mail"]["unclaimed"] == 0
+
+    again = await client.post(f"/api/red-leaf-town/mail/{entry['mail_id']}/claim")
+    assert again.status_code == 409
+    assert (await again.get_json())["code"] == "mail_already_claimed"
+
+
+@runs
+async def test_mail_apis_require_login(client):
+    assert (await client.get("/api/red-leaf-town/mail")).status_code == 401
+    assert (await client.post("/api/red-leaf-town/mail/deadbeefcafe/claim")).status_code == 401
+
+
+@runs
+async def test_admin_mail_send_list_and_withdraw(admin_client, service):
+    player = service.repository.get_by_sub("route-sub")
+    sent = await admin_client.post(
+        "/api/red-leaf-town/admin/mail",
+        json={
+            "scope": "player",
+            "recipient_id": player.player_id,
+            "title": "给小枫的信",
+            "sender": "白璃",
+            "body": "记得来取你的东西。",
+            "attachments": {"items": [{"item_id": "carrot_seed", "quantity": 2}]},
+        },
+        headers=admin_headers(),
+    )
+    mail = (await sent.get_json())["data"]["mail"]
+    assert sent.status_code == 200
+    assert mail["recipient_name"] == "小枫"
+    assert mail["attachments"]["items"][0]["name"]
+
+    listed = await admin_client.get(
+        f"/api/red-leaf-town/admin/mail?scope=player&player_id={player.player_id}",
+        headers=admin_headers(),
+    )
+    assert [entry["mail_id"] for entry in (await listed.get_json())["data"]["entries"]] == [mail["mail_id"]]
+
+    withdrawn = await admin_client.delete(
+        f"/api/red-leaf-town/admin/mail/{mail['mail_id']}?recipient_id={player.player_id}",
+        headers=admin_headers(),
+    )
+    assert withdrawn.status_code == 200
+    assert service.mailbox_repository.list_for_player(player.player_id) == []
+
+
+@runs
+async def test_admin_mail_requires_token(admin_client):
+    assert (await admin_client.get("/api/red-leaf-town/admin/mail")).status_code == 403
+    assert (await admin_client.post("/api/red-leaf-town/admin/mail", json={})).status_code == 403

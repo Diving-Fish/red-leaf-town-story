@@ -418,8 +418,16 @@ class CommissionPayout(BaseModel):
     completed_at: int = Field(ge=0)
 
 
+class MailReceiptState(BaseModel):
+    """一封信在我这边的状态。信本身存在公共信箱里，这里只记我读没读过、附件领没领过。"""
+
+    mail_id: str = Field(min_length=8, max_length=64)
+    read_at: int = Field(default=0, ge=0)
+    claimed_at: int = Field(default=0, ge=0)
+
+
 class PlayerState(BaseModel):
-    schema_version: int = 17
+    schema_version: int = 18
     version: int = 1
     player_id: str
     oauth_sub: str
@@ -444,6 +452,7 @@ class PlayerState(BaseModel):
     portals: list[PortalProgressState] = Field(default_factory=list)
     commission: CommissionState | None = None
     commission_takes: list[TakenCommissionRecord] = Field(default_factory=list, max_length=30)
+    mail_receipts: list[MailReceiptState] = Field(default_factory=list, max_length=1000)
     bonus_talent_points: int = Field(default=0, ge=0)
     gacha_progress: dict[str, GachaPoolProgressState] = Field(default_factory=dict)
     gacha_history: list[GachaRequestRecord] = Field(default_factory=list)
@@ -539,7 +548,9 @@ class PlayerState(BaseModel):
                     snapshot = production_slot.get("task_snapshot")
                     if isinstance(snapshot, dict):
                         _migrate_task_snapshot(snapshot)
-        migrated["schema_version"] = 17
+        if schema_version < 18:
+            migrated.setdefault("mail_receipts", [])
+        migrated["schema_version"] = 18
         return migrated
 
     @model_validator(mode="after")
@@ -564,6 +575,9 @@ class PlayerState(BaseModel):
         portal_ids = [entry.portal_id for entry in self.portals]
         if len(portal_ids) != len(set(portal_ids)):
             raise ValueError("player cannot record the same portal more than once")
+        mail_ids = [entry.mail_id for entry in self.mail_receipts]
+        if len(mail_ids) != len(set(mail_ids)):
+            raise ValueError("player cannot record the same mail more than once")
         taken_ids = [entry.commission_id for entry in self.commission_takes]
         if len(taken_ids) != len(set(taken_ids)):
             raise ValueError("player cannot take the same commission more than once")

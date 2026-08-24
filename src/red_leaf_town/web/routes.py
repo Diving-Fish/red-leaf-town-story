@@ -712,6 +712,31 @@ def create_blueprint(
         result = get_service().admin_delete_player(player_id)
         return jsonify({"code": 0, "data": result, "message": "角色已删除"})
 
+    @blueprint.get("/api/red-leaf-town/admin/mail")
+    async def admin_mail_list():
+        if not _is_admin_request():
+            return _admin_error()
+        result = get_service().admin_list_mail(
+            request.args.get("scope", "global"),
+            request.args.get("player_id", ""),
+        )
+        return jsonify({"code": 0, "data": result})
+
+    @blueprint.post("/api/red-leaf-town/admin/mail")
+    async def admin_mail_send():
+        if not _is_admin_request():
+            return _admin_error()
+        payload = await request.get_json(silent=True) or {}
+        result = get_service().admin_send_mail(payload)
+        return jsonify({"code": 0, "data": result, "message": "邮件已投递"})
+
+    @blueprint.delete("/api/red-leaf-town/admin/mail/<string:mail_id>")
+    async def admin_mail_delete(mail_id: str):
+        if not _is_admin_request():
+            return _admin_error()
+        result = get_service().admin_delete_mail(mail_id, request.args.get("recipient_id", ""))
+        return jsonify({"code": 0, "data": result, "message": "邮件已撤回"})
+
     @blueprint.get("/api/oauth/red-leaf-town/start")
     async def oauth_start():
         from private.libraries.df_oauth import OAuthError, build_authorize_url
@@ -1017,6 +1042,24 @@ def create_blueprint(
     @login_required
     async def take_commission(subject: str, commission_id: str):
         result = get_service().take_commission(subject, commission_id)
+        return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
+
+    @blueprint.get("/api/red-leaf-town/mail")
+    @login_required
+    async def mailbox(subject: str):
+        result = get_service().mailbox(subject)
+        return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
+
+    @blueprint.post("/api/red-leaf-town/mail/<string:mail_id>/read")
+    @login_required
+    async def read_mail(subject: str, mail_id: str):
+        result = get_service().read_mail(subject, mail_id)
+        return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
+
+    @blueprint.post("/api/red-leaf-town/mail/<string:mail_id>/claim")
+    @login_required
+    async def claim_mail(subject: str, mail_id: str):
+        result = get_service().claim_mail(subject, mail_id)
         return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
 
     @blueprint.post("/api/red-leaf-town/story/cue")

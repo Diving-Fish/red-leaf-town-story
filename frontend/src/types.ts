@@ -264,6 +264,53 @@ export interface Reward {
   empty: boolean
 }
 
+export type MailScope = 'global' | 'player'
+
+export interface MailSummary {
+  total: number
+  unread: number
+  unclaimed: number
+}
+
+export interface MailEntry {
+  mail_id: string
+  scope: MailScope
+  title: string
+  sender: string
+  body: string
+  created_at: number
+  expires_at: number | null
+  attachments: Reward
+  read: boolean
+  claimed: boolean
+  claimable: boolean
+}
+
+export interface MailboxState extends MailSummary {
+  available: boolean
+  entries: MailEntry[]
+}
+
+export interface MailClaimResult {
+  mail_id: string
+  title: string
+  granted: Reward & { levels: number[] }
+}
+
+export interface AdminMailEntry {
+  mail_id: string
+  scope: MailScope
+  recipient_id: string
+  recipient_name: string
+  registered_before: number
+  title: string
+  sender: string
+  body: string
+  attachments: Reward
+  created_at: number
+  expires_at: number
+}
+
 export interface PortalTribute {
   id: string
   item_id: string
@@ -316,7 +363,7 @@ export interface TributeDeliveryResult {
   unlocked_portals: { portal_id: string; name: string }[]
 }
 
-export interface CommissionItem {
+export interface ItemDefinition {
   id: string
   name: string
   icon: string
@@ -324,6 +371,8 @@ export interface CommissionItem {
   sell_price: number
   has_quality: boolean
 }
+
+export type CommissionItem = ItemDefinition
 
 export type CommissionStatus = 'open' | 'forwarded' | 'completed' | 'forward_completed'
 
@@ -549,6 +598,7 @@ export interface GameState {
   talents: TalentState
   portals: PortalState[]
   commissions: CommissionsState
+  mail: MailSummary
   crops: CropDefinition[]
   shop: ShopEntry[]
 }

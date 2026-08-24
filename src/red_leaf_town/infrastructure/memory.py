@@ -10,6 +10,7 @@ from red_leaf_town.content import GameContent
 from red_leaf_town.domain import (
     CommissionBoardEntry,
     CommissionPayout,
+    MailMessage,
     PlayerState,
     PlotState,
     QQIdentity,
@@ -184,3 +185,30 @@ class InMemoryCommissionBoard:
 
     def restore_payouts(self, player_id: str, payouts: list[CommissionPayout]) -> None:
         self.payouts.setdefault(player_id, [])[:0] = [payout.model_copy(deep=True) for payout in payouts]
+
+
+class InMemoryMailbox:
+    def __init__(self):
+        self.letters: dict[tuple[str, str], MailMessage] = {}
+
+    def publish(self, mail: MailMessage) -> None:
+        self.letters[(mail.recipient_id, mail.mail_id)] = mail.model_copy(deep=True)
+
+    def get(self, mail_id: str, recipient_id: str = "") -> MailMessage | None:
+        mail = self.letters.get((recipient_id, mail_id))
+        return mail.model_copy(deep=True) if mail else None
+
+    def list_global(self) -> list[MailMessage]:
+        return self._list("")
+
+    def list_for_player(self, player_id: str) -> list[MailMessage]:
+        return self._list(player_id)
+
+    def delete(self, mail_id: str, recipient_id: str = "") -> bool:
+        return self.letters.pop((recipient_id, mail_id), None) is not None
+
+    def _list(self, recipient_id: str) -> list[MailMessage]:
+        return sorted(
+            (mail.model_copy(deep=True) for (bucket, _), mail in self.letters.items() if bucket == recipient_id),
+            key=lambda mail: (-mail.created_at, mail.mail_id),
+        )

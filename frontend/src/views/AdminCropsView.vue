@@ -240,6 +240,7 @@ onMounted(() => {
         <nav class="admin-links">
           <RouterLink :to="{ name: 'admin-partners' }">伙伴管理</RouterLink>
           <RouterLink :to="{ name: 'admin-story' }">剧情素材</RouterLink>
+          <RouterLink :to="{ name: 'admin-mail' }">镇邮局</RouterLink>
         </nav>
         <div class="header-actions">
           <span v-if="hasUnsavedChanges" class="unsaved-notice">有未保存改动</span>

@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import random
+import secrets
 import time
 from collections.abc import Callable
 from math import ceil, floor
 
-from red_leaf_town.content import GameContent, GatheringDrawDefinition
+from red_leaf_town.content import GameContent, GatheringDrawDefinition, RewardDefinition
 from red_leaf_town.domain import (
     CommissionBoardEntry,
     CommissionPayout,
@@ -15,6 +16,8 @@ from red_leaf_town.domain import (
     GachaPoolProgressState,
     GachaRequestRecord,
     GatheringSiteState,
+    MailMessage,
+    MailReceiptState,
     MiningSiteState,
     OwnedPartnerState,
     PlayerState,
@@ -61,12 +64,16 @@ from red_leaf_town.partner_content import (
     load_partner_catalog,
 )
 from red_leaf_town.partner_traits import partner_trait_catalog
-from red_leaf_town.rewards import serialize_reward
+from red_leaf_town.rewards import serialize_reward, validate_reward_references
 from red_leaf_town.story_assets import StoryAssetCatalog, load_story_asset_catalog
 from red_leaf_town.story_content import StoryCatalog, load_story_catalog, serialize_script
 from red_leaf_town.story_triggers import StoryContext, validate_story_cue
 
-from .ports import CommissionBoardRepository, PlayerRepository
+from .ports import CommissionBoardRepository, MailRepository, PlayerRepository
+
+
+MAIL_LIST_LIMIT = 60
+_UNSEEN = MailReceiptState(mail_id="placeholder")
 
 
 class GameError(Exception):
@@ -84,6 +91,7 @@ class GameService:
         repository: PlayerRepository,
         *,
         commission_board: CommissionBoardRepository | None = None,
+        mailbox: MailRepository | None = None,
         clock: Callable[[], float] = time.time,
         rng: random.Random | random.SystemRandom | None = None,
         partner_catalog_loader: Callable[[], PartnerCatalog] = load_partner_catalog,
@@ -95,6 +103,8 @@ class GameService:
         self.repository = repository
         # 转发池是唯一的跨玩家状态。不接的话委托照常刷新和提交，只是转发功能不开放。
         self.commission_board = commission_board
+        # 信箱同样是玩家存档之外的共享存储。不接就当作小镇还没通邮，收件箱恒为空。
+        self.mailbox_repository = mailbox
         self.clock = clock
         self.rng = rng or random.SystemRandom()
         self.partner_catalog_loader = partner_catalog_loader
@@ -1585,6 +1595,206 @@ class GameService:
             "commission": payload,
         }
 
+    # -------------------------------------------------------------------- 镇邮局
+
+    def mailbox(self, oauth_sub: str) -> dict:
+        """收件箱全文。顺手清掉指向已删除或已过期信件的收据，存档不会越攒越厚。"""
+        now = self._now()
+        player = self._require_player(oauth_sub)
+        letters = self._delivered_mail(player, now)
+        player = self._prune_mail_receipts(player, letters)
+        receipts = {entry.mail_id: entry for entry in player.mail_receipts}
+        partners = self.partner_catalog_loader()
+        return {
+            "available": self.mailbox_repository is not None,
+            "entries": [
+                self._mail_snapshot(mail, receipts.get(mail.mail_id), partners)
+                for mail in letters[:MAIL_LIST_LIMIT]
+            ],
+            **self._mail_summary(player, now, letters),
+        }
+
+    def read_mail(self, oauth_sub: str, mail_id: str) -> dict:
+        now = self._now()
+        player = self._require_player(oauth_sub)
+        mail = self._require_mail(player, mail_id, now)
+
+        def mutation(state: PlayerState):
+            self._settle(state, now)
+            receipt = self._mail_receipt(state, mail.mail_id)
+            receipt.read_at = receipt.read_at or now
+            return {"mail_id": mail.mail_id, "read_at": receipt.read_at}
+
+        state, result = self.repository.update(player.player_id, mutation)
+        return {"result": result, "state": self._snapshot(state, now)}
+
+    def claim_mail(self, oauth_sub: str, mail_id: str) -> dict:
+        """整封一次领完。已领标记和发放写在同一次事务里，重复点击不会领两份。"""
+        now = self._now()
+        player = self._require_player(oauth_sub)
+        mail = self._require_mail(player, mail_id, now)
+        if mail.attachments.empty:
+            raise GameError("mail_without_attachment", "这封信没有附件", 409)
+
+        def mutation(state: PlayerState):
+            self._settle(state, now)
+            receipt = self._mail_receipt(state, mail.mail_id)
+            if receipt.claimed_at:
+                raise GameError("mail_already_claimed", "这封信的附件已经领过了", 409)
+            receipt.claimed_at = now
+            receipt.read_at = receipt.read_at or now
+            return {
+                "mail_id": mail.mail_id,
+                "title": mail.title,
+                "granted": self._grant_reward(state, mail.attachments, now),
+            }
+
+        state, result = self.repository.update(player.player_id, mutation)
+        return {"result": result, "state": self._snapshot(state, now)}
+
+    def admin_send_mail(self, payload: dict) -> dict:
+        """写一封信投进公共信箱。全服信只投给截止时刻之前注册的人，个人信指定收件人。"""
+        now = self._now()
+        store = self._mail_store()
+        scope = str(payload.get("scope") or "global").strip()
+        if scope not in ("global", "player"):
+            raise GameError("invalid_mail_scope", "邮件类型只能是全服或个人")
+        recipient = None
+        registered_before = 0
+        if scope == "player":
+            recipient = self.repository.get(str(payload.get("recipient_id") or "").strip())
+            if not recipient:
+                raise GameError("player_not_found", "收件人不存在", 404)
+        else:
+            registered_before = int(payload.get("registered_before") or 0) or now
+        try:
+            attachments = RewardDefinition.model_validate(payload.get("attachments") or {})
+            validate_reward_references(attachments, self.content, self.partner_catalog_loader(), "邮件附件")
+            mail = MailMessage(
+                mail_id=secrets.token_hex(8),
+                scope=scope,
+                recipient_id=recipient.player_id if recipient else "",
+                registered_before=registered_before,
+                title=str(payload.get("title") or "").strip(),
+                sender=str(payload.get("sender") or "").strip(),
+                body=str(payload.get("body") or "").strip(),
+                attachments=attachments,
+                created_at=now,
+                expires_at=int(payload.get("expires_at") or 0),
+            )
+        except ValueError as exc:
+            raise GameError("invalid_mail", str(exc)) from exc
+        store.publish(mail)
+        return {"mail": self._mail_admin_snapshot(mail, recipient)}
+
+    def admin_list_mail(self, scope: str = "global", player_id: str = "") -> dict:
+        """后台信箱视图。顺带把物品和伙伴清单带上，写信页面挑附件时不用再请求一次。"""
+        store = self._mail_store()
+        if scope == "player":
+            recipient = self.repository.get(str(player_id or "").strip())
+            if not recipient:
+                raise GameError("player_not_found", "收件人不存在", 404)
+            letters = store.list_for_player(recipient.player_id)
+            entries = [self._mail_admin_snapshot(mail, recipient) for mail in letters]
+        else:
+            scope = "global"
+            entries = [self._mail_admin_snapshot(mail) for mail in store.list_global()]
+        return {
+            "scope": scope,
+            "entries": entries,
+            "items": [item.model_dump() for item in self.content.items],
+            "partners": [
+                {"partner_id": partner.id, "name": partner.name, "rarity": partner.rarity}
+                for partner in self.partner_catalog_loader().partners
+            ],
+        }
+
+    def admin_delete_mail(self, mail_id: str, recipient_id: str = "") -> dict:
+        store = self._mail_store()
+        mail = store.get(mail_id, recipient_id)
+        if not mail or not store.delete(mail_id, recipient_id):
+            raise GameError("mail_not_found", "这封信不存在", 404)
+        return {"mail_id": mail_id, "title": mail.title}
+
+    def _mail_store(self) -> MailRepository:
+        if self.mailbox_repository is None:
+            raise GameError("mailbox_unavailable", "镇邮局暂时不可用", 503)
+        return self.mailbox_repository
+
+    def _delivered_mail(self, player: PlayerState, now: int) -> list[MailMessage]:
+        store = self.mailbox_repository
+        if store is None:
+            return []
+        letters = [
+            mail
+            for mail in (*store.list_global(), *store.list_for_player(player.player_id))
+            if mail.deliverable_to(player, now)
+        ]
+        letters.sort(key=lambda mail: (-mail.created_at, mail.mail_id))
+        return letters
+
+    def _require_mail(self, player: PlayerState, mail_id: str, now: int) -> MailMessage:
+        store = self._mail_store()
+        mail = store.get(mail_id, player.player_id) or store.get(mail_id)
+        if mail is None or not mail.deliverable_to(player, now):
+            raise GameError("mail_not_found", "这封信不在你的信箱里", 404)
+        return mail
+
+    @staticmethod
+    def _mail_receipt(player: PlayerState, mail_id: str) -> MailReceiptState:
+        receipt = next((entry for entry in player.mail_receipts if entry.mail_id == mail_id), None)
+        if receipt is None:
+            receipt = MailReceiptState(mail_id=mail_id)
+            player.mail_receipts.append(receipt)
+        return receipt
+
+    def _prune_mail_receipts(self, player: PlayerState, letters: list[MailMessage]) -> PlayerState:
+        if self.mailbox_repository is None:
+            return player
+        live = {mail.mail_id for mail in letters}
+        if all(entry.mail_id in live for entry in player.mail_receipts):
+            return player
+
+        def mutation(state: PlayerState):
+            state.mail_receipts = [entry for entry in state.mail_receipts if entry.mail_id in live]
+
+        refreshed, _ = self.repository.update(player.player_id, mutation)
+        return refreshed
+
+    def _mail_summary(self, player: PlayerState, now: int, letters: list[MailMessage] | None = None) -> dict:
+        letters = self._delivered_mail(player, now) if letters is None else letters
+        receipts = {entry.mail_id: entry for entry in player.mail_receipts}
+        unread = sum(1 for mail in letters if not receipts.get(mail.mail_id, _UNSEEN).read_at)
+        unclaimed = sum(
+            1
+            for mail in letters
+            if not mail.attachments.empty and not receipts.get(mail.mail_id, _UNSEEN).claimed_at
+        )
+        return {"total": len(letters), "unread": unread, "unclaimed": unclaimed}
+
+    def _mail_snapshot(self, mail: MailMessage, receipt: MailReceiptState | None, partners: PartnerCatalog) -> dict:
+        claimed = bool(receipt and receipt.claimed_at)
+        return {
+            "mail_id": mail.mail_id,
+            "scope": mail.scope,
+            "title": mail.title,
+            "sender": mail.sender,
+            "body": mail.body,
+            "created_at": mail.created_at,
+            "expires_at": mail.expires_at or None,
+            "attachments": serialize_reward(mail.attachments, self.content, partners),
+            "read": bool(receipt and receipt.read_at),
+            "claimed": claimed,
+            "claimable": not mail.attachments.empty and not claimed,
+        }
+
+    def _mail_admin_snapshot(self, mail: MailMessage, recipient: PlayerState | None = None) -> dict:
+        return {
+            **mail.model_dump(exclude={"attachments"}),
+            "attachments": serialize_reward(mail.attachments, self.content, self.partner_catalog_loader()),
+            "recipient_name": recipient.display_name if recipient else "",
+        }
+
     def story_cue(self, oauth_sub: str, cue: str) -> dict:
         """返回这个信号下应该立即播放的剧情，已经看过的一次性剧本不再返回。"""
         try:
@@ -1709,6 +1919,9 @@ class GameService:
         if not player:
             raise GameError("player_not_found", "玩家不存在", 404)
         summary = self._admin_player_summary(player)
+        if self.mailbox_repository is not None:
+            for mail in self.mailbox_repository.list_for_player(player_id):
+                self.mailbox_repository.delete(mail.mail_id, player_id)
         if not self.repository.delete(player_id):
             raise GameError("player_not_found", "玩家不存在", 404)
         return {"player": summary}
@@ -2375,6 +2588,7 @@ class GameService:
             "talents": self._talent_snapshot(player),
             "portals": self._portal_snapshot(player),
             "commissions": self._commission_snapshot(player, now),
+            "mail": self._mail_summary(player, now),
             "crops": [
                 crop.model_dump()
                 for crop in self.content.crops

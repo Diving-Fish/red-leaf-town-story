@@ -102,6 +102,10 @@ button:disabled { cursor: not-allowed; opacity: .48; }
 .resource-strip { display: flex; gap: 10px; margin-left: auto; }
 .resource-pill { min-width: 112px; height: 38px; padding: 0 12px; display: flex; align-items: center; gap: 7px; border: 1px solid var(--line); border-radius: 10px; background: rgba(255,255,255,.025); }
 .resource-pill strong { font-size: 14px; }.resource-pill small { color: #77837a; font-size: 12px; margin-left: auto; }.resource-pill.coins svg { color: var(--gold); }.resource-pill.stamina svg { color: var(--leaf-bright); }
+.inbox-button { position: relative; }
+.inbox-badge { position: absolute; right: -5px; top: -5px; min-width: 18px; height: 18px; padding: 0 4px; display: grid; place-items: center; font-size: 10px; font-style: normal; font-weight: 800; border-radius: 99px; box-shadow: 0 0 0 2px #131c17; }
+.inbox-badge.unread { color: #2a140e; background: var(--autumn); }
+.inbox-badge.unclaimed { color: #241d0e; background: var(--gold); }
 .icon-button { width: 38px; height: 38px; display: grid; place-items: center; padding: 0; border: 1px solid var(--line); border-radius: 10px; background: rgba(255,255,255,.025); cursor: pointer; }
 .menu-button, .mobile-close { display: none; }
 .nav-scrim { position: fixed; inset: 0; z-index: 65; display: none; background: rgba(5, 8, 6, .55); backdrop-filter: blur(2px); }
@@ -152,7 +156,7 @@ button:disabled { cursor: not-allowed; opacity: .48; }
   .game-shell { display: block; padding-bottom: calc(66px + env(safe-area-inset-bottom)); }
   .nav-scrim { display: block; }
   .sidebar { position: fixed; left: 0; top: 0; width: min(300px, 84vw); transform: translateX(-105%); transition: transform .22s ease; box-shadow: 20px 0 70px #0008; }.sidebar.open { transform: translateX(0); }.mobile-close { display: grid; margin-left: auto; }
-  .menu-button { display: grid; }.topbar { height: 64px; padding: 0 14px; gap: 10px; }.page-location { display: none; }.resource-strip { gap: 6px; }.resource-pill { min-width: 0; padding: 0 9px; }.resource-pill small { display: none; }.refresh-button { width: 34px; }.level-ribbon { padding: 0 16px; }.page-scroll { padding: 25px 16px; }
+  .menu-button { display: grid; }.topbar { height: 64px; padding: 0 14px; gap: 10px; }.page-location { display: none; }.resource-strip { gap: 6px; }.resource-pill { min-width: 0; padding: 0 9px; }.resource-pill small { display: none; }.refresh-button,.inbox-button { width: 34px; }.level-ribbon { padding: 0 16px; }.page-scroll { padding: 25px 16px; }
   .view-heading { align-items: flex-start; }.season-chip { padding: 8px; font-size: 12px; }.plot-grid { grid-template-columns: 1fr 1fr; gap: 10px; }.farm-plot { min-height: 225px; padding: 15px; }
   .industry-grid { grid-template-columns: 1fr; }.industry-card { min-height: 0; }
   .login-card { padding: 34px 24px; }

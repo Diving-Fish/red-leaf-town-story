@@ -7,6 +7,7 @@ from .models import (
     GachaDropRecord,
     GachaPoolProgressState,
     GachaRequestRecord,
+    MailReceiptState,
     MiningSiteState,
     OwnedPartnerState,
     PlayerState,
@@ -22,6 +23,7 @@ from .models import (
     TaskOutputSnapshot,
     TaskQualitySnapshot,
 )
+from .mail import MailMessage, MailScope
 from .production import build_results, draw_count, pick_weighted, roll_unit_qualities
 
 __all__ = [
@@ -37,6 +39,9 @@ __all__ = [
     "GachaDropRecord",
     "GachaPoolProgressState",
     "GachaRequestRecord",
+    "MailMessage",
+    "MailReceiptState",
+    "MailScope",
     "MiningSiteState",
     "OwnedPartnerState",
     "PlayerState",

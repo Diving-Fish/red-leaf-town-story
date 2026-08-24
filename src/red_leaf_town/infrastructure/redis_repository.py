@@ -13,6 +13,7 @@ from red_leaf_town.content import GameContent
 from red_leaf_town.domain import (
     CommissionBoardEntry,
     CommissionPayout,
+    MailMessage,
     PlayerState,
     PlotState,
     QQIdentity,
@@ -346,3 +347,47 @@ class RedisCommissionBoard:
 
     def _payout_key(self, player_id: str) -> str:
         return f"{self.PREFIX}payout:{player_id}"
+
+
+class RedisMailbox:
+    """公共信箱。全服信共用一个哈希，个人信一人一个哈希，已读/已领的状态不在这里。"""
+
+    PREFIX = "rlt:mail:"
+
+    def __init__(self, redis_client: Any):
+        self.redis = redis_client
+
+    def publish(self, mail: MailMessage) -> None:
+        self.redis.hset(self._key(mail.recipient_id), mail.mail_id, mail.model_dump_json())
+
+    def get(self, mail_id: str, recipient_id: str = "") -> MailMessage | None:
+        raw = self.redis.hget(self._key(recipient_id), mail_id)
+        return self._parse(raw)
+
+    def list_global(self) -> list[MailMessage]:
+        return self._list("")
+
+    def list_for_player(self, player_id: str) -> list[MailMessage]:
+        return self._list(player_id)
+
+    def delete(self, mail_id: str, recipient_id: str = "") -> bool:
+        return bool(self.redis.hdel(self._key(recipient_id), mail_id))
+
+    def _list(self, recipient_id: str) -> list[MailMessage]:
+        letters = [self._parse(raw) for raw in (self.redis.hvals(self._key(recipient_id)) or [])]
+        return sorted(
+            (letter for letter in letters if letter),
+            key=lambda letter: (-letter.created_at, letter.mail_id),
+        )
+
+    @staticmethod
+    def _parse(raw) -> MailMessage | None:
+        if not raw:
+            return None
+        try:
+            return MailMessage.model_validate_json(raw)
+        except (TypeError, ValueError):
+            return None
+
+    def _key(self, recipient_id: str) -> str:
+        return f"{self.PREFIX}player:{recipient_id}" if recipient_id else f"{self.PREFIX}global"

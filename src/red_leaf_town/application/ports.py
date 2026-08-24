@@ -2,7 +2,13 @@ from __future__ import annotations
 
 from typing import Callable, Protocol, TypeVar
 
-from red_leaf_town.domain import CommissionBoardEntry, CommissionPayout, PlayerState, QQIdentity
+from red_leaf_town.domain import (
+    CommissionBoardEntry,
+    CommissionPayout,
+    MailMessage,
+    PlayerState,
+    QQIdentity,
+)
 
 T = TypeVar("T")
 
@@ -31,3 +37,13 @@ class CommissionBoardRepository(Protocol):
     def release(self, day: str, commission_id: str, taker_id: str, payout: CommissionPayout) -> None: ...
     def drain_payouts(self, player_id: str) -> list[CommissionPayout]: ...
     def restore_payouts(self, player_id: str, payouts: list[CommissionPayout]) -> None: ...
+
+
+class MailRepository(Protocol):
+    """公共信箱。全服信只存一份大家共读，个人信按收件人分桶；读没读过记在各自存档里。"""
+
+    def publish(self, mail: MailMessage) -> None: ...
+    def get(self, mail_id: str, recipient_id: str = "") -> MailMessage | None: ...
+    def list_global(self) -> list[MailMessage]: ...
+    def list_for_player(self, player_id: str) -> list[MailMessage]: ...
+    def delete(self, mail_id: str, recipient_id: str = "") -> bool: ...

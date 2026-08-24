@@ -27,6 +27,12 @@ export default createRouter({
       meta: { title: '伙伴管理', admin: true },
     },
     {
+      path: '/admin/mail',
+      name: 'admin-mail',
+      component: () => import('@/views/AdminMailView.vue'),
+      meta: { title: '镇邮局', admin: true },
+    },
+    {
       path: '/admin/story',
       name: 'admin-story',
       component: () => import('@/views/AdminStoryView.vue'),
