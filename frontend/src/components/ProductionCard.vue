@@ -27,6 +27,10 @@ const { progress, label } = useCountdown(
   () => props.node.taskSnapshot?.ready_at,
   () => props.node.taskSnapshot?.final_duration,
 )
+const activeItems = computed(() => (game.state?.task_items || []).filter((item) => (
+  item.timing === 'active'
+  && (!item.eligible_industries.length || item.eligible_industries.includes(props.node.industry))
+)))
 </script>
 
 <template>
@@ -78,6 +82,15 @@ const { progress, label } = useCountdown(
         <Clock3 :size="17" />
       </div>
       <slot name="running" />
+      <ActionButton
+        v-for="item in activeItems"
+        :key="item.id"
+        variant="secondary"
+        :action-key="`${scope}:item:${item.id}`"
+        :disabled="(node.taskSnapshot?.ready_at || 0) - game.serverNow > item.value"
+        reason="剩余时间还太长"
+        @click="game.useActiveTaskItem(node.industry, node.nodeId, item.id)"
+      >{{ item.name }} ×{{ item.quantity }}</ActionButton>
       <ProgressBar class="running-progress" :value="progress" :color="node.accent" smooth />
     </div>
   </article>

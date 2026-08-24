@@ -277,7 +277,7 @@ def create_blueprint(
         data["complete"] = partner.complete
         data["ability_preview"] = {
             tendency.industry: {
-                str(level): partner.ability_at(tendency.industry, level)
+                str(level): partner.ability_at(tendency.industry, level, partner.rarity)
                 for level in (1, 20, 40, 60)
             }
             for tendency in partner.tendencies
@@ -692,6 +692,19 @@ def create_blueprint(
         result = get_service().admin_grant_partner(player_id, str(payload.get("partner_id", "")))
         return jsonify({"code": 0, "data": result})
 
+    @blueprint.post("/api/red-leaf-town/admin/players/<string:player_id>/resources")
+    async def admin_player_grant_resources(player_id: str):
+        if not _is_admin_request():
+            return _admin_error()
+        payload = await request.get_json(silent=True) or {}
+        result = get_service().admin_grant_resources(
+            player_id,
+            payload.get("coins", 0),
+            payload.get("experience", 0),
+            payload.get("maple_flame", 0),
+        )
+        return jsonify({"code": 0, "data": result, "message": "资源已发放"})
+
     @blueprint.delete("/api/red-leaf-town/admin/players/<string:player_id>")
     async def admin_player_delete(player_id: str):
         if not _is_admin_request():
@@ -773,7 +786,12 @@ def create_blueprint(
     @login_required
     async def plant(subject: str, slot: int):
         payload = await request.get_json(silent=True) or {}
-        result = get_service().plant(subject, slot, str(payload.get("crop_id", "")))
+        result = get_service().plant(
+            subject,
+            slot,
+            str(payload.get("crop_id", "")),
+            str(payload.get("task_item_id", "")),
+        )
         return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
 
     @blueprint.put("/api/red-leaf-town/plots/<int:slot>/partners")
@@ -804,7 +822,12 @@ def create_blueprint(
     @login_required
     async def start_gathering(subject: str, site_id: str):
         payload = await request.get_json(silent=True) or {}
-        result = get_service().start_gathering(subject, site_id, str(payload.get("task_id", "")))
+        result = get_service().start_gathering(
+            subject,
+            site_id,
+            str(payload.get("task_id", "")),
+            str(payload.get("task_item_id", "")),
+        )
         return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
 
     @blueprint.post("/api/red-leaf-town/gathering/sites/<string:site_id>/collect")
@@ -828,7 +851,12 @@ def create_blueprint(
     @login_required
     async def start_crafting(subject: str, station_id: str):
         payload = await request.get_json(silent=True) or {}
-        result = get_service().start_crafting(subject, station_id, str(payload.get("recipe_id", "")))
+        result = get_service().start_crafting(
+            subject,
+            station_id,
+            str(payload.get("recipe_id", "")),
+            str(payload.get("task_item_id", "")),
+        )
         return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
 
     @blueprint.post("/api/red-leaf-town/crafting/stations/<string:station_id>/collect")
@@ -852,13 +880,72 @@ def create_blueprint(
     @login_required
     async def start_mining(subject: str, site_id: str):
         payload = await request.get_json(silent=True) or {}
-        result = get_service().start_mining(subject, site_id, str(payload.get("task_id", "")))
+        result = get_service().start_mining(
+            subject,
+            site_id,
+            str(payload.get("task_id", "")),
+            str(payload.get("task_item_id", "")),
+        )
         return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
 
     @blueprint.post("/api/red-leaf-town/mining/sites/<string:site_id>/collect")
     @login_required
     async def collect_mining(subject: str, site_id: str):
         result = get_service().collect_mining(subject, site_id)
+        return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
+
+    @blueprint.post("/api/red-leaf-town/gacha/convert")
+    @login_required
+    async def convert_gacha_currency(subject: str):
+        payload = await request.get_json(silent=True) or {}
+        result = get_service().convert_maple_flame(subject, int(payload.get("quantity", 1)))
+        return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
+
+    @blueprint.post("/api/red-leaf-town/gacha/pull")
+    @login_required
+    async def gacha_pull(subject: str):
+        payload = await request.get_json(silent=True) or {}
+        result = get_service().recruit(
+            subject,
+            int(payload.get("count", 1)),
+            str(payload.get("request_id", "")),
+        )
+        return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
+
+    @blueprint.post("/api/red-leaf-town/partners/<string:partner_id>/train")
+    @login_required
+    async def train_partner(subject: str, partner_id: str):
+        payload = await request.get_json(silent=True) or {}
+        result = get_service().train_partner(
+            subject,
+            partner_id,
+            str(payload.get("item_id", "")),
+            int(payload.get("quantity", 1)),
+        )
+        return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
+
+    @blueprint.post("/api/red-leaf-town/partners/<string:partner_id>/star-up")
+    @login_required
+    async def star_up_partner(subject: str, partner_id: str):
+        result = get_service().star_up_partner(subject, partner_id)
+        return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
+
+    @blueprint.post("/api/red-leaf-town/partners/<string:partner_id>/breakthrough")
+    @login_required
+    async def breakthrough_partner(subject: str, partner_id: str):
+        result = get_service().breakthrough_partner(subject, partner_id)
+        return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
+
+    @blueprint.post("/api/red-leaf-town/tasks/use-item")
+    @login_required
+    async def use_active_task_item(subject: str):
+        payload = await request.get_json(silent=True) or {}
+        result = get_service().use_active_task_item(
+            subject,
+            str(payload.get("industry", "")),
+            str(payload.get("slot_id", "")),
+            str(payload.get("task_item_id", "")),
+        )
         return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
 
     @blueprint.post("/api/red-leaf-town/talents/<string:node_id>/unlock")

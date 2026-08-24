@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -46,6 +47,8 @@ class TaskQualitySnapshot(BaseModel):
     width: float = Field(default=1, gt=0)
     miracle_probability_cap: float = Field(default=0, ge=0, le=0.01)
     miracle_eligible: bool = False
+    miracle_width_multiplier: float = Field(default=1, ge=1)
+    miracle_cap_ignored: bool = False
     probabilities: list[float] = Field(default_factory=lambda: [1, 0, 0, 0, 0], min_length=5, max_length=5)
 
     @model_validator(mode="after")
@@ -73,6 +76,7 @@ class ProductionTaskSnapshot(BaseModel):
     character_ability: int = Field(ge=0)
     total_ability: int = Field(ge=0)
     time_efficiency: float = Field(ge=1, le=3)
+    yield_efficiency: float = Field(default=1, ge=1)
     base_duration: int = Field(gt=0)
     minimum_duration: int = Field(default=1, gt=0)
     final_duration: int = Field(gt=0)
@@ -164,7 +168,9 @@ class MiningSiteState(BaseModel):
 class OwnedPartnerState(BaseModel):
     partner_id: str = Field(min_length=1)
     level: int = Field(default=1, ge=1, le=60)
+    experience: int = Field(default=0, ge=0)
     breakthrough: int = Field(default=0, ge=0, le=2)
+    stars: int = Field(default=0, ge=0, le=5)
     acquired_at: int = Field(ge=0)
 
     @model_validator(mode="before")
@@ -176,6 +182,23 @@ class OwnedPartnerState(BaseModel):
         if "spirit_id" in migrated:
             migrated["partner_id"] = migrated.pop("spirit_id")
         return migrated
+
+
+class GachaDropRecord(BaseModel):
+    kind: Literal["partner", "task_item"]
+    content_id: str = Field(min_length=1)
+    rarity: int | None = Field(default=None, ge=3, le=5)
+    duplicate: bool = False
+    quantity: int = Field(default=1, ge=1)
+    companion_marks: int = Field(default=0, ge=0)
+
+
+class GachaRequestRecord(BaseModel):
+    request_id: str = Field(min_length=8, max_length=128)
+    pool_id: str = Field(min_length=1)
+    count: Literal[1, 10]
+    created_at: int = Field(ge=0)
+    results: list[GachaDropRecord] = Field(min_length=1, max_length=10)
 
 
 def _rename_partner_ids(migrated: dict) -> dict:
@@ -232,7 +255,7 @@ class PortalProgressState(BaseModel):
 
 
 class PlayerState(BaseModel):
-    schema_version: int = 13
+    schema_version: int = 14
     version: int = 1
     player_id: str
     oauth_sub: str
@@ -240,9 +263,13 @@ class PlayerState(BaseModel):
     level: int = 1
     experience: int = 0
     coins: int = Field(default=0, ge=0)
+    maple_flame: int = Field(default=0, ge=0)
+    guide_leaves: int = Field(default=0, ge=0)
+    companion_marks: int = Field(default=0, ge=0)
     stamina: int = Field(default=0, ge=0)
     stamina_updated_at: int
     inventory: dict[str, dict[int, int]] = Field(default_factory=dict)
+    task_items: dict[str, int] = Field(default_factory=dict)
     plots: list[PlotState] = Field(default_factory=list)
     gathering_sites: list[GatheringSiteState] = Field(default_factory=list)
     crafting_stations: list[CraftingStationState] = Field(default_factory=list)
@@ -252,6 +279,10 @@ class PlayerState(BaseModel):
     seen_story_ids: list[str] = Field(default_factory=list)
     portals: list[PortalProgressState] = Field(default_factory=list)
     bonus_talent_points: int = Field(default=0, ge=0)
+    gacha_total_pulls: int = Field(default=0, ge=0)
+    gacha_four_pity: int = Field(default=0, ge=0)
+    gacha_five_pity: int = Field(default=0, ge=0)
+    gacha_history: list[GachaRequestRecord] = Field(default_factory=list)
     created_at: int
     updated_at: int
 
@@ -305,7 +336,16 @@ class PlayerState(BaseModel):
                         continue
                     legacy_result = production_slot.pop("task_result", None)
                     production_slot.setdefault("task_results", [legacy_result] if legacy_result else [])
-        migrated["schema_version"] = 13
+        if schema_version < 14:
+            migrated.setdefault("maple_flame", 0)
+            migrated.setdefault("guide_leaves", 0)
+            migrated.setdefault("companion_marks", 0)
+            migrated.setdefault("task_items", {})
+            migrated.setdefault("gacha_total_pulls", 0)
+            migrated.setdefault("gacha_four_pity", 0)
+            migrated.setdefault("gacha_five_pity", 0)
+            migrated.setdefault("gacha_history", [])
+        migrated["schema_version"] = 14
         return migrated
 
     @model_validator(mode="after")
@@ -315,6 +355,8 @@ class PlayerState(BaseModel):
                 raise ValueError(f"inventory item {item_id} has an invalid quality")
             if any(quantity < 0 for quantity in qualities.values()):
                 raise ValueError(f"inventory item {item_id} has a negative quantity")
+        if any(quantity < 0 for quantity in self.task_items.values()):
+            raise ValueError("task item quantity cannot be negative")
         partner_ids = [entry.partner_id for entry in self.owned_partners]
         if len(partner_ids) != len(set(partner_ids)):
             raise ValueError("player cannot own the same partner more than once")
@@ -322,6 +364,9 @@ class PlayerState(BaseModel):
             raise ValueError("player cannot unlock the same talent node more than once")
         if len(self.seen_story_ids) != len(set(self.seen_story_ids)):
             raise ValueError("player cannot record the same story more than once")
+        request_ids = [entry.request_id for entry in self.gacha_history]
+        if len(request_ids) != len(set(request_ids)):
+            raise ValueError("gacha request ids must be unique")
         portal_ids = [entry.portal_id for entry in self.portals]
         if len(portal_ids) != len(set(portal_ids)):
             raise ValueError("player cannot record the same portal more than once")

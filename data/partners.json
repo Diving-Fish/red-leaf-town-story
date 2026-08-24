@@ -1,5 +1,5 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "partners": [
     {
       "id": "ai_xinyu",
@@ -10,18 +10,18 @@
       "tendencies": [
         {
           "industry": "aquatic",
-          "level_1": 36,
-          "level_60": 220
+          "level_1": 33,
+          "level_60": 200
         },
         {
           "industry": "crafting",
-          "level_1": 30,
-          "level_60": 184
+          "level_1": 27,
+          "level_60": 167
         },
         {
           "industry": "gathering",
-          "level_1": 24,
-          "level_60": 147
+          "level_1": 22,
+          "level_60": 134
         }
       ],
       "trait_codes": [],
@@ -56,7 +56,8 @@
           "w": 1,
           "h": 1
         }
-      ]
+      ],
+      "ascensions": []
     },
     {
       "id": "aishen",
@@ -67,18 +68,18 @@
       "tendencies": [
         {
           "industry": "exploration",
-          "level_1": 39,
-          "level_60": 240
-        },
-        {
-          "industry": "crafting",
           "level_1": 33,
           "level_60": 200
         },
         {
+          "industry": "crafting",
+          "level_1": 28,
+          "level_60": 167
+        },
+        {
           "industry": "livestock",
-          "level_1": 26,
-          "level_60": 160
+          "level_1": 22,
+          "level_60": 133
         }
       ],
       "trait_codes": [],
@@ -113,7 +114,8 @@
           "w": 1,
           "h": 1
         }
-      ]
+      ],
+      "ascensions": []
     },
     {
       "id": "aiweier",
@@ -124,18 +126,18 @@
       "tendencies": [
         {
           "industry": "farming",
-          "level_1": 36,
-          "level_60": 220
+          "level_1": 33,
+          "level_60": 200
         },
         {
           "industry": "gathering",
-          "level_1": 30,
-          "level_60": 184
+          "level_1": 27,
+          "level_60": 167
         },
         {
           "industry": "livestock",
-          "level_1": 24,
-          "level_60": 147
+          "level_1": 22,
+          "level_60": 134
         }
       ],
       "trait_codes": [],
@@ -170,7 +172,8 @@
           "w": 1,
           "h": 1
         }
-      ]
+      ],
+      "ascensions": []
     },
     {
       "id": "banniang",
@@ -181,18 +184,18 @@
       "tendencies": [
         {
           "industry": "gathering",
-          "level_1": 36,
-          "level_60": 220
+          "level_1": 33,
+          "level_60": 200
         },
         {
           "industry": "aquatic",
-          "level_1": 30,
-          "level_60": 184
+          "level_1": 27,
+          "level_60": 167
         },
         {
           "industry": "livestock",
-          "level_1": 24,
-          "level_60": 147
+          "level_1": 22,
+          "level_60": 134
         }
       ],
       "trait_codes": [],
@@ -227,7 +230,8 @@
           "w": 1,
           "h": 1
         }
-      ]
+      ],
+      "ascensions": []
     },
     {
       "id": "bufeng_zhuoying",
@@ -238,18 +242,18 @@
       "tendencies": [
         {
           "industry": "mining",
-          "level_1": 36,
-          "level_60": 220
+          "level_1": 33,
+          "level_60": 200
         },
         {
           "industry": "crafting",
-          "level_1": 30,
-          "level_60": 184
+          "level_1": 27,
+          "level_60": 167
         },
         {
           "industry": "exploration",
-          "level_1": 24,
-          "level_60": 147
+          "level_1": 22,
+          "level_60": 134
         }
       ],
       "trait_codes": [],
@@ -284,7 +288,8 @@
           "w": 1,
           "h": 1
         }
-      ]
+      ],
+      "ascensions": []
     },
     {
       "id": "daian_zeer",
@@ -336,7 +341,8 @@
           "w": 1,
           "h": 1
         }
-      ]
+      ],
+      "ascensions": []
     },
     {
       "id": "fein",
@@ -347,13 +353,13 @@
       "tendencies": [
         {
           "industry": "gathering",
-          "level_1": 40,
-          "level_60": 245
+          "level_1": 36,
+          "level_60": 223
         },
         {
           "industry": "farming",
-          "level_1": 30,
-          "level_60": 164
+          "level_1": 27,
+          "level_60": 149
         }
       ],
       "trait_codes": [],
@@ -388,7 +394,8 @@
           "w": 1,
           "h": 1
         }
-      ]
+      ],
+      "ascensions": []
     },
     {
       "id": "guidengdeng",
@@ -399,13 +406,13 @@
       "tendencies": [
         {
           "industry": "farming",
-          "level_1": 43,
-          "level_60": 266
+          "level_1": 36,
+          "level_60": 222
         },
         {
           "industry": "crafting",
-          "level_1": 33,
-          "level_60": 201
+          "level_1": 28,
+          "level_60": 168
         }
       ],
       "trait_codes": [],
@@ -440,7 +447,8 @@
           "w": 1,
           "h": 1
         }
-      ]
+      ],
+      "ascensions": []
     },
     {
       "id": "gujian_bu",
@@ -497,7 +505,8 @@
           "w": 1,
           "h": 1
         }
-      ]
+      ],
+      "ascensions": []
     },
     {
       "id": "gujian_miao",
@@ -508,18 +517,18 @@
       "tendencies": [
         {
           "industry": "exploration",
-          "level_1": 39,
-          "level_60": 240
-        },
-        {
-          "industry": "mining",
           "level_1": 33,
           "level_60": 200
         },
         {
+          "industry": "mining",
+          "level_1": 28,
+          "level_60": 167
+        },
+        {
           "industry": "aquatic",
-          "level_1": 26,
-          "level_60": 160
+          "level_1": 22,
+          "level_60": 133
         }
       ],
       "trait_codes": [],
@@ -554,7 +563,8 @@
           "w": 1,
           "h": 1
         }
-      ]
+      ],
+      "ascensions": []
     },
     {
       "id": "guqi",
@@ -565,13 +575,13 @@
       "tendencies": [
         {
           "industry": "mining",
-          "level_1": 43,
-          "level_60": 270
+          "level_1": 36,
+          "level_60": 225
         },
         {
           "industry": "exploration",
-          "level_1": 32,
-          "level_60": 202
+          "level_1": 27,
+          "level_60": 168
         }
       ],
       "trait_codes": [],
@@ -606,7 +616,8 @@
           "w": 1,
           "h": 1
         }
-      ]
+      ],
+      "ascensions": []
     },
     {
       "id": "hei_yuchuan",
@@ -617,18 +628,18 @@
       "tendencies": [
         {
           "industry": "farming",
-          "level_1": 36,
-          "level_60": 220
+          "level_1": 33,
+          "level_60": 200
         },
         {
           "industry": "aquatic",
-          "level_1": 30,
-          "level_60": 184
+          "level_1": 27,
+          "level_60": 167
         },
         {
           "industry": "gathering",
-          "level_1": 24,
-          "level_60": 147
+          "level_1": 22,
+          "level_60": 134
         }
       ],
       "trait_codes": [],
@@ -663,7 +674,8 @@
           "w": 1,
           "h": 1
         }
-      ]
+      ],
+      "ascensions": []
     },
     {
       "id": "hongkai",
@@ -674,18 +686,18 @@
       "tendencies": [
         {
           "industry": "exploration",
-          "level_1": 36,
-          "level_60": 220
+          "level_1": 33,
+          "level_60": 200
         },
         {
           "industry": "crafting",
-          "level_1": 30,
-          "level_60": 184
+          "level_1": 27,
+          "level_60": 167
         },
         {
           "industry": "gathering",
-          "level_1": 24,
-          "level_60": 147
+          "level_1": 22,
+          "level_60": 134
         }
       ],
       "trait_codes": [],
@@ -720,7 +732,8 @@
           "w": 1,
           "h": 1
         }
-      ]
+      ],
+      "ascensions": []
     },
     {
       "id": "lengyue",
@@ -772,7 +785,8 @@
           "w": 1,
           "h": 1
         }
-      ]
+      ],
+      "ascensions": []
     },
     {
       "id": "luo_nali",
@@ -783,18 +797,18 @@
       "tendencies": [
         {
           "industry": "gathering",
-          "level_1": 39,
-          "level_60": 240
-        },
-        {
-          "industry": "aquatic",
           "level_1": 33,
           "level_60": 200
         },
         {
+          "industry": "aquatic",
+          "level_1": 28,
+          "level_60": 167
+        },
+        {
           "industry": "livestock",
-          "level_1": 26,
-          "level_60": 160
+          "level_1": 22,
+          "level_60": 133
         }
       ],
       "trait_codes": [],
@@ -829,7 +843,8 @@
           "w": 1,
           "h": 1
         }
-      ]
+      ],
+      "ascensions": []
     },
     {
       "id": "mami",
@@ -840,13 +855,13 @@
       "tendencies": [
         {
           "industry": "farming",
-          "level_1": 43,
-          "level_60": 266
+          "level_1": 36,
+          "level_60": 222
         },
         {
           "industry": "gathering",
-          "level_1": 33,
-          "level_60": 201
+          "level_1": 28,
+          "level_60": 168
         }
       ],
       "trait_codes": [],
@@ -881,7 +896,8 @@
           "w": 1,
           "h": 1
         }
-      ]
+      ],
+      "ascensions": []
     },
     {
       "id": "manlong",
@@ -928,7 +944,8 @@
           "w": 1,
           "h": 1
         }
-      ]
+      ],
+      "ascensions": []
     },
     {
       "id": "wujian",
@@ -975,7 +992,8 @@
           "w": 1,
           "h": 1
         }
-      ]
+      ],
+      "ascensions": []
     },
     {
       "id": "xiang_hanyang",
@@ -1022,7 +1040,8 @@
           "w": 1,
           "h": 1
         }
-      ]
+      ],
+      "ascensions": []
     },
     {
       "id": "xiyue_kanna",
@@ -1033,18 +1052,18 @@
       "tendencies": [
         {
           "industry": "gathering",
-          "level_1": 39,
-          "level_60": 240
-        },
-        {
-          "industry": "aquatic",
           "level_1": 33,
           "level_60": 200
         },
         {
+          "industry": "aquatic",
+          "level_1": 28,
+          "level_60": 167
+        },
+        {
           "industry": "crafting",
-          "level_1": 26,
-          "level_60": 160
+          "level_1": 22,
+          "level_60": 133
         }
       ],
       "trait_codes": [],
@@ -1079,7 +1098,8 @@
           "w": 1,
           "h": 1
         }
-      ]
+      ],
+      "ascensions": []
     },
     {
       "id": "ye_lvsu",
@@ -1136,7 +1156,8 @@
           "w": 1,
           "h": 1
         }
-      ]
+      ],
+      "ascensions": []
     },
     {
       "id": "zhuoyan",
@@ -1147,8 +1168,8 @@
       "tendencies": [
         {
           "industry": "exploration",
-          "level_1": 44,
-          "level_60": 267
+          "level_1": 37,
+          "level_60": 223
         }
       ],
       "trait_codes": [],
@@ -1183,7 +1204,8 @@
           "w": 1,
           "h": 1
         }
-      ]
+      ],
+      "ascensions": []
     }
   ]
 }

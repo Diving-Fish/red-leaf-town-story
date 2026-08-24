@@ -6,7 +6,7 @@ import { PRODUCTION_COPY, type ProductionIndustry } from '@/lib/production'
 import { qualityName } from '@/lib/quality'
 import { useStoryStore } from '@/stores/story'
 import { useTickerStore } from '@/stores/ticker'
-import type { AccountState, ActionResult, GameState, Reward, TributeDeliveryResult } from '@/types'
+import type { AccountState, ActionResult, GachaResult, GameState, Reward, TributeDeliveryResult } from '@/types'
 
 export interface ProductionOutcome {
   quantity?: number
@@ -220,9 +220,9 @@ export const useGameStore = defineStore('game', () => {
     })
   }
 
-  function plant(slot: number, cropId: string) {
+  function plant(slot: number, cropId: string, taskItemId = '') {
     return action(`plot:${slot}:plant:${cropId}`, `${API_ROOT}/plots/${slot}/plant`, {
-      payload: { crop_id: cropId },
+      payload: { crop_id: cropId, task_item_id: taskItemId },
       successMessage: '种子已经种下',
       cue: 'action:plant',
     })
@@ -284,10 +284,10 @@ export const useGameStore = defineStore('game', () => {
     })
   }
 
-  function startProduction(industry: ProductionIndustry, nodeId: string, taskId: string) {
+  function startProduction(industry: ProductionIndustry, nodeId: string, taskId: string, taskItemId = '') {
     const copy = PRODUCTION_COPY[industry]
     return action(`${industry}:${nodeId}:start:${taskId}`, `${productionBase(industry, nodeId)}/start`, {
-      payload: { [copy.startPayloadKey]: taskId },
+      payload: { [copy.startPayloadKey]: taskId, task_item_id: taskItemId },
       successMessage: '任务已经开始',
       cue: `action:start_${industry}`,
     })
@@ -302,6 +302,47 @@ export const useGameStore = defineStore('game', () => {
       | undefined
     if (result) showNotice(outcomeText(result, copy.collectVerb, copy.collectNoun))
     return result
+  }
+
+  function convertMapleFlame(quantity: number) {
+    return action(`gacha:convert:${quantity}`, `${API_ROOT}/gacha/convert`, {
+      payload: { quantity },
+      successMessage: '引路枫叶已经点亮',
+    })
+  }
+
+  async function recruit(count: 1 | 10) {
+    const requestId = crypto.randomUUID()
+    const result = await action(`gacha:pull:${requestId}`, `${API_ROOT}/gacha/pull`, {
+      payload: { count, request_id: requestId },
+    })
+    return result as unknown as GachaResult | undefined
+  }
+
+  function trainPartner(partnerId: string, itemId: string, quantity = 1) {
+    return action(`partner:${partnerId}:train:${itemId}`, `${API_ROOT}/partners/${partnerId}/train`, {
+      payload: { item_id: itemId, quantity },
+      successMessage: '伙伴获得了经验',
+    })
+  }
+
+  function starUpPartner(partnerId: string) {
+    return action(`partner:${partnerId}:star-up`, `${API_ROOT}/partners/${partnerId}/star-up`, {
+      successMessage: '伙伴升星完成',
+    })
+  }
+
+  function breakthroughPartner(partnerId: string) {
+    return action(`partner:${partnerId}:breakthrough`, `${API_ROOT}/partners/${partnerId}/breakthrough`, {
+      successMessage: '伙伴突破完成',
+    })
+  }
+
+  function useActiveTaskItem(industry: ProductionIndustry | 'farming', slotId: string | number, taskItemId: string) {
+    return action(`${industry}:${slotId}:item:${taskItemId}`, `${API_ROOT}/tasks/use-item`, {
+      payload: { industry, slot_id: String(slotId), task_item_id: taskItemId },
+      successMessage: '特殊道具已经生效',
+    })
   }
 
   async function createBindingCode() {
@@ -371,6 +412,12 @@ export const useGameStore = defineStore('game', () => {
     assignProductionPartner,
     startProduction,
     collectProduction,
+    convertMapleFlame,
+    recruit,
+    trainPartner,
+    starUpPartner,
+    breakthroughPartner,
+    useActiveTaskItem,
     deliverTribute,
     createBindingCode,
     logout,

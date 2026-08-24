@@ -1,6 +1,8 @@
 from .models import (
     CraftingStationState,
     GatheringSiteState,
+    GachaDropRecord,
+    GachaRequestRecord,
     MiningSiteState,
     OwnedPartnerState,
     PlayerState,
@@ -24,6 +26,8 @@ __all__ = [
     "roll_unit_qualities",
     "CraftingStationState",
     "GatheringSiteState",
+    "GachaDropRecord",
+    "GachaRequestRecord",
     "MiningSiteState",
     "OwnedPartnerState",
     "PlayerState",

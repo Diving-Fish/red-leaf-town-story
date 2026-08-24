@@ -44,9 +44,10 @@ function inputName(station: CraftingStationState, itemId: string) {
               :recipe="recipe"
               :accent="entry.node.accent"
               :ability="ability"
+              industry="crafting"
               :action-key="`crafting:${entry.node.nodeId}:start:${recipe.id}`"
               :group="`crafting:${entry.node.nodeId}:start`"
-              @start="game.startProduction('crafting', entry.node.nodeId, recipe.id)"
+              @start="(taskItemId) => game.startProduction('crafting', entry.node.nodeId, recipe.id, taskItemId)"
             />
           </div>
         </template>

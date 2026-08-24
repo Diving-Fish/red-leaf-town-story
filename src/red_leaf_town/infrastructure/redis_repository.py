@@ -67,6 +67,8 @@ class RedisPlayerRepository:
             oauth_sub=oauth_sub,
             display_name=display_name,
             coins=self.content.game.starting_coins,
+            maple_flame=self.content.game.starting_maple_flame,
+            guide_leaves=self.content.game.starting_guide_leaves,
             stamina=level.stamina_cap,
             stamina_updated_at=now,
             inventory=dict(self.content.game.initial_inventory),

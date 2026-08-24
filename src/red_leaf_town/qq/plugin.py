@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import secrets
+
 from nonebot import on_command
 from nonebot.adapters import Bot, Event, Message
 from nonebot.params import CommandArg
@@ -16,6 +18,7 @@ PLUGIN_META = {
     "enable": False,
     "help_text": """【红叶镇物语】
   红叶镇                  — 查看农场摘要
+  红叶镇招募 [1/10]       — 使用引路枫叶招募伙伴
   绑定红叶镇 [绑定码]     — 绑定水鱼账号中的红叶镇角色
 
 请先在 Web 端使用水鱼账号登录。""",
@@ -63,6 +66,41 @@ async def bind_player(bot: Bot, event: Event, message: Message = CommandArg()):
 
 
 summary_command = on_command("红叶镇", force_whitespace=True)
+recruit_command = on_command("红叶镇招募", aliases={"红叶镇抽卡"}, force_whitespace=True)
+
+
+@recruit_command.handle()
+async def recruit_partner(bot: Bot, event: Event, message: Message = CommandArg()):
+    identity = resolve_identity(bot, event)
+    if not identity:
+        await _reply(event, "无法识别当前 QQ 身份。").send()
+        return
+    raw = message.extract_plain_text().strip() or "1"
+    if raw not in {"1", "10"}:
+        await _reply(event, "招募次数只能是 1 或 10。").send()
+        return
+    service = get_service()
+    try:
+        result = service.recruit_by_identity(
+            identity,
+            int(raw),
+            f"qq-{secrets.token_hex(8)}",
+        )
+    except GameError as exc:
+        await _reply(event, exc.message).send()
+        return
+    catalog = {entry["partner_id"]: entry for entry in result["state"]["gacha"]["catalog"]}
+    task_items = {entry["id"]: entry for entry in result["state"]["gacha"]["task_items"]}
+    lines = []
+    for drop in result["result"]["results"]:
+        if drop["kind"] == "partner":
+            name = catalog.get(drop["content_id"], {}).get("name", drop["content_id"])
+            suffix = f"（重复，同行印记 +{drop['companion_marks']}）" if drop["duplicate"] else "（新伙伴）"
+            lines.append(f"{'★' * drop['rarity']} {name}{suffix}")
+        else:
+            name = task_items.get(drop["content_id"], {}).get("name", drop["content_id"])
+            lines.append(f"◆ {name} ×{drop['quantity']}")
+    await _reply(event, "招募结果：\n" + "\n".join(lines)).send()
 
 
 @summary_command.handle()
@@ -99,6 +137,7 @@ async def farm_summary(bot: Bot, event: Event):
         event,
         f"🍁 {player['display_name']} · Lv.{player['level']}\n"
         f"金币：{player['coins']}\n"
+        f"枫火：{player['maple_flame']} · 引路枫叶：{player['guide_leaves']} · 同行印记：{player['companion_marks']}\n"
         f"体力：{player['stamina']}/{player['stamina_cap']}\n"
         f"伙伴：{state['partner_count']} 位，{working_partners} 位任务中\n"
         f"农田：{ready} 块可收获，{growing} 块生长中\n"

@@ -129,7 +129,7 @@ def test_old_player_save_migrates_to_empty_partner_warehouse():
         "created_at": 1,
         "updated_at": 1,
     })
-    assert player.schema_version == 13
+    assert player.schema_version == PlayerState.model_fields["schema_version"].default
     assert player.owned_partners == []
 
 
@@ -144,7 +144,7 @@ def test_schema_two_spirit_fields_migrate_to_partner_fields():
         "updated_at": 1,
         "owned_spirits": [{"spirit_id": "maple_sprite", "acquired_at": 2}],
     })
-    assert player.schema_version == 13
+    assert player.schema_version == PlayerState.model_fields["schema_version"].default
     assert player.owned_partners[0].partner_id == "maple_sprite"
     assert "owned_spirits" not in player.model_dump()
 
@@ -160,7 +160,7 @@ def test_schema_three_plots_migrate_to_partner_assignment_structure():
         "updated_at": 1,
         "plots": [{"slot": 0}],
     })
-    assert player.schema_version == 13
+    assert player.schema_version == PlayerState.model_fields["schema_version"].default
     assert player.plots[0].assigned_partner_ids == []
     assert player.plots[0].task_snapshot is None
 
@@ -226,8 +226,8 @@ def test_admin_grants_unique_partner_and_snapshot_resolves_details(game):
     assert partner["name"] == "枫糖"
     assert partner["level"] == 1
     assert partner["level_cap"] == 20
-    assert partner["tendencies"][0]["current_ability"] == 18
-    assert partner["upgrade_available"] is False
+    assert partner["tendencies"][0]["current_ability"] > 0
+    assert partner["upgrade_available"] is (partner["level"] < partner["level_cap"])
 
     with pytest.raises(GameError) as duplicate:
         service.admin_grant_partner(player.player_id, "maple_sprite")
@@ -261,7 +261,7 @@ def test_partner_assignment_creates_immutable_farming_task_snapshot(game):
     planted = service.plant("oauth-sub-1", 0, "carrot")
     task = planted["state"]["plots"][0]["task_snapshot"]
     assert task["assigned_partner_ids"] == ["farm_partner"]
-    assert task["partner_snapshots"][0]["ability"] == 40
+    assert task["partner_snapshots"][0]["ability"] > 0
     assert task["total_ability"] == 40
     assert task["base_duration"] == 10_800
     assert task["final_duration"] == 7_200

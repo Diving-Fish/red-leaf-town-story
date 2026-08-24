@@ -352,7 +352,7 @@ def test_legacy_save_migrates_to_schema_eleven():
         "updated_at": 0,
     })
 
-    assert player.schema_version == 13
+    assert player.schema_version == PlayerState.model_fields["schema_version"].default
     assert player.portals == []
     assert player.bonus_talent_points == 0
 

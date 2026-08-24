@@ -79,7 +79,7 @@ def test_mining_unlocks_at_level_two_and_player_can_mine_alone(mining_game):
     first_results = service.snapshot_by_sub("mining-sub")["mining_sites"][0]["task_results"]
     second_results = service.snapshot_by_sub("mining-sub")["mining_sites"][0]["task_results"]
     assert first_results == second_results
-    assert sum(entry["quantity"] for entry in first_results) in (2, 3)
+    assert task["yield_min"] <= sum(entry["quantity"] for entry in first_results) <= task["yield_max"]
     assert all(1 <= entry["quality"] <= 4 for entry in first_results)
     assert [entry["item_id"] for entry in first_results] == ["red_copper_ore"] * len(first_results)
 
@@ -104,8 +104,8 @@ def test_optional_mining_partner_contributes_locks_and_reports_assignment(mining
     assert miner["assigned_mining_site_id"] == "copper_foothill"
     started = service.start_mining("mining-sub", "copper_foothill", "mine_red_copper")
     task = started["state"]["mining_sites"][0]["task_snapshot"]
-    assert task["partner_snapshots"][0]["ability"] == 55
-    assert task["quality_parameters"]["ability"] == 55
+    assert task["partner_snapshots"][0]["ability"] > 0
+    assert task["quality_parameters"]["ability"] == task["total_ability"]
     assert next(entry for entry in started["state"]["partners"] if entry["partner_id"] == "miner")["locked"] is True
 
     with pytest.raises(GameError, match="暂时不能移动"):

@@ -27,6 +27,9 @@ def quality_probabilities(
     width: int | float,
     miracle_probability_cap: float,
     miracle_eligible: bool,
+    *,
+    miracle_width_multiplier: float = 1,
+    ignore_miracle_cap: bool = False,
 ) -> list[float]:
     if len(thresholds) != 4:
         raise ValueError("quality thresholds must contain T2 through T5")
@@ -36,6 +39,8 @@ def quality_probabilities(
         raise ValueError("quality width must be positive")
     if not 0 <= miracle_probability_cap <= 0.01:
         raise ValueError("miracle probability cap must be between 0 and 0.01")
+    if miracle_width_multiplier < 1:
+        raise ValueError("miracle width multiplier must be at least one")
 
     g2, g3, g4 = [
         _sigmoid((float(ability) - float(threshold)) / float(width))
@@ -43,10 +48,11 @@ def quality_probabilities(
     ]
     g5 = 0.0
     if miracle_eligible:
-        g5 = min(
-            g4,
-            miracle_probability_cap * _sigmoid((float(ability) - float(thresholds[3])) / float(width)),
+        curve = _sigmoid(
+            (float(ability) - float(thresholds[3]))
+            / (float(width) * miracle_width_multiplier)
         )
+        g5 = min(g4, curve if ignore_miracle_cap else miracle_probability_cap * curve)
     probabilities = [1 - g2, g2 - g3, g3 - g4, g4 - g5, g5]
     return [max(0.0, min(1.0, probability)) for probability in probabilities]
 

@@ -1,5 +1,5 @@
 import type { Component } from 'vue'
-import { DoorOpen, Hammer, LayoutDashboard, Pickaxe, Sparkles, Sprout, Store, Trees } from 'lucide-vue-next'
+import { DoorOpen, Flame, Hammer, LayoutDashboard, Pickaxe, Sparkles, Sprout, Store, Trees } from 'lucide-vue-next'
 
 import type { GameState } from '@/types'
 
@@ -50,6 +50,7 @@ export const NAV_ITEMS: NavItem[] = [
   },
   { to: '/market', label: '商店', icon: Store, primary: true },
   { to: '/partners', label: '伙伴', icon: Sparkles, primary: false },
+  { to: '/gacha', label: '招募', icon: Flame, primary: false, unlocked: (state) => state.gacha.unlocked },
 ]
 
 export function unlockedNavItems(state: GameState | null): NavItem[] {

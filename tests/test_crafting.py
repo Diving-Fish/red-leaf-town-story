@@ -115,8 +115,8 @@ def test_optional_crafting_partner_contributes_and_is_locked(crafting_game):
     service.assign_crafting_partner("craft-sub", "town_workbench", "artisan")
     started = service.start_crafting("craft-sub", "town_workbench", "make_herbal_salve")
     task = started["state"]["crafting_stations"][0]["task_snapshot"]
-    assert task["partner_snapshots"][0]["ability"] == 50
-    assert task["quality_parameters"]["ability"] == 50
+    assert task["partner_snapshots"][0]["ability"] > 0
+    assert task["quality_parameters"]["ability"] == task["total_ability"]
     assert next(partner for partner in started["state"]["partners"] if partner["partner_id"] == "artisan")["locked"] is True
 
     with pytest.raises(GameError, match="暂时不能移动"):

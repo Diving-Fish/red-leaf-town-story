@@ -8,6 +8,8 @@ from math import ceil, floor
 from red_leaf_town.content import GameContent, GatheringDrawDefinition
 from red_leaf_town.domain import (
     CraftingStationState,
+    GachaDropRecord,
+    GachaRequestRecord,
     GatheringSiteState,
     MiningSiteState,
     OwnedPartnerState,
@@ -114,7 +116,7 @@ class GameService:
         player, result = self._update_by_sub(oauth_sub, mutation)
         return {"result": result, "state": self._snapshot(player)}
 
-    def plant(self, oauth_sub: str, slot: int, crop_id: str) -> dict:
+    def plant(self, oauth_sub: str, slot: int, crop_id: str, task_item_id: str = "") -> dict:
         crop = self.content.crop_map.get(crop_id)
         if not crop:
             raise GameError("crop_not_found", "作物不存在", 404)
@@ -127,7 +129,7 @@ class GameService:
             plot = self._plot(player, slot)
             if not plot.empty:
                 raise GameError("plot_occupied", "这块土地已经种有作物")
-            task_snapshot = self._build_farming_task_snapshot(player, plot, crop, now)
+            task_snapshot = self._build_farming_task_snapshot(player, plot, crop, now, task_item_id)
             try:
                 remove_item(player, crop.seed_item_id, 1)
                 consume_stamina(player, crop.stamina_cost, self.content, now)
@@ -175,6 +177,7 @@ class GameService:
             for result in results:
                 add_item(player, result.item_id, result.quantity, result.quality)
             levels = grant_experience(player, harvest_xp, self.content)
+            partner_experience = self._grant_task_partner_experience(player, task)
             plot.crop_id = ""
             plot.planted_at = 0
             plot.ready_at = 0
@@ -187,6 +190,7 @@ class GameService:
                 "drops": [self._result_snapshot(result) for result in results],
                 "experience": harvest_xp,
                 "levels": levels,
+                "partner_experience": partner_experience,
             }
 
         player, result = self._update_by_sub(oauth_sub, mutation)
@@ -203,7 +207,11 @@ class GameService:
             desired_ids = [partner_id] if partner_id else []
             if site.assigned_partner_ids == desired_ids:
                 return {"site_id": site_id, "partner_id": partner_id or None, "changed": False}
-            if site.task_snapshot is not None and site.task_snapshot.ready_at > now:
+            if (
+                site.task_snapshot is not None
+                and site.task_snapshot.ready_at > now
+                and not self._task_releases_partner(site.task_snapshot)
+            ):
                 raise GameError("partner_assignment_locked", "采集进行中，不能调整这个采集点的伙伴", 409)
 
             locked_until = self._partner_lock_deadlines(player, now)
@@ -233,7 +241,7 @@ class GameService:
         player, result = self._update_by_sub(oauth_sub, mutation)
         return {"result": result, "state": self._snapshot(player, now)}
 
-    def start_gathering(self, oauth_sub: str, site_id: str, task_id: str) -> dict:
+    def start_gathering(self, oauth_sub: str, site_id: str, task_id: str, task_item_id: str = "") -> dict:
         task = self.content.gathering_task_map.get(task_id)
         if task is None or task.site_id != site_id:
             raise GameError("gathering_task_not_found", "这个采集点没有该任务", 404)
@@ -268,6 +276,7 @@ class GameService:
                 quality=task.quality,
                 output_pool=[TaskOutputSnapshot.model_validate(output.model_dump()) for output in task.outputs],
                 draws=task.draws,
+                task_item_id=task_item_id,
             )
             try:
                 consume_stamina(player, task.stamina_cost, self.content, now)
@@ -306,6 +315,7 @@ class GameService:
             for result in results:
                 add_item(player, result.item_id, result.quantity, result.quality)
             levels = grant_experience(player, harvest_xp, self.content)
+            partner_experience = self._grant_task_partner_experience(player, site.task_snapshot)
             site.task_snapshot = None
             site.task_results = []
             return {
@@ -313,6 +323,7 @@ class GameService:
                 "drops": [self._result_snapshot(result) for result in results],
                 "experience": harvest_xp,
                 "levels": levels,
+                "partner_experience": partner_experience,
             }
 
         player, result = self._update_by_sub(oauth_sub, mutation)
@@ -329,7 +340,11 @@ class GameService:
             desired_ids = [partner_id] if partner_id else []
             if station.assigned_partner_ids == desired_ids:
                 return {"station_id": station_id, "partner_id": partner_id or None, "changed": False}
-            if station.task_snapshot is not None and station.task_snapshot.ready_at > now:
+            if (
+                station.task_snapshot is not None
+                and station.task_snapshot.ready_at > now
+                and not self._task_releases_partner(station.task_snapshot)
+            ):
                 raise GameError("partner_assignment_locked", "加工进行中，不能调整这个工位的伙伴", 409)
 
             locked_until = self._partner_lock_deadlines(player, now)
@@ -359,7 +374,7 @@ class GameService:
         player, result = self._update_by_sub(oauth_sub, mutation)
         return {"result": result, "state": self._snapshot(player, now)}
 
-    def start_crafting(self, oauth_sub: str, station_id: str, recipe_id: str) -> dict:
+    def start_crafting(self, oauth_sub: str, station_id: str, recipe_id: str, task_item_id: str = "") -> dict:
         recipe = self.content.recipe_map.get(recipe_id)
         if recipe is None or recipe.station_id != station_id:
             raise GameError("recipe_not_found", "这个工位没有该配方", 404)
@@ -395,6 +410,7 @@ class GameService:
                 harvest_xp=recipe.collect_xp,
                 quality=recipe.quality,
                 consumed_inputs=consumed_inputs,
+                task_item_id=task_item_id,
             )
             try:
                 consume_stamina(player, recipe.stamina_cost, self.content, now)
@@ -433,6 +449,7 @@ class GameService:
             for result in results:
                 add_item(player, result.item_id, result.quantity, result.quality)
             levels = grant_experience(player, collect_xp, self.content)
+            partner_experience = self._grant_task_partner_experience(player, station.task_snapshot)
             station.task_snapshot = None
             station.task_results = []
             return {
@@ -442,6 +459,7 @@ class GameService:
                 "drops": [self._result_snapshot(result) for result in results],
                 "experience": collect_xp,
                 "levels": levels,
+                "partner_experience": partner_experience,
             }
 
         player, result = self._update_by_sub(oauth_sub, mutation)
@@ -458,7 +476,11 @@ class GameService:
             desired_ids = [partner_id] if partner_id else []
             if site.assigned_partner_ids == desired_ids:
                 return {"site_id": site_id, "partner_id": partner_id or None, "changed": False}
-            if site.task_snapshot is not None and site.task_snapshot.ready_at > now:
+            if (
+                site.task_snapshot is not None
+                and site.task_snapshot.ready_at > now
+                and not self._task_releases_partner(site.task_snapshot)
+            ):
                 raise GameError("partner_assignment_locked", "采矿进行中，不能调整这个矿点的伙伴", 409)
 
             locked_until = self._partner_lock_deadlines(player, now)
@@ -488,7 +510,7 @@ class GameService:
         player, result = self._update_by_sub(oauth_sub, mutation)
         return {"result": result, "state": self._snapshot(player, now)}
 
-    def start_mining(self, oauth_sub: str, site_id: str, task_id: str) -> dict:
+    def start_mining(self, oauth_sub: str, site_id: str, task_id: str, task_item_id: str = "") -> dict:
         task = self.content.mining_task_map.get(task_id)
         if task is None or task.site_id != site_id:
             raise GameError("mining_task_not_found", "这个矿点没有该任务", 404)
@@ -503,6 +525,8 @@ class GameService:
                 raise GameError("mining_site_occupied", "这个矿点已有任务")
             if self._industry_assigned_count(player, "mining") > self._industry_partner_capacity(player, "mining"):
                 raise GameError("partner_capacity_reached", "当前矿产伙伴编制已满", 409)
+            total_ability = self._production_ability(player, site.assigned_partner_ids, "mining")[0]
+            yield_efficiency = 1 + task.yield_bonus * total_ability / (total_ability + task.yield_difficulty)
             snapshot = self._build_production_task_snapshot(
                 player=player,
                 assigned_partner_ids=site.assigned_partner_ids,
@@ -511,12 +535,15 @@ class GameService:
                 production_slot_id=f"mining:site:{site.site_id}",
                 now=now,
                 base_duration=task.duration_seconds,
-                time_difficulty=task.time_difficulty,
+                time_difficulty=None,
                 produce_item_id=task.produce_item_id,
                 yield_min=task.yield_min,
                 yield_max=task.yield_max,
                 harvest_xp=task.collect_xp,
                 quality=task.quality,
+                fixed_duration=True,
+                yield_efficiency=yield_efficiency,
+                task_item_id=task_item_id,
             )
             try:
                 consume_stamina(player, task.stamina_cost, self.content, now)
@@ -554,6 +581,7 @@ class GameService:
             for result in results:
                 add_item(player, result.item_id, result.quantity, result.quality)
             levels = grant_experience(player, collect_xp, self.content)
+            partner_experience = self._grant_task_partner_experience(player, site.task_snapshot)
             site.task_snapshot = None
             site.task_results = []
             return {
@@ -563,7 +591,221 @@ class GameService:
                 "drops": [self._result_snapshot(result) for result in results],
                 "experience": collect_xp,
                 "levels": levels,
+                "partner_experience": partner_experience,
             }
+
+        player, result = self._update_by_sub(oauth_sub, mutation)
+        return {"result": result, "state": self._snapshot(player, now)}
+
+    def convert_maple_flame(self, oauth_sub: str, quantity: int) -> dict:
+        quantity = int(quantity)
+        if quantity < 1:
+            raise GameError("invalid_quantity", "兑换数量必须为正数")
+        cost = quantity * self.content.gacha.maple_flame_per_leaf
+
+        def mutation(player: PlayerState):
+            if player.maple_flame < cost:
+                raise GameError("resource_insufficient", "枫火不足")
+            player.maple_flame -= cost
+            player.guide_leaves += quantity
+            return {"quantity": quantity, "maple_flame_spent": cost}
+
+        player, result = self._update_by_sub(oauth_sub, mutation)
+        return {"result": result, "state": self._snapshot(player)}
+
+    def recruit(self, oauth_sub: str, count: int, request_id: str) -> dict:
+        if count not in (1, 10):
+            raise GameError("invalid_pull_count", "只能单次或十次招募")
+        request_id = str(request_id or "").strip()
+        if len(request_id) < 8 or len(request_id) > 128:
+            raise GameError("invalid_request_id", "招募请求标识不正确")
+        now = self._now()
+        gacha = self.content.gacha
+        catalog = self.partner_catalog_loader()
+        partners_by_rarity = {
+            rarity: [entry for entry in catalog.partners if entry.rarity == rarity]
+            for rarity in (3, 4, 5)
+        }
+
+        def mutation(player: PlayerState):
+            self._settle(player, now)
+            if player.level < gacha.min_level:
+                raise GameError("content_locked", f"达到 {gacha.min_level} 级后开放招募")
+            previous = next((entry for entry in player.gacha_history if entry.request_id == request_id), None)
+            if previous:
+                return {**previous.model_dump(), "replayed": True}
+            if player.guide_leaves < count:
+                raise GameError("resource_insufficient", "引路枫叶不足")
+
+            player.guide_leaves -= count
+            results: list[GachaDropRecord] = []
+            for _ in range(count):
+                force_five = player.gacha_five_pity + 1 >= gacha.five_star_pity
+                force_four = player.gacha_four_pity + 1 >= gacha.four_star_guarantee
+                rarity = 5 if force_five else 4 if force_four else self._roll_gacha_rarity(player)
+                if rarity is None:
+                    drop = self._roll_gacha_item(player)
+                    results.append(drop)
+                    player.gacha_four_pity += 1
+                    player.gacha_five_pity += 1
+                else:
+                    candidates = partners_by_rarity[rarity]
+                    if not candidates:
+                        raise GameError("gacha_pool_invalid", f"常驻池没有 {rarity} 星伙伴", 500)
+                    definition = candidates[self.rng.randrange(len(candidates))]
+                    owned = next(
+                        (entry for entry in player.owned_partners if entry.partner_id == definition.id),
+                        None,
+                    )
+                    marks = gacha.duplicate_marks[rarity] if owned else 0
+                    if owned:
+                        player.companion_marks += marks
+                    else:
+                        player.owned_partners.append(OwnedPartnerState(
+                            partner_id=definition.id,
+                            stars=definition.rarity,
+                            acquired_at=now,
+                        ))
+                    results.append(GachaDropRecord(
+                        kind="partner",
+                        content_id=definition.id,
+                        rarity=rarity,
+                        duplicate=owned is not None,
+                        companion_marks=marks,
+                    ))
+                    player.gacha_four_pity = 0 if rarity >= 4 else player.gacha_four_pity + 1
+                    player.gacha_five_pity = 0 if rarity == 5 else player.gacha_five_pity + 1
+                player.gacha_total_pulls += 1
+
+            record = GachaRequestRecord(
+                request_id=request_id,
+                pool_id=gacha.pool_id,
+                count=count,
+                created_at=now,
+                results=results,
+            )
+            player.gacha_history.append(record)
+            return {**record.model_dump(), "replayed": False}
+
+        player, result = self._update_by_sub(oauth_sub, mutation)
+        return {"result": result, "state": self._snapshot(player, now)}
+
+    def recruit_by_identity(self, identity: QQIdentity, count: int, request_id: str) -> dict:
+        player_id = self.repository.player_id_for_identity(identity)
+        player = self.repository.get(player_id) if player_id else None
+        if player is None:
+            raise GameError("identity_not_bound", "这个 QQ 身份尚未绑定红叶镇角色", 404)
+        return self.recruit(player.oauth_sub, count, request_id)
+
+    def train_partner(self, oauth_sub: str, partner_id: str, item_id: str, quantity: int) -> dict:
+        quantity = int(quantity)
+        if quantity < 1 or quantity > 99:
+            raise GameError("invalid_quantity", "使用数量需在 1 到 99 之间")
+        book_experience = self.content.partner_growth.experience_books.get(item_id)
+        if book_experience is None:
+            raise GameError("experience_item_invalid", "这个物品不能用于伙伴升级")
+
+        def mutation(player: PlayerState):
+            owned = self._owned_partner(player, partner_id)
+            try:
+                remove_item(player, item_id, quantity)
+            except EconomyError as exc:
+                raise GameError("resource_insufficient", str(exc)) from exc
+            progress = self._grant_partner_experience(owned, book_experience * quantity)
+            return {"partner_id": partner_id, "item_id": item_id, "quantity": quantity, **progress}
+
+        player, result = self._update_by_sub(oauth_sub, mutation)
+        return {"result": result, "state": self._snapshot(player)}
+
+    def star_up_partner(self, oauth_sub: str, partner_id: str) -> dict:
+        def mutation(player: PlayerState):
+            owned = self._owned_partner(player, partner_id)
+            if owned.stars >= 5:
+                raise GameError("partner_max_stars", "伙伴已经达到五星")
+            cost = self.content.gacha.star_up_costs[owned.stars]
+            if player.companion_marks < cost:
+                raise GameError("resource_insufficient", "同行印记不足")
+            player.companion_marks -= cost
+            owned.stars += 1
+            return {"partner_id": partner_id, "stars": owned.stars, "companion_marks_spent": cost}
+
+        player, result = self._update_by_sub(oauth_sub, mutation)
+        return {"result": result, "state": self._snapshot(player)}
+
+    def breakthrough_partner(self, oauth_sub: str, partner_id: str) -> dict:
+        catalog = self.partner_catalog_loader()
+
+        def mutation(player: PlayerState):
+            owned = self._owned_partner(player, partner_id)
+            definition = catalog.partner_map.get(partner_id)
+            if definition is None:
+                raise GameError("partner_not_found", "伙伴配置不存在", 404)
+            if owned.breakthrough >= 2:
+                raise GameError("partner_max_breakthrough", "伙伴已经完成全部突破")
+            target = owned.breakthrough + 1
+            ascension = next((entry for entry in definition.ascensions if entry.breakthrough == target), None)
+            if ascension is None:
+                raise GameError("breakthrough_unavailable", "这个伙伴暂不能突破", 409)
+            try:
+                spend_coins(player, ascension.coins)
+                consumed = []
+                for requirement in ascension.items:
+                    consumed.extend(self._consume_minimum_quality_items(
+                        player,
+                        requirement.item_id,
+                        requirement.quantity,
+                        requirement.min_quality,
+                    ))
+            except EconomyError as exc:
+                raise GameError("resource_insufficient", str(exc)) from exc
+            owned.breakthrough = target
+            progress = self._grant_partner_experience(owned, 0)
+            return {
+                "partner_id": partner_id,
+                "breakthrough": target,
+                "coins_spent": ascension.coins,
+                "consumed": [entry.model_dump() for entry in consumed],
+                **progress,
+            }
+
+        player, result = self._update_by_sub(oauth_sub, mutation)
+        return {"result": result, "state": self._snapshot(player)}
+
+    def use_active_task_item(self, oauth_sub: str, industry: str, slot_id: str, task_item_id: str) -> dict:
+        now = self._now()
+        definition = self.content.task_item_map.get(task_item_id)
+        if definition is None or definition.effect != "instant_finish":
+            raise GameError("task_item_invalid", "这个道具不能用于进行中的任务")
+        if definition.eligible_industries and industry not in definition.eligible_industries:
+            raise GameError("task_item_industry_mismatch", "这个道具不能用于当前产业")
+
+        def mutation(player: PlayerState):
+            self._settle(player, now)
+            production_slot = self._production_slot(player, industry, slot_id)
+            task = production_slot.task_snapshot
+            if task is None or task.ready_at <= now:
+                raise GameError("task_not_active", "这里没有可以加速的任务")
+            if task.ready_at - now > int(definition.value):
+                raise GameError("task_item_limit", "任务剩余时间过长，暂时不能使用夜灯茶")
+            if player.task_items.get(task_item_id, 0) < 1:
+                raise GameError("task_item_insufficient", "这个特殊道具数量不足")
+            player.task_items[task_item_id] -= 1
+            if player.task_items[task_item_id] <= 0:
+                player.task_items.pop(task_item_id, None)
+            completed_at = max(now, task.started_at + 1)
+            task.final_duration = completed_at - task.started_at
+            task.minimum_duration = min(task.minimum_duration, task.final_duration)
+            task.ready_at = completed_at
+            if hasattr(production_slot, "ready_at"):
+                production_slot.ready_at = completed_at
+            task.applied_effects.append({
+                "task_item_id": definition.id,
+                "name": definition.name,
+                "effect": definition.effect,
+                "value": definition.value,
+            })
+            self._settle(player, completed_at)
+            return {"industry": industry, "slot_id": slot_id, "ready_at": completed_at}
 
         player, result = self._update_by_sub(oauth_sub, mutation)
         return {"result": result, "state": self._snapshot(player, now)}
@@ -607,7 +849,11 @@ class GameService:
             desired_ids = [partner_id] if partner_id else []
             if plot.assigned_partner_ids == desired_ids:
                 return {"slot": slot, "partner_id": partner_id or None, "changed": False}
-            if not plot.empty and plot.ready_at > now:
+            if (
+                not plot.empty
+                and plot.ready_at > now
+                and not self._task_releases_partner(plot.task_snapshot)
+            ):
                 raise GameError("partner_assignment_locked", "任务进行中，不能调整这块土地的伙伴", 409)
 
             locked_until = self._partner_lock_deadlines(player, now)
@@ -821,7 +1067,11 @@ class GameService:
                 continue
             if any(owned.partner_id == partner_id for owned in player.owned_partners):
                 continue
-            player.owned_partners.append(OwnedPartnerState(partner_id=partner_id, acquired_at=now))
+            player.owned_partners.append(OwnedPartnerState(
+                partner_id=partner_id,
+                stars=partner_map[partner_id].rarity,
+                acquired_at=now,
+            ))
             granted_partners.append({"partner_id": partner_id, "name": partner_map[partner_id].name})
         if reward.coins:
             grant_coins(player, reward.coins)
@@ -923,7 +1173,7 @@ class GameService:
         def mutation(player: PlayerState):
             if any(owned.partner_id == partner_id for owned in player.owned_partners):
                 raise GameError("partner_already_owned", "玩家已经持有这个伙伴", 409)
-            owned = OwnedPartnerState(partner_id=partner_id, acquired_at=now)
+            owned = OwnedPartnerState(partner_id=partner_id, stars=partner.rarity, acquired_at=now)
             player.owned_partners.append(owned)
             return owned
 
@@ -933,6 +1183,32 @@ class GameService:
             raise GameError("player_not_found", "玩家不存在", 404) from exc
         return {
             "owned_partner": owned.model_dump(),
+            "player": self._admin_player_summary(player),
+        }
+
+    def admin_grant_resources(self, player_id: str, coins: int, experience: int, maple_flame: int) -> dict:
+        if type(coins) is not int or type(experience) is not int or type(maple_flame) is not int:
+            raise GameError("invalid_grant_amount", "发放数量必须是整数")
+        if min(coins, experience, maple_flame) < 0 or (coins == 0 and experience == 0 and maple_flame == 0):
+            raise GameError("invalid_grant_amount", "请填写要发放的正数资源")
+
+        def mutation(player: PlayerState):
+            if coins:
+                grant_coins(player, coins)
+            if maple_flame:
+                player.maple_flame += maple_flame
+            unlocked_levels = grant_experience(player, experience, self.content) if experience else []
+            return unlocked_levels
+
+        try:
+            player, unlocked_levels = self.repository.update(player_id, mutation)
+        except KeyError as exc:
+            raise GameError("player_not_found", "玩家不存在", 404) from exc
+        return {
+            "coins": coins,
+            "experience": experience,
+            "maple_flame": maple_flame,
+            "unlocked_levels": unlocked_levels,
             "player": self._admin_player_summary(player),
         }
 
@@ -961,8 +1237,133 @@ class GameService:
             raise GameError("player_not_found", "角色不存在", 404)
         return self.repository.update(player.player_id, mutation)
 
+    def _roll_gacha_rarity(self, player: PlayerState) -> int | None:
+        gacha = self.content.gacha
+        probabilities = gacha.rarity_probabilities
+        if player.gacha_total_pulls < gacha.first_pulls_without_items:
+            total = sum(probabilities.values())
+            draw = self.rng.random() * total
+            for rarity in (5, 4, 3):
+                draw -= probabilities[rarity]
+                if draw < 0:
+                    return rarity
+            return 3
+        draw = self.rng.random()
+        for rarity in (5, 4, 3):
+            draw -= probabilities[rarity]
+            if draw < 0:
+                return rarity
+        return None
+
+    def _roll_gacha_item(self, player: PlayerState) -> GachaDropRecord:
+        drops = self.content.gacha.item_drops
+        total = sum(entry.weight for entry in drops)
+        draw = self.rng.random() * total
+        selected = drops[-1]
+        for entry in drops:
+            draw -= entry.weight
+            if draw < 0:
+                selected = entry
+                break
+        player.task_items[selected.task_item_id] = (
+            player.task_items.get(selected.task_item_id, 0) + selected.quantity
+        )
+        return GachaDropRecord(
+            kind="task_item",
+            content_id=selected.task_item_id,
+            quantity=selected.quantity,
+        )
+
+    @staticmethod
+    def _owned_partner(player: PlayerState, partner_id: str) -> OwnedPartnerState:
+        owned = next((entry for entry in player.owned_partners if entry.partner_id == partner_id), None)
+        if owned is None:
+            raise GameError("partner_not_owned", "你还没有这个伙伴", 404)
+        return owned
+
+    def _grant_partner_experience(self, owned: OwnedPartnerState, amount: int) -> dict:
+        owned.experience += max(0, int(amount))
+        previous_level = owned.level
+        level_cap = level_cap_for_breakthrough(owned.breakthrough)
+        while owned.level < level_cap:
+            cost = self.content.partner_growth.experience_for_next_level(owned.level)
+            if owned.experience < cost:
+                break
+            owned.experience -= cost
+            owned.level += 1
+        return {
+            "experience_gained": max(0, int(amount)),
+            "previous_level": previous_level,
+            "level": owned.level,
+            "level_cap": level_cap,
+        }
+
+    def _grant_task_partner_experience(
+        self,
+        player: PlayerState,
+        task: ProductionTaskSnapshot | None,
+    ) -> list[dict]:
+        if task is None or not task.partner_snapshots:
+            return []
+        amount = max(
+            1,
+            floor(task.final_duration / 60) * self.content.partner_growth.experience_per_minute,
+        )
+        records = []
+        for snapshot in task.partner_snapshots:
+            owned = next(
+                (entry for entry in player.owned_partners if entry.partner_id == snapshot.partner_id),
+                None,
+            )
+            if owned:
+                records.append({"partner_id": owned.partner_id, **self._grant_partner_experience(owned, amount)})
+        return records
+
+    def _consume_minimum_quality_items(
+        self,
+        player: PlayerState,
+        item_id: str,
+        quantity: int,
+        min_quality: int,
+    ) -> list[TaskInputSnapshot]:
+        available = sum(
+            amount
+            for quality, amount in player.inventory.get(item_id, {}).items()
+            if quality >= min_quality
+        )
+        if available < quantity:
+            raise EconomyError("材料数量不足")
+        remaining = quantity
+        consumed = []
+        for quality, amount in sorted(player.inventory.get(item_id, {}).items()):
+            if quality < min_quality or remaining <= 0:
+                continue
+            taken = min(amount, remaining)
+            remove_item(player, item_id, taken, quality)
+            consumed.append(TaskInputSnapshot(item_id=item_id, quality=quality, quantity=taken))
+            remaining -= taken
+        return consumed
+
+    def _production_slot(self, player: PlayerState, industry: str, slot_id: str):
+        if industry == "farming":
+            try:
+                return self._plot(player, int(slot_id))
+            except ValueError as exc:
+                raise GameError("production_slot_not_found", "生产位置不存在", 404) from exc
+        if industry == "gathering":
+            return self._gathering_site(player, slot_id)
+        if industry == "crafting":
+            return self._crafting_station(player, slot_id)
+        if industry == "mining":
+            return self._mining_site(player, slot_id)
+        raise GameError("industry_not_found", "产业不存在", 404)
+
     def _settle(self, player: PlayerState, now: int) -> None:
         self._normalize_inventory_quality(player)
+        partner_map = self.partner_catalog_loader().partner_map
+        for owned in player.owned_partners:
+            if owned.stars == 0 and owned.partner_id in partner_map:
+                owned.stars = partner_map[owned.partner_id].rarity
         level = self.content.level_for_xp(player.experience)
         player.level = level.level
         normalize_plot_slots(player, self.content)
@@ -1006,7 +1407,14 @@ class GameService:
             raise GameError("mining_site_locked", "这个矿点尚未解锁", 404)
         return site
 
-    def _build_farming_task_snapshot(self, player, plot, crop, now: int) -> ProductionTaskSnapshot:
+    def _build_farming_task_snapshot(
+        self,
+        player,
+        plot,
+        crop,
+        now: int,
+        task_item_id: str = "",
+    ) -> ProductionTaskSnapshot:
         if self._industry_assigned_count(player, "farming") > self._industry_partner_capacity(player, "farming"):
             raise GameError("partner_capacity_reached", "当前农作伙伴编制已满", 409)
         return self._build_production_task_snapshot(
@@ -1023,32 +1431,16 @@ class GameService:
             yield_max=crop.yield_max,
             harvest_xp=crop.harvest_xp,
             quality=crop.quality,
+            task_item_id=task_item_id,
         )
 
-    def _build_production_task_snapshot(
+    def _production_ability(
         self,
-        *,
         player: PlayerState,
         assigned_partner_ids: list[str],
         industry: str,
-        content_id: str,
-        production_slot_id: str,
-        now: int,
-        base_duration: int,
-        time_difficulty: int,
-        produce_item_id: str,
-        yield_min: int,
-        yield_max: int,
-        harvest_xp: int,
-        quality,
-        minimum_duration: int = 1,
-        consumed_inputs: list[TaskInputSnapshot] | None = None,
-        output_pool: list[TaskOutputSnapshot] | None = None,
-        draws: GatheringDrawDefinition | None = None,
-    ) -> ProductionTaskSnapshot:
+    ) -> tuple[int, int, list[TaskPartnerSnapshot]]:
         rules = self.content.industries[industry]
-        if len(assigned_partner_ids) > rules.collaborator_slots:
-            raise GameError("collaborator_slots_exceeded", "这个生产格的伙伴位置超过当前上限", 409)
         catalog = self.partner_catalog_loader()
         owned_map = {entry.partner_id: entry for entry in player.owned_partners}
         partner_snapshots: list[TaskPartnerSnapshot] = []
@@ -1057,11 +1449,7 @@ class GameService:
             definition = catalog.partner_map.get(partner_id)
             if owned is None or definition is None:
                 raise GameError("partner_assignment_invalid", "驻场伙伴数据无效，请重新安排", 409)
-            tendency = next(
-                (entry for entry in definition.tendencies if entry.industry == industry),
-                None,
-            )
-            if tendency is None:
+            if not any(entry.industry == industry for entry in definition.tendencies):
                 raise GameError("partner_tendency_mismatch", "驻场伙伴没有对应产业倾向，请重新安排", 409)
             effective_level = min(
                 owned.level,
@@ -1073,20 +1461,82 @@ class GameService:
                 level=owned.level,
                 effective_level=effective_level,
                 breakthrough=owned.breakthrough,
-                ability=definition.ability_at(industry, effective_level),
+                ability=definition.ability_at(industry, effective_level, owned.stars),
             ))
-
         character_ability = rules.character_base_ability
-        total_ability = character_ability + sum(entry.ability for entry in partner_snapshots)
-        time_efficiency = 1 + 2 * total_ability / (total_ability + time_difficulty)
-        final_duration = max(minimum_duration, ceil(base_duration / time_efficiency))
+        return character_ability + sum(entry.ability for entry in partner_snapshots), character_ability, partner_snapshots
+
+    def _build_production_task_snapshot(
+        self,
+        *,
+        player: PlayerState,
+        assigned_partner_ids: list[str],
+        industry: str,
+        content_id: str,
+        production_slot_id: str,
+        now: int,
+        base_duration: int,
+        time_difficulty: int | None,
+        produce_item_id: str,
+        yield_min: int,
+        yield_max: int,
+        harvest_xp: int,
+        quality,
+        minimum_duration: int = 1,
+        consumed_inputs: list[TaskInputSnapshot] | None = None,
+        output_pool: list[TaskOutputSnapshot] | None = None,
+        draws: GatheringDrawDefinition | None = None,
+        fixed_duration: bool = False,
+        yield_efficiency: float = 1,
+        task_item_id: str = "",
+    ) -> ProductionTaskSnapshot:
+        rules = self.content.industries[industry]
+        if len(assigned_partner_ids) > rules.collaborator_slots:
+            raise GameError("collaborator_slots_exceeded", "这个生产格的伙伴位置超过当前上限", 409)
+        total_ability, character_ability, partner_snapshots = self._production_ability(
+            player,
+            assigned_partner_ids,
+            industry,
+        )
+        task_item = self._consume_start_task_item(player, task_item_id, industry)
+        applied_effects = [
+            {
+                "task_item_id": task_item.id,
+                "name": task_item.name,
+                "effect": task_item.effect,
+                "value": task_item.value,
+            }
+        ] if task_item else []
+        time_efficiency = 1 if fixed_duration else 1 + 2 * total_ability / (total_ability + int(time_difficulty))
+        duration_multiplier = task_item.value if task_item and task_item.effect == "duration_multiplier" else 1
+        final_duration = max(minimum_duration, ceil(base_duration / time_efficiency * duration_multiplier))
+        quality_ability = total_ability + round(task_item.value if task_item and task_item.effect == "quality_boost" else 0)
+        miracle_unlocked = bool(task_item and task_item.effect == "unlock_miracle")
+        miracle_width_multiplier = task_item.value if miracle_unlocked else 1
         probabilities = quality_probabilities(
-            total_ability,
+            quality_ability,
             quality.thresholds,
             quality.width,
             quality.miracle_probability_cap,
-            quality.miracle_eligible,
+            quality.miracle_eligible or miracle_unlocked,
+            miracle_width_multiplier=miracle_width_multiplier,
+            ignore_miracle_cap=miracle_unlocked,
         )
+        effective_yield_min = max(1, floor(yield_min * yield_efficiency))
+        effective_yield_max = max(effective_yield_min, floor(yield_max * yield_efficiency))
+        extra_yield = round(task_item.value) if task_item and task_item.effect == "yield_bonus" else 0
+        effective_draw_count = draw_count(
+            total_ability,
+            draws.base_draws,
+            draws.ability_bonus,
+            draws.difficulty,
+        ) if draws else 0
+        if extra_yield:
+            if draws:
+                effective_draw_count += extra_yield
+            else:
+                effective_yield_min += extra_yield
+                effective_yield_max += extra_yield
         return ProductionTaskSnapshot(
             industry=industry,
             content_id=content_id,
@@ -1096,34 +1546,48 @@ class GameService:
             assigned_partner_ids=list(assigned_partner_ids),
             support_partner_ids=[],
             partner_snapshots=partner_snapshots,
-            applied_effects=[],
+            applied_effects=applied_effects,
             character_ability=character_ability,
             total_ability=total_ability,
             time_efficiency=time_efficiency,
+            yield_efficiency=yield_efficiency,
             base_duration=base_duration,
             minimum_duration=minimum_duration,
             final_duration=final_duration,
             produce_item_id=produce_item_id,
-            yield_min=yield_min,
-            yield_max=yield_max,
+            yield_min=effective_yield_min,
+            yield_max=effective_yield_max,
             harvest_xp=harvest_xp,
             consumed_inputs=consumed_inputs or [],
             output_pool=output_pool or [],
-            draw_count=draw_count(
-                total_ability,
-                draws.base_draws,
-                draws.ability_bonus,
-                draws.difficulty,
-            ) if draws else 0,
+            draw_count=effective_draw_count,
             quality_parameters=TaskQualitySnapshot(
-                ability=total_ability,
+                ability=quality_ability,
                 thresholds=quality.thresholds,
                 width=quality.width,
                 miracle_probability_cap=quality.miracle_probability_cap,
-                miracle_eligible=quality.miracle_eligible,
+                miracle_eligible=quality.miracle_eligible or miracle_unlocked,
+                miracle_width_multiplier=miracle_width_multiplier,
+                miracle_cap_ignored=miracle_unlocked,
                 probabilities=probabilities,
             ),
         )
+
+    def _consume_start_task_item(self, player: PlayerState, task_item_id: str, industry: str):
+        task_item_id = str(task_item_id or "").strip()
+        if not task_item_id:
+            return None
+        definition = self.content.task_item_map.get(task_item_id)
+        if definition is None or definition.timing != "start":
+            raise GameError("task_item_invalid", "这个道具不能在开工时使用")
+        if definition.eligible_industries and industry not in definition.eligible_industries:
+            raise GameError("task_item_industry_mismatch", "这个道具不能用于当前产业")
+        if player.task_items.get(task_item_id, 0) < 1:
+            raise GameError("task_item_insufficient", "这个特殊道具数量不足")
+        player.task_items[task_item_id] -= 1
+        if player.task_items[task_item_id] <= 0:
+            player.task_items.pop(task_item_id, None)
+        return definition
 
     @staticmethod
     def _partner_lock_deadlines(player: PlayerState, now: int) -> dict[str, int]:
@@ -1132,9 +1596,15 @@ class GameService:
             task = production_slot.task_snapshot
             if task is None or task.ready_at <= now:
                 continue
+            if GameService._task_releases_partner(task):
+                continue
             for partner_id in {*task.assigned_partner_ids, *task.support_partner_ids}:
                 deadlines[partner_id] = max(deadlines.get(partner_id, 0), task.ready_at)
         return deadlines
+
+    @staticmethod
+    def _task_releases_partner(task: ProductionTaskSnapshot | None) -> bool:
+        return bool(task and any(effect.get("effect") == "release_partner" for effect in task.applied_effects))
 
     def _snapshot(self, player: PlayerState, now: int | None = None) -> dict:
         now = self._now() if now is None else now
@@ -1341,6 +1811,9 @@ class GameService:
                 "current_level_xp": level.total_xp,
                 "next_level_xp": next_level.total_xp if next_level else None,
                 "coins": player.coins,
+                "maple_flame": player.maple_flame,
+                "guide_leaves": player.guide_leaves,
+                "companion_marks": player.companion_marks,
                 "stamina": player.stamina,
                 "stamina_cap": level.stamina_cap,
                 "stamina_restore_seconds": self.content.stamina.restore_seconds,
@@ -1356,8 +1829,28 @@ class GameService:
             "mining_sites": mining_sites,
             "next_mining_site_level": next_mining_site_level,
             "inventory": inventory,
+            "task_items": [
+                {
+                    **definition.model_dump(),
+                    "quantity": player.task_items.get(definition.id, 0),
+                }
+                for definition in self.content.task_items
+                if player.task_items.get(definition.id, 0) > 0
+            ],
             "partners": partner_records,
             "partner_count": len(partner_records),
+            "partner_growth": {
+                "experience_books": [
+                    {
+                        "item_id": item_id,
+                        "experience": experience,
+                        "item": items[item_id].model_dump(),
+                        "owned": sum(player.inventory.get(item_id, {}).values()),
+                    }
+                    for item_id, experience in self.content.partner_growth.experience_books.items()
+                ],
+            },
+            "gacha": self._gacha_snapshot(player),
             "industry_rules": {
                 industry: {
                     **rules.model_dump(),
@@ -1440,10 +1933,17 @@ class GameService:
                 "missing": False,
                 "name": definition.name,
                 "rarity": definition.rarity,
+                "origin_rarity": definition.rarity,
+                "stars": owned.stars,
                 "description": definition.description,
                 "growth_curve": definition.growth_curve,
                 "growth_curve_name": GROWTH_CURVE_NAMES[definition.growth_curve],
                 "level_cap": level_cap_for_breakthrough(owned.breakthrough),
+                "experience_to_next_level": (
+                    self.content.partner_growth.experience_for_next_level(owned.level)
+                    if owned.level < level_cap_for_breakthrough(owned.breakthrough)
+                    else None
+                ),
                 "artwork": artwork.model_dump() if artwork else None,
                 "avatar_crop": avatar_crop.model_dump() if avatar_crop else None,
                 "tendencies": [
@@ -1459,8 +1959,10 @@ class GameService:
                     }
                     for code in definition.trait_codes
                 ],
-                "upgrade_available": False,
-                "breakthrough_available": False,
+                "upgrade_available": owned.level < level_cap_for_breakthrough(owned.breakthrough),
+                "star_up_available": owned.stars < 5,
+                "star_up_cost": self.content.gacha.star_up_costs.get(owned.stars),
+                **self._partner_breakthrough_snapshot(player, definition, owned),
                 "assigned_plot_slot": assigned_slots.get(owned.partner_id),
                 "assigned_gathering_site_id": assigned_gathering_sites.get(owned.partner_id),
                 "assigned_crafting_station_id": assigned_crafting_stations.get(owned.partner_id),
@@ -1481,9 +1983,72 @@ class GameService:
         return {
             **tendency.model_dump(),
             "name": INDUSTRY_NAMES[tendency.industry],
-            "current_ability": definition.ability_at(tendency.industry, owned.level),
+            "current_ability": definition.ability_at(tendency.industry, owned.level, owned.stars),
             "effective_level": effective_level,
-            "effective_ability": definition.ability_at(tendency.industry, effective_level),
+            "effective_ability": definition.ability_at(tendency.industry, effective_level, owned.stars),
+        }
+
+    def _partner_breakthrough_snapshot(self, player: PlayerState, definition, owned: OwnedPartnerState) -> dict:
+        if owned.breakthrough >= 2:
+            return {"breakthrough_available": False, "breakthrough_reason": "已完成全部突破", "ascension": None}
+        target = owned.breakthrough + 1
+        ascension = next((entry for entry in definition.ascensions if entry.breakthrough == target), None)
+        if ascension is None:
+            return {"breakthrough_available": False, "breakthrough_reason": "暂不能突破", "ascension": None}
+        items = []
+        affordable = player.coins >= ascension.coins
+        for requirement in ascension.items:
+            item = self.content.item_map.get(requirement.item_id)
+            owned_quantity = sum(
+                quantity
+                for quality, quantity in player.inventory.get(requirement.item_id, {}).items()
+                if quality >= requirement.min_quality
+            )
+            affordable = affordable and item is not None and owned_quantity >= requirement.quantity
+            items.append({
+                **requirement.model_dump(),
+                "name": item.name if item else requirement.item_id,
+                "icon": item.icon if item else "package",
+                "owned": owned_quantity,
+            })
+        return {
+            "breakthrough_available": affordable,
+            "breakthrough_reason": None if affordable else "突破材料不足",
+            "ascension": {"breakthrough": target, "coins": ascension.coins, "items": items},
+        }
+
+    def _gacha_snapshot(self, player: PlayerState) -> dict:
+        gacha = self.content.gacha
+        catalog = self.partner_catalog_loader()
+        return {
+            "pool_id": gacha.pool_id,
+            "unlocked": player.level >= gacha.min_level,
+            "min_level": gacha.min_level,
+            "maple_flame_per_leaf": gacha.maple_flame_per_leaf,
+            "rarity_probabilities": gacha.rarity_probabilities,
+            "item_probability": gacha.item_probability,
+            "four_star_guarantee": gacha.four_star_guarantee,
+            "five_star_pity": gacha.five_star_pity,
+            "pulls_until_four_star": gacha.four_star_guarantee - player.gacha_four_pity,
+            "pulls_until_five_star": gacha.five_star_pity - player.gacha_five_pity,
+            "catalog": [
+                {
+                    "partner_id": definition.id,
+                    "name": definition.name,
+                    "rarity": definition.rarity,
+                    "artwork": (
+                        definition.artwork_for(0).model_dump()
+                        if definition.artwork_for(0)
+                        else None
+                    ),
+                    "avatar_crop": next(
+                        (entry.model_dump() for entry in definition.avatar_crops if entry.breakthrough == 0),
+                        None,
+                    ),
+                }
+                for definition in catalog.partners
+            ],
+            "task_items": [entry.model_dump() for entry in self.content.task_items],
         }
 
     @staticmethod
@@ -1731,6 +2296,9 @@ class GameService:
             "player_id": player.player_id,
             "display_name": player.display_name,
             "level": player.level,
+            "experience": player.experience,
+            "coins": player.coins,
+            "maple_flame": player.maple_flame,
             "owned_partner_ids": [entry.partner_id for entry in player.owned_partners],
             "updated_at": player.updated_at,
         }

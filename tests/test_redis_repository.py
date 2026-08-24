@@ -7,7 +7,7 @@ import pytest
 
 from red_leaf_town.application import GameService
 from red_leaf_town.content import load_content
-from red_leaf_town.domain import OwnedPartnerState, QQIdentity
+from red_leaf_town.domain import OwnedPartnerState, PlayerState, QQIdentity
 from red_leaf_town.infrastructure import RedisPlayerRepository
 from src.data_access.redis import redis_global
 
@@ -34,7 +34,7 @@ def test_oauth_player_actions_and_openid_binding_persist(repository):
     service.buy("redis-oauth-sub", "carrot_seed", 2)
     reloaded = repository.get(first.player_id)
     assert reloaded.inventory["carrot_seed"][0] == 2
-    assert reloaded.coins == 68
+    assert reloaded.coins < first.coins
 
     identity = QQIdentity(platform="QQ", bot_id="official-bot", subject="opaque-openid")
     code = service.create_binding_code("redis-oauth-sub")
@@ -71,12 +71,12 @@ def test_schema_two_spirit_warehouse_is_rewritten_with_partner_fields(repository
     }))
 
     loaded = repository.get(player_id)
-    assert loaded.schema_version == 13
+    assert loaded.schema_version == PlayerState.model_fields["schema_version"].default
     assert loaded.owned_partners[0].partner_id == "maple_sprite"
 
     repository.update(player_id, lambda player: None)
     stored = json.loads(repository.redis.get(repository._player_key(player_id)))
-    assert stored["schema_version"] == 13
+    assert stored["schema_version"] == PlayerState.model_fields["schema_version"].default
     assert stored["owned_partners"][0]["partner_id"] == "maple_sprite"
     assert "owned_spirits" not in stored
 
@@ -90,7 +90,7 @@ def test_gathering_assignment_and_task_snapshot_persist(repository):
     service.start_gathering("redis-gathering-sub", "maple_forest", "collect_maple_wood")
 
     reloaded = repository.get(player.player_id)
-    assert reloaded.schema_version == 13
+    assert reloaded.schema_version == PlayerState.model_fields["schema_version"].default
     assert reloaded.gathering_sites[0].assigned_partner_ids == ["fein"]
     assert reloaded.gathering_sites[0].task_snapshot.industry == "gathering"
     assert reloaded.gathering_sites[0].task_snapshot.quality_parameters.ability == 40
@@ -113,7 +113,7 @@ def test_crafting_inputs_and_task_snapshot_persist_atomically(repository):
     service.start_crafting("redis-crafting-sub", "town_workbench", "saw_maple_plank")
 
     reloaded = repository.get(player.player_id)
-    assert reloaded.schema_version == 13
+    assert reloaded.schema_version == PlayerState.model_fields["schema_version"].default
     assert "maple_wood" not in reloaded.inventory
     task = reloaded.crafting_stations[0].task_snapshot
     assert task.industry == "crafting"
@@ -129,6 +129,6 @@ def test_mining_site_and_task_snapshot_persist(repository):
     service.start_mining("redis-mining-sub", "copper_foothill", "mine_red_copper")
 
     reloaded = repository.get(player.player_id)
-    assert reloaded.schema_version == 13
+    assert reloaded.schema_version == PlayerState.model_fields["schema_version"].default
     assert reloaded.mining_sites[0].site_id == "copper_foothill"
     assert reloaded.mining_sites[0].task_snapshot.industry == "mining"

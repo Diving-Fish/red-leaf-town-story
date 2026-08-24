@@ -8,6 +8,7 @@ import CraftingView from '@/views/CraftingView.vue'
 import MiningView from '@/views/MiningView.vue'
 import DashboardView from '@/views/DashboardView.vue'
 import PortalsView from '@/views/PortalsView.vue'
+import GachaView from '@/views/GachaView.vue'
 
 export default createRouter({
   history: createWebHistory('/red-leaf-town/'),
@@ -36,6 +37,7 @@ export default createRouter({
     { path: '/crafting', name: 'crafting', component: CraftingView, meta: { title: '加工' } },
     { path: '/mining', name: 'mining', component: MiningView, meta: { title: '矿产' } },
     { path: '/portals', name: 'portals', component: PortalsView, meta: { title: '传送门' } },
+    { path: '/gacha', name: 'gacha', component: GachaView, meta: { title: '异界招募' } },
     { path: '/market', name: 'market', component: MarketView, meta: { title: '商店' } },
     { path: '/shop', redirect: { name: 'market' } },
     { path: '/inventory', redirect: { name: 'market', query: { tab: 'sell' } } },

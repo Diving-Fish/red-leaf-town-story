@@ -29,11 +29,12 @@ const sites = computed(() => (game.state?.gathering_sites || []).map((site) => (
             :task="task"
             :accent="entry.node.accent"
             :ability="ability"
+            industry="gathering"
             :action-key="`gathering:${entry.node.nodeId}:start:${task.id}`"
             :group="`gathering:${entry.node.nodeId}:start`"
             :disabled="!entry.node.assignedPartnerId"
             :reason="entry.node.assignedPartnerId ? undefined : '必须先派一名采集伙伴前往'"
-            @start="game.startProduction('gathering', entry.node.nodeId, task.id)"
+            @start="(taskItemId) => game.startProduction('gathering', entry.node.nodeId, task.id, taskItemId)"
           />
         </template>
       </ProductionCard>

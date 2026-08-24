@@ -100,6 +100,44 @@ async def test_shop_and_plant_api(client):
 
 
 @runs
+async def test_gacha_and_partner_growth_apis_commit_domain_actions(client, service):
+    from red_leaf_town.domain.economy import add_item
+
+    player = service.repository.get_by_sub("route-sub")
+
+    def prepare(state):
+        state.experience = service.content.levels[-1].total_xp
+        add_item(state, next(iter(service.content.partner_growth.experience_books)), 1)
+
+    service.repository.update(player.player_id, prepare)
+    service.admin_grant_partner(player.player_id, "xiang_hanyang")
+    authenticate(client)
+
+    pulled = await client.post(
+        "/api/red-leaf-town/gacha/pull",
+        json={"count": 10, "request_id": "route-recruit-request"},
+    )
+    replayed = await client.post(
+        "/api/red-leaf-town/gacha/pull",
+        json={"count": 10, "request_id": "route-recruit-request"},
+    )
+    pulled_body = (await pulled.get_json())["data"]
+    replayed_body = (await replayed.get_json())["data"]
+
+    assert pulled.status_code == replayed.status_code == 200
+    assert replayed_body["result"]["replayed"] is True
+    assert pulled_body["result"]["results"] == replayed_body["result"]["results"]
+
+    book_id = next(iter(service.content.partner_growth.experience_books))
+    trained = await client.post(
+        "/api/red-leaf-town/partners/xiang_hanyang/train",
+        json={"item_id": book_id, "quantity": 1},
+    )
+    assert trained.status_code == 200
+    assert (await trained.get_json())["data"]["result"]["level"] > 1
+
+
+@runs
 async def test_state_lists_story_crop_without_putting_its_seed_in_shop(client):
     authenticate(client)
     response = await client.get("/api/red-leaf-town/state")
@@ -421,7 +459,7 @@ async def test_admin_searches_player_and_grants_partner_once(admin_client):
     state = await admin_client.get("/api/red-leaf-town/state")
     partner = (await state.get_json())["data"]["partners"][0]
     assert partner["partner_id"] == "maple_sprite"
-    assert partner["upgrade_available"] is False
+    assert partner["upgrade_available"] is (partner["level"] < partner["level_cap"])
 
 
 @runs

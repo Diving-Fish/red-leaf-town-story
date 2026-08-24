@@ -25,6 +25,10 @@ const { progress, label, elapsed } = useCountdown(
 
 const ready = computed(() => Boolean(props.plot?.crop) && (props.plot?.ready || elapsed.value))
 const assignedPartner = computed(() => props.plot?.assigned_partners[0] || null)
+const activeItems = computed(() => (game.state?.task_items || []).filter((item) => (
+  item.timing === 'active'
+  && (!item.eligible_industries.length || item.eligible_industries.includes('farming'))
+)))
 
 function selectPartner(partnerId: string | null) {
   if (!props.plot) return
@@ -105,6 +109,15 @@ function selectPartner(partnerId: string | null) {
       </ActionButton>
     </template>
     <template v-else>
+      <ActionButton
+        v-for="item in activeItems"
+        :key="item.id"
+        variant="secondary"
+        :action-key="`farming:${plot.slot}:item:${item.id}`"
+        :disabled="plot.ready_at - game.serverNow > item.value"
+        reason="剩余时间还太长"
+        @click="game.useActiveTaskItem('farming', plot.slot, item.id)"
+      >{{ item.name }} ×{{ item.quantity }}</ActionButton>
       <ProgressBar class="plot-progress" :value="progress" :color="plot.crop?.accent" track="#111713" smooth />
       <span class="time-left"><Clock3 :size="14" /> {{ label }}</span>
     </template>

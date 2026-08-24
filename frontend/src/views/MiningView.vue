@@ -35,9 +35,10 @@ const sites = computed(() => (game.state?.mining_sites || []).map((site) => ({ s
             :task="task"
             :accent="entry.node.accent"
             :ability="ability"
+            industry="mining"
             :action-key="`mining:${entry.node.nodeId}:start:${task.id}`"
             :group="`mining:${entry.node.nodeId}:start`"
-            @start="game.startProduction('mining', entry.node.nodeId, task.id)"
+            @start="(taskItemId) => game.startProduction('mining', entry.node.nodeId, task.id, taskItemId)"
           />
         </template>
       </ProductionCard>

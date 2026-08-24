@@ -12,6 +12,8 @@ from pydantic import BaseModel, Field, model_validator
 class GameMeta(BaseModel):
     title: str
     starting_coins: int = Field(ge=0)
+    starting_maple_flame: int = Field(default=0, ge=0)
+    starting_guide_leaves: int = Field(default=0, ge=0)
     initial_inventory: dict[str, int] = Field(default_factory=dict)
 
 
@@ -38,7 +40,7 @@ class ItemDefinition(BaseModel):
     id: str
     name: str
     icon: str
-    kind: Literal["seed", "produce", "material", "product"]
+    kind: Literal["seed", "produce", "material", "product", "consumable"]
     sell_price: int = Field(ge=0)
     has_quality: bool = False
 
@@ -219,7 +221,8 @@ class MiningTaskDefinition(BaseModel):
     name: str = Field(min_length=1)
     produce_item_id: str = Field(min_length=1)
     duration_seconds: int = Field(gt=0)
-    time_difficulty: int = Field(gt=0)
+    yield_bonus: float = Field(default=1, ge=0, le=5)
+    yield_difficulty: int = Field(gt=0)
     yield_min: int = Field(ge=1)
     yield_max: int = Field(ge=1)
     stamina_cost: int = Field(ge=0)
@@ -232,6 +235,68 @@ class MiningTaskDefinition(BaseModel):
         if self.yield_max < self.yield_min:
             raise ValueError(f"mining task {self.id}: yield_max must be >= yield_min")
         return self
+
+
+class TaskItemDefinition(BaseModel):
+    id: str = Field(pattern=r"^[a-z][a-z0-9_-]{1,63}$")
+    name: str = Field(min_length=1)
+    description: str = Field(min_length=1)
+    icon: str = Field(min_length=1)
+    effect: Literal[
+        "quality_boost",
+        "duration_multiplier",
+        "yield_bonus",
+        "release_partner",
+        "instant_finish",
+        "unlock_miracle",
+    ]
+    value: float = Field(default=1, gt=0)
+    timing: Literal["start", "active"] = "start"
+    eligible_industries: list[str] = Field(default_factory=list)
+
+
+class GachaItemDropDefinition(BaseModel):
+    task_item_id: str = Field(min_length=1)
+    weight: float = Field(gt=0)
+    quantity: int = Field(default=1, ge=1)
+
+
+class GachaDefinition(BaseModel):
+    pool_id: str = Field(min_length=1)
+    min_level: int = Field(default=1, ge=1)
+    maple_flame_per_leaf: int = Field(gt=0)
+    rarity_probabilities: dict[int, float]
+    item_probability: float = Field(ge=0, lt=1)
+    first_pulls_without_items: int = Field(default=0, ge=0)
+    four_star_guarantee: int = Field(gt=0)
+    five_star_pity: int = Field(gt=0)
+    duplicate_marks: dict[int, int]
+    star_up_costs: dict[int, int]
+    item_drops: list[GachaItemDropDefinition] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def validate_probabilities(self):
+        if set(self.rarity_probabilities) != {3, 4, 5}:
+            raise ValueError("gacha rarity probabilities must define 3, 4 and 5 stars")
+        if any(probability < 0 for probability in self.rarity_probabilities.values()):
+            raise ValueError("gacha rarity probabilities cannot be negative")
+        if abs(sum(self.rarity_probabilities.values()) + self.item_probability - 1) > 1e-8:
+            raise ValueError("gacha probabilities must sum to one")
+        if set(self.duplicate_marks) != {3, 4, 5}:
+            raise ValueError("gacha duplicate marks must define 3, 4 and 5 stars")
+        if set(self.star_up_costs) != {3, 4}:
+            raise ValueError("star-up costs must define the 3-to-4 and 4-to-5 steps")
+        return self
+
+
+class PartnerGrowthDefinition(BaseModel):
+    experience_per_minute: int = Field(gt=0)
+    level_cost_base: int = Field(gt=0)
+    level_cost_growth: int = Field(ge=0)
+    experience_books: dict[str, int] = Field(min_length=1)
+
+    def experience_for_next_level(self, level: int) -> int:
+        return self.level_cost_base + self.level_cost_growth * max(0, level - 1)
 
 
 class RewardItemDefinition(BaseModel):
@@ -316,6 +381,9 @@ class GameContent(BaseModel):
     recipes: list[RecipeDefinition] = Field(default_factory=list)
     mining_sites: list[MiningSiteDefinition] = Field(default_factory=list)
     mining_tasks: list[MiningTaskDefinition] = Field(default_factory=list)
+    task_items: list[TaskItemDefinition] = Field(default_factory=list)
+    gacha: GachaDefinition
+    partner_growth: PartnerGrowthDefinition
     portals: list[PortalDefinition] = Field(default_factory=list)
     shop: list[ShopEntry]
 
@@ -335,6 +403,7 @@ class GameContent(BaseModel):
         unique([entry.id for entry in self.recipes], "recipe")
         unique([entry.id for entry in self.mining_sites], "mining site")
         unique([entry.id for entry in self.mining_tasks], "mining task")
+        unique([entry.id for entry in self.task_items], "task item")
         unique([entry.id for entry in self.portals], "portal")
         unique([tribute.id for portal in self.portals for tribute in portal.tributes], "portal tribute")
         levels = [entry.level for entry in self.levels]
@@ -395,6 +464,20 @@ class GameContent(BaseModel):
                 raise ValueError(f"mining task {task.id} references an unknown item")
             if not self.item_map[task.produce_item_id].has_quality:
                 raise ValueError(f"mining task {task.id} output must support quality")
+            if task.duration_seconds != task.stamina_cost * self.stamina.restore_seconds:
+                raise ValueError(f"mining task {task.id} duration must equal stamina recovery time")
+        task_item_ids = {entry.id for entry in self.task_items}
+        for entry in self.task_items:
+            if entry.effect == "instant_finish" and entry.timing != "active":
+                raise ValueError(f"task item {entry.id} must be used on an active task")
+            if entry.effect != "instant_finish" and entry.timing != "start":
+                raise ValueError(f"task item {entry.id} must be used when a task starts")
+            if any(industry not in self.industries for industry in entry.eligible_industries):
+                raise ValueError(f"task item {entry.id} references an unknown industry")
+        if any(entry.task_item_id not in task_item_ids for entry in self.gacha.item_drops):
+            raise ValueError("gacha item drops reference an unknown task item")
+        if any(item_id not in items for item_id in self.partner_growth.experience_books):
+            raise ValueError("partner growth references an unknown experience book")
         self._validate_portals(items)
         for entry in self.shop:
             if entry.item_id not in items:
@@ -478,6 +561,10 @@ class GameContent(BaseModel):
     @property
     def mining_task_map(self) -> dict[str, MiningTaskDefinition]:
         return {entry.id: entry for entry in self.mining_tasks}
+
+    @property
+    def task_item_map(self) -> dict[str, TaskItemDefinition]:
+        return {entry.id: entry for entry in self.task_items}
 
     @property
     def portal_map(self) -> dict[str, PortalDefinition]:

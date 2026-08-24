@@ -6,6 +6,9 @@ export interface PlayerSummary {
   current_level_xp: number
   next_level_xp: number | null
   coins: number
+  maple_flame: number
+  guide_leaves: number
+  companion_marks: number
   stamina: number
   stamina_cap: number
   stamina_restore_seconds: number
@@ -60,6 +63,8 @@ export interface CropAdminPayload {
 export interface TaskQualitySnapshot extends QualityCurveDefinition {
   ability: number
   probabilities: number[]
+  miracle_width_multiplier: number
+  miracle_cap_ignored: boolean
 }
 
 export interface PlotState {
@@ -117,6 +122,7 @@ export interface ProductionTaskSnapshot {
   character_ability: number
   total_ability: number
   time_efficiency: number
+  yield_efficiency: number
   base_duration: number
   final_duration: number
   produce_item_id: string
@@ -359,7 +365,8 @@ export interface MiningTaskDefinition {
   name: string
   produce_item_id: string
   duration_seconds: number
-  time_difficulty: number
+  yield_bonus: number
+  yield_difficulty: number
   yield_min: number
   yield_max: number
   stamina_cost: number
@@ -434,8 +441,11 @@ export interface GameState {
   mining_sites: MiningSiteState[]
   next_mining_site_level: number | null
   inventory: InventoryItem[]
+  task_items: TaskItemState[]
   partners: OwnedPartner[]
   partner_count: number
+  partner_growth: PartnerGrowthState
+  gacha: GachaState
   industry_rules: Record<string, IndustryRules>
   talents: TalentState
   portals: PortalState[]
@@ -494,6 +504,7 @@ export interface PartnerDefinition {
   trait_codes: string[]
   artworks: PartnerArtwork[]
   avatar_crops: AvatarCrop[]
+  ascensions?: PartnerAscension[]
   complete?: boolean
   ability_preview?: Record<string, Record<string, number>>
 }
@@ -529,7 +540,9 @@ export interface OwnedPartnerTrait {
 export interface OwnedPartner {
   partner_id: string
   level: number
+  experience: number
   breakthrough: number
+  stars: number
   acquired_at: number
   missing: boolean
   name: string
@@ -538,12 +551,17 @@ export interface OwnedPartner {
   growth_curve?: GrowthCurveId
   growth_curve_name?: string
   level_cap?: number
+  experience_to_next_level?: number | null
   artwork?: PartnerArtwork | null
   avatar_crop?: AvatarCrop | null
   tendencies?: OwnedPartnerTendency[]
   traits?: OwnedPartnerTrait[]
   upgrade_available?: boolean
   breakthrough_available?: boolean
+  breakthrough_reason?: string | null
+  ascension?: PartnerAscensionState | null
+  star_up_available?: boolean
+  star_up_cost?: number | null
   assigned_plot_slot: number | null
   assigned_gathering_site_id: string | null
   assigned_crafting_station_id: string | null
@@ -552,12 +570,103 @@ export interface OwnedPartner {
   locked_until: number | null
 }
 
+export interface PartnerAscensionItem {
+  item_id: string
+  quantity: number
+  min_quality: number
+}
+
+export interface PartnerAscension {
+  breakthrough: 1 | 2
+  coins: number
+  items: PartnerAscensionItem[]
+}
+
+export interface PartnerAscensionState extends PartnerAscension {
+  items: Array<PartnerAscensionItem & { name: string; icon: string; owned: number }>
+}
+
+export interface TaskItemState {
+  id: string
+  name: string
+  description: string
+  icon: string
+  effect: string
+  value: number
+  timing: 'start' | 'active'
+  eligible_industries: string[]
+  quantity: number
+}
+
+export interface PartnerExperienceBook {
+  item_id: string
+  experience: number
+  owned: number
+  item: { id: string; name: string; icon: string; kind: string; sell_price: number; has_quality: boolean }
+}
+
+export interface PartnerGrowthState {
+  experience_books: PartnerExperienceBook[]
+}
+
+export interface GachaCatalogPartner {
+  partner_id: string
+  name: string
+  rarity: 3 | 4 | 5
+  artwork: PartnerArtwork | null
+  avatar_crop: AvatarCrop | null
+}
+
+export interface GachaState {
+  pool_id: string
+  unlocked: boolean
+  min_level: number
+  maple_flame_per_leaf: number
+  rarity_probabilities: Record<number, number>
+  item_probability: number
+  four_star_guarantee: number
+  five_star_pity: number
+  pulls_until_four_star: number
+  pulls_until_five_star: number
+  catalog: GachaCatalogPartner[]
+  task_items: Omit<TaskItemState, 'quantity'>[]
+}
+
+export interface GachaDrop {
+  kind: 'partner' | 'task_item'
+  content_id: string
+  rarity: number | null
+  duplicate: boolean
+  quantity: number
+  companion_marks: number
+}
+
+export interface GachaResult {
+  request_id: string
+  pool_id: string
+  count: 1 | 10
+  created_at: number
+  results: GachaDrop[]
+  replayed: boolean
+}
+
 export interface AdminPlayerSummary {
   player_id: string
   display_name: string
   level: number
+  experience: number
+  coins: number
+  maple_flame: number
   owned_partner_ids: string[]
   updated_at: number
+}
+
+export interface AdminPlayerResourceGrantResult {
+  coins: number
+  experience: number
+  maple_flame: number
+  unlocked_levels: number[]
+  player: AdminPlayerSummary
 }
 
 export interface AdminPartnerGrantResult {

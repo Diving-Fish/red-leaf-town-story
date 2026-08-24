@@ -87,6 +87,7 @@ function blankPartner(): PartnerDefinition {
     trait_codes: [],
     artworks: [],
     avatar_crops: [0, 1, 2].map((breakthrough) => ({ breakthrough, x: 0, y: 0, w: 1, h: 1 })),
+    ascensions: [],
   }
 }
 
@@ -191,6 +192,7 @@ function cleanPayload(): PartnerDefinition {
       w: Number(crop.w),
       h: Number(crop.h),
     })),
+    ascensions: editor.value.ascensions || [],
   }
 }
 

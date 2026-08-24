@@ -1,8 +1,10 @@
 {
-  "schema_version": 10,
+  "schema_version": 11,
   "game": {
     "title": "红叶镇物语",
     "starting_coins": 80,
+    "starting_maple_flame": 0,
+    "starting_guide_leaves": 10,
     "initial_inventory": {}
   },
   "stamina": {
@@ -332,6 +334,30 @@
       "kind": "material",
       "sell_price": 24,
       "has_quality": true
+    },
+    {
+      "id": "partner_notes_small",
+      "name": "同行札记",
+      "icon": "book-open",
+      "kind": "consumable",
+      "sell_price": 0,
+      "has_quality": false
+    },
+    {
+      "id": "partner_notes_medium",
+      "name": "厚册同行札记",
+      "icon": "library-big",
+      "kind": "consumable",
+      "sell_price": 0,
+      "has_quality": false
+    },
+    {
+      "id": "partner_notes_large",
+      "name": "珍藏同行札记",
+      "icon": "book-marked",
+      "kind": "consumable",
+      "sell_price": 0,
+      "has_quality": false
     }
   ],
   "crops": [
@@ -788,12 +814,13 @@
       "site_id": "copper_foothill",
       "name": "开采赤铜矿脉",
       "produce_item_id": "red_copper_ore",
-      "duration_seconds": 75,
-      "time_difficulty": 115,
-      "yield_min": 2,
-      "yield_max": 3,
-      "stamina_cost": 2,
-      "collect_xp": 7,
+      "duration_seconds": 900,
+      "yield_bonus": 1.0,
+      "yield_difficulty": 150,
+      "yield_min": 3,
+      "yield_max": 4,
+      "stamina_cost": 5,
+      "collect_xp": 18,
       "min_level": 2,
       "quality": {
         "thresholds": [
@@ -812,12 +839,13 @@
       "site_id": "moonstone_depths",
       "name": "勘采月银矿脉",
       "produce_item_id": "moon_silver_ore",
-      "duration_seconds": 150,
-      "time_difficulty": 180,
-      "yield_min": 1,
-      "yield_max": 2,
-      "stamina_cost": 3,
-      "collect_xp": 13,
+      "duration_seconds": 1800,
+      "yield_bonus": 1.0,
+      "yield_difficulty": 200,
+      "yield_min": 4,
+      "yield_max": 5,
+      "stamina_cost": 10,
+      "collect_xp": 40,
       "min_level": 4,
       "quality": {
         "thresholds": [
@@ -832,6 +860,98 @@
       }
     }
   ],
+  "task_items": [
+    {
+      "id": "thick_soil_fertilizer",
+      "name": "厚土肥",
+      "description": "开工时使用，本次任务的品质能力提高。",
+      "icon": "sprout",
+      "effect": "quality_boost",
+      "value": 40,
+      "timing": "start",
+      "eligible_industries": ["farming", "gathering", "crafting", "mining"]
+    },
+    {
+      "id": "maple_wind_whistle",
+      "name": "枫风哨",
+      "description": "开工时使用，本次任务所需时间缩短。",
+      "icon": "wind",
+      "effect": "duration_multiplier",
+      "value": 0.7,
+      "timing": "start",
+      "eligible_industries": ["farming", "gathering", "crafting", "mining"]
+    },
+    {
+      "id": "harvest_knot",
+      "name": "丰收结",
+      "description": "开工时使用，本次生产额外获得一次产出。",
+      "icon": "wheat",
+      "effect": "yield_bonus",
+      "value": 1,
+      "timing": "start",
+      "eligible_industries": ["farming", "gathering", "crafting", "mining"]
+    },
+    {
+      "id": "handover_order",
+      "name": "换手令",
+      "description": "开工时使用，本次任务不会锁定协助伙伴。",
+      "icon": "repeat-2",
+      "effect": "release_partner",
+      "value": 1,
+      "timing": "start",
+      "eligible_industries": ["farming", "gathering", "crafting", "mining"]
+    },
+    {
+      "id": "night_lamp_tea",
+      "name": "夜灯茶",
+      "description": "用于剩余时间不超过两小时的任务，使其立即完成。",
+      "icon": "lamp-desk",
+      "effect": "instant_finish",
+      "value": 7200,
+      "timing": "active",
+      "eligible_industries": ["farming", "gathering", "crafting", "mining"]
+    },
+    {
+      "id": "golden_leaf",
+      "name": "一片金叶",
+      "description": "开工时使用，本次任务可按两倍宽度的完整曲线获得奇迹品质。",
+      "icon": "leaf",
+      "effect": "unlock_miracle",
+      "value": 2,
+      "timing": "start",
+      "eligible_industries": ["farming", "gathering", "crafting", "mining"]
+    }
+  ],
+  "gacha": {
+    "pool_id": "standard-1",
+    "min_level": 2,
+    "maple_flame_per_leaf": 100,
+    "rarity_probabilities": {"3": 0.4, "4": 0.125, "5": 0.025},
+    "item_probability": 0.45,
+    "first_pulls_without_items": 30,
+    "four_star_guarantee": 10,
+    "five_star_pity": 50,
+    "duplicate_marks": {"3": 25, "4": 80, "5": 250},
+    "star_up_costs": {"3": 500, "4": 1500},
+    "item_drops": [
+      {"task_item_id": "thick_soil_fertilizer", "weight": 35, "quantity": 2},
+      {"task_item_id": "maple_wind_whistle", "weight": 35, "quantity": 2},
+      {"task_item_id": "harvest_knot", "weight": 20, "quantity": 2},
+      {"task_item_id": "handover_order", "weight": 5, "quantity": 1},
+      {"task_item_id": "night_lamp_tea", "weight": 4, "quantity": 1},
+      {"task_item_id": "golden_leaf", "weight": 1, "quantity": 1}
+    ]
+  },
+  "partner_growth": {
+    "experience_per_minute": 1,
+    "level_cost_base": 20,
+    "level_cost_growth": 5,
+    "experience_books": {
+      "partner_notes_small": 60,
+      "partner_notes_medium": 300,
+      "partner_notes_large": 1200
+    }
+  },
   "portals": [
     {
       "id": "first_gate",
@@ -1117,6 +1237,27 @@
       "price": 80,
       "currency": "coins",
       "min_level": 8
+    },
+    {
+      "id": "partner_notes_small",
+      "item_id": "partner_notes_small",
+      "price": 240,
+      "currency": "coins",
+      "min_level": 2
+    },
+    {
+      "id": "partner_notes_medium",
+      "item_id": "partner_notes_medium",
+      "price": 1000,
+      "currency": "coins",
+      "min_level": 4
+    },
+    {
+      "id": "partner_notes_large",
+      "item_id": "partner_notes_large",
+      "price": 3600,
+      "currency": "coins",
+      "min_level": 6
     }
   ]
 }

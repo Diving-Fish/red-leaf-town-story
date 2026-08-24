@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 
 import ActionButton from '@/components/ActionButton.vue'
 import CostChip from '@/components/CostChip.vue'
 import ItemTile from '@/components/ItemTile.vue'
+import TaskItemSelect from '@/components/TaskItemSelect.vue'
 import { formatDuration } from '@/lib/format'
 import { estimateDrawCount, estimateDuration } from '@/lib/production'
 import { useGameStore } from '@/stores/game'
@@ -17,10 +18,12 @@ const props = defineProps<{
   disabled?: boolean
   reason?: string
   ability?: number
+  industry: string
 }>()
 
-const emit = defineEmits<{ (event: 'start'): void }>()
+const emit = defineEmits<{ (event: 'start', taskItemId: string): void }>()
 const game = useGameStore()
+const taskItemId = ref('')
 
 const affordable = computed(() => game.liveStamina >= props.task.stamina_cost)
 const blocked = computed(() => Boolean(props.disabled) || !affordable.value)
@@ -31,12 +34,14 @@ const singleOutputTask = computed<MiningTaskDefinition | null>(() => (
 ))
 const drawCount = computed(() => estimateDrawCount(gatheringTask.value?.draws, props.ability || 0))
 const poolWeight = computed(() => (gatheringTask.value?.outputs || []).reduce((total, entry) => total + entry.weight, 0))
-const duration = computed(() => estimateDuration(
-  props.task.duration_seconds,
-  props.task.time_difficulty,
-  props.ability || 0,
-  'minimum_duration_seconds' in props.task ? props.task.minimum_duration_seconds : 1,
-))
+const duration = computed(() => 'yield_difficulty' in props.task
+  ? props.task.duration_seconds
+  : estimateDuration(
+      props.task.duration_seconds,
+      props.task.time_difficulty,
+      props.ability || 0,
+      'minimum_duration_seconds' in props.task ? props.task.minimum_duration_seconds : 1,
+    ))
 </script>
 
 <template>
@@ -47,7 +52,7 @@ const duration = computed(() => estimateDuration(
     :group="group"
     :disabled="blocked"
     :reason="reasonText"
-    @click="emit('start')"
+    @click="emit('start', taskItemId)"
   >
     <ItemTile :icon="task.item.icon" :size="42" :accent="accent" />
     <span class="task-copy">
@@ -63,6 +68,7 @@ const duration = computed(() => estimateDuration(
       <small v-else-if="singleOutputTask">
         {{ singleOutputTask.yield_min }}—{{ singleOutputTask.yield_max }} 个 · 约 {{ formatDuration(duration) }}
       </small>
+      <TaskItemSelect v-model="taskItemId" :industry="industry" />
     </span>
     <CostChip v-if="task.stamina_cost" kind="stamina" :amount="task.stamina_cost" :affordable="affordable" signed />
     <span v-else class="free-cost">无需体力</span>

@@ -1,19 +1,21 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { Lock } from 'lucide-vue-next'
 
 import ActionButton from '@/components/ActionButton.vue'
 import CostChip from '@/components/CostChip.vue'
 import GameIcon from '@/components/GameIcon.vue'
 import ItemTile from '@/components/ItemTile.vue'
+import TaskItemSelect from '@/components/TaskItemSelect.vue'
 import { formatDuration } from '@/lib/format'
 import { estimateDuration } from '@/lib/production'
 import { useGameStore } from '@/stores/game'
 import type { RecipeState } from '@/types'
 
-const props = defineProps<{ recipe: RecipeState; actionKey: string; group?: string; accent?: string; ability?: number }>()
-const emit = defineEmits<{ (event: 'start'): void }>()
+const props = defineProps<{ recipe: RecipeState; actionKey: string; group?: string; accent?: string; ability?: number; industry: string }>()
+const emit = defineEmits<{ (event: 'start', taskItemId: string): void }>()
 const game = useGameStore()
+const taskItemId = ref('')
 
 const affordable = computed(() => game.liveStamina >= props.recipe.stamina_cost)
 const duration = computed(() => estimateDuration(
@@ -55,13 +57,14 @@ const reason = computed(() =>
       约 {{ formatDuration(duration) }}
       <CostChip kind="stamina" :amount="recipe.stamina_cost" :affordable="affordable" signed />
     </p>
+    <TaskItemSelect v-model="taskItemId" :industry="industry" />
     <ActionButton
       variant="secondary"
       :action-key="actionKey"
       :group="group"
       :disabled="!recipe.unlocked || !recipe.ingredients_available || !affordable"
       :reason="reason"
-      @click="emit('start')"
+      @click="emit('start', taskItemId)"
     >{{ label }}</ActionButton>
   </article>
 </template>

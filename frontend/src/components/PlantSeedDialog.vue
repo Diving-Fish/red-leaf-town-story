@@ -8,6 +8,7 @@ import GameIcon from '@/components/GameIcon.vue'
 import ItemTile from '@/components/ItemTile.vue'
 import ModalSheet from '@/components/ModalSheet.vue'
 import PartnerPicker from '@/components/PartnerPicker.vue'
+import TaskItemSelect from '@/components/TaskItemSelect.vue'
 import { usePartnerRoster } from '@/composables/usePartnerRoster'
 import { formatDuration } from '@/lib/format'
 import { estimateDuration } from '@/lib/production'
@@ -20,6 +21,7 @@ const emit = defineEmits<{ (event: 'close'): void }>()
 const game = useGameStore()
 const { ability } = usePartnerRoster('farming')
 const selectedId = ref<string | null>(null)
+const taskItemId = ref('')
 
 const assignedPartner = computed(() => props.plot.assigned_partners[0] || null)
 const selected = computed(() => props.crops.find((crop) => crop.id === selectedId.value) || null)
@@ -29,6 +31,7 @@ watch(
   () => props.open,
   (open) => {
     if (open) selectedId.value = props.crops.length === 1 ? props.crops[0].id : null
+    if (open) taskItemId.value = ''
   },
   { immediate: true },
 )
@@ -49,7 +52,7 @@ function selectPartner(partnerId: string | null) {
 async function confirmPlant() {
   const crop = selected.value
   if (!crop) return
-  const result = await game.plant(props.plot.slot, crop.id)
+  const result = await game.plant(props.plot.slot, crop.id, taskItemId.value)
   if (result) emit('close')
 }
 </script>
@@ -101,6 +104,8 @@ async function confirmPlant() {
 
       <p v-if="!crops.length" class="seed-empty">仓库里没有可用种子</p>
     </div>
+
+    <TaskItemSelect v-model="taskItemId" industry="farming" />
 
     <template #footer>
       <p class="footer-summary">

@@ -67,6 +67,18 @@ def default_avatar_crops() -> list[AvatarCrop]:
     return [AvatarCrop(breakthrough=stage) for stage in range(3)]
 
 
+class AscensionItemRequirement(BaseModel):
+    item_id: str = Field(min_length=1)
+    quantity: int = Field(ge=1)
+    min_quality: int = Field(default=0, ge=0, le=5)
+
+
+class PartnerAscension(BaseModel):
+    breakthrough: Literal[1, 2]
+    coins: int = Field(default=0, ge=0)
+    items: list[AscensionItemRequirement] = Field(min_length=1, max_length=4)
+
+
 class PartnerDefinition(BaseModel):
     id: str = Field(pattern=r"^[a-z][a-z0-9_-]{1,63}$")
     name: str = Field(min_length=1, max_length=64)
@@ -77,6 +89,7 @@ class PartnerDefinition(BaseModel):
     trait_codes: list[str] = Field(default_factory=list)
     artworks: list[PartnerArtwork] = Field(default_factory=list, max_length=3)
     avatar_crops: list[AvatarCrop] = Field(default_factory=default_avatar_crops, min_length=3, max_length=3)
+    ascensions: list[PartnerAscension] = Field(default_factory=list, max_length=2)
 
     @model_validator(mode="before")
     @classmethod
@@ -121,6 +134,9 @@ class PartnerDefinition(BaseModel):
                 or crop.y + crop.h > source.height
             ):
                 raise ValueError(f"avatar crop for breakthrough {crop.breakthrough} must stay inside its artwork")
+        ascension_stages = [entry.breakthrough for entry in self.ascensions]
+        if len(ascension_stages) != len(set(ascension_stages)):
+            raise ValueError("partner ascensions must use unique breakthrough stages")
         return self
 
     def artwork_for(self, breakthrough: int) -> PartnerArtwork | None:
@@ -130,12 +146,14 @@ class PartnerDefinition(BaseModel):
     def complete(self) -> bool:
         return {artwork.breakthrough for artwork in self.artworks} == {0, 1, 2}
 
-    def ability_at(self, industry: str, level: int) -> int:
+    def ability_at(self, industry: str, level: int, stars: int | None = None) -> int:
         tendency = next((entry for entry in self.tendencies if entry.industry == industry), None)
         if tendency is None:
             raise KeyError(industry)
         progress = growth_progress(level, self.growth_curve)
-        return round(tendency.level_1 + (tendency.level_60 - tendency.level_1) * progress)
+        base = tendency.level_1 + (tendency.level_60 - tendency.level_1) * progress
+        multiplier = {3: 1.0, 4: 1.1, 5: 1.2}.get(stars, 1.0)
+        return round(base * multiplier)
 
 
 class PartnerCatalog(BaseModel):
