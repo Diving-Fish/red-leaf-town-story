@@ -55,7 +55,7 @@ def test_portals_start_locked_until_the_level_is_reached(game):
     assert first["unlocked"] is False
     assert first["locked_reason"] == "居民等级达到 2 级"
     assert first["completed"] is False
-    assert [entry["delivered"] for entry in first["tributes"]] == [0, 0]
+    assert [entry["delivered"] for entry in first["tributes"]] == [0] * 7
 
     set_level(service, player.player_id, 2)
     assert portal_of(service.snapshot_by_sub("portal-sub"), "first_gate")["unlocked"] is True
@@ -63,10 +63,10 @@ def test_portals_start_locked_until_the_level_is_reached(game):
 
 def test_locked_portal_refuses_deliveries(game):
     service, player = game
-    stock(service, player.player_id, "carrot", 12)
+    stock(service, player.player_id, "carrot", 15)
 
     with pytest.raises(GameError) as error:
-        service.deliver_tribute("portal-sub", "first_gate", "first_gate_carrot", 12)
+        service.deliver_tribute("portal-sub", "first_gate", "first_gate_carrot", 15)
     assert error.value.code == "portal_locked"
     assert service.repository.get(player.player_id).portals == []
 
@@ -74,32 +74,32 @@ def test_locked_portal_refuses_deliveries(game):
 def test_deliveries_accumulate_until_the_tribute_is_filled(game):
     service, player = game
     set_level(service, player.player_id, 2)
-    stock(service, player.player_id, "carrot", 20)
+    stock(service, player.player_id, "carrot", 25)
 
     partial = service.deliver_tribute("portal-sub", "first_gate", "first_gate_carrot", 5)["result"]
-    assert (partial["delivered"], partial["total_delivered"], partial["required"]) == (5, 5, 12)
+    assert (partial["delivered"], partial["total_delivered"], partial["required"]) == (5, 5, 15)
     assert partial["tribute_completed"] is False
     assert partial["rewards"] == []
 
-    coins_before = service.snapshot_by_sub("portal-sub")["player"]["coins"]
+    flame_before = service.snapshot_by_sub("portal-sub")["player"]["maple_flame"]
     # 交多了只收还缺的那些，剩下的留在仓库里。
     filled = service.deliver_tribute("portal-sub", "first_gate", "first_gate_carrot", 99)["result"]
-    assert (filled["delivered"], filled["total_delivered"]) == (7, 12)
+    assert (filled["delivered"], filled["total_delivered"]) == (10, 15)
     assert filled["tribute_completed"] is True
     assert filled["portal_completed"] is False
     assert [entry["source"] for entry in filled["rewards"]] == ["tribute"]
-    assert filled["rewards"][0]["coins"] == 70
+    assert filled["rewards"][0]["maple_flame"] == 150
 
     state = service.snapshot_by_sub("portal-sub")
-    assert state["player"]["coins"] == coins_before + 70
-    assert next(entry["quantity"] for entry in state["inventory"] if entry["item_id"] == "carrot") == 8
+    assert state["player"]["maple_flame"] == flame_before + 150
+    assert next(entry["quantity"] for entry in state["inventory"] if entry["item_id"] == "carrot") == 10
 
 
 def test_a_filled_tribute_cannot_be_delivered_again(game):
     service, player = game
     set_level(service, player.player_id, 2)
     stock(service, player.player_id, "carrot", 20)
-    service.deliver_tribute("portal-sub", "first_gate", "first_gate_carrot", 12)
+    service.deliver_tribute("portal-sub", "first_gate", "first_gate_carrot", 15)
 
     with pytest.raises(GameError) as error:
         service.deliver_tribute("portal-sub", "first_gate", "first_gate_carrot", 1)
@@ -117,92 +117,71 @@ def test_delivering_more_than_the_warehouse_holds_is_refused(game):
     assert service.repository.get(player.player_id).inventory["carrot"] == {0: 3}
 
 
-def test_completing_every_tribute_settles_the_portal_and_opens_its_children(game):
+def test_completing_every_tribute_settles_the_portal(game):
     service, player = game
     set_level(service, player.player_id, 3)
-    stock(service, player.player_id, "carrot", 12)
-    stock(service, player.player_id, "maple_wood", 10)
+    tributes = (
+        ("first_gate_carrot", "carrot", 15),
+        ("first_gate_maple_wood", "maple_wood", 12),
+        ("first_gate_tough_fodder", "tough_fodder", 12),
+        ("first_gate_woodland_mushroom", "woodland_mushroom", 8),
+        ("first_gate_autumn_herb", "autumn_herb", 8),
+        ("first_gate_copper_ore", "red_copper_ore", 8),
+        ("first_gate_amber_beeswax", "amber_beeswax", 3),
+    )
+    for tribute_id, item_id, quantity in tributes:
+        stock(service, player.player_id, item_id, quantity)
 
-    service.deliver_tribute("portal-sub", "first_gate", "first_gate_carrot", 12)
-    finished = service.deliver_tribute("portal-sub", "first_gate", "first_gate_maple_wood", 10)
+    leaves_before = service.snapshot_by_sub("portal-sub")["player"]["guide_leaves"]
+
+    for tribute_id, item_id, quantity in tributes[:-1]:
+        result = service.deliver_tribute("portal-sub", "first_gate", tribute_id, quantity)["result"]
+        assert result["tribute_completed"] is True
+        assert result["portal_completed"] is False
+        assert result["rewards"][0]["maple_flame"] == 150
+
+    last_id, _, last_quantity = tributes[-1]
+    finished = service.deliver_tribute("portal-sub", "first_gate", last_id, last_quantity)
     result = finished["result"]
 
     assert result["portal_completed"] is True
     assert [entry["source"] for entry in result["rewards"]] == ["tribute", "portal"]
     completion = result["rewards"][-1]
-    assert completion["coins"] == 220
-    assert completion["items"] == [{
-        "item_id": "wheat_seed",
-        "name": "小麦种子",
-        "quantity": 5,
-        "quality": None,
-        "quality_name": None,
-    }]
-    assert sorted(entry["portal_id"] for entry in result["unlocked_portals"]) == ["copper_gate", "maple_gate"]
+    assert completion["guide_leaves"] == 10
+    assert completion["items"] == []
+    assert result["unlocked_portals"] == []
 
     state = finished["state"]
     assert portal_of(state, "first_gate")["completed"] is True
-    assert portal_of(state, "maple_gate")["unlocked"] is True
-    # 树状解锁：月影之门要两条支线都完成，只开一道还打不开。
-    moonlit = portal_of(state, "moonlit_gate")
-    assert moonlit["unlocked"] is False
-    assert [entry["completed"] for entry in moonlit["prerequisites"]] == [False, False]
-
-
-def test_unlock_tree_needs_every_prerequisite(game):
-    service, player = game
-    set_level(service, player.player_id, 4)
-    for item_id, quantity, quality in (
-        ("carrot", 12, 0),
-        ("maple_wood", 10, 0),
-        ("maple_plank", 6, 0),
-        ("autumn_herb", 12, 3),
-        ("red_copper_ore", 15, 0),
-        ("wheat", 16, 0),
-    ):
-        stock(service, player.player_id, item_id, quantity, quality)
-
-    service.deliver_tribute("portal-sub", "first_gate", "first_gate_carrot", 12)
-    service.deliver_tribute("portal-sub", "first_gate", "first_gate_maple_wood", 10)
-    service.deliver_tribute("portal-sub", "maple_gate", "maple_gate_plank", 6)
-    maple_done = service.deliver_tribute("portal-sub", "maple_gate", "maple_gate_herb", 12)
-
-    # 枫林之门单独完成就能开灶火之门，但月影之门还缺赤岩那一支。
-    assert sorted(entry["portal_id"] for entry in maple_done["result"]["unlocked_portals"]) == ["hearth_gate"]
-    assert portal_of(maple_done["state"], "hearth_gate")["unlocked"] is True
-    assert portal_of(maple_done["state"], "moonlit_gate")["locked_reason"] == "先完成赤岩之门"
-
-    service.deliver_tribute("portal-sub", "copper_gate", "copper_gate_ore", 15)
-    copper_done = service.deliver_tribute("portal-sub", "copper_gate", "copper_gate_wheat", 16)
-
-    assert [entry["portal_id"] for entry in copper_done["result"]["unlocked_portals"]] == ["moonlit_gate"]
-    assert portal_of(copper_done["state"], "moonlit_gate")["unlocked"] is True
+    assert state["player"]["guide_leaves"] == leaves_before + 10
 
 
 def test_tribute_quality_floor_filters_the_warehouse(game):
     service, player = game
-    set_level(service, player.player_id, 3)
-    stock(service, player.player_id, "carrot", 12)
-    stock(service, player.player_id, "maple_wood", 10)
-    service.deliver_tribute("portal-sub", "first_gate", "first_gate_carrot", 12)
-    service.deliver_tribute("portal-sub", "first_gate", "first_gate_maple_wood", 10)
+    set_level(service, player.player_id, 2)
+    # 出厂内容暂不要求品质，这里临时给一项贡品加上品质门槛来测试底层机制。
+    herb_tribute = next(
+        entry for entry in service.content.portal_map["first_gate"].tributes
+        if entry.id == "first_gate_autumn_herb"
+    )
+    herb_tribute.min_quality = 2
 
     stock(service, player.player_id, "autumn_herb", 8, 1)
     herb = next(
-        entry for entry in portal_of(service.snapshot_by_sub("portal-sub"), "maple_gate")["tributes"]
-        if entry["id"] == "maple_gate_herb"
+        entry for entry in portal_of(service.snapshot_by_sub("portal-sub"), "first_gate")["tributes"]
+        if entry["id"] == "first_gate_autumn_herb"
     )
     assert (herb["min_quality"], herb["min_quality_name"]) == (2, "良品")
     assert (herb["owned"], herb["deliverable"]) == (0, 0)
 
     with pytest.raises(GameError) as error:
-        service.deliver_tribute("portal-sub", "maple_gate", "maple_gate_herb", 1)
+        service.deliver_tribute("portal-sub", "first_gate", "first_gate_autumn_herb", 1)
     assert error.value.code == "resource_insufficient"
     assert "良品以上的秋露草" in error.value.message
 
     stock(service, player.player_id, "autumn_herb", 3, 4)
     stock(service, player.player_id, "autumn_herb", 5, 2)
-    delivered = service.deliver_tribute("portal-sub", "maple_gate", "maple_gate_herb", 6)["result"]
+    delivered = service.deliver_tribute("portal-sub", "first_gate", "first_gate_autumn_herb", 6)["result"]
 
     # 够格的品质里先扣最低的，臻品只用来补差额。
     assert delivered["consumed"] == [
@@ -215,20 +194,26 @@ def test_tribute_quality_floor_filters_the_warehouse(game):
 
 def test_completion_reward_can_hand_out_talent_points(game):
     service, player = game
-    set_level(service, player.player_id, 3)
-    for item_id, quantity, quality in (
-        ("carrot", 12, 0),
-        ("maple_wood", 10, 0),
-        ("maple_plank", 6, 0),
-        ("autumn_herb", 12, 3),
-    ):
-        stock(service, player.player_id, item_id, quantity, quality)
-    service.deliver_tribute("portal-sub", "first_gate", "first_gate_carrot", 12)
-    service.deliver_tribute("portal-sub", "first_gate", "first_gate_maple_wood", 10)
-    service.deliver_tribute("portal-sub", "maple_gate", "maple_gate_plank", 6)
+    set_level(service, player.player_id, 2)
+    # 出厂的全完成奖励暂不发天赋点，这里临时改一下来测试底层机制。
+    service.content.portal_map["first_gate"].completion_reward.talent_points = 1
+    tributes = (
+        ("first_gate_carrot", "carrot", 15),
+        ("first_gate_maple_wood", "maple_wood", 12),
+        ("first_gate_tough_fodder", "tough_fodder", 12),
+        ("first_gate_woodland_mushroom", "woodland_mushroom", 8),
+        ("first_gate_autumn_herb", "autumn_herb", 8),
+        ("first_gate_copper_ore", "red_copper_ore", 8),
+        ("first_gate_amber_beeswax", "amber_beeswax", 3),
+    )
+    for tribute_id, item_id, quantity in tributes:
+        stock(service, player.player_id, item_id, quantity)
+    for tribute_id, _, quantity in tributes[:-1]:
+        service.deliver_tribute("portal-sub", "first_gate", tribute_id, quantity)
 
     before = service.snapshot_by_sub("portal-sub")["talents"]["available_points"]
-    finished = service.deliver_tribute("portal-sub", "maple_gate", "maple_gate_herb", 12)
+    last_id, _, last_quantity = tributes[-1]
+    finished = service.deliver_tribute("portal-sub", "first_gate", last_id, last_quantity)
 
     assert finished["result"]["rewards"][-1]["talent_points"] == 1
     assert service.repository.get(player.player_id).bonus_talent_points == 1
@@ -239,10 +224,10 @@ def test_completion_reward_can_hand_out_talent_points(game):
 def test_reward_can_make_a_partner_join(game):
     service, player = game
     set_level(service, player.player_id, 2)
-    stock(service, player.player_id, "carrot", 12)
+    stock(service, player.player_id, "carrot", 15)
     service.content.portal_map["first_gate"].tributes[0].reward.partner_ids = ["fein"]
 
-    result = service.deliver_tribute("portal-sub", "first_gate", "first_gate_carrot", 12)["result"]
+    result = service.deliver_tribute("portal-sub", "first_gate", "first_gate_carrot", 15)["result"]
 
     assert result["rewards"][0]["partners"] == [{"partner_id": "fein", "name": "绯恩"}]
     assert [entry.partner_id for entry in service.repository.get(player.player_id).owned_partners] == ["fein"]
@@ -317,18 +302,16 @@ def test_quality_floor_needs_an_item_that_can_have_quality():
         )])
 
 
-def test_shipped_portals_form_a_tree_with_a_shared_root():
+def test_shipped_portals_only_have_the_first_gate():
     content = load_content()
-    portals = {portal.id: portal for portal in content.portals}
 
-    roots = [portal.id for portal in content.portals if not portal.prerequisites]
-    assert roots == ["first_gate"]
-    # 不是一条链：根节点带出两条支线，月影之门要两条都完成。
-    assert sorted(portal.id for portal in content.portals if portal.prerequisites == ["first_gate"]) == [
-        "copper_gate",
-        "maple_gate",
-    ]
-    assert sorted(portals["moonlit_gate"].prerequisites) == ["copper_gate", "maple_gate"]
+    assert [portal.id for portal in content.portals] == ["first_gate"]
+    first_gate = content.portal_map["first_gate"]
+    assert first_gate.prerequisites == []
+    assert len(first_gate.tributes) == 7
+    assert all(tribute.min_quality == 0 for tribute in first_gate.tributes)
+    assert all(tribute.reward.maple_flame == 150 for tribute in first_gate.tributes)
+    assert first_gate.completion_reward.guide_leaves == 10
 
 
 def test_shipped_portal_rewards_only_reference_known_partners():

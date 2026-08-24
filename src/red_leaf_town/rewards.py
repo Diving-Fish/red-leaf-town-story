@@ -13,6 +13,8 @@ def serialize_reward(reward: RewardDefinition, content: GameContent, partners: P
         "coins": reward.coins,
         "experience": reward.experience,
         "talent_points": reward.talent_points,
+        "maple_flame": reward.maple_flame,
+        "guide_leaves": reward.guide_leaves,
         "items": [
             {
                 **entry.model_dump(),

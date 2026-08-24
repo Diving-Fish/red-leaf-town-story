@@ -623,6 +623,52 @@
   ],
   "talents": [
     {
+      "id": "farming_roster_1",
+      "industry": "farming",
+      "name": "田间协作",
+      "description": "农业伙伴同时驻场上限增加 1。",
+      "cost": 1,
+      "min_level": 2,
+      "prerequisites": [],
+      "partner_capacity_bonus": 1
+    },
+    {
+      "id": "farming_ability_1",
+      "industry": "farming",
+      "name": "农艺精研",
+      "description": "全局农业能力值增加 10，同时提高生产速度与品质。",
+      "cost": 1,
+      "min_level": 4,
+      "prerequisites": [
+        "farming_roster_1"
+      ],
+      "global_ability_bonus": 10
+    },
+    {
+      "id": "farming_roster_2",
+      "industry": "farming",
+      "name": "农务统筹",
+      "description": "农业伙伴同时驻场上限再增加 1。",
+      "cost": 1,
+      "min_level": 6,
+      "prerequisites": [
+        "farming_ability_1"
+      ],
+      "partner_capacity_bonus": 1
+    },
+    {
+      "id": "farming_ability_2",
+      "industry": "farming",
+      "name": "丰收之道",
+      "description": "全局农业能力值再增加 10，同时提高生产速度与品质。",
+      "cost": 1,
+      "min_level": 8,
+      "prerequisites": [
+        "farming_roster_2"
+      ],
+      "global_ability_bonus": 10
+    },
+    {
       "id": "gathering_roster_1",
       "industry": "gathering",
       "name": "结伴入林",
@@ -633,16 +679,86 @@
       "partner_capacity_bonus": 1
     },
     {
-      "id": "gathering_roster_2",
+      "id": "gathering_ability_1",
       "industry": "gathering",
-      "name": "林野调度",
-      "description": "采集伙伴同时驻场上限再增加 1。",
+      "name": "林野洞察",
+      "description": "全局采集能力值增加 10。",
       "cost": 1,
       "min_level": 4,
       "prerequisites": [
         "gathering_roster_1"
       ],
+      "global_ability_bonus": 10
+    },
+    {
+      "id": "gathering_roster_2",
+      "industry": "gathering",
+      "name": "林野调度",
+      "description": "采集伙伴同时驻场上限再增加 1。",
+      "cost": 1,
+      "min_level": 6,
+      "prerequisites": [
+        "gathering_ability_1"
+      ],
       "partner_capacity_bonus": 1
+    },
+    {
+      "id": "gathering_ability_2",
+      "industry": "gathering",
+      "name": "万物寻踪",
+      "description": "全局采集能力值再增加 10。",
+      "cost": 1,
+      "min_level": 8,
+      "prerequisites": [
+        "gathering_roster_2"
+      ],
+      "global_ability_bonus": 10
+    },
+    {
+      "id": "mining_ability_1",
+      "industry": "mining",
+      "name": "辨岩识脉",
+      "description": "全局矿产能力值增加 10。",
+      "cost": 1,
+      "min_level": 2,
+      "prerequisites": [],
+      "global_ability_bonus": 10
+    },
+    {
+      "id": "mining_roster_1",
+      "industry": "mining",
+      "name": "矿队扩编",
+      "description": "矿产伙伴同时驻场上限增加 1。",
+      "cost": 1,
+      "min_level": 4,
+      "prerequisites": [
+        "mining_ability_1"
+      ],
+      "partner_capacity_bonus": 1
+    },
+    {
+      "id": "mining_ability_2",
+      "industry": "mining",
+      "name": "精工开采",
+      "description": "全局矿产能力值再增加 10。",
+      "cost": 1,
+      "min_level": 6,
+      "prerequisites": [
+        "mining_roster_1"
+      ],
+      "global_ability_bonus": 10
+    },
+    {
+      "id": "mining_ability_3",
+      "industry": "mining",
+      "name": "深脉共鸣",
+      "description": "全局矿产能力值再增加 10。",
+      "cost": 1,
+      "min_level": 8,
+      "prerequisites": [
+        "mining_ability_2"
+      ],
+      "global_ability_bonus": 10
     }
   ],
   "crafting_stations": [
@@ -978,7 +1094,7 @@
     {
       "id": "first_gate",
       "name": "第一传送门",
-      "description": "镇口那道一直没关上的裂口。绯恩说，先喂饱它，它才肯告诉你下一步。",
+      "description": "你从这里出来，结果现在这里又让你提交贡品。",
       "accent": "#8aa6e0",
       "min_level": 2,
       "prerequisites": [],
@@ -986,12 +1102,14 @@
         {
           "id": "first_gate_carrot",
           "item_id": "carrot",
-          "quantity": 12,
+          "quantity": 15,
           "min_quality": 0,
           "reward": {
-            "coins": 70,
-            "experience": 12,
+            "coins": 0,
+            "experience": 0,
             "talent_points": 0,
+            "maple_flame": 150,
+            "guide_leaves": 0,
             "items": [],
             "partner_ids": []
           }
@@ -999,233 +1117,100 @@
         {
           "id": "first_gate_maple_wood",
           "item_id": "maple_wood",
-          "quantity": 10,
-          "min_quality": 0,
-          "reward": {
-            "coins": 80,
-            "experience": 15,
-            "talent_points": 0,
-            "items": [],
-            "partner_ids": []
-          }
-        }
-      ],
-      "completion_reward": {
-        "coins": 220,
-        "experience": 45,
-        "talent_points": 0,
-        "items": [
-          {
-            "item_id": "wheat_seed",
-            "quantity": 5,
-            "quality": 0
-          }
-        ],
-        "partner_ids": []
-      }
-    },
-    {
-      "id": "maple_gate",
-      "name": "枫林之门",
-      "description": "林子深处的那道门只收林子里的东西，而且挑得很。",
-      "accent": "#cf8b4e",
-      "min_level": 3,
-      "prerequisites": [
-        "first_gate"
-      ],
-      "tributes": [
-        {
-          "id": "maple_gate_plank",
-          "item_id": "maple_plank",
-          "quantity": 6,
-          "min_quality": 0,
-          "reward": {
-            "coins": 150,
-            "experience": 25,
-            "talent_points": 0,
-            "items": [],
-            "partner_ids": []
-          }
-        },
-        {
-          "id": "maple_gate_herb",
-          "item_id": "autumn_herb",
           "quantity": 12,
-          "min_quality": 2,
-          "reward": {
-            "coins": 160,
-            "experience": 25,
-            "talent_points": 0,
-            "items": [],
-            "partner_ids": []
-          }
-        }
-      ],
-      "completion_reward": {
-        "coins": 380,
-        "experience": 80,
-        "talent_points": 1,
-        "items": [],
-        "partner_ids": []
-      }
-    },
-    {
-      "id": "copper_gate",
-      "name": "赤岩之门",
-      "description": "山脚下的门埋在矿渣里，敲上去是空的。",
-      "accent": "#c46a4b",
-      "min_level": 3,
-      "prerequisites": [
-        "first_gate"
-      ],
-      "tributes": [
-        {
-          "id": "copper_gate_ore",
-          "item_id": "red_copper_ore",
-          "quantity": 15,
           "min_quality": 0,
           "reward": {
-            "coins": 170,
-            "experience": 25,
+            "coins": 0,
+            "experience": 0,
             "talent_points": 0,
+            "maple_flame": 150,
+            "guide_leaves": 0,
             "items": [],
             "partner_ids": []
           }
         },
         {
-          "id": "copper_gate_wheat",
-          "item_id": "wheat",
-          "quantity": 16,
+          "id": "first_gate_tough_fodder",
+          "item_id": "tough_fodder",
+          "quantity": 12,
           "min_quality": 0,
           "reward": {
-            "coins": 140,
-            "experience": 20,
+            "coins": 0,
+            "experience": 0,
             "talent_points": 0,
+            "maple_flame": 150,
+            "guide_leaves": 0,
             "items": [],
             "partner_ids": []
           }
-        }
-      ],
-      "completion_reward": {
-        "coins": 400,
-        "experience": 85,
-        "talent_points": 0,
-        "items": [
-          {
-            "item_id": "moon_silver_ore",
-            "quantity": 3,
-            "quality": 0
-          }
-        ],
-        "partner_ids": []
-      }
-    },
-    {
-      "id": "hearth_gate",
-      "name": "灶火之门",
-      "description": "它只对做熟的东西有反应。镇上没人知道为什么，绯恩说别问。",
-      "accent": "#d8a24d",
-      "min_level": 4,
-      "prerequisites": [
-        "maple_gate"
-      ],
-      "tributes": [
+        },
         {
-          "id": "hearth_gate_flour",
-          "item_id": "flour",
+          "id": "first_gate_woodland_mushroom",
+          "item_id": "woodland_mushroom",
           "quantity": 8,
           "min_quality": 0,
           "reward": {
-            "coins": 220,
-            "experience": 30,
+            "coins": 0,
+            "experience": 0,
             "talent_points": 0,
+            "maple_flame": 150,
+            "guide_leaves": 0,
             "items": [],
             "partner_ids": []
           }
         },
         {
-          "id": "hearth_gate_pickle",
-          "item_id": "pickled_carrot",
-          "quantity": 6,
+          "id": "first_gate_autumn_herb",
+          "item_id": "autumn_herb",
+          "quantity": 8,
           "min_quality": 0,
           "reward": {
-            "coins": 220,
-            "experience": 30,
+            "coins": 0,
+            "experience": 0,
             "talent_points": 0,
+            "maple_flame": 150,
+            "guide_leaves": 0,
+            "items": [],
+            "partner_ids": []
+          }
+        },
+        {
+          "id": "first_gate_copper_ore",
+          "item_id": "red_copper_ore",
+          "quantity": 8,
+          "min_quality": 0,
+          "reward": {
+            "coins": 0,
+            "experience": 0,
+            "talent_points": 0,
+            "maple_flame": 150,
+            "guide_leaves": 0,
+            "items": [],
+            "partner_ids": []
+          }
+        },
+        {
+          "id": "first_gate_amber_beeswax",
+          "item_id": "amber_beeswax",
+          "quantity": 3,
+          "min_quality": 0,
+          "reward": {
+            "coins": 0,
+            "experience": 0,
+            "talent_points": 0,
+            "maple_flame": 150,
+            "guide_leaves": 0,
             "items": [],
             "partner_ids": []
           }
         }
       ],
       "completion_reward": {
-        "coins": 500,
-        "experience": 120,
+        "coins": 0,
+        "experience": 0,
         "talent_points": 0,
-        "items": [
-          {
-            "item_id": "herbal_salve",
-            "quantity": 3,
-            "quality": 3
-          }
-        ],
-        "partner_ids": []
-      }
-    },
-    {
-      "id": "moonlit_gate",
-      "name": "月影之门",
-      "description": "两道门都开过之后，山谷里才会出现第三道。它比前面几道安静得多。",
-      "accent": "#a48fd6",
-      "min_level": 4,
-      "prerequisites": [
-        "maple_gate",
-        "copper_gate"
-      ],
-      "tributes": [
-        {
-          "id": "moonlit_gate_silver",
-          "item_id": "moon_silver_ore",
-          "quantity": 10,
-          "min_quality": 2,
-          "reward": {
-            "coins": 320,
-            "experience": 45,
-            "talent_points": 0,
-            "items": [],
-            "partner_ids": []
-          }
-        },
-        {
-          "id": "moonlit_gate_salve",
-          "item_id": "herbal_salve",
-          "quantity": 5,
-          "min_quality": 3,
-          "reward": {
-            "coins": 300,
-            "experience": 45,
-            "talent_points": 0,
-            "items": [],
-            "partner_ids": []
-          }
-        },
-        {
-          "id": "moonlit_gate_plank",
-          "item_id": "maple_plank",
-          "quantity": 10,
-          "min_quality": 0,
-          "reward": {
-            "coins": 260,
-            "experience": 40,
-            "talent_points": 0,
-            "items": [],
-            "partner_ids": []
-          }
-        }
-      ],
-      "completion_reward": {
-        "coins": 900,
-        "experience": 220,
-        "talent_points": 1,
+        "maple_flame": 0,
+        "guide_leaves": 10,
         "items": [],
         "partner_ids": []
       }

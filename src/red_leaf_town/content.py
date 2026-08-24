@@ -172,6 +172,7 @@ class TalentNodeDefinition(BaseModel):
     min_level: int = Field(default=1, ge=1)
     prerequisites: list[str] = Field(default_factory=list)
     partner_capacity_bonus: int = Field(default=0, ge=0)
+    global_ability_bonus: int = Field(default=0, ge=0)
 
 
 class RecipeUnlockCondition(BaseModel):
@@ -293,6 +294,8 @@ class RewardDefinition(BaseModel):
     coins: int = Field(default=0, ge=0)
     experience: int = Field(default=0, ge=0)
     talent_points: int = Field(default=0, ge=0)
+    maple_flame: int = Field(default=0, ge=0)
+    guide_leaves: int = Field(default=0, ge=0)
     items: list[RewardItemDefinition] = Field(default_factory=list, max_length=8)
     partner_ids: list[str] = Field(default_factory=list, max_length=4)
 
@@ -304,7 +307,15 @@ class RewardDefinition(BaseModel):
 
     @property
     def empty(self) -> bool:
-        return not (self.coins or self.experience or self.talent_points or self.items or self.partner_ids)
+        return not (
+            self.coins
+            or self.experience
+            or self.talent_points
+            or self.maple_flame
+            or self.guide_leaves
+            or self.items
+            or self.partner_ids
+        )
 
 
 class PortalTributeDefinition(BaseModel):

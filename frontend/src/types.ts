@@ -142,6 +142,8 @@ export interface TaskInputSnapshot {
 
 export interface IndustryRules {
   character_base_ability: number
+  base_character_ability: number
+  global_ability_bonus: number
   partner_capacity: number
   partner_level_cap: number
   collaborator_slots: number
@@ -223,6 +225,7 @@ export interface TalentNode {
   min_level: number
   prerequisites: string[]
   partner_capacity_bonus: number
+  global_ability_bonus: number
   unlocked: boolean
   can_unlock: boolean
   locked_reason: string | null
@@ -253,6 +256,8 @@ export interface Reward {
   coins: number
   experience: number
   talent_points: number
+  maple_flame: number
+  guide_leaves: number
   items: RewardItem[]
   partners: RewardPartner[]
   empty: boolean

@@ -214,7 +214,7 @@ function restartLayoutPreview() {
       mode: layoutMode.value,
       priority: 0,
       repeatable: true,
-      rewards: { coins: 0, experience: 0, talent_points: 0, items: [], partners: [], empty: true },
+      rewards: { coins: 0, experience: 0, talent_points: 0, maple_flame: 0, guide_leaves: 0, items: [], partners: [], empty: true },
       trigger_description: '',
       steps,
     },

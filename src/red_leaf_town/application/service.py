@@ -1096,11 +1096,17 @@ class GameService:
             grant_coins(player, reward.coins)
         if reward.talent_points:
             player.bonus_talent_points += reward.talent_points
+        if reward.maple_flame:
+            player.maple_flame += reward.maple_flame
+        if reward.guide_leaves:
+            player.guide_leaves += reward.guide_leaves
         levels = grant_experience(player, reward.experience, self.content) if reward.experience else []
         return {
             "coins": reward.coins,
             "experience": reward.experience,
             "talent_points": reward.talent_points,
+            "maple_flame": reward.maple_flame,
+            "guide_leaves": reward.guide_leaves,
             "items": granted_items,
             "partners": granted_partners,
             "levels": levels,
@@ -1494,7 +1500,7 @@ class GameService:
                 breakthrough=owned.breakthrough,
                 ability=definition.ability_at(industry, effective_level, owned.stars),
             ))
-        character_ability = rules.character_base_ability
+        character_ability = rules.character_base_ability + self._industry_ability_bonus(player, industry)
         return character_ability + sum(entry.ability for entry in partner_snapshots), character_ability, partner_snapshots
 
     def _build_production_task_snapshot(
@@ -1885,6 +1891,9 @@ class GameService:
             "industry_rules": {
                 industry: {
                     **rules.model_dump(),
+                    "base_character_ability": rules.character_base_ability,
+                    "global_ability_bonus": self._industry_ability_bonus(player, industry),
+                    "character_base_ability": rules.character_base_ability + self._industry_ability_bonus(player, industry),
                     "base_partner_capacity": rules.partner_capacity,
                     "partner_capacity": self._industry_partner_capacity(player, industry),
                 }
@@ -2136,6 +2145,13 @@ class GameService:
             if (node := self.content.talent_map.get(node_id)) is not None and node.industry == industry
         )
         return rules.partner_capacity + bonuses
+
+    def _industry_ability_bonus(self, player: PlayerState, industry: str) -> int:
+        return sum(
+            node.global_ability_bonus
+            for node_id in player.talent_nodes
+            if (node := self.content.talent_map.get(node_id)) is not None and node.industry == industry
+        )
 
     def _available_talent_points(self, player: PlayerState) -> int:
         spent = sum(

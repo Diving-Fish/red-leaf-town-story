@@ -611,18 +611,18 @@ async def test_tribute_delivery_api(client, service):
 
     player = service.repository.get_by_sub("route-sub")
     service.repository.update(player.player_id, lambda state: setattr(state, "experience", 20))
-    service.repository.update(player.player_id, lambda state: add_item(state, "carrot", 12))
+    service.repository.update(player.player_id, lambda state: add_item(state, "carrot", 15))
     authenticate(client)
 
     response = await client.post(
         "/api/red-leaf-town/portals/first_gate/tributes/first_gate_carrot/deliver",
-        json={"quantity": 12},
+        json={"quantity": 15},
     )
     body = await response.get_json()
 
     assert response.status_code == 200
     assert body["data"]["result"]["tribute_completed"] is True
-    assert body["data"]["result"]["rewards"][0]["coins"] == 70
+    assert body["data"]["result"]["rewards"][0]["maple_flame"] == 150
     portal = next(
         entry for entry in body["data"]["state"]["portals"] if entry["portal_id"] == "first_gate"
     )
@@ -634,7 +634,7 @@ async def test_tribute_delivery_api(client, service):
 async def test_tribute_delivery_api_rejects_a_locked_portal(client, service):
     authenticate(client)
     response = await client.post(
-        "/api/red-leaf-town/portals/maple_gate/tributes/maple_gate_plank/deliver",
+        "/api/red-leaf-town/portals/first_gate/tributes/first_gate_carrot/deliver",
         json={"quantity": 1},
     )
     body = await response.get_json()
