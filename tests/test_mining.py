@@ -92,7 +92,7 @@ def test_mining_unlocks_at_level_two_and_player_can_mine_alone(mining_game):
 
 
 def test_optional_mining_partner_contributes_locks_and_reports_assignment(mining_game):
-    service, repository, _, player = mining_game
+    service, repository, clock, player = mining_game
     reach_level_two(repository, player.player_id)
     service.snapshot_by_sub("mining-sub")
 
@@ -110,3 +110,9 @@ def test_optional_mining_partner_contributes_locks_and_reports_assignment(mining
 
     with pytest.raises(GameError, match="暂时不能移动"):
         service.assign_partner("mining-sub", 0, "miner")
+    assert task["final_duration"] == 12 * 60
+    assert task["stamina_cost"] == 1
+    clock.advance(task["final_duration"])
+    service.snapshot_by_sub("mining-sub")
+    collected = service.collect_mining("mining-sub", "copper_foothill")
+    assert collected["result"]["partner_experience"][0]["experience_gained"] == 3

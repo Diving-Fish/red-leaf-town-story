@@ -107,7 +107,7 @@ def test_cancel_crafting_refunds_consumed_inputs_and_stamina(game):
     before_stamina = repository.get(player.player_id).stamina
     started = service.start_crafting("cancel-sub", "town_workbench", "saw_maple_plank")
     assert repository.get(player.player_id).inventory["maple_wood"] == {3: 1}
-    assert repository.get(player.player_id).stamina == before_stamina - 10
+    assert repository.get(player.player_id).stamina == before_stamina - 2
 
     cancelled = service.cancel_task("cancel-sub", "crafting", "town_workbench")
     station = cancelled["state"]["crafting_stations"][0]
@@ -126,7 +126,7 @@ def test_cancel_mining_refunds_stamina(game):
 
     before_stamina = repository.get(player.player_id).stamina
     service.start_mining("cancel-sub", "copper_foothill", "mine_red_copper")
-    assert repository.get(player.player_id).stamina == before_stamina - 5
+    assert repository.get(player.player_id).stamina == before_stamina - 1
 
     cancelled = service.cancel_task("cancel-sub", "mining", "copper_foothill")
     site = cancelled["state"]["mining_sites"][0]

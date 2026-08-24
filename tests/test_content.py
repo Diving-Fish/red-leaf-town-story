@@ -107,6 +107,11 @@ def test_crop_roster_separates_tutorial_and_regular_economy():
 
 def test_crafting_prices_reflect_inputs_and_mining_stamina_value():
     content = load_content()
+    assert content.stamina.restore_seconds == 12 * 60
+    assert [(task.duration_seconds, task.stamina_cost) for task in content.mining_tasks] == [
+        (12 * 60, 1),
+        (24 * 60, 2),
+    ]
     mining_values_per_stamina = []
     for task in content.mining_tasks:
         item = content.item_map[task.produce_item_id]
@@ -131,7 +136,7 @@ def test_crafting_prices_reflect_inputs_and_mining_stamina_value():
         )
         output_value = content.item_map[recipe.produce_item_id].sell_price * recipe.produce_quantity
         added_value_per_stamina = (output_value - input_value) / recipe.stamina_cost
-        assert recipe.stamina_cost == 10
+        assert recipe.stamina_cost == 2
         assert minimum_value <= added_value_per_stamina <= maximum_value
 
 

@@ -381,7 +381,7 @@ def test_old_saves_migrate_to_the_commission_schema():
     }
     player = PlayerState.model_validate(legacy)
 
-    assert player.schema_version == 16
+    assert player.schema_version == PlayerState.model_fields["schema_version"].default
     assert player.commission is None
     assert player.commission_takes == []
 

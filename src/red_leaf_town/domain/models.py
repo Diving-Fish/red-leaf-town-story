@@ -7,6 +7,82 @@ from pydantic import BaseModel, Field, model_validator
 
 
 RENAMED_PARTNER_IDS: dict[str, str] = {"sprite_001": "fein"}
+LEGACY_PARTNER_LEVEL_COST_BASE = 20
+LEGACY_PARTNER_LEVEL_COST_GROWTH = 5
+LEGACY_PARTNER_EXPERIENCE_DIVISOR = 12
+PARTNER_LEVEL_CAPS = (20, 40, 60)
+LEGACY_TASK_STAMINA_COSTS: dict[tuple[str, str], int] = {
+    ("crafting", "saw_maple_plank"): 2,
+    ("crafting", "make_herbal_salve"): 2,
+    ("crafting", "mill_flour"): 2,
+    ("crafting", "pickle_carrot"): 2,
+    ("mining", "mine_red_copper"): 1,
+    ("mining", "mine_moon_silver"): 2,
+}
+LEGACY_MINING_DURATION_CAPS: dict[str, int] = {
+    "mine_red_copper": 12 * 60,
+    "mine_moon_silver": 24 * 60,
+}
+
+
+def _legacy_partner_total_experience(level: int, experience: int = 0) -> int:
+    completed_levels = max(0, int(level) - 1)
+    return (
+        completed_levels * LEGACY_PARTNER_LEVEL_COST_BASE
+        + LEGACY_PARTNER_LEVEL_COST_GROWTH * completed_levels * (completed_levels - 1) // 2
+        + max(0, int(experience))
+    )
+
+
+def _partner_progress_from_experience(total_experience: int, breakthrough: int) -> tuple[int, int]:
+    remaining = max(0, int(total_experience))
+    level = 1
+    level_cap = PARTNER_LEVEL_CAPS[max(0, min(2, int(breakthrough)))]
+    while level < level_cap:
+        cost = LEGACY_PARTNER_LEVEL_COST_BASE + LEGACY_PARTNER_LEVEL_COST_GROWTH * (level - 1)
+        if remaining < cost:
+            break
+        remaining -= cost
+        level += 1
+    return level, remaining
+
+
+def _migrate_partner_progress(partner: dict) -> None:
+    total = _legacy_partner_total_experience(partner.get("level", 1), partner.get("experience", 0))
+    level, experience = _partner_progress_from_experience(
+        total // LEGACY_PARTNER_EXPERIENCE_DIVISOR,
+        partner.get("breakthrough", 0),
+    )
+    partner["level"] = level
+    partner["experience"] = experience
+
+
+def _migrate_task_snapshot(snapshot: dict) -> None:
+    industry = str(snapshot.get("industry") or "")
+    content_id = str(snapshot.get("content_id") or "")
+    snapshot["stamina_cost"] = LEGACY_TASK_STAMINA_COSTS.get((industry, content_id), 0)
+    snapshot["rule_version"] = 2
+    for partner in snapshot.get("partner_snapshots") or []:
+        if not isinstance(partner, dict):
+            continue
+        level, _ = _partner_progress_from_experience(
+            _legacy_partner_total_experience(partner.get("level", 1)) // LEGACY_PARTNER_EXPERIENCE_DIVISOR,
+            partner.get("breakthrough", 0),
+        )
+        effective_level, _ = _partner_progress_from_experience(
+            _legacy_partner_total_experience(partner.get("effective_level", 1))
+            // LEGACY_PARTNER_EXPERIENCE_DIVISOR,
+            partner.get("breakthrough", 0),
+        )
+        partner["level"] = level
+        partner["effective_level"] = min(level, effective_level)
+    duration_cap = LEGACY_MINING_DURATION_CAPS.get(content_id)
+    if industry == "mining" and duration_cap:
+        final_duration = min(int(snapshot.get("final_duration", duration_cap)), duration_cap)
+        snapshot["base_duration"] = duration_cap
+        snapshot["final_duration"] = final_duration
+        snapshot["minimum_duration"] = min(int(snapshot.get("minimum_duration", 1)), final_duration)
+        snapshot["ready_at"] = int(snapshot.get("started_at", 0)) + final_duration
 
 
 class TaskPartnerSnapshot(BaseModel):
@@ -63,7 +139,7 @@ class TaskQualitySnapshot(BaseModel):
 
 
 class ProductionTaskSnapshot(BaseModel):
-    rule_version: int = Field(default=1, ge=1)
+    rule_version: int = Field(default=2, ge=1)
     industry: str = Field(min_length=1)
     content_id: str = Field(min_length=1)
     production_slot_id: str = Field(min_length=1)
@@ -80,6 +156,7 @@ class ProductionTaskSnapshot(BaseModel):
     base_duration: int = Field(gt=0)
     minimum_duration: int = Field(default=1, gt=0)
     final_duration: int = Field(gt=0)
+    stamina_cost: int = Field(default=0, ge=0)
     produce_item_id: str = Field(min_length=1)
     yield_min: int = Field(ge=1)
     yield_max: int = Field(ge=1)
@@ -342,7 +419,7 @@ class CommissionPayout(BaseModel):
 
 
 class PlayerState(BaseModel):
-    schema_version: int = 16
+    schema_version: int = 17
     version: int = 1
     player_id: str
     oauth_sub: str
@@ -378,7 +455,7 @@ class PlayerState(BaseModel):
     def migrate_schema(cls, value):
         if not isinstance(value, dict):
             return value
-        migrated = dict(value)
+        migrated = deepcopy(value)
         schema_version = int(migrated.get("schema_version", 1))
         if schema_version < 3:
             legacy_partners = migrated.pop("owned_spirits", None)
@@ -451,7 +528,18 @@ class PlayerState(BaseModel):
         if schema_version < 16:
             migrated.setdefault("commission", None)
             migrated.setdefault("commission_takes", [])
-        migrated["schema_version"] = 16
+        if schema_version < 17:
+            for partner in migrated.get("owned_partners") or []:
+                if isinstance(partner, dict):
+                    _migrate_partner_progress(partner)
+            for key in ("plots", "gathering_sites", "crafting_stations", "mining_sites"):
+                for production_slot in migrated.get(key) or []:
+                    if not isinstance(production_slot, dict):
+                        continue
+                    snapshot = production_slot.get("task_snapshot")
+                    if isinstance(snapshot, dict):
+                        _migrate_task_snapshot(snapshot)
+        migrated["schema_version"] = 17
         return migrated
 
     @model_validator(mode="after")

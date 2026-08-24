@@ -8,7 +8,7 @@
     "initial_inventory": {}
   },
   "stamina": {
-    "restore_seconds": 180
+    "restore_seconds": 720
   },
   "quality": {
     "grades": [
@@ -785,7 +785,7 @@
       "produce_quantity": 1,
       "duration_seconds": 60,
       "time_difficulty": 100,
-      "stamina_cost": 10,
+      "stamina_cost": 2,
       "collect_xp": 6,
       "quality": {
         "thresholds": [
@@ -819,7 +819,7 @@
       "produce_quantity": 1,
       "duration_seconds": 90,
       "time_difficulty": 125,
-      "stamina_cost": 10,
+      "stamina_cost": 2,
       "collect_xp": 8,
       "quality": {
         "thresholds": [
@@ -853,7 +853,7 @@
       "produce_quantity": 1,
       "duration_seconds": 75,
       "time_difficulty": 115,
-      "stamina_cost": 10,
+      "stamina_cost": 2,
       "collect_xp": 7,
       "quality": {
         "thresholds": [
@@ -887,7 +887,7 @@
       "produce_quantity": 1,
       "duration_seconds": 120,
       "time_difficulty": 145,
-      "stamina_cost": 10,
+      "stamina_cost": 2,
       "collect_xp": 10,
       "quality": {
         "thresholds": [
@@ -930,12 +930,12 @@
       "site_id": "copper_foothill",
       "name": "开采赤铜矿脉",
       "produce_item_id": "red_copper_ore",
-      "duration_seconds": 900,
+      "duration_seconds": 720,
       "yield_bonus": 1.0,
       "yield_difficulty": 150,
       "yield_min": 3,
       "yield_max": 4,
-      "stamina_cost": 5,
+      "stamina_cost": 1,
       "collect_xp": 18,
       "min_level": 2,
       "quality": {
@@ -955,12 +955,12 @@
       "site_id": "moonstone_depths",
       "name": "勘采月银矿脉",
       "produce_item_id": "moon_silver_ore",
-      "duration_seconds": 1800,
+      "duration_seconds": 1440,
       "yield_bonus": 1.0,
       "yield_difficulty": 200,
       "yield_min": 4,
       "yield_max": 5,
-      "stamina_cost": 10,
+      "stamina_cost": 2,
       "collect_xp": 40,
       "min_level": 4,
       "quality": {
@@ -1081,7 +1081,8 @@
     }
   },
   "partner_growth": {
-    "experience_per_minute": 1,
+    "experience_interval_seconds": 720,
+    "experience_per_stamina": 2,
     "level_cost_base": 20,
     "level_cost_growth": 5,
     "experience_books": {

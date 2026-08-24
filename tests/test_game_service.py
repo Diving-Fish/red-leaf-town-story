@@ -165,6 +165,70 @@ def test_schema_three_plots_migrate_to_partner_assignment_structure():
     assert player.plots[0].task_snapshot is None
 
 
+def test_schema_sixteen_rebalances_partner_progress_and_active_task_snapshots_once():
+    started_at = 1_700_000_000
+    player = PlayerState.model_validate({
+        "schema_version": 16,
+        "player_id": "legacy-partner-experience",
+        "oauth_sub": "legacy-partner-experience-sub",
+        "display_name": "旧伙伴经验居民",
+        "stamina_updated_at": started_at,
+        "created_at": started_at,
+        "updated_at": started_at,
+        "owned_partners": [{
+            "partner_id": "maple_sprite",
+            "level": 12,
+            "experience": 45,
+            "breakthrough": 0,
+            "stars": 4,
+            "acquired_at": started_at,
+        }],
+        "mining_sites": [{
+            "site_id": "copper_foothill",
+            "assigned_partner_ids": ["maple_sprite"],
+            "task_snapshot": {
+                "rule_version": 1,
+                "industry": "mining",
+                "content_id": "mine_red_copper",
+                "production_slot_id": "mining:site:copper_foothill",
+                "started_at": started_at,
+                "ready_at": started_at + 15 * 60,
+                "assigned_partner_ids": ["maple_sprite"],
+                "partner_snapshots": [{
+                    "partner_id": "maple_sprite",
+                    "level": 12,
+                    "effective_level": 12,
+                    "breakthrough": 0,
+                    "ability": 40,
+                }],
+                "character_ability": 0,
+                "total_ability": 40,
+                "time_efficiency": 1,
+                "base_duration": 15 * 60,
+                "final_duration": 15 * 60,
+                "produce_item_id": "red_copper_ore",
+                "yield_min": 3,
+                "yield_max": 4,
+                "harvest_xp": 18,
+            },
+        }],
+    })
+
+    partner = player.owned_partners[0]
+    task = player.mining_sites[0].task_snapshot
+    assert player.schema_version == 17
+    assert (partner.level, partner.experience) == (3, 0)
+    assert (task.partner_snapshots[0].level, task.partner_snapshots[0].effective_level) == (2, 2)
+    assert task.rule_version == 2
+    assert task.stamina_cost == 1
+    assert task.base_duration == task.final_duration == 12 * 60
+    assert task.ready_at == started_at + 12 * 60
+
+    reloaded = PlayerState.model_validate(player.model_dump())
+    assert reloaded.owned_partners[0].model_dump() == partner.model_dump()
+    assert reloaded.mining_sites[0].task_snapshot.model_dump() == task.model_dump()
+
+
 def test_player_save_rejects_duplicate_owned_partners():
     payload = {
         "player_id": "duplicate-player",

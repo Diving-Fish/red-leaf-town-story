@@ -108,7 +108,7 @@ def test_crafting_consumes_lowest_quality_inputs_and_freezes_task(crafting_game)
 
 
 def test_optional_crafting_partner_contributes_and_is_locked(crafting_game):
-    service, repository, _, player = crafting_game
+    service, repository, clock, player = crafting_game
     reach_level(repository, player.player_id, 60)
     service.snapshot_by_sub("craft-sub")
     repository.update(player.player_id, lambda state: add_item(state, "autumn_herb", 2, 1))
@@ -121,3 +121,7 @@ def test_optional_crafting_partner_contributes_and_is_locked(crafting_game):
 
     with pytest.raises(GameError, match="暂时不能移动"):
         service.assign_gathering_partner("craft-sub", "maple_forest", "artisan")
+    clock.advance(task["final_duration"])
+    service.snapshot_by_sub("craft-sub")
+    collected = service.collect_crafting("craft-sub", "town_workbench")
+    assert collected["result"]["partner_experience"][0]["experience_gained"] == 4

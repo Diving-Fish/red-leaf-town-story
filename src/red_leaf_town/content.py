@@ -273,7 +273,8 @@ class GachaEconomyDefinition(BaseModel):
 
 
 class PartnerGrowthDefinition(BaseModel):
-    experience_per_minute: int = Field(gt=0)
+    experience_interval_seconds: int = Field(gt=0)
+    experience_per_stamina: int = Field(gt=0)
     level_cost_base: int = Field(gt=0)
     level_cost_growth: int = Field(ge=0)
     experience_books: dict[str, int] = Field(min_length=1)

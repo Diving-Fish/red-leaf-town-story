@@ -125,6 +125,7 @@ export interface ProductionTaskSnapshot {
   yield_efficiency: number
   base_duration: number
   final_duration: number
+  stamina_cost: number
   produce_item_id: string
   yield_min: number
   yield_max: number

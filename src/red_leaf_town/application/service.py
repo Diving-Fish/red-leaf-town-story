@@ -300,6 +300,7 @@ class GameService:
                 yield_min=headline_output.quantity_min,
                 yield_max=headline_output.quantity_max,
                 harvest_xp=task.collect_xp,
+                stamina_cost=task.stamina_cost,
                 quality=task.quality,
                 output_pool=[TaskOutputSnapshot.model_validate(output.model_dump()) for output in task.outputs],
                 draws=task.draws,
@@ -435,6 +436,7 @@ class GameService:
                 yield_min=recipe.produce_quantity,
                 yield_max=recipe.produce_quantity,
                 harvest_xp=recipe.collect_xp,
+                stamina_cost=recipe.stamina_cost,
                 quality=recipe.quality,
                 consumed_inputs=consumed_inputs,
                 task_item_id=task_item_id,
@@ -567,6 +569,7 @@ class GameService:
                 yield_min=task.yield_min,
                 yield_max=task.yield_max,
                 harvest_xp=task.collect_xp,
+                stamina_cost=task.stamina_cost,
                 quality=task.quality,
                 fixed_duration=True,
                 yield_efficiency=yield_efficiency,
@@ -859,7 +862,7 @@ class GameService:
             # 各生产格目前彼此独立，取消只回滚这一格自身消耗的资源。
             # 如果未来出现"某格效果会影响其他格子"的机制（例如跨格加成、连锁触发），
             # 取消逻辑需要额外处理那些外溢效果，而不能只是清空这一格。
-            stamina_cost = self._task_stamina_cost(industry, task.content_id)
+            stamina_cost = task.stamina_cost
             if stamina_cost:
                 refund_stamina(player, stamina_cost, self.content, now)
             for entry in task.consumed_inputs:
@@ -1808,7 +1811,8 @@ class GameService:
             return []
         amount = max(
             1,
-            floor(task.final_duration / 60) * self.content.partner_growth.experience_per_minute,
+            floor(task.final_duration / self.content.partner_growth.experience_interval_seconds)
+            + task.stamina_cost * self.content.partner_growth.experience_per_stamina,
         )
         records = []
         for snapshot in task.partner_snapshots:
@@ -1858,21 +1862,6 @@ class GameService:
         if industry == "mining":
             return self._mining_site(player, slot_id)
         raise GameError("industry_not_found", "产业不存在", 404)
-
-    def _task_stamina_cost(self, industry: str, content_id: str) -> int:
-        if industry == "farming":
-            crop = self.content.crop_map.get(content_id)
-            return crop.stamina_cost if crop else 0
-        if industry == "gathering":
-            task = self.content.gathering_task_map.get(content_id)
-            return task.stamina_cost if task else 0
-        if industry == "crafting":
-            recipe = self.content.recipe_map.get(content_id)
-            return recipe.stamina_cost if recipe else 0
-        if industry == "mining":
-            task = self.content.mining_task_map.get(content_id)
-            return task.stamina_cost if task else 0
-        return 0
 
     def _settle(self, player: PlayerState, now: int) -> None:
         self._normalize_inventory_quality(player)
@@ -1947,6 +1936,7 @@ class GameService:
             yield_min=crop.yield_min,
             yield_max=crop.yield_max,
             harvest_xp=crop.harvest_xp,
+            stamina_cost=crop.stamina_cost,
             quality=crop.quality,
             consumed_inputs=[TaskInputSnapshot(item_id=crop.seed_item_id, quality=0, quantity=1)],
             task_item_id=task_item_id,
@@ -1999,6 +1989,7 @@ class GameService:
         yield_min: int,
         yield_max: int,
         harvest_xp: int,
+        stamina_cost: int,
         quality,
         minimum_duration: int = 1,
         consumed_inputs: list[TaskInputSnapshot] | None = None,
@@ -2072,6 +2063,7 @@ class GameService:
             base_duration=base_duration,
             minimum_duration=minimum_duration,
             final_duration=final_duration,
+            stamina_cost=stamina_cost,
             produce_item_id=produce_item_id,
             yield_min=effective_yield_min,
             yield_max=effective_yield_max,

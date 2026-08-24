@@ -120,6 +120,13 @@ def test_gathering_requires_partner_and_locks_it_until_ready(gathering_game):
     assert all(1 <= result["quality"] <= 5 for result in first_results)
     collected = service.collect_gathering("gather-sub", "maple_forest")
     assert collected["result"]["drops"] == first_results
+    assert collected["result"]["partner_experience"] == [{
+        "partner_id": "gather_one",
+        "experience_gained": site["task_snapshot"]["final_duration"] // (12 * 60),
+        "previous_level": 1,
+        "level": 2,
+        "level_cap": 20,
+    }]
     inventory = repository.get(player.player_id).inventory
     for result in first_results:
         assert inventory[result["item_id"]][result["quality"]] == result["quantity"]
