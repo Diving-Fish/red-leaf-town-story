@@ -1,0 +1,33 @@
+{
+  "pool_id": "newcomers-1",
+  "title": "新枫初见",
+  "min_level": 2,
+  "max_pulls_per_player": 10,
+  "rarity_probabilities": {
+    "3": 0.7,
+    "4": 0.25,
+    "5": 0.05
+  },
+  "item_probability": 0.0,
+  "first_pulls_without_items": 0,
+  "four_star_guarantee": 10,
+  "five_star_pity": 10,
+  "item_drops": [],
+  "background_asset_id": "",
+  "partner_ids": [
+    "babi",
+    "xiaoha",
+    "aorui_jin",
+    "xixi",
+    "guyu_yu",
+    "xiao_xingyun",
+    "ze_feiyang",
+    "ye_huanan",
+    "nuanyu",
+    "leilei",
+    "sunfeng_liya",
+    "xuanyuan",
+    "xiang_hanyuan",
+    "manlong_2"
+  ]
+}

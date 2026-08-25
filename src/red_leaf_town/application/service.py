@@ -663,10 +663,7 @@ class GameService:
         gacha = self._gacha_pool(pool_id)
         economy = self.content.gacha_economy
         catalog = self.partner_catalog_loader()
-        partners_by_rarity = {
-            rarity: [entry for entry in catalog.partners if entry.rarity == rarity]
-            for rarity in (3, 4, 5)
-        }
+        partners_by_rarity = self._pool_partner_candidates(gacha, catalog)
 
         def mutation(player: PlayerState):
             self._settle(player, now)
@@ -675,6 +672,8 @@ class GameService:
             previous = next((entry for entry in player.gacha_history if entry.request_id == request_id), None)
             if previous:
                 return {**previous.model_dump(), "replayed": True}
+            if not self._pool_is_open(partners_by_rarity):
+                raise GameError("gacha_pool_invalid", "这个招募池暂时无法招募", 500)
             if player.guide_leaves < count:
                 raise GameError("resource_insufficient", "引路枫叶不足")
             progress = player.gacha_progress.get(pool_id)
@@ -1959,6 +1958,24 @@ class GameService:
                 return rarity
         return None
 
+    @staticmethod
+    def _pool_partner_candidates(gacha: GachaDefinition, catalog: PartnerCatalog) -> dict[int, list[PartnerDefinition]]:
+        """招募池的候选伙伴：只收画了一破立绘的，partner_ids 非空时再限定在这份名单里。"""
+        allowed = set(gacha.partner_ids)
+        return {
+            rarity: [
+                entry
+                for entry in catalog.partners
+                if entry.rarity == rarity and entry.recruitable and (not allowed or entry.id in allowed)
+            ]
+            for rarity in (3, 4, 5)
+        }
+
+    @staticmethod
+    def _pool_is_open(candidates: dict[int, list[PartnerDefinition]]) -> bool:
+        """保底会强制抽出 4★ 和 5★，所以三个星级都得有人，池子才算能开。"""
+        return all(candidates[rarity] for rarity in (3, 4, 5))
+
     def _pick_gacha_partner(self, gacha: GachaDefinition, candidates: list[PartnerDefinition], rarity: int) -> PartnerDefinition:
         """五星的 up 池：featured_rate 概率抽中 featured_partner_id，否则在同星级里均匀抽其它角色。"""
         if rarity == 5 and gacha.featured_partner_id:
@@ -2751,8 +2768,8 @@ class GameService:
 
     def _gacha_pools_snapshot(self, player: PlayerState) -> list[dict]:
         catalog = self.partner_catalog_loader()
-        catalog_payload = [
-            {
+        catalog_payload = {
+            definition.id: {
                 "partner_id": definition.id,
                 "name": definition.name,
                 "rarity": definition.rarity,
@@ -2767,12 +2784,17 @@ class GameService:
                 ),
             }
             for definition in catalog.partners
-        ]
+            if definition.recruitable
+        }
         task_items_payload = [entry.model_dump() for entry in self.content.task_items]
         story_assets = self.story_asset_loader().asset_map
         pools = sorted(self.gacha_pool_loader().values(), key=lambda entry: (entry.min_level, entry.pool_id))
         snapshots = []
         for gacha in pools:
+            candidates = self._pool_partner_candidates(gacha, catalog)
+            # 还凑不齐三个星级的池子（比如限定池的立绘还没画完）先不摆出来。
+            if not self._pool_is_open(candidates):
+                continue
             progress = player.gacha_progress.get(gacha.pool_id)
             total_pulls = progress.total_pulls if progress else 0
             four_pity = progress.four_pity if progress else 0
@@ -2782,6 +2804,9 @@ class GameService:
                 if gacha.max_pulls_per_player is not None
                 else None
             )
+            # 限定池抽完就撤下，不再占着招募界面。
+            if remaining_pulls == 0:
+                continue
             background_asset = story_assets.get(gacha.background_asset_id) if gacha.background_asset_id else None
             snapshots.append({
                 "pool_id": gacha.pool_id,
@@ -2801,7 +2826,11 @@ class GameService:
                 "background": background_asset.model_dump() if background_asset else None,
                 "featured_partner_id": gacha.featured_partner_id,
                 "featured_rate": gacha.featured_rate,
-                "catalog": catalog_payload,
+                "catalog": [
+                    catalog_payload[definition.id]
+                    for rarity in (5, 4, 3)
+                    for definition in candidates[rarity]
+                ],
                 "task_items": task_items_payload,
             })
         return snapshots

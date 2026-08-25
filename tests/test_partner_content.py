@@ -134,3 +134,20 @@ def test_python_trait_registry_dispatches_handlers():
     context = {"quality": 3}
     assert execute_partner_traits(["1", code], context) == [code]
     assert context["quality"] == 5
+
+
+def test_recruitable_requires_a_breakthrough_zero_artwork():
+    drafted = PartnerDefinition.model_validate(partner_payload())
+    assert drafted.recruitable is False
+
+    illustrated = PartnerDefinition.model_validate({
+        **partner_payload(),
+        "artworks": [{
+            "breakthrough": 0,
+            "asset_key": "red-leaf-town/partners/maple_sprite/breakthrough-0.webp",
+            "width": 936,
+            "height": 1664,
+            "content_type": "image/webp",
+        }],
+    })
+    assert illustrated.recruitable is True

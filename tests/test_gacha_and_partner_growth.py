@@ -7,9 +7,14 @@ import pytest
 from red_leaf_town.application import GameError, GameService
 from red_leaf_town.content import load_content
 from red_leaf_town.domain.economy import add_item
-from red_leaf_town.gacha_pools import GachaDefinition
+from red_leaf_town.gacha_pools import GachaDefinition, load_gacha_pools
 from red_leaf_town.infrastructure import InMemoryPlayerRepository
-from red_leaf_town.partner_content import load_partner_catalog
+from red_leaf_town.partner_content import (
+    PartnerArtwork,
+    PartnerDefinition,
+    PartnerTendency,
+    load_partner_catalog,
+)
 
 
 class Clock:
@@ -82,11 +87,24 @@ def test_gacha_pool_pity_is_tracked_independently_per_pool(growth_game):
 
     after = service.snapshot_by_sub("growth-sub")
     standard_after = next(pool for pool in after["gacha_pools"] if pool["pool_id"] == "standard-1")
-    beginner_after = next(pool for pool in after["gacha_pools"] if pool["pool_id"] == "beginner-1")
 
     assert standard_after["pulls_until_five_star"] == standard_before["pulls_until_five_star"]
-    assert beginner_after["remaining_pulls"] == 0
     assert standard_after["remaining_pulls"] is None
+    assert not [pool for pool in after["gacha_pools"] if pool["pool_id"] == "beginner-1"]
+
+
+def test_exhausted_limited_pools_disappear_from_the_snapshot(growth_game):
+    service, repository, _, player = growth_game
+    repository.update(player.player_id, lambda state: setattr(state, "guide_leaves", 20))
+
+    before = service.snapshot_by_sub("growth-sub")
+    assert any(pool["pool_id"] == "beginner-1" for pool in before["gacha_pools"])
+
+    service.recruit("growth-sub", 10, "beginner-request-5", "beginner-1")
+
+    after = service.snapshot_by_sub("growth-sub")
+    assert not any(pool["pool_id"] == "beginner-1" for pool in after["gacha_pools"])
+    assert any(pool["pool_id"] == "standard-1" for pool in after["gacha_pools"])
 
 
 def test_unknown_gacha_pool_is_rejected(growth_game):
@@ -129,6 +147,127 @@ def test_gacha_pools_snapshot_carries_background_and_featured_metadata(growth_ga
     assert pools["guqi-up-1"]["featured_partner_id"] == "guqi"
     assert pools["guqi-up-1"]["featured_rate"] == pytest.approx(0.8)
     assert pools["standard-1"]["featured_partner_id"] is None
+
+
+def test_partners_without_a_first_artwork_never_drop_and_stay_out_of_the_pool_catalog(growth_game):
+    service, repository, _, player = growth_game
+    catalog = load_partner_catalog().model_copy(deep=True)
+    drafted_ids = set()
+    for rarity in (3, 4, 5):
+        drafted = PartnerDefinition(
+            id=f"drafted_{rarity}_star",
+            name=f"未完成的{rarity}星",
+            rarity=rarity,
+            tendencies=[PartnerTendency(industry="farming", level_1=36, level_60=223)],
+        )
+        catalog.partners.append(drafted)
+        drafted_ids.add(drafted.id)
+    service.partner_catalog_loader = lambda: catalog
+    repository.update(player.player_id, lambda state: setattr(state, "guide_leaves", 500))
+
+    dropped: set[str] = set()
+    for index in range(50):
+        pulled = service.recruit("growth-sub", 10, f"draft-request-{index}", "standard-1")
+        dropped |= {drop["content_id"] for drop in pulled["result"]["results"] if drop["kind"] == "partner"}
+
+    snapshot = service.snapshot_by_sub("growth-sub")
+    pool = next(entry for entry in snapshot["gacha_pools"] if entry["pool_id"] == "standard-1")
+
+    assert dropped and not dropped & drafted_ids
+    assert not {entry["partner_id"] for entry in pool["catalog"]} & drafted_ids
+    assert all(entry["artwork"] for entry in pool["catalog"])
+
+
+def test_recruitment_reports_a_broken_pool_when_a_rarity_has_no_illustrated_partner(growth_game):
+    service, repository, _, player = growth_game
+    catalog = load_partner_catalog().model_copy(deep=True)
+    for partner in catalog.partners:
+        if partner.rarity == 5:
+            partner.artworks = []
+    service.partner_catalog_loader = lambda: catalog
+    repository.update(player.player_id, lambda state: setattr(state, "guide_leaves", 10))
+
+    with pytest.raises(GameError) as invalid:
+        service.recruit("growth-sub", 10, "no-five-star-artwork", "beginner-1")
+
+    assert invalid.value.code == "gacha_pool_invalid"
+
+
+def illustrate(partner: PartnerDefinition) -> None:
+    partner.artworks = [PartnerArtwork(
+        breakthrough=0,
+        asset_key=f"red-leaf-town/partners/{partner.id}/breakthrough-0-test.webp",
+        width=936,
+        height=1664,
+        content_type="image/webp",
+    )]
+
+
+def test_newcomer_pool_stays_hidden_while_its_partners_have_no_artwork(growth_game):
+    service, repository, _, player = growth_game
+    pool = load_gacha_pools()["newcomers-1"]
+    catalog = load_partner_catalog().model_copy(deep=True)
+    for partner in catalog.partners:
+        if partner.id in set(pool.partner_ids):
+            partner.artworks = []
+    service.partner_catalog_loader = lambda: catalog
+    repository.update(player.player_id, lambda state: setattr(state, "guide_leaves", 10))
+
+    snapshot = service.snapshot_by_sub("growth-sub")
+
+    assert not any(entry["pool_id"] == "newcomers-1" for entry in snapshot["gacha_pools"])
+    assert any(entry["pool_id"] == "standard-1" for entry in snapshot["gacha_pools"])
+
+    with pytest.raises(GameError) as closed:
+        service.recruit("growth-sub", 10, "newcomer-closed", "newcomers-1")
+    assert closed.value.code == "gacha_pool_invalid"
+    assert repository.get(player.player_id).guide_leaves == 10
+
+
+def test_newcomer_pool_draws_only_its_own_partners_and_guarantees_a_five_star(growth_game):
+    service, repository, _, player = growth_game
+    pool = load_gacha_pools()["newcomers-1"]
+    catalog = load_partner_catalog().model_copy(deep=True)
+    for partner in catalog.partners:
+        if partner.id in set(pool.partner_ids):
+            illustrate(partner)
+    service.partner_catalog_loader = lambda: catalog
+    repository.update(player.player_id, lambda state: setattr(state, "guide_leaves", 20))
+
+    listed = next(entry for entry in service.snapshot_by_sub("growth-sub")["gacha_pools"] if entry["pool_id"] == "newcomers-1")
+    assert {entry["partner_id"] for entry in listed["catalog"]} == set(pool.partner_ids)
+    assert listed["remaining_pulls"] == 10
+
+    pulled = service.recruit("growth-sub", 10, "newcomer-request-1", "newcomers-1")
+    results = pulled["result"]["results"]
+
+    assert len(results) == 10
+    assert all(drop["kind"] == "partner" for drop in results)
+    assert {drop["content_id"] for drop in results} <= set(pool.partner_ids)
+    assert any(drop["rarity"] == 5 for drop in results)
+
+    with pytest.raises(GameError) as exhausted:
+        service.recruit("growth-sub", 1, "newcomer-request-2", "newcomers-1")
+    assert exhausted.value.code == "gacha_pool_exhausted"
+    assert not any(
+        entry["pool_id"] == "newcomers-1"
+        for entry in service.snapshot_by_sub("growth-sub")["gacha_pools"]
+    )
+
+
+def test_limited_pool_rejects_a_featured_partner_outside_its_roster():
+    with pytest.raises(ValueError):
+        GachaDefinition(
+            pool_id="bad-limited",
+            title="名单外的 UP",
+            rarity_probabilities={3: 0.7, 4: 0.25, 5: 0.05},
+            item_probability=0,
+            four_star_guarantee=10,
+            five_star_pity=10,
+            partner_ids=["babi", "leilei"],
+            featured_partner_id="guqi",
+            featured_rate=0.5,
+        )
 
 
 def test_duplicates_turn_into_marks_instead_of_duplicate_partners(growth_game):

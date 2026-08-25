@@ -146,6 +146,11 @@ class PartnerDefinition(BaseModel):
     def complete(self) -> bool:
         return {artwork.breakthrough for artwork in self.artworks} == {0, 1, 2}
 
+    @property
+    def recruitable(self) -> bool:
+        """没有一破立绘的伙伴还在草稿阶段，不进招募池，也不出现在池子的常驻名单里。"""
+        return self.artwork_for(0) is not None
+
     def ability_at(self, industry: str, level: int, stars: int | None = None) -> int:
         tendency = next((entry for entry in self.tendencies if entry.industry == industry), None)
         if tendency is None:
