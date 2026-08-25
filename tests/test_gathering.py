@@ -246,6 +246,38 @@ def test_legacy_running_gathering_task_without_pool_still_resolves(gathering_gam
     assert [result["item_id"] for result in results] == ["maple_wood"]
 
 
+def test_maple_wind_whistle_cuts_below_the_minimum_duration(gathering_game):
+    service, repository, clock, player = gathering_game
+    task = service.content.gathering_task_map["collect_maple_wood"]
+    service.assign_gathering_partner("gather-sub", "maple_forest", "gather_one")
+
+    def raise_partner(state):
+        owned = next(entry for entry in state.owned_partners if entry.partner_id == "gather_one")
+        owned.level = 60
+        owned.breakthrough = 2
+
+    repository.update(player.player_id, raise_partner)
+
+    plain = service.start_gathering("gather-sub", "maple_forest", "collect_maple_wood")
+    plain_duration = plain["state"]["gathering_sites"][0]["task_snapshot"]["final_duration"]
+    assert plain_duration == task.minimum_duration_seconds
+    service.cancel_task("gather-sub", "gathering", "maple_forest")
+
+    repository.update(player.player_id, lambda state: state.task_items.update({"maple_wind_whistle": 1}))
+    boosted = service.start_gathering(
+        "gather-sub",
+        "maple_forest",
+        "collect_maple_wood",
+        "maple_wind_whistle",
+    )
+    snapshot = boosted["state"]["gathering_sites"][0]["task_snapshot"]
+
+    assert snapshot["final_duration"] == round(plain_duration * 0.7)
+    assert snapshot["final_duration"] < task.minimum_duration_seconds
+    assert snapshot["minimum_duration"] == snapshot["final_duration"]
+    assert snapshot["applied_effects"][0]["task_item_id"] == "maple_wind_whistle"
+    assert "maple_wind_whistle" not in repository.get(player.player_id).task_items
+
 def test_player_rejects_partner_assigned_across_farm_and_gathering():
     with pytest.raises(ValidationError, match="more than one production slot"):
         PlayerState.model_validate({

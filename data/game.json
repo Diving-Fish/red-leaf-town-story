@@ -995,7 +995,7 @@
     {
       "id": "maple_wind_whistle",
       "name": "枫风哨",
-      "description": "开工时使用，本次任务所需时间缩短。",
+      "description": "开工时使用，本次任务所需时间缩短三成，且无视最短时长限制。",
       "icon": "wind",
       "effect": "duration_multiplier",
       "value": 0.7,

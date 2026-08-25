@@ -11,7 +11,7 @@ import PartnerPicker from '@/components/PartnerPicker.vue'
 import TaskItemSelect from '@/components/TaskItemSelect.vue'
 import { usePartnerRoster } from '@/composables/usePartnerRoster'
 import { formatDuration } from '@/lib/format'
-import { estimateDuration } from '@/lib/production'
+import { estimateDuration, taskItemDurationMultiplier } from '@/lib/production'
 import { useGameStore } from '@/stores/game'
 import type { CropDefinition, PlotState } from '@/types'
 
@@ -42,7 +42,13 @@ function seedCount(crop: CropDefinition) {
 
 function estimatedDuration(crop: CropDefinition) {
   const baseAbility = game.state?.industry_rules.farming?.character_base_ability || 0
-  return estimateDuration(crop.growth_seconds, crop.time_difficulty, baseAbility + ability(assignedPartner.value))
+  return estimateDuration(
+    crop.growth_seconds,
+    crop.time_difficulty,
+    baseAbility + ability(assignedPartner.value),
+    1,
+    taskItemDurationMultiplier(game.state?.task_items, taskItemId.value),
+  )
 }
 
 function selectPartner(partnerId: string | null) {

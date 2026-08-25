@@ -8,7 +8,7 @@ import GameIcon from '@/components/GameIcon.vue'
 import ItemTile from '@/components/ItemTile.vue'
 import TaskItemSelect from '@/components/TaskItemSelect.vue'
 import { formatDuration } from '@/lib/format'
-import { estimateDuration } from '@/lib/production'
+import { estimateDuration, taskItemDurationMultiplier } from '@/lib/production'
 import { useGameStore } from '@/stores/game'
 import type { RecipeState } from '@/types'
 
@@ -22,6 +22,8 @@ const duration = computed(() => estimateDuration(
   props.recipe.duration_seconds,
   props.recipe.time_difficulty,
   props.ability || 0,
+  1,
+  taskItemDurationMultiplier(game.state?.task_items, taskItemId.value),
 ))
 const label = computed(() => {
   if (!props.recipe.unlocked) return '配方未解锁'

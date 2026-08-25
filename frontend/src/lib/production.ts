@@ -150,10 +150,22 @@ export function estimateDuration(
   timeDifficulty: number,
   totalAbility: number,
   minimumDuration = 1,
+  durationMultiplier = 1,
 ): number {
   const denominator = totalAbility + timeDifficulty
   const efficiency = denominator > 0 ? 1 + (2 * totalAbility) / denominator : 1
-  return Math.max(minimumDuration, Math.ceil(baseDuration / efficiency))
+  const duration = Math.max(minimumDuration, Math.ceil(baseDuration / efficiency))
+  /* 与后端一致：缩时道具压在最小时长之后结算 */
+  if (durationMultiplier === 1) return duration
+  return Math.max(1, Math.ceil(duration * durationMultiplier))
+}
+
+export function taskItemDurationMultiplier(
+  taskItems: { id: string; effect: string; value: number }[] | undefined,
+  taskItemId: string,
+): number {
+  const item = (taskItems || []).find((entry) => entry.id === taskItemId)
+  return item && item.effect === 'duration_multiplier' ? item.value : 1
 }
 
 export function estimateDrawCount(

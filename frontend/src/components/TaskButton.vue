@@ -6,7 +6,7 @@ import CostChip from '@/components/CostChip.vue'
 import ItemTile from '@/components/ItemTile.vue'
 import TaskItemSelect from '@/components/TaskItemSelect.vue'
 import { formatDuration } from '@/lib/format'
-import { estimateDrawCount, estimateDuration } from '@/lib/production'
+import { estimateDrawCount, estimateDuration, taskItemDurationMultiplier } from '@/lib/production'
 import { useGameStore } from '@/stores/game'
 import type { GatheringTaskDefinition, MiningTaskDefinition } from '@/types'
 
@@ -34,6 +34,7 @@ const singleOutputTask = computed<MiningTaskDefinition | null>(() => (
 ))
 const drawCount = computed(() => estimateDrawCount(gatheringTask.value?.draws, props.ability || 0))
 const poolWeight = computed(() => (gatheringTask.value?.outputs || []).reduce((total, entry) => total + entry.weight, 0))
+const durationMultiplier = computed(() => taskItemDurationMultiplier(game.state?.task_items, taskItemId.value))
 const duration = computed(() => 'yield_difficulty' in props.task
   ? props.task.duration_seconds
   : estimateDuration(
@@ -41,6 +42,7 @@ const duration = computed(() => 'yield_difficulty' in props.task
       props.task.time_difficulty,
       props.ability || 0,
       'minimum_duration_seconds' in props.task ? props.task.minimum_duration_seconds : 1,
+      durationMultiplier.value,
     ))
 </script>
 

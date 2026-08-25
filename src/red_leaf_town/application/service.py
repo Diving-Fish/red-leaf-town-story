@@ -2231,7 +2231,11 @@ class GameService:
         ] if task_item else []
         time_efficiency = 1 if fixed_duration else 1 + 2 * total_ability / (total_ability + int(time_difficulty))
         duration_multiplier = task_item.value if task_item and task_item.effect == "duration_multiplier" else 1
-        final_duration = max(minimum_duration, ceil(base_duration / time_efficiency * duration_multiplier))
+        final_duration = max(minimum_duration, ceil(base_duration / time_efficiency))
+        if duration_multiplier != 1:
+            # 缩时道具压在最小时长之后结算，踩到时长下限的高能力玩家也能吃到这份折扣
+            final_duration = max(1, ceil(final_duration * duration_multiplier))
+            minimum_duration = min(minimum_duration, final_duration)
         quality_ability = total_ability + round(task_item.value if task_item and task_item.effect == "quality_boost" else 0)
         miracle_unlocked = bool(task_item and task_item.effect == "unlock_miracle")
         miracle_width_multiplier = task_item.value if miracle_unlocked else 1
