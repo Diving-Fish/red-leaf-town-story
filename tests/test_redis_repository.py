@@ -15,6 +15,7 @@ from red_leaf_town.domain import (
     QQIdentity,
 )
 from red_leaf_town.infrastructure import RedisCommissionBoard, RedisPlayerRepository
+from red_leaf_town.partner_content import load_partner_catalog
 from src.data_access.redis import redis_global
 
 
@@ -99,7 +100,11 @@ def test_gathering_assignment_and_task_snapshot_persist(repository):
     assert reloaded.schema_version == PlayerState.model_fields["schema_version"].default
     assert reloaded.gathering_sites[0].assigned_partner_ids == ["fein"]
     assert reloaded.gathering_sites[0].task_snapshot.industry == "gathering"
-    assert reloaded.gathering_sites[0].task_snapshot.quality_parameters.ability == 40
+    # 伙伴倾向数值随平衡改动，这里只校验快照落的是当前配置算出来的能力，不锁死具体数字。
+    fein = load_partner_catalog().partner_map["fein"]
+    assert reloaded.gathering_sites[0].task_snapshot.quality_parameters.ability == fein.ability_at(
+        "gathering", 1, fein.rarity
+    )
     assert reloaded.gathering_sites[0].task_snapshot.minimum_duration == 8 * 3600
     assert [output.item_id for output in reloaded.gathering_sites[0].task_snapshot.output_pool] == [
         "maple_wood",

@@ -10,13 +10,13 @@
       "tendencies": [
         {
           "industry": "aquatic",
-          "level_1": 33,
-          "level_60": 200
+          "level_1": 32,
+          "level_60": 205
         },
         {
           "industry": "crafting",
-          "level_1": 27,
-          "level_60": 167
+          "level_1": 25,
+          "level_60": 158
         },
         {
           "industry": "gathering",
@@ -68,18 +68,18 @@
       "tendencies": [
         {
           "industry": "exploration",
-          "level_1": 33,
-          "level_60": 200
+          "level_1": 32,
+          "level_60": 205
         },
         {
           "industry": "crafting",
-          "level_1": 28,
-          "level_60": 167
+          "level_1": 25,
+          "level_60": 158
         },
         {
           "industry": "livestock",
           "level_1": 22,
-          "level_60": 133
+          "level_60": 134
         }
       ],
       "trait_codes": [],
@@ -126,13 +126,13 @@
       "tendencies": [
         {
           "industry": "farming",
-          "level_1": 33,
-          "level_60": 200
+          "level_1": 32,
+          "level_60": 205
         },
         {
           "industry": "gathering",
-          "level_1": 27,
-          "level_60": 167
+          "level_1": 25,
+          "level_60": 158
         },
         {
           "industry": "livestock",
@@ -184,8 +184,8 @@
       "tendencies": [
         {
           "industry": "aquatic",
-          "level_1": 36,
-          "level_60": 223
+          "level_1": 37,
+          "level_60": 235
         }
       ],
       "trait_codes": [],
@@ -232,7 +232,7 @@
       "tendencies": [
         {
           "industry": "crafting",
-          "level_1": 36,
+          "level_1": 34,
           "level_60": 223
         },
         {
@@ -285,13 +285,13 @@
       "tendencies": [
         {
           "industry": "gathering",
-          "level_1": 33,
-          "level_60": 200
+          "level_1": 32,
+          "level_60": 205
         },
         {
           "industry": "aquatic",
-          "level_1": 27,
-          "level_60": 167
+          "level_1": 25,
+          "level_60": 158
         },
         {
           "industry": "livestock",
@@ -343,13 +343,13 @@
       "tendencies": [
         {
           "industry": "mining",
-          "level_1": 33,
-          "level_60": 200
+          "level_1": 32,
+          "level_60": 205
         },
         {
           "industry": "crafting",
-          "level_1": 27,
-          "level_60": 167
+          "level_1": 25,
+          "level_60": 158
         },
         {
           "industry": "exploration",
@@ -401,8 +401,8 @@
       "tendencies": [
         {
           "industry": "farming",
-          "level_1": 36,
-          "level_60": 222
+          "level_1": 34,
+          "level_60": 223
         },
         {
           "industry": "aquatic",
@@ -454,13 +454,13 @@
       "tendencies": [
         {
           "industry": "gathering",
-          "level_1": 36,
-          "level_60": 223
+          "level_1": 37,
+          "level_60": 235
         },
         {
           "industry": "farming",
-          "level_1": 27,
-          "level_60": 149
+          "level_1": 32,
+          "level_60": 205
         }
       ],
       "trait_codes": [],
@@ -507,12 +507,12 @@
       "tendencies": [
         {
           "industry": "farming",
-          "level_1": 36,
-          "level_60": 222
+          "level_1": 34,
+          "level_60": 223
         },
         {
           "industry": "crafting",
-          "level_1": 28,
+          "level_1": 27,
           "level_60": 168
         }
       ],
@@ -560,13 +560,13 @@
       "tendencies": [
         {
           "industry": "farming",
-          "level_1": 33,
-          "level_60": 201
+          "level_1": 32,
+          "level_60": 205
         },
         {
           "industry": "mining",
-          "level_1": 27,
-          "level_60": 167
+          "level_1": 25,
+          "level_60": 158
         },
         {
           "industry": "gathering",
@@ -618,18 +618,18 @@
       "tendencies": [
         {
           "industry": "exploration",
-          "level_1": 33,
-          "level_60": 200
+          "level_1": 32,
+          "level_60": 205
         },
         {
           "industry": "mining",
-          "level_1": 28,
-          "level_60": 167
+          "level_1": 25,
+          "level_60": 158
         },
         {
           "industry": "aquatic",
           "level_1": 22,
-          "level_60": 133
+          "level_60": 134
         }
       ],
       "trait_codes": [],
@@ -676,8 +676,8 @@
       "tendencies": [
         {
           "industry": "mining",
-          "level_1": 36,
-          "level_60": 225
+          "level_1": 34,
+          "level_60": 223
         },
         {
           "industry": "exploration",
@@ -729,7 +729,7 @@
       "tendencies": [
         {
           "industry": "crafting",
-          "level_1": 36,
+          "level_1": 34,
           "level_60": 223
         },
         {
@@ -782,13 +782,13 @@
       "tendencies": [
         {
           "industry": "farming",
-          "level_1": 33,
-          "level_60": 200
+          "level_1": 32,
+          "level_60": 205
         },
         {
           "industry": "aquatic",
-          "level_1": 27,
-          "level_60": 167
+          "level_1": 25,
+          "level_60": 158
         },
         {
           "industry": "gathering",
@@ -840,13 +840,13 @@
       "tendencies": [
         {
           "industry": "exploration",
-          "level_1": 33,
-          "level_60": 200
+          "level_1": 32,
+          "level_60": 205
         },
         {
           "industry": "crafting",
-          "level_1": 27,
-          "level_60": 167
+          "level_1": 25,
+          "level_60": 158
         },
         {
           "industry": "gathering",
@@ -898,7 +898,7 @@
       "tendencies": [
         {
           "industry": "exploration",
-          "level_1": 36,
+          "level_1": 34,
           "level_60": 223
         },
         {
@@ -951,8 +951,8 @@
       "tendencies": [
         {
           "industry": "livestock",
-          "level_1": 36,
-          "level_60": 222
+          "level_1": 34,
+          "level_60": 223
         },
         {
           "industry": "farming",
@@ -1004,18 +1004,18 @@
       "tendencies": [
         {
           "industry": "gathering",
-          "level_1": 33,
-          "level_60": 200
+          "level_1": 32,
+          "level_60": 205
         },
         {
           "industry": "aquatic",
-          "level_1": 28,
-          "level_60": 167
+          "level_1": 25,
+          "level_60": 158
         },
         {
           "industry": "livestock",
           "level_1": 22,
-          "level_60": 133
+          "level_60": 134
         }
       ],
       "trait_codes": [],
@@ -1062,12 +1062,12 @@
       "tendencies": [
         {
           "industry": "farming",
-          "level_1": 36,
-          "level_60": 222
+          "level_1": 34,
+          "level_60": 223
         },
         {
           "industry": "gathering",
-          "level_1": 28,
+          "level_1": 27,
           "level_60": 168
         }
       ],
@@ -1115,8 +1115,8 @@
       "tendencies": [
         {
           "industry": "livestock",
-          "level_1": 36,
-          "level_60": 223
+          "level_1": 37,
+          "level_60": 235
         }
       ],
       "trait_codes": [],
@@ -1163,8 +1163,13 @@
       "tendencies": [
         {
           "industry": "livestock",
-          "level_1": 36,
+          "level_1": 34,
           "level_60": 223
+        },
+        {
+          "industry": "aquatic",
+          "level_1": 27,
+          "level_60": 168
         }
       ],
       "trait_codes": [],
@@ -1211,13 +1216,13 @@
       "tendencies": [
         {
           "industry": "farming",
-          "level_1": 33,
-          "level_60": 200
+          "level_1": 32,
+          "level_60": 205
         },
         {
           "industry": "gathering",
-          "level_1": 27,
-          "level_60": 167
+          "level_1": 25,
+          "level_60": 158
         },
         {
           "industry": "livestock",
@@ -1269,13 +1274,13 @@
       "tendencies": [
         {
           "industry": "gathering",
-          "level_1": 33,
-          "level_60": 200
+          "level_1": 32,
+          "level_60": 205
         },
         {
           "industry": "exploration",
-          "level_1": 27,
-          "level_60": 167
+          "level_1": 25,
+          "level_60": 158
         },
         {
           "industry": "mining",
@@ -1327,8 +1332,8 @@
       "tendencies": [
         {
           "industry": "exploration",
-          "level_1": 36,
-          "level_60": 223
+          "level_1": 37,
+          "level_60": 235
         }
       ],
       "trait_codes": [],
@@ -1375,8 +1380,8 @@
       "tendencies": [
         {
           "industry": "mining",
-          "level_1": 36,
-          "level_60": 223
+          "level_1": 37,
+          "level_60": 235
         }
       ],
       "trait_codes": [],
@@ -1423,8 +1428,8 @@
       "tendencies": [
         {
           "industry": "livestock",
-          "level_1": 36,
-          "level_60": 223
+          "level_1": 37,
+          "level_60": 235
         }
       ],
       "trait_codes": [],
@@ -1471,13 +1476,13 @@
       "tendencies": [
         {
           "industry": "gathering",
-          "level_1": 33,
-          "level_60": 200
+          "level_1": 32,
+          "level_60": 205
         },
         {
           "industry": "livestock",
-          "level_1": 27,
-          "level_60": 167
+          "level_1": 25,
+          "level_60": 158
         },
         {
           "industry": "farming",
@@ -1521,8 +1526,8 @@
       "tendencies": [
         {
           "industry": "exploration",
-          "level_1": 36,
-          "level_60": 223
+          "level_1": 37,
+          "level_60": 235
         }
       ],
       "trait_codes": [],
@@ -1569,7 +1574,7 @@
       "tendencies": [
         {
           "industry": "livestock",
-          "level_1": 36,
+          "level_1": 34,
           "level_60": 223
         },
         {
@@ -1622,18 +1627,18 @@
       "tendencies": [
         {
           "industry": "gathering",
-          "level_1": 33,
-          "level_60": 200
+          "level_1": 32,
+          "level_60": 205
         },
         {
           "industry": "aquatic",
-          "level_1": 28,
-          "level_60": 167
+          "level_1": 25,
+          "level_60": 158
         },
         {
           "industry": "crafting",
           "level_1": 22,
-          "level_60": 133
+          "level_60": 134
         }
       ],
       "trait_codes": [],
@@ -1680,13 +1685,13 @@
       "tendencies": [
         {
           "industry": "livestock",
-          "level_1": 33,
-          "level_60": 200
+          "level_1": 32,
+          "level_60": 205
         },
         {
           "industry": "crafting",
-          "level_1": 27,
-          "level_60": 167
+          "level_1": 25,
+          "level_60": 158
         },
         {
           "industry": "aquatic",
@@ -1738,13 +1743,13 @@
       "tendencies": [
         {
           "industry": "crafting",
-          "level_1": 33,
-          "level_60": 200
+          "level_1": 32,
+          "level_60": 205
         },
         {
           "industry": "exploration",
-          "level_1": 27,
-          "level_60": 167
+          "level_1": 25,
+          "level_60": 158
         },
         {
           "industry": "farming",
@@ -1796,13 +1801,13 @@
       "tendencies": [
         {
           "industry": "farming",
-          "level_1": 33,
-          "level_60": 201
+          "level_1": 32,
+          "level_60": 205
         },
         {
           "industry": "gathering",
-          "level_1": 27,
-          "level_60": 167
+          "level_1": 25,
+          "level_60": 158
         },
         {
           "industry": "livestock",
@@ -1854,13 +1859,13 @@
       "tendencies": [
         {
           "industry": "crafting",
-          "level_1": 33,
-          "level_60": 200
+          "level_1": 32,
+          "level_60": 205
         },
         {
           "industry": "exploration",
-          "level_1": 27,
-          "level_60": 167
+          "level_1": 25,
+          "level_60": 158
         },
         {
           "industry": "livestock",
@@ -1905,7 +1910,7 @@
         {
           "industry": "exploration",
           "level_1": 37,
-          "level_60": 223
+          "level_60": 235
         }
       ],
       "trait_codes": [],
