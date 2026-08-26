@@ -384,3 +384,31 @@ def test_player_rejects_partner_assigned_across_farm_and_gathering():
             "plots": [{"slot": 0, "assigned_partner_ids": ["worker"]}],
             "gathering_sites": [{"site_id": "maple_forest", "assigned_partner_ids": ["worker"]}],
         })
+
+
+def test_a_fishing_companion_is_released_when_stationed_at_a_gathering_site(gathering_game):
+    service, repository, _, player = gathering_game
+    dual = PartnerDefinition.model_validate({
+        "id": "gather_angler",
+        "name": "gather_angler",
+        "rarity": 3,
+        "growth_curve": "linear",
+        "tendencies": [
+            {"industry": "gathering", "level_1": 40, "level_60": 120},
+            {"industry": "aquatic", "level_1": 40, "level_60": 120},
+        ],
+        "avatar_crops": [
+            {"breakthrough": stage, "x": 0, "y": 0, "w": 1, "h": 1}
+            for stage in range(3)
+        ],
+    })
+    service.partner_catalog_loader().partners.append(dual)
+    service.admin_grant_partner(player.player_id, "gather_angler")
+
+    service.assign_fishing_companion("gather-sub", "gather_angler")
+    service.assign_gathering_partner("gather-sub", "maple_forest", "gather_angler")
+
+    saved = repository.get(player.player_id)
+    # 跨产业唯一派驻：上采集点会把陪钓状态让出来，而不是两头都占着。
+    assert saved.fishing.companion_partner_id == ""
+    assert saved.gathering_sites[0].assigned_partner_ids == ["gather_angler"]

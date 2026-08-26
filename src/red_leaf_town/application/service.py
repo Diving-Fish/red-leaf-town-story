@@ -374,6 +374,8 @@ class GameService:
 
             if partner_id:
                 self._clear_partner_assignment(player, partner_id)
+                if player.fishing.companion_partner_id == partner_id:
+                    player.fishing.companion_partner_id = ""
             site.assigned_partner_ids = desired_ids
             if self._industry_assigned_count(player, "gathering") > self._industry_partner_capacity(player, "gathering"):
                 raise GameError("partner_capacity_reached", "当前采集伙伴编制已满", 409)
@@ -508,6 +510,8 @@ class GameService:
 
             if partner_id:
                 self._clear_partner_assignment(player, partner_id)
+                if player.fishing.companion_partner_id == partner_id:
+                    player.fishing.companion_partner_id = ""
             station.assigned_partner_ids = desired_ids
             if self._industry_assigned_count(player, "crafting") > self._industry_partner_capacity(player, "crafting"):
                 raise GameError("partner_capacity_reached", "当前加工伙伴编制已满", 409)
@@ -645,6 +649,8 @@ class GameService:
 
             if partner_id:
                 self._clear_partner_assignment(player, partner_id)
+                if player.fishing.companion_partner_id == partner_id:
+                    player.fishing.companion_partner_id = ""
             site.assigned_partner_ids = desired_ids
             if self._industry_assigned_count(player, "mining") > self._industry_partner_capacity(player, "mining"):
                 raise GameError("partner_capacity_reached", "当前矿产伙伴编制已满", 409)
@@ -2048,6 +2054,8 @@ class GameService:
 
             if partner_id:
                 self._clear_partner_assignment(player, partner_id)
+                if player.fishing.companion_partner_id == partner_id:
+                    player.fishing.companion_partner_id = ""
             plot.assigned_partner_ids = desired_ids
             assigned_count = self._industry_assigned_count(player, "farming")
             if assigned_count > self._industry_partner_capacity(player, "farming"):
