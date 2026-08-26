@@ -173,7 +173,7 @@ def test_schema_nineteen_migration_starts_from_empty_aquatic_state():
         "created_at": started_at,
         "updated_at": started_at,
     })
-    assert player.schema_version == 19
+    assert player.schema_version == 20
     assert player.ponds == []
     assert player.feed_slot.units == 0 and player.feed_slot.quality_score == 0
     assert player.fishing.combo == 0 and player.fishing.pending_big_catch is None

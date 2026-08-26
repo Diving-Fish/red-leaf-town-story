@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { Flame, Leaf, Percent, Sparkles, Stamp } from 'lucide-vue-next'
 
 import ActionButton from '@/components/ActionButton.vue'
 import StateBlock from '@/components/StateBlock.vue'
 import ViewHeader from '@/components/ViewHeader.vue'
+import CrossoverBanner from '@/components/gacha/CrossoverBanner.vue'
 import GachaPoolDetailsDialog from '@/components/gacha/GachaPoolDetailsDialog.vue'
 import GachaPoolSidebar from '@/components/gacha/GachaPoolSidebar.vue'
 import type { GachaPoolSummary } from '@/components/gacha/GachaPoolCard.vue'
@@ -14,7 +15,7 @@ import GachaResultCard from '@/components/gacha/GachaResultCard.vue'
 import type { GachaResultMeta } from '@/components/gacha/GachaResultCard.vue'
 import { useGameStore } from '@/stores/game'
 import { useUiStore } from '@/stores/ui'
-import type { GachaDrop } from '@/types'
+import type { CrossoverCampaign, GachaDrop } from '@/types'
 
 const game = useGameStore()
 const ui = useUiStore()
@@ -22,6 +23,7 @@ const pools = computed(() => game.state?.gacha_pools || [])
 const anyUnlocked = computed(() => pools.value.some((pool) => pool.unlocked))
 const lowestMinLevel = computed(() => pools.value[0]?.min_level ?? 1)
 
+const crossovers = ref<CrossoverCampaign[]>([])
 const results = ref<GachaDrop[]>([])
 const overlayOpen = ref(false)
 const detailsDialogOpen = ref(false)
@@ -87,6 +89,17 @@ function recapMeta(drop: GachaDrop): GachaResultMeta {
   return { name: entry?.name || drop.content_id, rarity: null }
 }
 
+async function loadCrossovers() {
+  const payload = await game.loadCrossoverCampaigns()
+  crossovers.value = payload?.campaigns || []
+}
+
+async function claimCrossover(campaignId: string) {
+  if (await game.claimCrossover(campaignId)) await loadCrossovers()
+}
+
+onMounted(loadCrossovers)
+
 async function pull(count: 1 | 10) {
   const pool = activePool.value
   if (!pool) return
@@ -135,6 +148,13 @@ async function pull(count: 1 | 10) {
     <ViewHeader eyebrow="GUIDING LEAVES" title="异界招募">
       <template #chip><Sparkles :size="18" /> 常驻同行 {{ activePool.catalog.length }} 位</template>
     </ViewHeader>
+
+    <CrossoverBanner
+      v-for="campaign in crossovers"
+      :key="campaign.campaign_id"
+      :campaign="campaign"
+      @claim="claimCrossover"
+    />
 
     <StateBlock
       v-if="!anyUnlocked"

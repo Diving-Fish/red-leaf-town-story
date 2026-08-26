@@ -12,6 +12,8 @@ import type {
   BigCatchResult,
   CastResult,
   CommissionBoard,
+  CrossoverCampaign,
+  CrossoverClaimResult,
   GachaResult,
   GameState,
   MailboxState,
@@ -466,6 +468,30 @@ export const useGameStore = defineStore('game', () => {
     })
   }
 
+  async function loadCrossoverCampaigns() {
+    if (isPending('crossover:list')) return undefined
+    pending.value.add('crossover:list')
+    try {
+      return await api<{ campaigns: CrossoverCampaign[] }>(`${API_ROOT}/crossover`)
+    } catch (caught) {
+      fail(caught)
+      return undefined
+    } finally {
+      pending.value.delete('crossover:list')
+    }
+  }
+
+  async function claimCrossover(campaignId: string) {
+    const result = (await action(`crossover:claim:${campaignId}`, `${API_ROOT}/crossover/${campaignId}/claim`)) as
+      | CrossoverClaimResult
+      | undefined
+    if (result) {
+      const leaves = result.granted.guide_leaves
+      showNotice(leaves ? `联动礼物收下了，引路枫叶 ×${leaves}` : rewardText(result.granted) || '联动礼物收下了')
+    }
+    return result
+  }
+
   function convertMapleFlame(quantity: number) {
     return action(`gacha:convert:${quantity}`, `${API_ROOT}/gacha/convert`, {
       payload: { quantity },
@@ -592,6 +618,8 @@ export const useGameStore = defineStore('game', () => {
     depositFeed,
     dumpFeed,
     convertMapleFlame,
+    loadCrossoverCampaigns,
+    claimCrossover,
     recruit,
     trainPartner,
     starUpPartner,

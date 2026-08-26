@@ -264,6 +264,27 @@ export interface Reward {
   empty: boolean
 }
 
+export interface CrossoverCampaign {
+  campaign_id: string
+  title: string
+  source: string
+  description: string
+  requirement: string
+  home_url: string
+  locked_hint: string
+  reward: Reward
+  eligible: boolean
+  claimed: boolean
+  claimed_at: number | null
+  claimable: boolean
+}
+
+export interface CrossoverClaimResult {
+  campaign_id: string
+  title: string
+  granted: Reward & { levels: number[] }
+}
+
 export type MailScope = 'global' | 'player'
 
 export interface MailSummary {

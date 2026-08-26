@@ -68,6 +68,11 @@ from red_leaf_town.domain.progression import (
 )
 from red_leaf_town.domain.production import build_results, draw_count, pick_weighted
 from red_leaf_town.domain.quality import QUALITY_NAMES, quality_probabilities, roll_quality
+from red_leaf_town.crossover import (
+    CrossoverCampaign,
+    get_crossover_campaign,
+    list_crossover_campaigns,
+)
 from red_leaf_town.gacha_pools import GachaDefinition, load_gacha_pools
 from red_leaf_town.recipe_unlocks import describe_recipe_unlock, evaluate_recipe_unlock
 from red_leaf_town.partner_content import (
@@ -2717,6 +2722,94 @@ class GameService:
             **mail.model_dump(exclude={"attachments"}),
             "attachments": serialize_reward(mail.attachments, self.content, self.partner_catalog_loader()),
             "recipient_name": recipient.display_name if recipient else "",
+        }
+
+    # -------------------------------------------------------------------- 联动活动
+
+    def crossover_campaigns(self, oauth_sub: str) -> dict:
+        """列出全部联动活动，带上这个账号的达成情况和领取情况。
+
+        标了 ``hide_after_claim`` 的活动一旦领过就不再出现——一次性的联动礼物领完即撤。
+        没有可展示的联动活动时返回空列表，前端据此整块隐藏入口。
+        """
+        player = self._require_player(oauth_sub)
+        partners = self.partner_catalog_loader()
+        return {
+            "campaigns": [
+                self._crossover_snapshot(campaign, player, oauth_sub, partners)
+                for campaign in list_crossover_campaigns()
+                if not (campaign.hide_after_claim and player.crossover_claims.get(campaign.campaign_id))
+            ],
+        }
+
+    def claim_crossover(self, oauth_sub: str, campaign_id: str) -> dict:
+        """领取联动奖励。一个 OAuth 账号每个活动只能领一次。
+
+        达成条件在事务外判定（要去问联动那一方），但「已领取」标记和发奖写在同一次
+        ``repository.update`` 里，所以重复点击、并发请求都只会发出一份。
+        """
+        campaign = get_crossover_campaign(campaign_id)
+        if campaign is None:
+            raise GameError("crossover_not_found", "这个联动活动不存在", 404)
+        now = self._now()
+        player = self._require_player(oauth_sub)
+        if player.crossover_claims.get(campaign.campaign_id):
+            raise GameError("crossover_already_claimed", "这份联动奖励已经领过了", 409)
+        if not campaign.is_eligible(oauth_sub):
+            raise GameError("crossover_locked", campaign.locked_hint or "还没有达成领取条件", 409)
+
+        def mutation(state: PlayerState):
+            self._settle(state, now)
+            if state.crossover_claims.get(campaign.campaign_id):
+                raise GameError("crossover_already_claimed", "这份联动奖励已经领过了", 409)
+            state.crossover_claims[campaign.campaign_id] = now
+            return {
+                "campaign_id": campaign.campaign_id,
+                "title": campaign.title,
+                "granted": self._grant_reward(state, campaign.reward, now),
+            }
+
+        state, result = self.repository.update(player.player_id, mutation)
+        return {"result": result, "state": self._snapshot(state, now)}
+
+    def crossover_claim_record(self, oauth_sub: str, campaign_id: str) -> dict:
+        """给联动那一方查的：这个账号在红叶镇有没有存档、这个活动领没领过。
+
+        和 :meth:`crossover_campaigns` 不同，这里**不要求**存档存在——联动方需要能对
+        「还没来过红叶镇」的玩家给出引导，而不是吃一个 404。
+        """
+        player = self.repository.get_by_sub(oauth_sub)
+        if player is None:
+            return {"registered": False, "claimed_at": 0, "display_name": ""}
+        return {
+            "registered": True,
+            "claimed_at": int(player.crossover_claims.get(str(campaign_id or ""), 0)),
+            "display_name": player.display_name,
+        }
+
+    def _crossover_snapshot(
+        self,
+        campaign: CrossoverCampaign,
+        player: PlayerState,
+        oauth_sub: str,
+        partners: PartnerCatalog,
+    ) -> dict:
+        claimed_at = int(player.crossover_claims.get(campaign.campaign_id, 0))
+        eligible = bool(claimed_at) or campaign.is_eligible(oauth_sub)
+        return {
+            "campaign_id": campaign.campaign_id,
+            "title": campaign.title,
+            "source": campaign.source,
+            "description": campaign.description,
+            "requirement": campaign.requirement,
+            "home_url": campaign.home_url,
+            "locked_hint": campaign.locked_hint,
+            "reward": serialize_reward(campaign.reward, self.content, partners),
+            "eligible": eligible,
+            "claimed": bool(claimed_at),
+            "claimed_at": claimed_at or None,
+            "claimable": eligible and not claimed_at,
+            **campaign.extra,
         }
 
     def story_cue(self, oauth_sub: str, cue: str) -> dict:

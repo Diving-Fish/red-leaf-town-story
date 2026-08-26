@@ -1133,6 +1133,18 @@ def create_blueprint(
         result = get_service().claim_mail(subject, mail_id)
         return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
 
+    @blueprint.get("/api/red-leaf-town/crossover")
+    @login_required
+    async def crossover_campaigns(subject: str):
+        result = get_service().crossover_campaigns(subject)
+        return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
+
+    @blueprint.post("/api/red-leaf-town/crossover/<string:campaign_id>/claim")
+    @login_required
+    async def claim_crossover(subject: str, campaign_id: str):
+        result = get_service().claim_crossover(subject, campaign_id)
+        return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
+
     @blueprint.post("/api/red-leaf-town/story/cue")
     @login_required
     async def story_cue(subject: str):

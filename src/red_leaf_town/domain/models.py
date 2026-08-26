@@ -519,7 +519,7 @@ class MailReceiptState(BaseModel):
 
 
 class PlayerState(BaseModel):
-    schema_version: int = 19
+    schema_version: int = 20
     version: int = 1
     player_id: str
     oauth_sub: str
@@ -552,6 +552,9 @@ class PlayerState(BaseModel):
     bonus_talent_points: int = Field(default=0, ge=0)
     gacha_progress: dict[str, GachaPoolProgressState] = Field(default_factory=dict)
     gacha_history: list[GachaRequestRecord] = Field(default_factory=list)
+    # 联动活动的一次性领取记录：campaign_id -> 领取时刻。存在这里而不是别处，是因为
+    # 红叶镇存档和 OAuth 账号一一对应，账号级的「只能领一次」才不会被小号或换角色绕过。
+    crossover_claims: dict[str, int] = Field(default_factory=dict)
     created_at: int
     updated_at: int
 
@@ -652,7 +655,9 @@ class PlayerState(BaseModel):
             migrated.setdefault("feed_slot", {"units": 0, "quality_score": 0})
             migrated.setdefault("fishing", {})
             migrated.setdefault("fish_codex", {})
-        migrated["schema_version"] = 19
+        if schema_version < 20:
+            migrated.setdefault("crossover_claims", {})
+        migrated["schema_version"] = 20
         return migrated
 
     @model_validator(mode="after")
