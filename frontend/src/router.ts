@@ -43,7 +43,6 @@ export default createRouter({
     { path: '/gathering', name: 'gathering', component: GatheringView, meta: { title: '采集' } },
     { path: '/crafting', name: 'crafting', component: CraftingView, meta: { title: '加工' } },
     { path: '/mining', name: 'mining', component: MiningView, meta: { title: '矿产' } },
-    // 水产还在第二里程碑的交付过程里，先只留 URL 入口，不进左侧菜单和 Dashboard。
     {
       path: '/aquatic',
       name: 'aquatic',

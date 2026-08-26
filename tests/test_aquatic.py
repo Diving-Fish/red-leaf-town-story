@@ -512,6 +512,25 @@ def test_fry_grow_up_after_three_cycles():
     assert pond.fry == []
 
 
+def test_settling_over_and_over_does_not_age_the_fry_faster():
+    """回归：_settle 每个请求都跑，同一个周期里结算多少次，鱼苗都只该老那么多。"""
+    service, repository, clock, player = stocked_pond_game()
+    service.stock_pond("aquatic-sub", "pond_1", "crucian", 4)
+    cycle = repository.get(player.player_id).ponds[0].cycle_seconds
+
+    for _ in range(60):
+        clock.advance(10)
+        service.snapshot_by_sub("aquatic-sub")
+    pond = repository.get(player.player_id).ponds[0]
+    assert pond.settle_remainder == 600
+    assert pond.fry[0].cycles_left == pytest.approx(3 - 600 / cycle)
+    assert pond.stock == 0
+
+    clock.advance(3 * cycle - 600)
+    service.snapshot_by_sub("aquatic-sub")
+    assert repository.get(player.player_id).ponds[0].stock == 4
+
+
 def test_each_batch_of_fry_matures_on_its_own_clock():
     service, repository, clock, player = stocked_pond_game()
     service.stock_pond("aquatic-sub", "pond_1", "crucian", 5)

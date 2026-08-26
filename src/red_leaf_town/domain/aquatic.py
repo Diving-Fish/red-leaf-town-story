@@ -174,16 +174,20 @@ def advance_pond(pond: PondState, parameters: PondParameters, seconds: int) -> P
 
     鱼苗的计时是连续的（按周期折算），繁殖与世代加值只在周期边界发生，所以这一段时间要
     切成"补齐当前周期 + 若干整周期 + 尾巴"三部分，三部分的折算周期数之和正好是 seconds / T。
+
+    没跨过周期边界时尾巴是【这一段本身】，不是【本周期已经过去的部分】—— 后者会把同一段
+    时间在每次结算里重复记一遍，而 _settle 是每个请求都跑的。
     """
 
     advance = PondAdvance(fed_seconds=max(0, int(seconds)))
     cycle_seconds = parameters.cycle_seconds
     if cycle_seconds <= 0:
         return advance
-    elapsed = pond.settle_remainder + max(0, int(seconds))
+    seconds = max(0, int(seconds))
+    elapsed = pond.settle_remainder + seconds
     cycles = elapsed // cycle_seconds
     leading = (cycle_seconds - pond.settle_remainder) / cycle_seconds if cycles else 0.0
-    trailing = (elapsed % cycle_seconds) / cycle_seconds
+    trailing = (elapsed % cycle_seconds) / cycle_seconds if cycles else seconds / cycle_seconds
     pond.settle_remainder = elapsed % cycle_seconds
     if pond.empty:
         # 空塘不繁殖，也不该攒着周期等投苗之后一次性爆发。
