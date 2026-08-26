@@ -815,3 +815,81 @@ async def test_admin_mail_send_list_and_withdraw(admin_client, service):
 async def test_admin_mail_requires_token(admin_client):
     assert (await admin_client.get("/api/red-leaf-town/admin/mail")).status_code == 403
     assert (await admin_client.post("/api/red-leaf-town/admin/mail", json={})).status_code == 403
+
+
+@runs
+async def test_fishing_and_feed_slot_api(client, service):
+    authenticate(client)
+    player = service.repository.get_by_sub("route-sub")
+    service.admin_grant_resources(player.player_id, 0, 2000, 0)
+    service.repository.update(player.player_id, lambda state: setattr(state, "stamina", 30))
+
+    cast = await client.post(
+        "/api/red-leaf-town/fishing/spots/town_creek/cast",
+        json={"request_id": "route-cast-1"},
+    )
+    body = (await cast.get_json())["data"]
+    assert cast.status_code == 200
+    assert body["result"]["experience"] == 18
+    assert body["state"]["aquatic"]["combo"]["layers"] == 1
+
+    repeated = await client.post(
+        "/api/red-leaf-town/fishing/spots/town_creek/cast",
+        json={"request_id": "route-cast-1"},
+    )
+    assert (await repeated.get_json())["data"]["result"]["duplicate"] is True
+
+    service.repository.update(player.player_id, lambda state: add_item(state, "meadow_hay", 6, 0))
+    deposited = await client.post(
+        "/api/red-leaf-town/feed-slot/deposit",
+        json={"item_id": "meadow_hay", "quality": 0, "count": 6},
+    )
+    feed_slot = (await deposited.get_json())["data"]["state"]["aquatic"]["feed_slot"]
+    assert deposited.status_code == 200
+    assert feed_slot["units"] == 24
+    assert feed_slot["quality_score"] == 5
+
+    dumped = await client.post("/api/red-leaf-town/feed-slot/dump")
+    assert (await dumped.get_json())["data"]["state"]["aquatic"]["feed_slot"]["units"] == 0
+
+
+@runs
+async def test_pond_api(client, service):
+    authenticate(client)
+    player = service.repository.get_by_sub("route-sub")
+    service.admin_grant_resources(player.player_id, 3000, 2000, 0)
+    service.repository.update(player.player_id, lambda state: add_item(state, "fish_fry", 6, 0))
+
+    built = await client.post("/api/red-leaf-town/ponds/pond_1/build")
+    assert built.status_code == 200
+    assert (await built.get_json())["data"]["result"]["build_cost"] == 3000
+
+    stocked = await client.post(
+        "/api/red-leaf-town/ponds/pond_1/stock",
+        json={"species_id": "crucian", "quantity": 6},
+    )
+    body = (await stocked.get_json())["data"]
+    assert stocked.status_code == 200
+    assert body["state"]["aquatic"]["ponds"][0]["fry_total"] == 6
+    assert body["state"]["aquatic"]["ponds"][0]["stock"] == 0
+
+    empty = await client.post("/api/red-leaf-town/ponds/pond_1/harvest", json={"quantity": 1})
+    assert empty.status_code == 400
+    assert (await empty.get_json())["code"] == "pond_empty"
+
+    def grow_up(state):
+        pond = state.ponds[0]
+        pond.stock = sum(batch.count for batch in pond.fry)
+        pond.fry = []
+
+    service.repository.update(player.player_id, grow_up)
+
+    harvested = await client.post("/api/red-leaf-town/ponds/pond_1/harvest", json={"quantity": 2})
+    harvest_body = (await harvested.get_json())["data"]
+    assert harvested.status_code == 200
+    assert harvest_body["result"]["stock"] == 4
+    assert sum(drop["quantity"] for drop in harvest_body["result"]["drops"]) == 2
+
+    too_many = await client.post("/api/red-leaf-town/ponds/pond_1/harvest", json={"quantity": 99})
+    assert too_many.status_code == 400
+    assert (await too_many.get_json())["code"] == "invalid_quantity"

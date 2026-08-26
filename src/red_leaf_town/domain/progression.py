@@ -2,7 +2,13 @@ from __future__ import annotations
 
 from red_leaf_town.content import GameContent
 
-from .models import CraftingStationState, GatheringSiteState, MiningSiteState, PlayerState, PlotState
+from .models import (
+    CraftingStationState,
+    GatheringSiteState,
+    MiningSiteState,
+    PlayerState,
+    PlotState,
+)
 
 
 def settle_stamina(player: PlayerState, content: GameContent, now: int) -> None:
@@ -52,6 +58,7 @@ def grant_experience(player: PlayerState, amount: int, content: GameContent) -> 
     normalize_gathering_sites(player, content)
     normalize_crafting_stations(player, content)
     normalize_mining_sites(player, content)
+    normalize_ponds(player, content)
     return unlocked_levels
 
 
@@ -86,3 +93,13 @@ def normalize_mining_sites(player: PlayerState, content: GameContent) -> None:
         for definition in content.mining_sites
         if definition.min_level <= player.level
     ]
+
+
+def normalize_ponds(player: PlayerState, content: GameContent) -> None:
+    """鱼塘要花红叶币挖，不随等级白送，所以这里只剔除内容里已经不存在的塘并保持顺序。"""
+
+    order = {definition.id: index for index, definition in enumerate(content.ponds)}
+    player.ponds = sorted(
+        (pond for pond in player.ponds if pond.pond_id in order),
+        key=lambda pond: order[pond.pond_id],
+    )

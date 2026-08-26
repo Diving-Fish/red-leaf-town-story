@@ -36,6 +36,13 @@ class LevelDefinition(BaseModel):
     unlocks: list[str] = Field(default_factory=list)
 
 
+class SlotInputDefinition(BaseModel):
+    """物品作为槽投入物的两个维度：units 是量，score 是单位品质分，都与售价解耦。"""
+
+    units: int = Field(gt=0)
+    score: float = Field(ge=0)
+
+
 class ItemDefinition(BaseModel):
     id: str
     name: str
@@ -43,6 +50,7 @@ class ItemDefinition(BaseModel):
     kind: Literal["seed", "produce", "material", "product", "consumable"]
     sell_price: int = Field(ge=0)
     has_quality: bool = False
+    feed: SlotInputDefinition | None = None
 
 
 class QualityGradeDefinition(BaseModel):
@@ -163,6 +171,14 @@ class GatheringTaskDefinition(BaseModel):
         return max(self.outputs, key=lambda entry: entry.weight)
 
 
+# 特殊效果节点认得的修正键。没登记的键会在内容加载时被拦下，避免写错字静默失效。
+TALENT_MODIFIER_KEYS: dict[str, str] = {
+    "fishing_combo_cap": "聚鱼度层数上限",
+    "pond_generation_cap": "鱼塘世代加值上限",
+    "pond_harvest_quality_floor": "捞鱼保底品质",
+}
+
+
 class TalentNodeDefinition(BaseModel):
     id: str = Field(min_length=1)
     industry: str = Field(min_length=1)
@@ -173,6 +189,14 @@ class TalentNodeDefinition(BaseModel):
     prerequisites: list[str] = Field(default_factory=list)
     partner_capacity_bonus: int = Field(default=0, ge=0)
     global_ability_bonus: int = Field(default=0, ge=0)
+    modifiers: dict[str, float] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def validate_modifiers(self):
+        unknown = sorted(set(self.modifiers) - set(TALENT_MODIFIER_KEYS))
+        if unknown:
+            raise ValueError(f"talent {self.id} declares unknown modifiers: {', '.join(unknown)}")
+        return self
 
 
 class RecipeUnlockCondition(BaseModel):
@@ -238,6 +262,153 @@ class MiningTaskDefinition(BaseModel):
         return self
 
 
+class FishingOutputDefinition(BaseModel):
+    """钓点产出池的一项。rare 的条目会吃聚鱼度加权，codex 的条目会录入鱼类图鉴。
+
+    带 size 区间的条目每次上钩都会摇一个体型并记进图鉴的最大值 —— 鱼有体型，水草和鱼苗没有。
+    """
+
+    item_id: str = Field(min_length=1)
+    weight: float = Field(gt=0)
+    quantity_min: int = Field(default=1, ge=1)
+    quantity_max: int = Field(default=1, ge=1)
+    rare: bool = False
+    codex: bool = False
+    size_min: float = Field(default=0, ge=0)
+    size_max: float = Field(default=0, ge=0)
+
+    @property
+    def has_size(self) -> bool:
+        return self.size_max > 0
+
+    @model_validator(mode="after")
+    def validate_quantity(self):
+        if self.quantity_max < self.quantity_min:
+            raise ValueError("fishing output quantity_max must be >= quantity_min")
+        if self.size_max < self.size_min:
+            raise ValueError("fishing output size_max must be >= size_min")
+        if self.has_size and self.size_min <= 0:
+            raise ValueError("fishing output size_min must be positive when a size range is given")
+        if self.codex and not self.has_size:
+            # 图鉴里的都是鱼，鱼一定有体型；杂物不进图鉴也就不需要体型。
+            raise ValueError("fishing output in the codex must carry a size range")
+        return self
+
+
+class BigCatchDefinition(BaseModel):
+    """大物条目。抽中之后不直接给鱼，而是进入一次搏鱼：追加体力搏一把，或者放弃拿回一条普通鱼。"""
+
+    item_id: str = Field(min_length=1)
+    fallback_item_id: str = Field(min_length=1)
+    weight: float = Field(gt=0)
+    stamina_cost: int = Field(default=3, ge=0)
+    base_chance: float = Field(ge=0, le=1)
+    ability_bonus: float = Field(default=0, ge=0, le=1)
+    difficulty: int = Field(gt=0)
+    min_quality: int = Field(default=3, ge=1, le=5)
+    size_min: float = Field(gt=0)
+    size_max: float = Field(gt=0)
+
+    @model_validator(mode="after")
+    def validate_big_catch(self):
+        if self.size_max < self.size_min:
+            raise ValueError(f"big catch {self.item_id}: size_max must be >= size_min")
+        if self.base_chance + self.ability_bonus > 1:
+            raise ValueError(f"big catch {self.item_id}: success chance can exceed one")
+        return self
+
+    def success_chance(self, ability: int | float) -> float:
+        ability = max(0.0, float(ability))
+        return self.base_chance + self.ability_bonus * ability / (ability + self.difficulty)
+
+
+class FishingSpotDefinition(BaseModel):
+    id: str = Field(min_length=1)
+    name: str = Field(min_length=1)
+    description: str = ""
+    accent: str
+    min_level: int = Field(ge=1)
+    stamina_cost: int = Field(gt=0)
+    cast_xp: int = Field(ge=0)
+    time_difficulty: int = Field(gt=0)
+    draws: GatheringDrawDefinition
+    outputs: list[FishingOutputDefinition] = Field(min_length=2, max_length=8)
+    big_catch: BigCatchDefinition | None = None
+    quality: QualityCurveDefinition
+
+    @model_validator(mode="after")
+    def validate_outputs(self):
+        item_ids = [entry.item_id for entry in self.outputs]
+        if len(item_ids) != len(set(item_ids)):
+            raise ValueError(f"fishing spot {self.id}: output items must be unique")
+        return self
+
+
+class FishingComboDefinition(BaseModel):
+    """聚鱼度：同一钓点连续抛竿累层，换钓点清零，停手一段时间后逐层衰减。"""
+
+    max_layers: int = Field(default=10, ge=1, le=50)
+    draw_bonus_per_layer: float = Field(default=0.1, ge=0, le=1)
+    rare_weight_per_layer: float = Field(default=0.05, ge=0, le=1)
+    idle_grace_seconds: int = Field(default=1800, gt=0)
+    decay_seconds: int = Field(default=600, gt=0)
+
+
+class PondTierDefinition(BaseModel):
+    """塘等级。本批只用 Lv1，但扩建要改的只是数据，模型不动。"""
+
+    level: int = Field(ge=1)
+    capacity: int = Field(gt=0)
+    quality_bonus: float = Field(default=0)
+    feed_per_cycle: float = Field(ge=0)
+
+
+class PondSlotDefinition(BaseModel):
+    id: str = Field(min_length=1)
+    name: str = Field(min_length=1)
+    description: str = ""
+    accent: str
+    min_level: int = Field(ge=1)
+    tier: int = Field(default=1, ge=1)
+    build_cost: int = Field(default=0, ge=0)
+
+
+class PondSpeciesDefinition(BaseModel):
+    id: str = Field(min_length=1)
+    name: str = Field(min_length=1)
+    icon: str = Field(min_length=1)
+    fry_item_id: str = Field(min_length=1)
+    produce_item_id: str = Field(min_length=1)
+    base_cycle_seconds: int = Field(gt=0)
+    time_difficulty: int = Field(gt=0)
+    growth_rate: float = Field(gt=0, le=1)
+    maturation_cycles: float = Field(gt=0)
+    steady_ratio: float = Field(gt=0, le=1)
+    generation_gain: float = Field(ge=0)
+    generation_decay: float = Field(ge=0)
+    generation_cap: float = Field(ge=0)
+    min_level: int = Field(ge=1)
+    quality: QualityCurveDefinition
+
+
+class FeedSlotDefinition(BaseModel):
+    name: str = Field(min_length=1)
+    capacity: int = Field(gt=0)
+    quality_multipliers: list[float] = Field(min_length=5, max_length=5)
+
+    @model_validator(mode="after")
+    def validate_multipliers(self):
+        if any(entry <= 0 for entry in self.quality_multipliers):
+            raise ValueError("feed slot quality multipliers must be positive")
+        return self
+
+    def multiplier(self, quality: int) -> float:
+        """品质影响 score，不影响 units。无品质物品按普通档计。"""
+
+        index = min(5, max(1, int(quality) or 1)) - 1
+        return self.quality_multipliers[index]
+
+
 class TaskItemDefinition(BaseModel):
     id: str = Field(pattern=r"^[a-z][a-z0-9_-]{1,63}$")
     name: str = Field(min_length=1)
@@ -275,6 +446,8 @@ class GachaEconomyDefinition(BaseModel):
 class PartnerGrowthDefinition(BaseModel):
     experience_interval_seconds: int = Field(gt=0)
     experience_per_stamina: int = Field(gt=0)
+    # 鱼塘是资产轴，没有时长也没有体力，所以驻场伙伴按结算掉的周期数拿经验。
+    pond_experience_per_cycle: int = Field(default=0, ge=0)
     level_cost_base: int = Field(gt=0)
     level_cost_growth: int = Field(ge=0)
     experience_books: dict[str, int] = Field(min_length=1)
@@ -317,6 +490,15 @@ class RewardDefinition(BaseModel):
             or self.items
             or self.partner_ids
         )
+
+
+class FishCodexMilestoneDefinition(BaseModel):
+    """鱼类图鉴的完成度档位。收齐若干种鱼给一次性奖励，是钓鱼的长线目标。"""
+
+    id: str = Field(min_length=1)
+    name: str = Field(min_length=1)
+    required: int = Field(ge=1)
+    reward: RewardDefinition = Field(default_factory=RewardDefinition)
 
 
 class PortalTributeDefinition(BaseModel):
@@ -493,6 +675,13 @@ class GameContent(BaseModel):
     recipes: list[RecipeDefinition] = Field(default_factory=list)
     mining_sites: list[MiningSiteDefinition] = Field(default_factory=list)
     mining_tasks: list[MiningTaskDefinition] = Field(default_factory=list)
+    fishing_spots: list[FishingSpotDefinition] = Field(default_factory=list)
+    fishing_combo: FishingComboDefinition = Field(default_factory=FishingComboDefinition)
+    fish_codex_milestones: list[FishCodexMilestoneDefinition] = Field(default_factory=list)
+    pond_tiers: list[PondTierDefinition] = Field(default_factory=list)
+    ponds: list[PondSlotDefinition] = Field(default_factory=list)
+    pond_species: list[PondSpeciesDefinition] = Field(default_factory=list)
+    feed_slot: FeedSlotDefinition | None = None
     task_items: list[TaskItemDefinition] = Field(default_factory=list)
     gacha_economy: GachaEconomyDefinition
     partner_growth: PartnerGrowthDefinition
@@ -516,6 +705,11 @@ class GameContent(BaseModel):
         unique([entry.id for entry in self.recipes], "recipe")
         unique([entry.id for entry in self.mining_sites], "mining site")
         unique([entry.id for entry in self.mining_tasks], "mining task")
+        unique([entry.id for entry in self.fishing_spots], "fishing spot")
+        unique([entry.id for entry in self.fish_codex_milestones], "fish codex milestone")
+        unique([str(entry.level) for entry in self.pond_tiers], "pond tier")
+        unique([entry.id for entry in self.ponds], "pond")
+        unique([entry.id for entry in self.pond_species], "pond species")
         unique([entry.id for entry in self.task_items], "task item")
         unique([entry.id for entry in self.portals], "portal")
         unique([tribute.id for portal in self.portals for tribute in portal.tributes], "portal tribute")
@@ -534,6 +728,9 @@ class GameContent(BaseModel):
             raise ValueError("crafting industry rules are required")
         if "mining" not in self.industries:
             raise ValueError("mining industry rules are required")
+        if self.fishing_spots or self.ponds:
+            if "aquatic" not in self.industries:
+                raise ValueError("aquatic industry rules are required once aquatic content exists")
 
         items = {item.id for item in self.items}
         for crop in self.crops:
@@ -577,8 +774,9 @@ class GameContent(BaseModel):
                 raise ValueError(f"mining task {task.id} references an unknown item")
             if not self.item_map[task.produce_item_id].has_quality:
                 raise ValueError(f"mining task {task.id} output must support quality")
-            if task.duration_seconds != task.stamina_cost * self.stamina.restore_seconds:
-                raise ValueError(f"mining task {task.id} duration must equal stamina recovery time")
+            if task.duration_seconds < task.stamina_cost * self.stamina.restore_seconds:
+                # 采矿是预支这段时间内恢复的体力，可以更慢，但不能凭空造出体力。
+                raise ValueError(f"mining task {task.id} duration cannot undercut stamina recovery time")
         for entry in self.task_items:
             if entry.effect == "instant_finish" and entry.timing != "active":
                 raise ValueError(f"task item {entry.id} must be used on an active task")
@@ -588,12 +786,43 @@ class GameContent(BaseModel):
                 raise ValueError(f"task item {entry.id} references an unknown industry")
         if any(item_id not in items for item_id in self.partner_growth.experience_books):
             raise ValueError("partner growth references an unknown experience book")
+        self._validate_aquatic(items)
         self._validate_portals(items)
         self._validate_commissions()
         for entry in self.shop:
             if entry.item_id not in items:
                 raise ValueError(f"shop {entry.id} references an unknown item")
         return self
+
+    def _validate_aquatic(self, items: set[str]) -> None:
+        for spot in self.fishing_spots:
+            for output in spot.outputs:
+                if output.item_id not in items:
+                    raise ValueError(f"fishing spot {spot.id} references an unknown item")
+            if spot.big_catch is None:
+                continue
+            for item_id in (spot.big_catch.item_id, spot.big_catch.fallback_item_id):
+                if item_id not in items:
+                    raise ValueError(f"fishing spot {spot.id} big catch references an unknown item")
+            if not self.item_map[spot.big_catch.item_id].has_quality:
+                raise ValueError(f"fishing spot {spot.id} big catch item must support quality")
+        for milestone in self.fish_codex_milestones:
+            self._validate_reward(milestone.reward, items, f"fish codex milestone {milestone.id}")
+        tiers = {tier.level for tier in self.pond_tiers}
+        for pond in self.ponds:
+            if pond.tier not in tiers:
+                raise ValueError(f"pond {pond.id} references an unknown tier")
+        for species in self.pond_species:
+            if species.fry_item_id not in items or species.produce_item_id not in items:
+                raise ValueError(f"pond species {species.id} references an unknown item")
+            if self.item_map[species.fry_item_id].has_quality:
+                raise ValueError(f"pond species {species.id} fry must be a quality-free item")
+            if not self.item_map[species.produce_item_id].has_quality:
+                raise ValueError(f"pond species {species.id} output must support quality")
+        if self.ponds and not self.pond_species:
+            raise ValueError("ponds require at least one species to stock")
+        if (self.ponds or self.fishing_spots) and self.feed_slot is None:
+            raise ValueError("aquatic content requires a feed slot definition")
 
     def _validate_portals(self, items: set[str]) -> None:
         portal_ids = {portal.id for portal in self.portals}
@@ -702,6 +931,22 @@ class GameContent(BaseModel):
     @property
     def task_item_map(self) -> dict[str, TaskItemDefinition]:
         return {entry.id: entry for entry in self.task_items}
+
+    @property
+    def fishing_spot_map(self) -> dict[str, FishingSpotDefinition]:
+        return {entry.id: entry for entry in self.fishing_spots}
+
+    @property
+    def pond_map(self) -> dict[str, PondSlotDefinition]:
+        return {entry.id: entry for entry in self.ponds}
+
+    @property
+    def pond_tier_map(self) -> dict[int, PondTierDefinition]:
+        return {entry.level: entry for entry in self.pond_tiers}
+
+    @property
+    def pond_species_map(self) -> dict[str, PondSpeciesDefinition]:
+        return {entry.id: entry for entry in self.pond_species}
 
     @property
     def portal_map(self) -> dict[str, PortalDefinition]:

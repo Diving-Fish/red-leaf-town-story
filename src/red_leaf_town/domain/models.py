@@ -242,6 +242,98 @@ class MiningSiteState(BaseModel):
         return self.task_snapshot is None
 
 
+class SlotState(BaseModel):
+    """饲料槽/肥料槽的状态。quality_score 是存量加权平均，消耗只扣 units、不改分数。"""
+
+    units: float = Field(default=0, ge=0)
+    quality_score: float = Field(default=0, ge=0)
+    updated_at: int = Field(default=0, ge=0)
+
+
+class FryBatchState(BaseModel):
+    """一批还没长成的鱼苗。
+
+    剩余时间记的是【还差几个繁殖周期】而不是到期时间戳：周期本身随水产能力变化，
+    换了更强的伙伴之后，塘里在长的这几批也应该跟着加速；饲料槽空了塘停摆，鱼苗
+    同样停止计时。批次各自独立，先投的先成。
+    """
+
+    count: int = Field(gt=0)
+    cycles_left: float = Field(gt=0)
+
+
+class PondState(BaseModel):
+    """资产轴生产格：没有完成时间，靠 last_settled_at 与参数快照分段推进。"""
+
+    pond_id: str = Field(min_length=1)
+    species_id: str = ""
+    stock: int = Field(default=0, ge=0)
+    fry: list[FryBatchState] = Field(default_factory=list, max_length=64)
+    growth_remainder: float = Field(default=0, ge=0)
+    generation_score: float = Field(default=0, ge=0)
+    settle_remainder: int = Field(default=0, ge=0)
+    last_settled_at: int = Field(default=0, ge=0)
+    ability: int = Field(default=0, ge=0)
+    cycle_seconds: int = Field(default=0, ge=0)
+    stalled: bool = False
+    assigned_partner_ids: list[str] = Field(default_factory=list, max_length=1)
+
+    @property
+    def fry_total(self) -> int:
+        return sum(batch.count for batch in self.fry)
+
+    @property
+    def population(self) -> int:
+        """占塘的总数：鱼苗也要占位置，否则鱼苗池会变成无限仓库。"""
+
+        return self.stock + self.fry_total
+
+    @property
+    def empty(self) -> bool:
+        return not self.species_id or self.population <= 0
+
+
+class PendingBigCatchState(BaseModel):
+    """抽中大物之后悬而未决的一次搏鱼。玩家要么追加体力搏一把，要么放弃拿回普通鱼。"""
+
+    spot_id: str = Field(min_length=1)
+    created_at: int = Field(ge=0)
+
+
+class FishingState(BaseModel):
+    spot_id: str = ""
+    combo: int = Field(default=0, ge=0, le=60)
+    combo_updated_at: int = Field(default=0, ge=0)
+    last_cast_at: int = Field(default=0, ge=0)
+    companion_partner_id: str = ""
+    pending_big_catch: PendingBigCatchState | None = None
+    recent_request_ids: list[str] = Field(default_factory=list, max_length=8)
+
+
+class FishCodexEntry(BaseModel):
+    item_id: str = Field(min_length=1)
+    caught: int = Field(default=1, ge=1)
+    first_caught_at: int = Field(ge=0)
+    max_size: float = Field(default=0, ge=0)
+
+
+class FishCodexState(BaseModel):
+    entries: list[FishCodexEntry] = Field(default_factory=list, max_length=200)
+    claimed_milestones: list[str] = Field(default_factory=list, max_length=32)
+
+    @model_validator(mode="after")
+    def validate_codex(self):
+        item_ids = [entry.item_id for entry in self.entries]
+        if len(item_ids) != len(set(item_ids)):
+            raise ValueError("fish codex cannot record the same species twice")
+        if len(self.claimed_milestones) != len(set(self.claimed_milestones)):
+            raise ValueError("fish codex cannot claim the same milestone twice")
+        return self
+
+    def entry(self, item_id: str) -> FishCodexEntry | None:
+        return next((entry for entry in self.entries if entry.item_id == item_id), None)
+
+
 class OwnedPartnerState(BaseModel):
     partner_id: str = Field(min_length=1)
     level: int = Field(default=1, ge=1, le=60)
@@ -427,7 +519,7 @@ class MailReceiptState(BaseModel):
 
 
 class PlayerState(BaseModel):
-    schema_version: int = 18
+    schema_version: int = 19
     version: int = 1
     player_id: str
     oauth_sub: str
@@ -446,6 +538,10 @@ class PlayerState(BaseModel):
     gathering_sites: list[GatheringSiteState] = Field(default_factory=list)
     crafting_stations: list[CraftingStationState] = Field(default_factory=list)
     mining_sites: list[MiningSiteState] = Field(default_factory=list)
+    ponds: list[PondState] = Field(default_factory=list)
+    feed_slot: SlotState = Field(default_factory=SlotState)
+    fishing: FishingState = Field(default_factory=FishingState)
+    fish_codex: FishCodexState = Field(default_factory=FishCodexState)
     talent_nodes: list[str] = Field(default_factory=list)
     owned_partners: list[OwnedPartnerState] = Field(default_factory=list)
     seen_story_ids: list[str] = Field(default_factory=list)
@@ -550,7 +646,13 @@ class PlayerState(BaseModel):
                         _migrate_task_snapshot(snapshot)
         if schema_version < 18:
             migrated.setdefault("mail_receipts", [])
-        migrated["schema_version"] = 18
+        if schema_version < 19:
+            # 水产上线。两个资产轴字段和饲料槽都从空状态开始，旧存档不补发任何东西。
+            migrated.setdefault("ponds", [])
+            migrated.setdefault("feed_slot", {"units": 0, "quality_score": 0})
+            migrated.setdefault("fishing", {})
+            migrated.setdefault("fish_codex", {})
+        migrated["schema_version"] = 19
         return migrated
 
     @model_validator(mode="after")
@@ -583,9 +685,18 @@ class PlayerState(BaseModel):
             raise ValueError("player cannot take the same commission more than once")
         if self.commission and self.commission.commission_id in set(taken_ids):
             raise ValueError("player cannot take their own commission")
+        pond_ids = [entry.pond_id for entry in self.ponds]
+        if len(pond_ids) != len(set(pond_ids)):
+            raise ValueError("player cannot record the same pond more than once")
         assigned_ids = [
             partner_id
-            for production_slot in [*self.plots, *self.gathering_sites, *self.crafting_stations, *self.mining_sites]
+            for production_slot in [
+                *self.plots,
+                *self.gathering_sites,
+                *self.crafting_stations,
+                *self.mining_sites,
+                *self.ponds,
+            ]
             for partner_id in production_slot.assigned_partner_ids
         ]
         if len(assigned_ids) != len(set(assigned_ids)):
@@ -593,6 +704,13 @@ class PlayerState(BaseModel):
         unknown_ids = set(assigned_ids) - set(partner_ids)
         if unknown_ids:
             raise ValueError("production slots cannot assign partners the player does not own")
+        companion_id = self.fishing.companion_partner_id
+        if companion_id:
+            if companion_id not in set(partner_ids):
+                raise ValueError("fishing companion must be a partner the player owns")
+            # 陪钓不写锁定引用，但跨产业唯一派驻规则照样适用。
+            if companion_id in set(assigned_ids):
+                raise ValueError("a partner stationed at a production slot cannot also come fishing")
         return self
 
 

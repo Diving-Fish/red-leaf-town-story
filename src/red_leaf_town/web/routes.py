@@ -919,6 +919,77 @@ def create_blueprint(
         result = get_service().collect_mining(subject, site_id)
         return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
 
+    @blueprint.put("/api/red-leaf-town/fishing/companion")
+    @login_required
+    async def assign_fishing_companion(subject: str):
+        payload = await request.get_json(silent=True) or {}
+        result = get_service().assign_fishing_companion(subject, str(payload.get("partner_id", "")))
+        return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
+
+    @blueprint.post("/api/red-leaf-town/fishing/spots/<string:spot_id>/cast")
+    @login_required
+    async def cast_line(subject: str, spot_id: str):
+        payload = await request.get_json(silent=True) or {}
+        result = get_service().cast_line(subject, spot_id, str(payload.get("request_id", "")))
+        return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
+
+    @blueprint.post("/api/red-leaf-town/fishing/big-catch")
+    @login_required
+    async def resolve_big_catch(subject: str):
+        payload = await request.get_json(silent=True) or {}
+        result = get_service().resolve_big_catch(subject, str(payload.get("action", "")))
+        return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
+
+    @blueprint.post("/api/red-leaf-town/ponds/<string:pond_id>/build")
+    @login_required
+    async def build_pond(subject: str, pond_id: str):
+        result = get_service().build_pond(subject, pond_id)
+        return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
+
+    @blueprint.put("/api/red-leaf-town/ponds/<string:pond_id>/partner")
+    @login_required
+    async def assign_pond_partner(subject: str, pond_id: str):
+        payload = await request.get_json(silent=True) or {}
+        result = get_service().assign_pond_partner(subject, pond_id, str(payload.get("partner_id", "")))
+        return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
+
+    @blueprint.post("/api/red-leaf-town/ponds/<string:pond_id>/stock")
+    @login_required
+    async def stock_pond(subject: str, pond_id: str):
+        payload = await request.get_json(silent=True) or {}
+        result = get_service().stock_pond(
+            subject,
+            pond_id,
+            str(payload.get("species_id", "")),
+            int(payload.get("quantity", 1)),
+        )
+        return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
+
+    @blueprint.post("/api/red-leaf-town/ponds/<string:pond_id>/harvest")
+    @login_required
+    async def harvest_pond(subject: str, pond_id: str):
+        payload = await request.get_json(silent=True) or {}
+        result = get_service().harvest_pond(subject, pond_id, int(payload.get("quantity", 1)))
+        return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
+
+    @blueprint.post("/api/red-leaf-town/feed-slot/deposit")
+    @login_required
+    async def deposit_feed(subject: str):
+        payload = await request.get_json(silent=True) or {}
+        result = get_service().deposit_feed(
+            subject,
+            str(payload.get("item_id", "")),
+            int(payload.get("quality", 0)),
+            int(payload.get("count", 1)),
+        )
+        return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
+
+    @blueprint.post("/api/red-leaf-town/feed-slot/dump")
+    @login_required
+    async def dump_feed(subject: str):
+        result = get_service().dump_feed(subject)
+        return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
+
     @blueprint.post("/api/red-leaf-town/gacha/convert")
     @login_required
     async def convert_gacha_currency(subject: str):

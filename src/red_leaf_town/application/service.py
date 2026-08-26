@@ -5,6 +5,7 @@ import secrets
 import time
 from collections.abc import Callable
 from math import ceil, floor
+from typing import NamedTuple
 
 from red_leaf_town.content import GameContent, GatheringDrawDefinition, RewardDefinition
 from red_leaf_town.domain import (
@@ -12,6 +13,7 @@ from red_leaf_town.domain import (
     CommissionPayout,
     CommissionState,
     CraftingStationState,
+    FishCodexEntry,
     GachaDropRecord,
     GachaPoolProgressState,
     GachaRequestRecord,
@@ -20,7 +22,9 @@ from red_leaf_town.domain import (
     MailReceiptState,
     MiningSiteState,
     OwnedPartnerState,
+    PendingBigCatchState,
     PlayerState,
+    PondState,
     PortalProgressState,
     PortalTributeProgress,
     ProductionResultSnapshot,
@@ -31,6 +35,16 @@ from red_leaf_town.domain import (
     TaskInputSnapshot,
     TaskOutputSnapshot,
     TaskQualitySnapshot,
+)
+from red_leaf_town.domain.aquatic import (
+    PondParameters,
+    SlotError,
+    add_fry,
+    decayed_combo,
+    deposit_into_slot,
+    pond_cycle_seconds,
+    settle_ponds,
+    slot_runtime_seconds,
 )
 from red_leaf_town.domain.commissions import (
     commission_day,
@@ -48,11 +62,12 @@ from red_leaf_town.domain.progression import (
     normalize_gathering_sites,
     normalize_mining_sites,
     normalize_plot_slots,
+    normalize_ponds,
     refund_stamina,
     settle_stamina,
 )
 from red_leaf_town.domain.production import build_results, draw_count, pick_weighted
-from red_leaf_town.domain.quality import QUALITY_NAMES, quality_probabilities
+from red_leaf_town.domain.quality import QUALITY_NAMES, quality_probabilities, roll_quality
 from red_leaf_town.gacha_pools import GachaDefinition, load_gacha_pools
 from red_leaf_town.recipe_unlocks import describe_recipe_unlock, evaluate_recipe_unlock
 from red_leaf_town.partner_content import (
@@ -73,7 +88,19 @@ from .ports import CommissionBoardRepository, MailRepository, PlayerRepository
 
 
 MAIL_LIST_LIMIT = 60
+# 钓鱼是高频接口且已知有脚本调用，限一个最小间隔，避免重试造成重复发放。
+FISHING_MIN_INTERVAL_SECONDS = 1
+FISHING_MAX_DRAWS = 40
 _UNSEEN = MailReceiptState(mail_id="placeholder")
+
+
+class FishingBatch(NamedTuple):
+    """一次抽取的结果。size 是这一批里最大的那条鱼的体型，0 表示这一项不记体型。"""
+
+    item_id: str
+    quantity: int
+    codex: bool
+    size: float
 
 
 class GameError(Exception):
@@ -636,6 +663,904 @@ class GameService:
 
         player, result = self._update_by_sub(oauth_sub, mutation)
         return {"result": result, "state": self._snapshot(player, now)}
+
+    # ------------------------------------------------------------------ 水产
+
+    def assign_fishing_companion(self, oauth_sub: str, partner_id: str = "") -> dict:
+        """陪钓伙伴。钓鱼是瞬时的，不写锁定引用，玩家随时可换。"""
+        partner_id = str(partner_id or "").strip()
+        now = self._now()
+        catalog = self.partner_catalog_loader()
+
+        def mutation(player: PlayerState):
+            self._settle(player, now)
+            if player.fishing.companion_partner_id == partner_id:
+                return {"partner_id": partner_id or None, "changed": False}
+            if partner_id:
+                owned = next((entry for entry in player.owned_partners if entry.partner_id == partner_id), None)
+                definition = catalog.partner_map.get(partner_id)
+                if owned is None:
+                    raise GameError("partner_not_owned", "你还没有这个伙伴", 404)
+                if definition is None:
+                    raise GameError("partner_not_found", "伙伴配置不存在", 404)
+                if not any(tendency.industry == "aquatic" for tendency in definition.tendencies):
+                    raise GameError("partner_tendency_mismatch", "这个伙伴没有水产倾向", 409)
+                if self._partner_lock_deadlines(player, now).get(partner_id, 0) > now:
+                    raise GameError("partner_locked", "伙伴正在参与进行中的任务，暂时不能陪钓", 409)
+                # 跨产业唯一派驻：驻场在鱼塘或别的生产格的伙伴不能同时陪钓。
+                self._clear_partner_assignment(player, partner_id)
+            player.fishing.companion_partner_id = partner_id
+            return {"partner_id": partner_id or None, "changed": True}
+
+        player, result = self._update_by_sub(oauth_sub, mutation)
+        return {"result": result, "state": self._snapshot(player, now)}
+
+    def cast_line(self, oauth_sub: str, spot_id: str, request_id: str = "") -> dict:
+        """抛一竿。扣体力、掷结果、入库在同一次原子更新里完成，重复的 request_id 不再发放。"""
+        spot = self.content.fishing_spot_map.get(spot_id)
+        if spot is None:
+            raise GameError("fishing_spot_not_found", "这个钓点不存在", 404)
+        combo_rules = self.content.fishing_combo
+        request_id = str(request_id or "").strip()[:64]
+        now = self._now()
+
+        def mutation(player: PlayerState):
+            self._settle(player, now)
+            if player.level < spot.min_level:
+                raise GameError("content_locked", f"达到 {spot.min_level} 级后解锁")
+            fishing = player.fishing
+            if request_id and request_id in fishing.recent_request_ids:
+                return {"spot_id": spot_id, "duplicate": True, "drops": [], "experience": 0}
+            if fishing.pending_big_catch is not None:
+                raise GameError("big_catch_pending", "线还绷着，先处理咬钩的大物")
+            if now - fishing.last_cast_at < FISHING_MIN_INTERVAL_SECONDS and fishing.last_cast_at:
+                raise GameError("fishing_too_fast", "刚抛完一竿，缓一口气", 429)
+
+            combo = self._current_combo(player, spot_id, now)
+            ability = self._aquatic_ability(player, self._fishing_companion_ids(player))
+            draws = self._fishing_draw_count(spot, ability, combo)
+            pool = self._fishing_pool(spot, combo)
+            try:
+                consume_stamina(player, spot.stamina_cost, self.content, now)
+            except ValueError as exc:
+                raise GameError("resource_insufficient", str(exc)) from exc
+
+            probabilities = quality_probabilities(
+                ability,
+                spot.quality.thresholds,
+                spot.quality.width,
+                spot.quality.miracle_probability_cap,
+                spot.quality.miracle_eligible,
+            )
+            batches: list[FishingBatch] = []
+            hooked = False
+            for _ in range(draws):
+                entry, big_catch = self._pick_fishing_entry(pool)
+                if big_catch and not hooked:
+                    hooked = True
+                    continue
+                if big_catch:
+                    # 一竿只处理一条大物，多抽到的按退回的普通鱼算。
+                    fallback = self._fishing_output(spot, spot.big_catch.fallback_item_id)
+                    batches.append(self._roll_batch(fallback, 1) if fallback else FishingBatch(spot.big_catch.fallback_item_id, 1, True, 0))
+                    continue
+                quantity = self.rng.randint(entry.quantity_min, entry.quantity_max)
+                batches.append(self._roll_batch(entry, quantity))
+            drops = self._grant_fishing_batches(player, batches, probabilities, now)
+            codex = self._record_codex(player, batches, now)
+
+            levels = grant_experience(player, spot.cast_xp, self.content)
+            milestones = self._claim_codex_milestones(player, now)
+            partner_experience = self._grant_companion_experience(player, spot.stamina_cost)
+            fishing.spot_id = spot_id
+            fishing.combo = min(self._combo_cap(player), combo + 1)
+            fishing.combo_updated_at = now
+            fishing.last_cast_at = now
+            if request_id:
+                fishing.recent_request_ids = [*fishing.recent_request_ids, request_id][-8:]
+            if hooked:
+                fishing.pending_big_catch = PendingBigCatchState(spot_id=spot_id, created_at=now)
+            return {
+                "spot_id": spot_id,
+                "duplicate": False,
+                "stamina_cost": spot.stamina_cost,
+                "draws": draws,
+                "ability": ability,
+                "combo": fishing.combo,
+                "drops": drops,
+                "experience": spot.cast_xp,
+                "levels": levels,
+                "codex_discoveries": codex,
+                "codex_milestones": milestones,
+                "partner_experience": partner_experience,
+                "big_catch": self._big_catch_snapshot(player, now),
+            }
+
+        player, result = self._update_by_sub(oauth_sub, mutation)
+        return {"result": result, "state": self._snapshot(player, now)}
+
+    def resolve_big_catch(self, oauth_sub: str, action: str) -> dict:
+        """搏鱼：追加体力搏一把，或者直接放弃拿回一条普通鱼。这是演出和图鉴触发，不是决策点。"""
+        action = str(action or "").strip()
+        if action not in ("fight", "release"):
+            raise GameError("invalid_action", "只能选择搏一把或者放弃")
+        now = self._now()
+
+        def mutation(player: PlayerState):
+            self._settle(player, now)
+            pending = player.fishing.pending_big_catch
+            if pending is None:
+                raise GameError("big_catch_missing", "现在没有咬钩的大物", 404)
+            spot = self.content.fishing_spot_map.get(pending.spot_id)
+            if spot is None or spot.big_catch is None:
+                player.fishing.pending_big_catch = None
+                raise GameError("fishing_spot_not_found", "这个钓点的配置已经不存在", 409)
+            big_catch = spot.big_catch
+            ability = self._aquatic_ability(player, self._fishing_companion_ids(player))
+            probabilities = quality_probabilities(
+                ability,
+                spot.quality.thresholds,
+                spot.quality.width,
+                spot.quality.miracle_probability_cap,
+                spot.quality.miracle_eligible,
+            )
+            chance = big_catch.success_chance(ability)
+            spent = 0
+            success = False
+            if action == "fight":
+                try:
+                    consume_stamina(player, big_catch.stamina_cost, self.content, now)
+                except ValueError as exc:
+                    raise GameError("resource_insufficient", str(exc)) from exc
+                spent = big_catch.stamina_cost
+                success = self.rng.random() < chance
+            player.fishing.pending_big_catch = None
+            partner_experience = self._grant_companion_experience(player, spent)
+            if not success:
+                quality = roll_quality(self.rng, probabilities)
+                fallback = self._fishing_output(spot, big_catch.fallback_item_id)
+                fallback_size = self._roll_size(fallback)
+                add_item(player, big_catch.fallback_item_id, 1, quality)
+                self._record_codex_entry(player, big_catch.fallback_item_id, now, size=fallback_size)
+                return {
+                    "action": action,
+                    "success": False,
+                    "chance": chance,
+                    "stamina_cost": spent,
+                    "drops": [self._fishing_drop(big_catch.fallback_item_id, 1, quality, fallback_size)],
+                    "codex_milestones": self._claim_codex_milestones(player, now),
+                    "partner_experience": partner_experience,
+                }
+            quality = max(big_catch.min_quality, roll_quality(self.rng, probabilities))
+            size = round(big_catch.size_min + self.rng.random() * (big_catch.size_max - big_catch.size_min), 1)
+            add_item(player, big_catch.item_id, 1, quality)
+            self._record_codex_entry(player, big_catch.item_id, now, size=size)
+            return {
+                "action": action,
+                "success": True,
+                "chance": chance,
+                "stamina_cost": spent,
+                "size": size,
+                "drops": [self._fishing_drop(big_catch.item_id, 1, quality, size)],
+                "codex_milestones": self._claim_codex_milestones(player, now),
+                "partner_experience": partner_experience,
+            }
+
+        player, result = self._update_by_sub(oauth_sub, mutation)
+        return {"result": result, "state": self._snapshot(player, now)}
+
+    def assign_pond_partner(self, oauth_sub: str, pond_id: str, partner_id: str = "") -> dict:
+        """资产格的伙伴驻场即占编制，但随时可以撤下 —— 因为没有需要保持完整性的进行中任务。"""
+        partner_id = str(partner_id or "").strip()
+        now = self._now()
+        catalog = self.partner_catalog_loader()
+
+        def mutation(player: PlayerState):
+            self._settle(player, now)
+            pond = self._pond(player, pond_id)
+            desired_ids = [partner_id] if partner_id else []
+            if pond.assigned_partner_ids == desired_ids:
+                return {"pond_id": pond_id, "partner_id": partner_id or None, "changed": False}
+            if partner_id:
+                owned = next((entry for entry in player.owned_partners if entry.partner_id == partner_id), None)
+                definition = catalog.partner_map.get(partner_id)
+                if owned is None:
+                    raise GameError("partner_not_owned", "你还没有这个伙伴", 404)
+                if definition is None:
+                    raise GameError("partner_not_found", "伙伴配置不存在", 404)
+                if not any(tendency.industry == "aquatic" for tendency in definition.tendencies):
+                    raise GameError("partner_tendency_mismatch", "这个伙伴没有水产倾向", 409)
+                if self._partner_lock_deadlines(player, now).get(partner_id, 0) > now:
+                    raise GameError("partner_locked", "伙伴正在参与进行中的任务，暂时不能移动", 409)
+                self._clear_partner_assignment(player, partner_id)
+                if player.fishing.companion_partner_id == partner_id:
+                    player.fishing.companion_partner_id = ""
+            pond.assigned_partner_ids = desired_ids
+            if self._industry_assigned_count(player, "aquatic") > self._industry_partner_capacity(player, "aquatic"):
+                raise GameError("partner_capacity_reached", "当前水产伙伴编制已满", 409)
+            # 结算已经在前面用旧能力做完，这里直接写入新的参数快照。
+            pond.ability = self._aquatic_ability(player, pond.assigned_partner_ids)
+            pond.cycle_seconds = self._pond_cycle_seconds(player, pond)
+            return {
+                "pond_id": pond_id,
+                "partner_id": partner_id or None,
+                "changed": True,
+                "ability": pond.ability,
+                "cycle_seconds": pond.cycle_seconds,
+            }
+
+        player, result = self._update_by_sub(oauth_sub, mutation)
+        return {"result": result, "state": self._snapshot(player, now)}
+
+    def build_pond(self, oauth_sub: str, pond_id: str) -> dict:
+        """挖塘。鱼塘是一次性投入的资产，到等级只是解锁资格，还要付红叶币才动土。"""
+        pond_id = str(pond_id or "").strip()
+        definition = self.content.pond_map.get(pond_id)
+        if definition is None:
+            raise GameError("pond_not_found", "没有这口鱼塘", 404)
+        now = self._now()
+
+        def mutation(player: PlayerState):
+            self._settle(player, now)
+            if any(pond.pond_id == pond_id for pond in player.ponds):
+                raise GameError("pond_exists", "这口塘已经挖好了", 409)
+            if player.level < definition.min_level:
+                raise GameError("content_locked", f"达到 {definition.min_level} 级之后才能挖这口塘")
+            if player.coins < definition.build_cost:
+                raise GameError("resource_insufficient", f"挖塘需要 {definition.build_cost} 红叶币")
+            player.coins -= definition.build_cost
+            player.ponds.append(PondState(pond_id=pond_id, last_settled_at=now))
+            normalize_ponds(player, self.content)
+            return {
+                "pond_id": pond_id,
+                "name": definition.name,
+                "build_cost": definition.build_cost,
+                "coins": player.coins,
+            }
+
+        player, result = self._update_by_sub(oauth_sub, mutation)
+        return {"result": result, "state": self._snapshot(player, now)}
+
+    def stock_pond(self, oauth_sub: str, pond_id: str, species_id: str, quantity: int) -> dict:
+        """投苗。空塘投苗即开塘，已有鱼群只能继续投同一个品种。"""
+        quantity = int(quantity)
+        if quantity < 1 or quantity > 999:
+            raise GameError("invalid_quantity", "投苗数量需在 1 到 999 之间")
+        species = self.content.pond_species_map.get(species_id)
+        if species is None:
+            raise GameError("pond_species_not_found", "这个鱼苗品种不存在", 404)
+        now = self._now()
+
+        def mutation(player: PlayerState):
+            self._settle(player, now)
+            pond = self._pond(player, pond_id)
+            if player.level < species.min_level:
+                raise GameError("content_locked", f"达到 {species.min_level} 级后可以养这个品种")
+            if pond.species_id and pond.species_id != species.id:
+                raise GameError("pond_species_mismatch", "塘里已经养着别的鱼，先捞光再换品种", 409)
+            capacity = self._pond_capacity(pond)
+            if pond.population + quantity > capacity:
+                raise GameError("pond_capacity_reached", f"这口塘最多容纳 {capacity} 尾（鱼苗也占位置）")
+            try:
+                remove_item(player, species.fry_item_id, quantity, 0)
+            except EconomyError as exc:
+                raise GameError("resource_insufficient", str(exc)) from exc
+            was_empty = pond.empty
+            pond.species_id = species.id
+            if was_empty:
+                pond.settle_remainder = 0
+                pond.growth_remainder = 0
+            pond.last_settled_at = now
+            pond.ability = self._aquatic_ability(player, pond.assigned_partner_ids)
+            pond.cycle_seconds = self._pond_cycle_seconds(player, pond)
+            # 投苗之后才知道周期，所以入池放在最后：这一批要长满 maturation_cycles 个周期。
+            add_fry(pond, quantity, species.maturation_cycles)
+            return {
+                "pond_id": pond_id,
+                "species_id": species.id,
+                "quantity": quantity,
+                "stock": pond.stock,
+                "fry": pond.fry_total,
+                "capacity": capacity,
+                "cycle_seconds": pond.cycle_seconds,
+                "maturation_seconds": int(species.maturation_cycles * pond.cycle_seconds),
+            }
+
+        player, result = self._update_by_sub(oauth_sub, mutation)
+        return {"result": result, "state": self._snapshot(player, now)}
+
+    def harvest_pond(self, oauth_sub: str, pond_id: str, quantity: int) -> dict:
+        """捞鱼。不消耗体力：鱼塘的成本在鱼苗和饲料槽上，它属于资产轴。"""
+        quantity = int(quantity)
+        if quantity < 1:
+            raise GameError("invalid_quantity", "捞鱼数量必须为正数")
+        now = self._now()
+
+        def mutation(player: PlayerState):
+            self._settle(player, now)
+            pond = self._pond(player, pond_id)
+            species = self.content.pond_species_map.get(pond.species_id)
+            if species is None or pond.stock <= 0:
+                raise GameError("pond_empty", "这口塘里还没有能捞的成鱼")
+            if quantity > pond.stock:
+                raise GameError("invalid_quantity", f"塘里只有 {pond.stock} 尾成鱼，鱼苗还没长成")
+            ability = self._aquatic_ability(player, pond.assigned_partner_ids)
+            quality_ability = (
+                ability
+                + self._pond_tier(pond).quality_bonus
+                + player.feed_slot.quality_score
+                + pond.generation_score
+            )
+            probabilities = quality_probabilities(
+                quality_ability,
+                species.quality.thresholds,
+                species.quality.width,
+                species.quality.miracle_probability_cap,
+                species.quality.miracle_eligible,
+            )
+            qualities = [roll_quality(self.rng, probabilities) for _ in range(quantity)]
+            floor_quality = int(self._talent_modifier(player, "pond_harvest_quality_floor"))
+            if floor_quality:
+                best = max(range(len(qualities)), key=lambda index: qualities[index])
+                qualities[best] = max(qualities[best], min(5, floor_quality))
+            tally: dict[int, int] = {}
+            for quality in qualities:
+                tally[quality] = tally.get(quality, 0) + 1
+            for quality, amount in tally.items():
+                add_item(player, species.produce_item_id, amount, quality)
+            pond.stock -= quantity
+            generation_before = pond.generation_score
+            if pond.empty:
+                # 竭泽而渔：连鱼苗都不剩，塘退回空塘状态，世代加值清零。
+                pond.generation_score = 0
+                pond.growth_remainder = 0
+                pond.settle_remainder = 0
+                pond.species_id = ""
+                pond.stalled = False
+            # 捞到门槛以下不在这里扣分：鱼群不稳定，世代加值会在之后的每个周期里自己回落。
+            pond.last_settled_at = now
+            return {
+                "pond_id": pond_id,
+                "species_id": species.id,
+                "quantity": quantity,
+                "stock": pond.stock,
+                "fry": pond.fry_total,
+                "steady_stock": self._pond_parameters(player, pond).steady_stock,
+                "quality_ability": round(quality_ability, 2),
+                "generation_before": round(generation_before, 2),
+                "generation_score": round(pond.generation_score, 2),
+                "drops": [
+                    self._fishing_drop(species.produce_item_id, amount, quality)
+                    for quality, amount in sorted(tally.items())
+                ],
+            }
+
+        player, result = self._update_by_sub(oauth_sub, mutation)
+        return {"result": result, "state": self._snapshot(player, now)}
+
+    def deposit_feed(self, oauth_sub: str, item_id: str, quality: int, count: int) -> dict:
+        """向饲料槽投料。投料之前必须先结算，否则新料的品质会被追溯到已经过去的那段时间。"""
+        item_id = str(item_id or "").strip()
+        quality = int(quality or 0)
+        count = int(count)
+        if count < 1 or count > 999:
+            raise GameError("invalid_quantity", "投料数量需在 1 到 999 之间")
+        definition = self.content.item_map.get(item_id)
+        if definition is None:
+            raise GameError("item_not_found", "物品不存在", 404)
+        if definition.feed is None:
+            raise GameError("item_not_feedable", "这个东西不能当饲料")
+        slot_rules = self._feed_slot_rules()
+        now = self._now()
+
+        def mutation(player: PlayerState):
+            self._settle(player, now)
+            try:
+                remove_item(player, item_id, count, quality)
+            except EconomyError as exc:
+                raise GameError("resource_insufficient", str(exc)) from exc
+            add_units = definition.feed.units * count
+            unit_score = definition.feed.score * slot_rules.multiplier(quality)
+            try:
+                deposit_into_slot(player.feed_slot, add_units, unit_score, slot_rules.capacity)
+            except SlotError as exc:
+                raise GameError("feed_slot_full", str(exc)) from exc
+            return {
+                "item_id": item_id,
+                "quality": quality or None,
+                "count": count,
+                "added_units": add_units,
+                "unit_score": round(unit_score, 2),
+                "units": round(player.feed_slot.units, 2),
+                "quality_score": round(player.feed_slot.quality_score, 2),
+            }
+
+        player, result = self._update_by_sub(oauth_sub, mutation)
+        return {"result": result, "state": self._snapshot(player, now)}
+
+    def dump_feed(self, oauth_sub: str) -> dict:
+        """倾倒饲料槽。无返还 —— 它是被稀释之后的逃生口。"""
+        now = self._now()
+
+        def mutation(player: PlayerState):
+            self._settle(player, now)
+            dumped = round(player.feed_slot.units, 2)
+            player.feed_slot.units = 0
+            player.feed_slot.quality_score = 0
+            player.feed_slot.updated_at = now
+            return {"dumped_units": dumped}
+
+        player, result = self._update_by_sub(oauth_sub, mutation)
+        return {"result": result, "state": self._snapshot(player, now)}
+
+    # ------------------------------------------------------- 水产：内部实现
+
+    def _pond(self, player: PlayerState, pond_id: str) -> PondState:
+        pond = next((entry for entry in player.ponds if entry.pond_id == pond_id), None)
+        if pond is None:
+            raise GameError("pond_locked", "这口鱼塘尚未开放", 404)
+        return pond
+
+    def _feed_slot_rules(self):
+        rules = self.content.feed_slot
+        if rules is None:
+            raise GameError("feed_slot_missing", "饲料槽配置缺失，请联系管理员", 409)
+        return rules
+
+    def _pond_definition(self, pond: PondState):
+        return self.content.pond_map.get(pond.pond_id)
+
+    def _pond_tier(self, pond: PondState):
+        definition = self._pond_definition(pond)
+        tier = self.content.pond_tier_map.get(definition.tier if definition else 1)
+        if tier is None:
+            raise GameError("pond_tier_missing", "鱼塘等级配置缺失，请联系管理员", 409)
+        return tier
+
+    def _pond_capacity(self, pond: PondState) -> int:
+        return self._pond_tier(pond).capacity
+
+    def _aquatic_ability(self, player: PlayerState, partner_ids: list[str]) -> int:
+        """驻场伙伴数据异常时退回主角能力，避免一条坏引用把整个存档卡住。"""
+        try:
+            total, _, _ = self._production_ability(player, list(partner_ids), "aquatic")
+        except GameError:
+            rules = self.content.industries["aquatic"]
+            return rules.character_base_ability + self._industry_ability_bonus(player, "aquatic")
+        return total
+
+    def _pond_cycle_seconds(self, player: PlayerState, pond: PondState) -> int:
+        species = self.content.pond_species_map.get(pond.species_id)
+        if species is None:
+            return 0
+        return pond_cycle_seconds(
+            species.base_cycle_seconds,
+            self._aquatic_ability(player, pond.assigned_partner_ids),
+            species.time_difficulty,
+        )
+
+    def _pond_parameters(self, player: PlayerState, pond: PondState) -> PondParameters:
+        tier = self._pond_tier(pond)
+        species = self.content.pond_species_map.get(pond.species_id)
+        generation_cap = (species.generation_cap if species else 0) + self._talent_modifier(player, "pond_generation_cap")
+        return PondParameters(
+            # 用存档里的周期快照推进这一段，没有快照（老存档、刚开塘）才现算。
+            cycle_seconds=pond.cycle_seconds or self._pond_cycle_seconds(player, pond),
+            capacity=tier.capacity,
+            growth_rate=species.growth_rate if species else 0,
+            maturation_cycles=species.maturation_cycles if species else 1,
+            steady_ratio=species.steady_ratio if species else 1,
+            generation_gain=species.generation_gain if species else 0,
+            generation_decay=species.generation_decay if species else 0,
+            generation_cap=generation_cap,
+            feed_per_cycle=tier.feed_per_cycle,
+        )
+
+    def _settle_aquatic(self, player: PlayerState, now: int) -> None:
+        if not player.ponds:
+            player.feed_slot.updated_at = now
+            return
+        parameters = {}
+        for pond in player.ponds:
+            if pond.last_settled_at <= 0 or pond.last_settled_at > now:
+                pond.last_settled_at = now
+            parameters[pond.pond_id] = self._pond_parameters(player, pond)
+        settlement = settle_ponds(player.ponds, player.feed_slot, parameters, now)
+        self._grant_pond_partner_experience(player, settlement)
+        for pond in player.ponds:
+            # 推进用旧快照，推进完立刻换成当前参数：天赋和伙伴的改动从下一段开始生效。
+            pond.ability = self._aquatic_ability(player, pond.assigned_partner_ids)
+            pond.cycle_seconds = self._pond_cycle_seconds(player, pond)
+
+    def _grant_pond_partner_experience(self, player: PlayerState, settlement) -> None:
+        """驻场看塘的伙伴按结算掉的周期数拿经验。停摆的周期没买单，也就不给经验。"""
+        per_cycle = self.content.partner_growth.pond_experience_per_cycle
+        if not per_cycle:
+            return
+        owned_map = {entry.partner_id: entry for entry in player.owned_partners}
+        for pond in player.ponds:
+            advance = settlement.ponds.get(pond.pond_id)
+            if advance is None or advance.paid_cycles <= 0:
+                continue
+            for partner_id in pond.assigned_partner_ids:
+                owned = owned_map.get(partner_id)
+                if owned is not None:
+                    self._grant_partner_experience(owned, advance.paid_cycles * per_cycle)
+
+    def _talent_modifier(self, player: PlayerState, key: str) -> float:
+        return sum(
+            node.modifiers.get(key, 0)
+            for node_id in player.talent_nodes
+            if (node := self.content.talent_map.get(node_id)) is not None
+        )
+
+    def _combo_cap(self, player: PlayerState) -> int:
+        return int(self.content.fishing_combo.max_layers + self._talent_modifier(player, "fishing_combo_cap"))
+
+    def _current_combo(self, player: PlayerState, spot_id: str, now: int) -> int:
+        """换钓点立即清零，久不抛竿逐层衰减。"""
+        fishing = player.fishing
+        if fishing.spot_id != spot_id:
+            return 0
+        rules = self.content.fishing_combo
+        combo = decayed_combo(
+            fishing.combo,
+            fishing.combo_updated_at,
+            now,
+            rules.idle_grace_seconds,
+            rules.decay_seconds,
+        )
+        return min(combo, self._combo_cap(player))
+
+    def _fishing_companion_ids(self, player: PlayerState) -> list[str]:
+        return [player.fishing.companion_partner_id] if player.fishing.companion_partner_id else []
+
+    def _fishing_draw_count(self, spot, ability: int, combo: int) -> int:
+        rules = self.content.fishing_combo
+        base = spot.draws.base_draws + combo * rules.draw_bonus_per_layer
+        multiplier = 1 + spot.draws.ability_bonus * max(0, ability) / (max(0, ability) + spot.draws.difficulty)
+        return max(1, min(FISHING_MAX_DRAWS, floor(base * multiplier + 0.5)))
+
+    def _fishing_pool(self, spot, combo: int) -> list[tuple[object, float, bool]]:
+        """产出池。稀有条目和大物吃聚鱼度的权重加成。"""
+        rare_multiplier = 1 + self.content.fishing_combo.rare_weight_per_layer * combo
+        pool: list[tuple[object, float, bool]] = [
+            (entry, entry.weight * (rare_multiplier if entry.rare else 1), False)
+            for entry in spot.outputs
+        ]
+        if spot.big_catch is not None:
+            pool.append((spot.big_catch, spot.big_catch.weight * rare_multiplier, True))
+        return pool
+
+    def _pick_fishing_entry(self, pool: list[tuple[object, float, bool]]):
+        total = sum(weight for _, weight, _ in pool)
+        draw = self.rng.random() * total
+        cumulative = 0.0
+        for entry, weight, big_catch in pool:
+            cumulative += weight
+            if draw < cumulative:
+                return entry, big_catch
+        return pool[-1][0], pool[-1][2]
+
+    def _fishing_output(self, spot, item_id: str):
+        return next((entry for entry in spot.outputs if entry.item_id == item_id), None)
+
+    def _roll_size(self, entry) -> float:
+        """鱼有体型，杂物没有。返回 0 表示这一项不记体型。"""
+        if entry is None or not entry.has_size:
+            return 0.0
+        return round(entry.size_min + self.rng.random() * (entry.size_max - entry.size_min), 1)
+
+    def _roll_batch(self, entry, quantity: int) -> FishingBatch:
+        """一批里每条鱼各摇一个体型，图鉴只记最大的那条。"""
+        size = max((self._roll_size(entry) for _ in range(max(1, quantity))), default=0.0)
+        return FishingBatch(entry.item_id, quantity, entry.codex, size)
+
+    def _grant_fishing_batches(
+        self,
+        player: PlayerState,
+        batches: list[FishingBatch],
+        probabilities: list[float],
+        now: int,
+    ) -> list[dict]:
+        """每件独立判品质。无品质的杂物（鱼苗之类）按 0 档直接进背包。"""
+        items = self.content.item_map
+        tally: dict[tuple[str, int], int] = {}
+        order: list[tuple[str, int]] = []
+        sizes: dict[str, float] = {}
+        for batch in batches:
+            definition = items.get(batch.item_id)
+            if batch.size:
+                sizes[batch.item_id] = max(sizes.get(batch.item_id, 0.0), batch.size)
+            for _ in range(batch.quantity):
+                quality = roll_quality(self.rng, probabilities) if definition and definition.has_quality else 0
+                key = (batch.item_id, quality)
+                if key not in tally:
+                    order.append(key)
+                tally[key] = tally.get(key, 0) + 1
+        drops = []
+        for key in order:
+            item_id, quality = key
+            add_item(player, item_id, tally[key], quality)
+            drops.append(self._fishing_drop(item_id, tally[key], quality, sizes.get(item_id, 0.0)))
+        return drops
+
+    def _fishing_drop(self, item_id: str, quantity: int, quality: int, size: float = 0.0) -> dict:
+        item = self.content.item_map.get(item_id)
+        return {
+            "item_id": item_id,
+            "name": item.name if item else item_id,
+            "icon": item.icon if item else "package",
+            "quantity": quantity,
+            "quality": quality or None,
+            "quality_name": QUALITY_NAMES.get(quality),
+            "size": size or None,
+            "item": item.model_dump() if item else None,
+        }
+
+    def _grant_companion_experience(self, player: PlayerState, stamina_cost: int) -> list[dict]:
+        """陪钓伙伴按体力拿经验，口径与其他产业的体力分量一致；没带伙伴就没有这一项。"""
+        companion_id = player.fishing.companion_partner_id
+        if not companion_id or stamina_cost <= 0:
+            return []
+        owned = next(
+            (entry for entry in player.owned_partners if entry.partner_id == companion_id),
+            None,
+        )
+        if owned is None:
+            return []
+        amount = stamina_cost * self.content.partner_growth.experience_per_stamina
+        return [{"partner_id": owned.partner_id, **self._grant_partner_experience(owned, amount)}]
+
+    def _record_codex(self, player: PlayerState, batches: list[FishingBatch], now: int) -> list[dict]:
+        discoveries = []
+        for item_id, quantity, codex, size in batches:
+            if not codex or quantity <= 0:
+                continue
+            if self._record_codex_entry(player, item_id, now, quantity=quantity, size=size):
+                item = self.content.item_map.get(item_id)
+                discoveries.append({"item_id": item_id, "name": item.name if item else item_id})
+        return discoveries
+
+    def _record_codex_entry(
+        self,
+        player: PlayerState,
+        item_id: str,
+        now: int,
+        quantity: int = 1,
+        size: float = 0,
+    ) -> bool:
+        """返回是否是首次记录。大物额外记录尺寸。"""
+        entry = player.fish_codex.entry(item_id)
+        if entry is None:
+            player.fish_codex.entries.append(FishCodexEntry(
+                item_id=item_id,
+                caught=quantity,
+                first_caught_at=now,
+                max_size=size,
+            ))
+            return True
+        entry.caught += quantity
+        entry.max_size = max(entry.max_size, size)
+        return False
+
+    def _claim_codex_milestones(self, player: PlayerState, now: int) -> list[dict]:
+        species_count = len(player.fish_codex.entries)
+        granted = []
+        for milestone in self.content.fish_codex_milestones:
+            if milestone.id in player.fish_codex.claimed_milestones:
+                continue
+            if species_count < milestone.required:
+                continue
+            player.fish_codex.claimed_milestones.append(milestone.id)
+            granted.append({
+                "id": milestone.id,
+                "name": milestone.name,
+                "required": milestone.required,
+                "granted": self._grant_reward(player, milestone.reward, now),
+            })
+        return granted
+
+    def _big_catch_snapshot(self, player: PlayerState, now: int) -> dict | None:
+        pending = player.fishing.pending_big_catch
+        if pending is None:
+            return None
+        spot = self.content.fishing_spot_map.get(pending.spot_id)
+        if spot is None or spot.big_catch is None:
+            return None
+        ability = self._aquatic_ability(player, self._fishing_companion_ids(player))
+        item = self.content.item_map.get(spot.big_catch.item_id)
+        return {
+            "spot_id": pending.spot_id,
+            "spot_name": spot.name,
+            "created_at": pending.created_at,
+            "item_id": spot.big_catch.item_id,
+            "name": item.name if item else spot.big_catch.item_id,
+            "stamina_cost": spot.big_catch.stamina_cost,
+            "chance": round(spot.big_catch.success_chance(ability), 3),
+            "min_quality": spot.big_catch.min_quality,
+        }
+
+    def _aquatic_snapshot(self, player: PlayerState, now: int, partner_map: dict[str, dict]) -> dict:
+        items = self.content.item_map
+        slot_rules = self.content.feed_slot
+        ability = self._aquatic_ability(player, self._fishing_companion_ids(player))
+        spots = []
+        for spot in self.content.fishing_spots:
+            unlocked = player.level >= spot.min_level
+            combo = self._current_combo(player, spot.id, now) if unlocked else 0
+            # 产出表和大物都不下发：钓点该保留神秘感，见过什么去图鉴里看。
+            spots.append({
+                **spot.model_dump(exclude={"outputs", "big_catch", "quality"}),
+                "unlocked": unlocked,
+                "combo": combo,
+                "draws": {
+                    **spot.draws.model_dump(),
+                    "expected": self._fishing_draw_count(spot, ability, combo) if unlocked else 0,
+                },
+            })
+        # 饲料按周期扣，但"还能撑多久"要按小时说人话，所以折算成每小时的份数。
+        hourly_rate = round(sum(
+            self._pond_parameters(player, pond).feed_per_cycle * 3600 / pond.cycle_seconds
+            for pond in player.ponds
+            if not pond.empty and pond.cycle_seconds > 0
+        ), 2)
+        ponds = []
+        for pond in player.ponds:
+            definition = self._pond_definition(pond)
+            species = self.content.pond_species_map.get(pond.species_id)
+            parameters = self._pond_parameters(player, pond)
+            assigned_partners = [
+                partner_map[partner_id]
+                for partner_id in pond.assigned_partner_ids
+                if partner_id in partner_map
+            ]
+            ponds.append({
+                **pond.model_dump(),
+                "definition": definition.model_dump() if definition else None,
+                "species": species.model_dump() if species else None,
+                "produce_item": items[species.produce_item_id].model_dump() if species else None,
+                "capacity": parameters.capacity,
+                "feed_per_cycle": parameters.feed_per_cycle,
+                "generation_cap": parameters.generation_cap,
+                "generation_gain": parameters.generation_gain,
+                "generation_decay": parameters.generation_decay,
+                "steady_stock": parameters.steady_stock if species else 0,
+                "cycle_seconds": parameters.cycle_seconds,
+                "next_cycle_seconds": max(0, parameters.cycle_seconds - pond.settle_remainder) if species else 0,
+                "fry_total": pond.fry_total,
+                "population": pond.population,
+                "next_spawn": (
+                    max(0, min(
+                        floor(pond.growth_remainder + pond.stock * parameters.growth_rate),
+                        parameters.capacity - pond.population,
+                    ))
+                    if species else 0
+                ),
+                "maturation_seconds": int(parameters.maturation_cycles * parameters.cycle_seconds) if species else 0,
+                "next_maturation_seconds": (
+                    int(min(batch.cycles_left for batch in pond.fry) * parameters.cycle_seconds)
+                    if pond.fry and parameters.cycle_seconds
+                    else 0
+                ),
+                "quality_ability": round(
+                    self._aquatic_ability(player, pond.assigned_partner_ids)
+                    + self._pond_tier(pond).quality_bonus
+                    + player.feed_slot.quality_score
+                    + pond.generation_score,
+                    2,
+                ),
+                "empty": pond.empty,
+                "assigned_partners": assigned_partners,
+            })
+        codex_species = {entry.item_id for entry in player.fish_codex.entries}
+        codex_pool: list[str] = []
+        for spot in self.content.fishing_spots:
+            for output in spot.outputs:
+                if output.codex and output.item_id not in codex_pool:
+                    codex_pool.append(output.item_id)
+            if spot.big_catch and spot.big_catch.item_id not in codex_pool:
+                codex_pool.append(spot.big_catch.item_id)
+        built = {pond.pond_id for pond in player.ponds}
+        return {
+            "unlocked": any(entry["unlocked"] for entry in spots),
+            "ability": ability,
+            "buildable_ponds": [
+                {
+                    **definition.model_dump(),
+                    "unlocked": player.level >= definition.min_level,
+                    "affordable": player.coins >= definition.build_cost,
+                    "capacity": (self.content.pond_tier_map.get(definition.tier).capacity
+                                 if self.content.pond_tier_map.get(definition.tier) else 0),
+                }
+                for definition in self.content.ponds
+                if definition.id not in built
+            ],
+            "companion_partner_id": player.fishing.companion_partner_id or None,
+            "companion": partner_map.get(player.fishing.companion_partner_id),
+            "spots": spots,
+            "next_spot_level": next(
+                (spot.min_level for spot in self.content.fishing_spots if player.level < spot.min_level),
+                None,
+            ),
+            "combo_rules": self.content.fishing_combo.model_dump(),
+            "combo_cap": self._combo_cap(player),
+            "combo": {
+                "spot_id": player.fishing.spot_id or None,
+                "layers": self._current_combo(player, player.fishing.spot_id, now) if player.fishing.spot_id else 0,
+                "updated_at": player.fishing.combo_updated_at,
+            },
+            "pending_big_catch": self._big_catch_snapshot(player, now),
+            "codex": {
+                "recorded": len(player.fish_codex.entries),
+                "total": len(codex_pool),
+                "entries": [
+                    {
+                        **entry.model_dump(),
+                        "item": items[entry.item_id].model_dump() if entry.item_id in items else None,
+                    }
+                    for entry in player.fish_codex.entries
+                ],
+                # 没见过的那一格只回一个占位，连名字和图标都不给 —— 直接读接口也看不到谜底。
+                "pool": [
+                    {"item_id": item_id, "item": items[item_id].model_dump(), "recorded": True}
+                    if item_id in codex_species
+                    else {"item_id": None, "item": None, "recorded": False}
+                    for item_id in codex_pool
+                    if item_id in items
+                ],
+                "milestones": [
+                    {
+                        **milestone.model_dump(exclude={"reward"}),
+                        "reward": self._reward_snapshot(milestone.reward),
+                        "claimed": milestone.id in player.fish_codex.claimed_milestones,
+                    }
+                    for milestone in self.content.fish_codex_milestones
+                ],
+            },
+            "ponds": ponds,
+            "next_pond_level": next(
+                (entry.min_level for entry in self.content.ponds if player.level < entry.min_level),
+                None,
+            ),
+            "species": [
+                {
+                    **species.model_dump(),
+                    "fry_item": items[species.fry_item_id].model_dump(),
+                    "produce_item": items[species.produce_item_id].model_dump(),
+                    "owned_fry": sum(player.inventory.get(species.fry_item_id, {}).values()),
+                    "unlocked": player.level >= species.min_level,
+                }
+                for species in self.content.pond_species
+            ],
+            "feed_slot": {
+                "name": slot_rules.name if slot_rules else "饲料槽",
+                "units": round(player.feed_slot.units, 2),
+                "quality_score": round(player.feed_slot.quality_score, 2),
+                "capacity": slot_rules.capacity if slot_rules else 0,
+                "hourly_rate": hourly_rate,
+                "runtime_seconds": slot_runtime_seconds(player.feed_slot, hourly_rate),
+                "quality_multipliers": slot_rules.quality_multipliers if slot_rules else [],
+                "inputs": [
+                    {
+                        "item_id": item_id,
+                        "quality": quality or None,
+                        "quality_name": QUALITY_NAMES.get(quality),
+                        "quantity": quantity,
+                        "item": items[item_id].model_dump(),
+                        "units": items[item_id].feed.units,
+                        "unit_score": round(
+                            items[item_id].feed.score * (slot_rules.multiplier(quality) if slot_rules else 1),
+                            2,
+                        ),
+                    }
+                    for item_id, qualities in sorted(player.inventory.items())
+                    if item_id in items and items[item_id].feed is not None
+                    for quality, quantity in sorted(qualities.items())
+                    if quantity > 0
+                ],
+            },
+        }
 
     def convert_maple_flame(self, oauth_sub: str, quantity: int) -> dict:
         quantity = int(quantity)
@@ -2105,7 +3030,9 @@ class GameService:
         normalize_gathering_sites(player, self.content)
         normalize_crafting_stations(player, self.content)
         normalize_mining_sites(player, self.content)
+        normalize_ponds(player, self.content)
         settle_stamina(player, self.content, now)
+        self._settle_aquatic(player, now)
         for plot in player.plots:
             if not plot.empty and plot.ready_at <= now and not plot.task_results:
                 self._resolve_output(plot, now, self.content.crop_map.get(plot.crop_id))
@@ -2572,6 +3499,7 @@ class GameService:
             "next_crafting_station_level": next_crafting_station_level,
             "mining_sites": mining_sites,
             "next_mining_site_level": next_mining_site_level,
+            "aquatic": self._aquatic_snapshot(player, now, partner_map),
             "inventory": inventory,
             "task_items": [
                 {
@@ -2842,6 +3770,7 @@ class GameService:
             *player.gathering_sites,
             *player.crafting_stations,
             *player.mining_sites,
+            *player.ponds,
         ]:
             if partner_id in production_slot.assigned_partner_ids:
                 production_slot.assigned_partner_ids = []
@@ -2856,6 +3785,9 @@ class GameService:
             return sum(len(station.assigned_partner_ids) for station in player.crafting_stations)
         if industry == "mining":
             return sum(len(site.assigned_partner_ids) for site in player.mining_sites)
+        if industry == "aquatic":
+            # 陪钓不占编制（不锁定、瞬时完成），驻场在鱼塘的才算。
+            return sum(len(pond.assigned_partner_ids) for pond in player.ponds)
         return 0
 
     def _industry_partner_capacity(self, player: PlayerState, industry: str) -> int:

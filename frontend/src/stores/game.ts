@@ -9,11 +9,14 @@ import { useTickerStore } from '@/stores/ticker'
 import type {
   AccountState,
   ActionResult,
+  BigCatchResult,
+  CastResult,
   CommissionBoard,
   GachaResult,
   GameState,
   MailboxState,
   MailClaimResult,
+  PondHarvestResult,
   Reward,
   TributeDeliveryResult,
 } from '@/types'
@@ -378,6 +381,91 @@ export const useGameStore = defineStore('game', () => {
     return result
   }
 
+  function dropText(drops: Array<{ quantity: number; quality: number | null; quality_name: string | null; name: string }>) {
+    return drops
+      .map((drop) => `${drop.quality_name || qualityName(drop.quality)}${drop.name}×${drop.quantity}`)
+      .join('、')
+  }
+
+  function assignFishingCompanion(partnerId: string | null) {
+    return action('aquatic:companion', `${API_ROOT}/fishing/companion`, {
+      payload: { partner_id: partnerId || '' },
+      method: 'PUT',
+      successMessage: partnerId ? '伙伴陪你去钓鱼' : '伙伴回去了',
+    })
+  }
+
+  async function castLine(spotId: string) {
+    // 抛竿是高频动作，带上幂等 ID，重试不会重复发放。
+    const requestId = crypto.randomUUID()
+    const result = (await action(`aquatic:cast:${spotId}`, `${API_ROOT}/fishing/spots/${spotId}/cast`, {
+      payload: { request_id: requestId },
+      cue: 'action:cast_line',
+    })) as CastResult | undefined
+    if (!result || result.duplicate) return result
+    if (result.big_catch) showNotice(`有大家伙咬钩了！`)
+    else if (result.drops.length) showNotice(`钓上${dropText(result.drops)}`)
+    for (const milestone of result.codex_milestones) {
+      showNotice(`鱼类图鉴达成「${milestone.name}」`)
+    }
+    return result
+  }
+
+  async function resolveBigCatch(nextAction: 'fight' | 'release') {
+    const result = (await action(`aquatic:big-catch:${nextAction}`, `${API_ROOT}/fishing/big-catch`, {
+      payload: { action: nextAction },
+      cue: 'action:big_catch',
+    })) as BigCatchResult | undefined
+    if (!result) return result
+    if (result.success) showNotice(`拉上来了！${dropText(result.drops)} ${result.size} 厘米`)
+    else showNotice(`跑了，只剩${dropText(result.drops)}`)
+    return result
+  }
+
+  function buildPond(pondId: string) {
+    return action(`aquatic:pond:${pondId}:build`, `${API_ROOT}/ponds/${pondId}/build`, {
+      successMessage: '塘挖好了',
+    })
+  }
+
+  function assignPondPartner(pondId: string, partnerId: string | null) {
+    return action(`aquatic:pond:${pondId}:partner`, `${API_ROOT}/ponds/${pondId}/partner`, {
+      payload: { partner_id: partnerId || '' },
+      method: 'PUT',
+      successMessage: partnerId ? '伙伴开始看塘' : '伙伴已撤下',
+    })
+  }
+
+  function stockPond(pondId: string, speciesId: string, quantity: number) {
+    return action(`aquatic:pond:${pondId}:stock`, `${API_ROOT}/ponds/${pondId}/stock`, {
+      payload: { species_id: speciesId, quantity },
+      successMessage: '鱼苗下塘了',
+      cue: 'action:stock_pond',
+    })
+  }
+
+  async function harvestPond(pondId: string, quantity: number) {
+    const result = (await action(`aquatic:pond:${pondId}:harvest`, `${API_ROOT}/ponds/${pondId}/harvest`, {
+      payload: { quantity },
+      cue: 'action:harvest_pond',
+    })) as PondHarvestResult | undefined
+    if (result) showNotice(`捞起${dropText(result.drops)}`)
+    return result
+  }
+
+  function depositFeed(itemId: string, quality: number, count: number) {
+    return action(`aquatic:feed:${itemId}:${quality}`, `${API_ROOT}/feed-slot/deposit`, {
+      payload: { item_id: itemId, quality, count },
+      successMessage: '饲料已经倒进槽里',
+    })
+  }
+
+  function dumpFeed() {
+    return action('aquatic:feed:dump', `${API_ROOT}/feed-slot/dump`, {
+      successMessage: '饲料槽已经倒空',
+    })
+  }
+
   function convertMapleFlame(quantity: number) {
     return action(`gacha:convert:${quantity}`, `${API_ROOT}/gacha/convert`, {
       payload: { quantity },
@@ -494,6 +582,15 @@ export const useGameStore = defineStore('game', () => {
     assignProductionPartner,
     startProduction,
     collectProduction,
+    assignFishingCompanion,
+    castLine,
+    resolveBigCatch,
+    buildPond,
+    assignPondPartner,
+    stockPond,
+    harvestPond,
+    depositFeed,
+    dumpFeed,
     convertMapleFlame,
     recruit,
     trainPartner,

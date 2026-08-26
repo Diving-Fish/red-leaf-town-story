@@ -139,6 +139,8 @@ async def farm_summary(bot: Bot, event: Event):
     mining_running = sum(
         1 for site in state.get("mining_sites", []) if not site["empty"] and not site["ready"]
     )
+    aquatic = state.get("aquatic") or {}
+    ponds = aquatic.get("ponds") or []
     portals = state.get("portals", [])
     portals_opened = sum(1 for portal in portals if portal["completed"])
     portals_active = sum(1 for portal in portals if portal["unlocked"] and not portal["completed"])
@@ -153,10 +155,25 @@ async def farm_summary(bot: Bot, event: Event):
         f"采集：{gathering_ready} 处可领取，{gathering_running} 处进行中\n"
         f"加工：{crafting_ready} 件可领取，{crafting_running} 件制作中\n"
         f"矿产：{mining_ready} 处可收取，{mining_running} 处开采中\n"
-        f"传送门：已开启 {portals_opened} 座，{portals_active} 座待交贡品\n"
+        + _pond_line(aquatic, ponds)
+        + f"传送门：已开启 {portals_opened} 座，{portals_active} 座待交贡品\n"
         + "\n".join(_commission_lines(state))
         + "\n前往 Web 页面管理农场：https://chiyuki.diving-fish.com/red-leaf-town/",
     ).send()
+
+
+def _pond_line(aquatic: dict, ponds: list) -> str:
+    """鱼塘要到 10 级才有，没开塘的玩家这一行整条不显示。"""
+    if not ponds:
+        return ""
+    stock = sum(pond.get("stock", 0) for pond in ponds)
+    fry = sum(pond.get("fry_total", 0) for pond in ponds)
+    capacity = sum(pond.get("capacity", 0) for pond in ponds)
+    feed_slot = aquatic.get("feed_slot") or {}
+    stalled = any(pond.get("stalled") for pond in ponds)
+    feed = "饲料已空，鱼塘停摆" if stalled else f"饲料 {int(feed_slot.get('units', 0))} 份"
+    fry_text = f"，鱼苗 {fry} 尾" if fry else ""
+    return f"鱼塘：成鱼 {stock}/{capacity} 尾{fry_text}，{feed}\n"
 
 
 def _commission_lines(state: dict) -> list[str]:

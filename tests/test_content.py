@@ -137,7 +137,32 @@ def test_crafting_prices_reflect_inputs_and_mining_stamina_value():
         output_value = content.item_map[recipe.produce_item_id].sell_price * recipe.produce_quantity
         added_value_per_stamina = (output_value - input_value) / recipe.stamina_cost
         assert recipe.stamina_cost == 2
+        if _is_refining_recipe(content, recipe):
+            continue
         assert minimum_value <= added_value_per_stamina <= maximum_value
+
+
+def _is_refining_recipe(content, recipe) -> bool:
+    """提纯配方把 units 高、score 低的原料换成 score 高的精料，回报在饲料槽而不在售价上。"""
+    produce = content.item_map[recipe.produce_item_id].feed
+    if produce is None:
+        return False
+    inputs = [content.item_map[entry.item_id].feed for entry in recipe.inputs]
+    return all(entry is None or entry.score < produce.score for entry in inputs)
+
+
+def test_refining_recipes_trade_sale_value_for_feed_score():
+    """提纯配方不按售价考核，但必须真的提高单位品质分，否则它就没有存在意义。"""
+    content = load_content()
+    refining = [recipe for recipe in content.recipes if _is_refining_recipe(content, recipe)]
+    assert {recipe.id for recipe in refining} == {"mill_fish_meal", "mix_fodder", "refine_fodder"}
+    for recipe in refining:
+        produce = content.item_map[recipe.produce_item_id].feed
+        best_input = max(
+            (content.item_map[entry.item_id].feed.score for entry in recipe.inputs if content.item_map[entry.item_id].feed),
+            default=0,
+        )
+        assert produce.score > best_input
 
 
 def test_unknown_crop_item_is_rejected():

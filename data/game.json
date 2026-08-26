@@ -63,6 +63,12 @@
       "partner_capacity": 1,
       "partner_level_cap": 20,
       "collaborator_slots": 1
+    },
+    "aquatic": {
+      "character_base_ability": 0,
+      "partner_capacity": 1,
+      "partner_level_cap": 20,
+      "collaborator_slots": 1
     }
   },
   "levels": [
@@ -85,7 +91,9 @@
       "stamina_cap": 22,
       "unlocks": [
         "system:mining",
-        "mining:copper_foothill"
+        "mining:copper_foothill",
+        "system:aquatic",
+        "fishing:town_creek"
       ]
     },
     {
@@ -140,6 +148,65 @@
       "unlocks": [
         "crop:pumpkin"
       ]
+    },
+    {
+      "level": 9,
+      "total_xp": 1350,
+      "plot_slots": 7,
+      "stamina_cap": 36,
+      "unlocks": []
+    },
+    {
+      "level": 10,
+      "total_xp": 2000,
+      "plot_slots": 7,
+      "stamina_cap": 38,
+      "unlocks": [
+        "aquatic:pond",
+        "fishing:maple_lake"
+      ]
+    },
+    {
+      "level": 11,
+      "total_xp": 2980,
+      "plot_slots": 8,
+      "stamina_cap": 40,
+      "unlocks": []
+    },
+    {
+      "level": 12,
+      "total_xp": 4450,
+      "plot_slots": 8,
+      "stamina_cap": 42,
+      "unlocks": []
+    },
+    {
+      "level": 13,
+      "total_xp": 6650,
+      "plot_slots": 9,
+      "stamina_cap": 44,
+      "unlocks": []
+    },
+    {
+      "level": 14,
+      "total_xp": 9950,
+      "plot_slots": 9,
+      "stamina_cap": 46,
+      "unlocks": []
+    },
+    {
+      "level": 15,
+      "total_xp": 14900,
+      "plot_slots": 10,
+      "stamina_cap": 48,
+      "unlocks": []
+    },
+    {
+      "level": 16,
+      "total_xp": 22350,
+      "plot_slots": 10,
+      "stamina_cap": 50,
+      "unlocks": []
     }
   ],
   "items": [
@@ -173,7 +240,11 @@
       "icon": "carrot",
       "kind": "produce",
       "sell_price": 10,
-      "has_quality": true
+      "has_quality": true,
+      "feed": {
+        "units": 3,
+        "score": 25
+      }
     },
     {
       "id": "potato_seed",
@@ -189,7 +260,11 @@
       "icon": "bean",
       "kind": "produce",
       "sell_price": 12,
-      "has_quality": true
+      "has_quality": true,
+      "feed": {
+        "units": 3,
+        "score": 22
+      }
     },
     {
       "id": "wheat_seed",
@@ -205,7 +280,11 @@
       "icon": "wheat",
       "kind": "produce",
       "sell_price": 17,
-      "has_quality": true
+      "has_quality": true,
+      "feed": {
+        "units": 4,
+        "score": 30
+      }
     },
     {
       "id": "pumpkin_seed",
@@ -221,7 +300,11 @@
       "icon": "vegan",
       "kind": "produce",
       "sell_price": 50,
-      "has_quality": true
+      "has_quality": true,
+      "feed": {
+        "units": 8,
+        "score": 40
+      }
     },
     {
       "id": "maple_wood",
@@ -237,7 +320,11 @@
       "icon": "vegan",
       "kind": "material",
       "sell_price": 7,
-      "has_quality": true
+      "has_quality": true,
+      "feed": {
+        "units": 2,
+        "score": 20
+      }
     },
     {
       "id": "maple_resin",
@@ -261,7 +348,11 @@
       "icon": "wheat",
       "kind": "material",
       "sell_price": 5,
-      "has_quality": true
+      "has_quality": true,
+      "feed": {
+        "units": 5,
+        "score": 12
+      }
     },
     {
       "id": "autumn_herb",
@@ -269,7 +360,11 @@
       "icon": "leaf",
       "kind": "material",
       "sell_price": 10,
-      "has_quality": true
+      "has_quality": true,
+      "feed": {
+        "units": 2,
+        "score": 35
+      }
     },
     {
       "id": "morning_dew_flower",
@@ -358,6 +453,194 @@
       "kind": "consumable",
       "sell_price": 0,
       "has_quality": false
+    },
+    {
+      "id": "trash_fish",
+      "name": "杂鱼",
+      "icon": "fish",
+      "kind": "material",
+      "sell_price": 6,
+      "has_quality": true,
+      "feed": {
+        "units": 2,
+        "score": 18
+      }
+    },
+    {
+      "id": "stream_fish",
+      "name": "溪石鱼",
+      "icon": "fish",
+      "kind": "material",
+      "sell_price": 34,
+      "has_quality": true,
+      "feed": {
+        "units": 2,
+        "score": 20
+      }
+    },
+    {
+      "id": "lake_fish",
+      "name": "枫湖鲈",
+      "icon": "fish",
+      "kind": "material",
+      "sell_price": 60,
+      "has_quality": true,
+      "feed": {
+        "units": 2,
+        "score": 24
+      }
+    },
+    {
+      "id": "deep_fish",
+      "name": "月影鲑",
+      "icon": "fish",
+      "kind": "material",
+      "sell_price": 75,
+      "has_quality": true,
+      "feed": {
+        "units": 2,
+        "score": 28
+      }
+    },
+    {
+      "id": "whitebait",
+      "name": "白条鱼",
+      "icon": "fish",
+      "kind": "material",
+      "sell_price": 20,
+      "has_quality": true,
+      "feed": {
+        "units": 2,
+        "score": 19
+      }
+    },
+    {
+      "id": "stone_loach",
+      "name": "石鳅",
+      "icon": "fish",
+      "kind": "material",
+      "sell_price": 46,
+      "has_quality": true,
+      "feed": {
+        "units": 2,
+        "score": 22
+      }
+    },
+    {
+      "id": "redfin",
+      "name": "红鳍鲌",
+      "icon": "fish",
+      "kind": "material",
+      "sell_price": 38,
+      "has_quality": true,
+      "feed": {
+        "units": 2,
+        "score": 21
+      }
+    },
+    {
+      "id": "giant_stream_carp",
+      "name": "溪口巨鲤",
+      "icon": "fish-symbol",
+      "kind": "material",
+      "sell_price": 300,
+      "has_quality": true
+    },
+    {
+      "id": "giant_maple_perch",
+      "name": "枫湖巨鲈",
+      "icon": "fish-symbol",
+      "kind": "material",
+      "sell_price": 700,
+      "has_quality": true
+    },
+    {
+      "id": "giant_moon_sturgeon",
+      "name": "月影巨鲟",
+      "icon": "fish-symbol",
+      "kind": "material",
+      "sell_price": 1500,
+      "has_quality": true
+    },
+    {
+      "id": "fish_fry",
+      "name": "鱼苗",
+      "icon": "droplet",
+      "kind": "material",
+      "sell_price": 3,
+      "has_quality": false
+    },
+    {
+      "id": "river_weed",
+      "name": "水草",
+      "icon": "waves",
+      "kind": "material",
+      "sell_price": 3,
+      "has_quality": true,
+      "feed": {
+        "units": 3,
+        "score": 6
+      }
+    },
+    {
+      "id": "pond_crucian",
+      "name": "塘养红鲫",
+      "icon": "fish",
+      "kind": "material",
+      "sell_price": 22,
+      "has_quality": true,
+      "feed": {
+        "units": 2,
+        "score": 20
+      }
+    },
+    {
+      "id": "meadow_hay",
+      "name": "牧草",
+      "icon": "wheat",
+      "kind": "material",
+      "sell_price": 3,
+      "has_quality": false,
+      "feed": {
+        "units": 4,
+        "score": 5
+      }
+    },
+    {
+      "id": "fish_meal",
+      "name": "鱼粉",
+      "icon": "package",
+      "kind": "product",
+      "sell_price": 14,
+      "has_quality": true,
+      "feed": {
+        "units": 3,
+        "score": 55
+      }
+    },
+    {
+      "id": "mixed_fodder",
+      "name": "混合饲料",
+      "icon": "wheat",
+      "kind": "product",
+      "sell_price": 18,
+      "has_quality": true,
+      "feed": {
+        "units": 10,
+        "score": 45
+      }
+    },
+    {
+      "id": "refined_fodder",
+      "name": "精饲料",
+      "icon": "package-check",
+      "kind": "product",
+      "sell_price": 48,
+      "has_quality": true,
+      "feed": {
+        "units": 10,
+        "score": 80
+      }
     }
   ],
   "crops": [
@@ -759,6 +1042,82 @@
         "mining_ability_2"
       ],
       "global_ability_bonus": 10
+    },
+    {
+      "id": "aquatic_ability_1",
+      "industry": "aquatic",
+      "name": "识水辨流",
+      "description": "全局水产能力值增加 10，同时影响单轮垂钓所得、鱼塘周期与品质。",
+      "cost": 1,
+      "min_level": 2,
+      "prerequisites": [],
+      "global_ability_bonus": 10
+    },
+    {
+      "id": "aquatic_combo_1",
+      "industry": "aquatic",
+      "name": "打窝",
+      "description": "聚鱼度层数上限提高 5 层。",
+      "cost": 1,
+      "min_level": 4,
+      "prerequisites": [
+        "aquatic_ability_1"
+      ],
+      "modifiers": {
+        "fishing_combo_cap": 5
+      }
+    },
+    {
+      "id": "aquatic_ability_2",
+      "industry": "aquatic",
+      "name": "看水色",
+      "description": "全局水产能力值再增加 10。",
+      "cost": 1,
+      "min_level": 10,
+      "prerequisites": [
+        "aquatic_combo_1"
+      ],
+      "global_ability_bonus": 10
+    },
+    {
+      "id": "aquatic_roster_1",
+      "industry": "aquatic",
+      "name": "同船共渔",
+      "description": "水产伙伴同时驻场上限增加 1。",
+      "cost": 1,
+      "min_level": 12,
+      "prerequisites": [
+        "aquatic_ability_2"
+      ],
+      "partner_capacity_bonus": 1
+    },
+    {
+      "id": "aquatic_generation_1",
+      "industry": "aquatic",
+      "name": "择优留种",
+      "description": "鱼塘世代加值上限提高 20。",
+      "cost": 1,
+      "min_level": 14,
+      "prerequisites": [
+        "aquatic_roster_1"
+      ],
+      "modifiers": {
+        "pond_generation_cap": 20
+      }
+    },
+    {
+      "id": "aquatic_harvest_floor_1",
+      "industry": "aquatic",
+      "name": "挑鱼的手",
+      "description": "每次捞鱼至少有一条达到上品。",
+      "cost": 1,
+      "min_level": 16,
+      "prerequisites": [
+        "aquatic_generation_1"
+      ],
+      "modifiers": {
+        "pond_harvest_quality_floor": 3
+      }
     }
   ],
   "crafting_stations": [
@@ -786,7 +1145,7 @@
       "duration_seconds": 60,
       "time_difficulty": 100,
       "stamina_cost": 2,
-      "collect_xp": 6,
+      "collect_xp": 12,
       "quality": {
         "thresholds": [
           45.0,
@@ -820,7 +1179,7 @@
       "duration_seconds": 90,
       "time_difficulty": 125,
       "stamina_cost": 2,
-      "collect_xp": 8,
+      "collect_xp": 12,
       "quality": {
         "thresholds": [
           55.0,
@@ -854,7 +1213,7 @@
       "duration_seconds": 75,
       "time_difficulty": 115,
       "stamina_cost": 2,
-      "collect_xp": 7,
+      "collect_xp": 12,
       "quality": {
         "thresholds": [
           50.0,
@@ -888,7 +1247,7 @@
       "duration_seconds": 120,
       "time_difficulty": 145,
       "stamina_cost": 2,
-      "collect_xp": 10,
+      "collect_xp": 12,
       "quality": {
         "thresholds": [
           65.0,
@@ -904,6 +1263,120 @@
         "hook": "player_level",
         "params": {
           "level": 4
+        }
+      }
+    },
+    {
+      "id": "mill_fish_meal",
+      "station_id": "town_workbench",
+      "name": "研磨鱼粉",
+      "inputs": [
+        {
+          "item_id": "trash_fish",
+          "quantity": 3
+        }
+      ],
+      "produce_item_id": "fish_meal",
+      "produce_quantity": 2,
+      "duration_seconds": 120,
+      "time_difficulty": 120,
+      "stamina_cost": 2,
+      "collect_xp": 12,
+      "quality": {
+        "thresholds": [
+          50.0,
+          100.0,
+          165.0,
+          250.0
+        ],
+        "width": 17.0,
+        "miracle_probability_cap": 0.003,
+        "miracle_eligible": false
+      },
+      "unlock_condition": {
+        "hook": "player_level",
+        "params": {
+          "level": 4
+        }
+      }
+    },
+    {
+      "id": "mix_fodder",
+      "station_id": "town_workbench",
+      "name": "调配混合饲料",
+      "inputs": [
+        {
+          "item_id": "tough_fodder",
+          "quantity": 3
+        },
+        {
+          "item_id": "wheat",
+          "quantity": 1
+        }
+      ],
+      "produce_item_id": "mixed_fodder",
+      "produce_quantity": 2,
+      "duration_seconds": 180,
+      "time_difficulty": 130,
+      "stamina_cost": 2,
+      "collect_xp": 12,
+      "quality": {
+        "thresholds": [
+          55.0,
+          105.0,
+          170.0,
+          255.0
+        ],
+        "width": 18.0,
+        "miracle_probability_cap": 0.003,
+        "miracle_eligible": false
+      },
+      "unlock_condition": {
+        "hook": "player_level",
+        "params": {
+          "level": 4
+        }
+      }
+    },
+    {
+      "id": "refine_fodder",
+      "station_id": "town_workbench",
+      "name": "精炼饲料",
+      "inputs": [
+        {
+          "item_id": "mixed_fodder",
+          "quantity": 2
+        },
+        {
+          "item_id": "autumn_herb",
+          "quantity": 1
+        },
+        {
+          "item_id": "fish_meal",
+          "quantity": 1
+        }
+      ],
+      "produce_item_id": "refined_fodder",
+      "produce_quantity": 2,
+      "duration_seconds": 300,
+      "time_difficulty": 150,
+      "stamina_cost": 2,
+      "collect_xp": 12,
+      "quality": {
+        "thresholds": [
+          65.0,
+          120.0,
+          190.0,
+          280.0
+        ],
+        "width": 20.0,
+        "miracle_probability_cap": 0.003,
+        "miracle_eligible": false
+      },
+      "unlock_condition": {
+        "hook": "player_level",
+        "params": {
+          "level": 8
         }
       }
     }
@@ -936,7 +1409,7 @@
       "yield_min": 3,
       "yield_max": 4,
       "stamina_cost": 1,
-      "collect_xp": 18,
+      "collect_xp": 12,
       "min_level": 2,
       "quality": {
         "thresholds": [
@@ -961,7 +1434,7 @@
       "yield_min": 4,
       "yield_max": 5,
       "stamina_cost": 2,
-      "collect_xp": 40,
+      "collect_xp": 24,
       "min_level": 4,
       "quality": {
         "thresholds": [
@@ -1087,9 +1560,10 @@
     "level_cost_growth": 5,
     "experience_books": {
       "partner_notes_small": 60,
-      "partner_notes_medium": 300,
-      "partner_notes_large": 1200
-    }
+      "partner_notes_medium": 250,
+      "partner_notes_large": 900
+    },
+    "pond_experience_per_cycle": 3
   },
   "portals": [
     {
@@ -1228,7 +1702,12 @@
     "daily_take_limit": 1,
     "board_limit": 30,
     "excluded_item_ids": [
-      "orange_berry"
+      "orange_berry",
+      "fish_fry",
+      "meadow_hay",
+      "giant_stream_carp",
+      "giant_maple_perch",
+      "giant_moon_sturgeon"
     ],
     "tiers": [
       {
@@ -1336,6 +1815,54 @@
       {
         "item_id": "silver_star_moss",
         "tier": 4
+      },
+      {
+        "item_id": "trash_fish",
+        "tier": 1
+      },
+      {
+        "item_id": "stream_fish",
+        "tier": 1
+      },
+      {
+        "item_id": "river_weed",
+        "tier": 1
+      },
+      {
+        "item_id": "lake_fish",
+        "tier": 2
+      },
+      {
+        "item_id": "pond_crucian",
+        "tier": 2
+      },
+      {
+        "item_id": "mixed_fodder",
+        "tier": 2
+      },
+      {
+        "item_id": "deep_fish",
+        "tier": 3
+      },
+      {
+        "item_id": "whitebait",
+        "tier": 1
+      },
+      {
+        "item_id": "stone_loach",
+        "tier": 2
+      },
+      {
+        "item_id": "redfin",
+        "tier": 2
+      },
+      {
+        "item_id": "fish_meal",
+        "tier": 3
+      },
+      {
+        "item_id": "refined_fodder",
+        "tier": 3
       }
     ],
     "npcs": [
@@ -1510,6 +2037,298 @@
       "price": 3600,
       "currency": "coins",
       "min_level": 6
+    },
+    {
+      "id": "meadow_hay",
+      "item_id": "meadow_hay",
+      "price": 8,
+      "currency": "coins",
+      "min_level": 2
+    },
+    {
+      "id": "fish_fry",
+      "item_id": "fish_fry",
+      "price": 45,
+      "currency": "coins",
+      "min_level": 10
     }
-  ]
+  ],
+  "fishing_combo": {
+    "max_layers": 10,
+    "draw_bonus_per_layer": 0.1,
+    "rare_weight_per_layer": 0.05,
+    "idle_grace_seconds": 1800,
+    "decay_seconds": 600
+  },
+  "fishing_spots": [
+    {
+      "id": "town_creek",
+      "name": "镇口小溪",
+      "description": "水浅流缓，卵石铺底，晴天能一眼望到底。",
+      "accent": "#6fa8b8",
+      "min_level": 2,
+      "stamina_cost": 3,
+      "cast_xp": 18,
+      "time_difficulty": 120,
+      "draws": {
+        "base_draws": 6,
+        "ability_bonus": 1.0,
+        "difficulty": 120
+      },
+      "outputs": [
+        {
+          "item_id": "stream_fish",
+          "weight": 26,
+          "quantity_min": 1,
+          "quantity_max": 1,
+          "codex": true,
+          "size_min": 14.0,
+          "size_max": 36.0
+        },
+        {
+          "item_id": "trash_fish",
+          "weight": 28,
+          "quantity_min": 1,
+          "quantity_max": 2,
+          "codex": true,
+          "size_min": 8.0,
+          "size_max": 22.0
+        },
+        {
+          "item_id": "whitebait",
+          "weight": 12,
+          "quantity_min": 1,
+          "quantity_max": 1,
+          "codex": true,
+          "size_min": 10.0,
+          "size_max": 26.0
+        },
+        {
+          "item_id": "stone_loach",
+          "weight": 4.5,
+          "quantity_min": 1,
+          "quantity_max": 1,
+          "rare": true,
+          "codex": true,
+          "size_min": 9.0,
+          "size_max": 20.0
+        },
+        {
+          "item_id": "river_weed",
+          "weight": 16,
+          "quantity_min": 1,
+          "quantity_max": 2
+        },
+        {
+          "item_id": "fish_fry",
+          "weight": 14,
+          "quantity_min": 1,
+          "quantity_max": 1
+        }
+      ],
+      "big_catch": {
+        "item_id": "giant_stream_carp",
+        "fallback_item_id": "stream_fish",
+        "weight": 0.5,
+        "stamina_cost": 3,
+        "base_chance": 0.35,
+        "ability_bonus": 0.45,
+        "difficulty": 150,
+        "min_quality": 3,
+        "size_min": 42.0,
+        "size_max": 80.0
+      },
+      "quality": {
+        "thresholds": [
+          30.0,
+          60.0,
+          110.0,
+          200.0
+        ],
+        "width": 18.0,
+        "miracle_probability_cap": 0.003,
+        "miracle_eligible": true
+      }
+    },
+    {
+      "id": "maple_lake",
+      "name": "红叶湖",
+      "description": "整片湖面浮着落叶，风来时红影漫开。",
+      "accent": "#c0603f",
+      "min_level": 10,
+      "stamina_cost": 4,
+      "cast_xp": 24,
+      "time_difficulty": 150,
+      "draws": {
+        "base_draws": 7,
+        "ability_bonus": 1.0,
+        "difficulty": 150
+      },
+      "outputs": [
+        {
+          "item_id": "lake_fish",
+          "weight": 26,
+          "quantity_min": 1,
+          "quantity_max": 1,
+          "codex": true,
+          "size_min": 22.0,
+          "size_max": 48.0
+        },
+        {
+          "item_id": "trash_fish",
+          "weight": 20,
+          "quantity_min": 1,
+          "quantity_max": 2,
+          "codex": true,
+          "size_min": 8.0,
+          "size_max": 22.0
+        },
+        {
+          "item_id": "redfin",
+          "weight": 10,
+          "quantity_min": 1,
+          "quantity_max": 1,
+          "codex": true,
+          "size_min": 18.0,
+          "size_max": 42.0
+        },
+        {
+          "item_id": "deep_fish",
+          "weight": 4,
+          "quantity_min": 1,
+          "quantity_max": 1,
+          "rare": true,
+          "codex": true,
+          "size_min": 30.0,
+          "size_max": 65.0
+        },
+        {
+          "item_id": "river_weed",
+          "weight": 10,
+          "quantity_min": 1,
+          "quantity_max": 2
+        },
+        {
+          "item_id": "fish_fry",
+          "weight": 22,
+          "quantity_min": 1,
+          "quantity_max": 2
+        }
+      ],
+      "big_catch": {
+        "item_id": "giant_maple_perch",
+        "fallback_item_id": "lake_fish",
+        "weight": 0.5,
+        "stamina_cost": 3,
+        "base_chance": 0.3,
+        "ability_bonus": 0.45,
+        "difficulty": 200,
+        "min_quality": 3,
+        "size_min": 60.0,
+        "size_max": 112.0
+      },
+      "quality": {
+        "thresholds": [
+          45.0,
+          85.0,
+          150.0,
+          250.0
+        ],
+        "width": 20.0,
+        "miracle_probability_cap": 0.003,
+        "miracle_eligible": true
+      }
+    }
+  ],
+  "fish_codex_milestones": [
+    {
+      "id": "codex_3",
+      "name": "初识水色",
+      "required": 3,
+      "reward": {
+        "maple_flame": 200,
+        "experience": 60
+      }
+    },
+    {
+      "id": "codex_6",
+      "name": "熟水之人",
+      "required": 6,
+      "reward": {
+        "maple_flame": 400,
+        "guide_leaves": 2,
+        "experience": 160
+      }
+    },
+    {
+      "id": "codex_9",
+      "name": "红叶镇的钓客",
+      "required": 9,
+      "reward": {
+        "maple_flame": 800,
+        "guide_leaves": 5,
+        "talent_points": 1,
+        "experience": 400
+      }
+    }
+  ],
+  "pond_tiers": [
+    {
+      "level": 1,
+      "capacity": 40,
+      "quality_bonus": 0.0,
+      "feed_per_cycle": 2.0
+    }
+  ],
+  "ponds": [
+    {
+      "id": "pond_1",
+      "name": "屋后鱼塘",
+      "description": "从溪里引水的一方浅塘，就在屋后菜畦边上。",
+      "accent": "#4f8f9c",
+      "min_level": 10,
+      "tier": 1,
+      "build_cost": 3000
+    }
+  ],
+  "pond_species": [
+    {
+      "id": "crucian",
+      "name": "红鲫",
+      "icon": "fish",
+      "fry_item_id": "fish_fry",
+      "produce_item_id": "pond_crucian",
+      "base_cycle_seconds": 7200,
+      "time_difficulty": 150,
+      "growth_rate": 0.08,
+      "maturation_cycles": 3.0,
+      "steady_ratio": 0.6,
+      "generation_gain": 0.6,
+      "generation_decay": 0.6,
+      "generation_cap": 60.0,
+      "min_level": 10,
+      "quality": {
+        "thresholds": [
+          40.0,
+          80.0,
+          150.0,
+          250.0
+        ],
+        "width": 20.0,
+        "miracle_probability_cap": 0.003,
+        "miracle_eligible": true
+      }
+    }
+  ],
+  "feed_slot": {
+    "name": "饲料槽",
+    "capacity": 500,
+    "quality_multipliers": [
+      1.0,
+      1.1,
+      1.25,
+      1.45,
+      1.8
+    ]
+  }
 }

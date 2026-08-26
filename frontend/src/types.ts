@@ -577,6 +577,204 @@ export interface ShopEntry {
   crop: CropDefinition | null
 }
 
+export interface AquaticItemRef {
+  id: string
+  name: string
+  icon: string
+  kind: string
+  sell_price: number
+  has_quality: boolean
+}
+
+export interface FishingSpotState {
+  id: string
+  name: string
+  description: string
+  accent: string
+  min_level: number
+  stamina_cost: number
+  cast_xp: number
+  unlocked: boolean
+  combo: number
+  draws: { base_draws: number; ability_bonus: number; difficulty: number; expected: number }
+}
+
+export interface PendingBigCatch {
+  spot_id: string
+  spot_name: string
+  created_at: number
+  item_id: string
+  name: string
+  stamina_cost: number
+  chance: number
+  min_quality: number
+}
+
+export interface PondSpeciesState {
+  id: string
+  name: string
+  icon: string
+  fry_item_id: string
+  produce_item_id: string
+  base_cycle_seconds: number
+  growth_rate: number
+  maturation_cycles: number
+  steady_ratio: number
+  generation_gain: number
+  generation_decay: number
+  generation_cap: number
+  min_level: number
+  unlocked: boolean
+  owned_fry: number
+  fry_item: AquaticItemRef
+  produce_item: AquaticItemRef
+}
+
+export interface FryBatchState {
+  count: number
+  cycles_left: number
+}
+
+export interface PondState {
+  pond_id: string
+  species_id: string
+  stock: number
+  fry: FryBatchState[]
+  fry_total: number
+  population: number
+  growth_remainder: number
+  generation_score: number
+  settle_remainder: number
+  last_settled_at: number
+  ability: number
+  cycle_seconds: number
+  next_cycle_seconds: number
+  maturation_seconds: number
+  next_maturation_seconds: number
+  stalled: boolean
+  empty: boolean
+  capacity: number
+  feed_per_cycle: number
+  next_spawn: number
+  steady_stock: number
+  generation_cap: number
+  generation_gain: number
+  generation_decay: number
+  quality_ability: number
+  assigned_partner_ids: string[]
+  assigned_partners: OwnedPartner[]
+  definition: { id: string; name: string; description: string; accent: string; min_level: number } | null
+  species: PondSpeciesState | null
+  produce_item: AquaticItemRef | null
+}
+
+export interface FeedSlotState {
+  name: string
+  units: number
+  quality_score: number
+  capacity: number
+  hourly_rate: number
+  runtime_seconds: number
+  quality_multipliers: number[]
+  inputs: Array<{
+    item_id: string
+    quality: number | null
+    quality_name: string | null
+    quantity: number
+    units: number
+    unit_score: number
+    item: AquaticItemRef
+  }>
+}
+
+export interface FishCodexState {
+  recorded: number
+  total: number
+  entries: Array<{ item_id: string; caught: number; first_caught_at: number; max_size: number; item: AquaticItemRef | null }>
+  pool: Array<{ item_id: string | null; recorded: boolean; item: AquaticItemRef | null }>
+  milestones: Array<{ id: string; name: string; required: number; claimed: boolean; reward: Reward }>
+}
+
+export interface BuildablePond {
+  id: string
+  name: string
+  description: string
+  accent: string
+  min_level: number
+  tier: number
+  build_cost: number
+  unlocked: boolean
+  affordable: boolean
+  capacity: number
+}
+
+export interface AquaticState {
+  unlocked: boolean
+  ability: number
+  companion_partner_id: string | null
+  companion: OwnedPartner | null
+  spots: FishingSpotState[]
+  next_spot_level: number | null
+  combo_rules: {
+    max_layers: number
+    draw_bonus_per_layer: number
+    rare_weight_per_layer: number
+    idle_grace_seconds: number
+    decay_seconds: number
+  }
+  combo_cap: number
+  combo: { spot_id: string | null; layers: number; updated_at: number }
+  pending_big_catch: PendingBigCatch | null
+  codex: FishCodexState
+  ponds: PondState[]
+  buildable_ponds: BuildablePond[]
+  next_pond_level: number | null
+  species: PondSpeciesState[]
+  feed_slot: FeedSlotState
+}
+
+export interface FishingDrop {
+  item_id: string
+  name: string
+  icon: string
+  quantity: number
+  quality: number | null
+  quality_name: string | null
+  size: number | null
+}
+
+export interface CastResult {
+  spot_id: string
+  duplicate: boolean
+  stamina_cost: number
+  draws: number
+  combo: number
+  drops: FishingDrop[]
+  experience: number
+  codex_discoveries: Array<{ item_id: string; name: string }>
+  codex_milestones: Array<{ id: string; name: string; required: number; granted: Reward }>
+  big_catch: PendingBigCatch | null
+}
+
+export interface BigCatchResult {
+  action: string
+  success: boolean
+  chance: number
+  stamina_cost: number
+  size?: number
+  drops: FishingDrop[]
+}
+
+export interface PondHarvestResult {
+  pond_id: string
+  quantity: number
+  stock: number
+  quality_ability: number
+  generation_before: number
+  generation_score: number
+  drops: FishingDrop[]
+}
+
 export interface GameState {
   server_time: number
   player: PlayerSummary
@@ -588,6 +786,7 @@ export interface GameState {
   next_crafting_station_level: number | null
   mining_sites: MiningSiteState[]
   next_mining_site_level: number | null
+  aquatic: AquaticState
   inventory: InventoryItem[]
   task_items: TaskItemState[]
   partners: OwnedPartner[]
