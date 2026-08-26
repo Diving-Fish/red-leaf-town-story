@@ -18,6 +18,8 @@ import type {
   GameState,
   MailboxState,
   MailClaimResult,
+  PartnerSelectPayload,
+  PartnerSelectUseResult,
   PondHarvestResult,
   Reward,
   TributeDeliveryResult,
@@ -492,6 +494,31 @@ export const useGameStore = defineStore('game', () => {
     return result
   }
 
+  async function loadPartnerSelectCandidates() {
+    if (isPending('partner-select:candidates')) return undefined
+    pending.value.add('partner-select:candidates')
+    try {
+      return await api<PartnerSelectPayload>(`${API_ROOT}/partner-select/candidates`)
+    } catch (caught) {
+      fail(caught)
+      return undefined
+    } finally {
+      pending.value.delete('partner-select:candidates')
+    }
+  }
+
+  async function useInventoryItem(itemId: string, partnerId: string) {
+    const result = (await action(`inventory:${itemId}:use`, `${API_ROOT}/inventory/${itemId}/use`, {
+      payload: { partner_id: partnerId },
+      cue: 'action:use_item',
+    })) as PartnerSelectUseResult | undefined
+    if (result) {
+      const marks = result.companion_marks_granted ? `，同行印记 ×${result.companion_marks_granted}` : ''
+      showNotice(`${result.name} 加入了小镇${marks}`)
+    }
+    return result
+  }
+
   function convertMapleFlame(quantity: number) {
     return action(`gacha:convert:${quantity}`, `${API_ROOT}/gacha/convert`, {
       payload: { quantity },
@@ -618,6 +645,8 @@ export const useGameStore = defineStore('game', () => {
     depositFeed,
     dumpFeed,
     convertMapleFlame,
+    loadPartnerSelectCandidates,
+    useInventoryItem,
     loadCrossoverCampaigns,
     claimCrossover,
     recruit,

@@ -5,6 +5,7 @@ import { useRoute, useRouter } from 'vue-router'
 
 import BuyItemDialog from '@/components/BuyItemDialog.vue'
 import ItemGridTile from '@/components/ItemGridTile.vue'
+import PartnerSelectDialog from '@/components/PartnerSelectDialog.vue'
 import SellItemDialog from '@/components/SellItemDialog.vue'
 import StateBlock from '@/components/StateBlock.vue'
 import ViewHeader from '@/components/ViewHeader.vue'
@@ -28,6 +29,7 @@ const sellKeyword = ref('')
 const sellKind = ref('all')
 const buyTargetId = ref('')
 const sellTargetId = ref('')
+const useTarget = ref<InventoryItem | null>(null)
 
 const coins = computed(() => game.player?.coins || 0)
 const shopEntries = computed(() => game.state?.shop || [])
@@ -216,7 +218,8 @@ function bucketLabel(bucket: InventoryItem) {
     </div>
 
     <BuyItemDialog :open="Boolean(buyTarget)" :entry="buyTarget" @close="buyTargetId = ''" />
-    <SellItemDialog :open="Boolean(sellTarget)" :group="sellTarget" @close="sellTargetId = ''" />
+    <SellItemDialog :open="Boolean(sellTarget)" :group="sellTarget" @close="sellTargetId = ''" @use="useTarget = $event" />
+    <PartnerSelectDialog :open="Boolean(useTarget)" :item="useTarget" @close="useTarget = null" @used="useTarget = null" />
   </section>
 </template>
 

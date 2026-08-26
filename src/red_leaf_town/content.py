@@ -22,6 +22,7 @@ CONTENT_TAGS = frozenset({
     "medicine",
     "mineral",
     "poultry_product",
+    "usable",
     "wood",
     "wood_product",
     "wool",

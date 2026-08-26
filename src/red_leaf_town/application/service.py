@@ -99,6 +99,47 @@ FISHING_MIN_INTERVAL_SECONDS = 1
 FISHING_MAX_DRAWS = 40
 _UNSEEN = MailReceiptState(mail_id="placeholder")
 
+# 伙伴邀约函可以自选的伙伴名单：当前所有已上线、有突破 0 立绘的伙伴。
+# 这份名单刻意写死——以后新伙伴上线不会自动进入可选范围，需要人工确认后手动加入。
+PARTNER_SELECT_IDS = frozenset({
+    "ai_xinyu",
+    "aishen",
+    "aiweier",
+    "aorui_jin",
+    "babi",
+    "banniang",
+    "bufeng_zhuoying",
+    "daian_zeer",
+    "fein",
+    "guidengdeng",
+    "gujian_bu",
+    "gujian_miao",
+    "guqi",
+    "guyu_yu",
+    "hei_yuchuan",
+    "hongkai",
+    "leilei",
+    "lengyue",
+    "luo_nali",
+    "mami",
+    "manlong",
+    "manlong_2",
+    "nuanyu",
+    "sunfeng_liya",
+    "wujian",
+    "xiang_hanyang",
+    "xiang_hanyuan",
+    "xiaoha",
+    "xixi",
+    "xiyue_kanna",
+    "xuanyuan",
+    "ye_huanan",
+    "ye_lvsu",
+    "zhuoyan",
+})
+# 选了低星伙伴的同行印记补偿，作为自选券的贴心缓冲：五星不补偿。
+PARTNER_SELECT_MARK_COMPENSATION = {3: 2000, 4: 1500, 5: 0}
+
 
 class FishingBatch(NamedTuple):
     """一次抽取的结果。size 是这一批里最大的那条鱼的体型，0 表示这一项不记体型。"""
@@ -2054,6 +2095,84 @@ class GameService:
                 "quality_name": QUALITY_NAMES.get(selected_quality),
                 "unit_price": unit_price,
                 "coins": coins,
+            }
+
+        player, result = self._update_by_sub(oauth_sub, mutation)
+        return {"result": result, "state": self._snapshot(player)}
+
+    def partner_select_candidates(self, oauth_sub: str) -> dict:
+        """伙伴邀约函的可选名单：写死名单里、玩家尚未拥有的伙伴，附详情供弹窗展示。"""
+        player = self.repository.get_by_sub(oauth_sub)
+        if not player:
+            raise GameError("player_not_found", "角色不存在", 404)
+        catalog = self.partner_catalog_loader()
+        trait_definitions = {trait.code: trait for trait in partner_trait_catalog()}
+        owned_ids = {owned.partner_id for owned in player.owned_partners}
+        candidates = []
+        for partner_id in sorted(PARTNER_SELECT_IDS):
+            definition = catalog.partner_map.get(partner_id)
+            if definition is None or partner_id in owned_ids:
+                continue
+            artwork = definition.artwork_for(0)
+            avatar_crop = next((crop for crop in definition.avatar_crops if crop.breakthrough == 0), None)
+            candidates.append({
+                "id": definition.id,
+                "name": definition.name,
+                "rarity": definition.rarity,
+                "description": definition.description,
+                "growth_curve_name": GROWTH_CURVE_NAMES[definition.growth_curve],
+                "artwork": artwork.model_dump() if artwork else None,
+                "avatar_crop": avatar_crop.model_dump() if avatar_crop else None,
+                "tendencies": [
+                    {
+                        "industry": tendency.industry,
+                        "name": INDUSTRY_NAMES[tendency.industry],
+                        "ability": definition.ability_at(tendency.industry, 1, definition.rarity),
+                    }
+                    for tendency in definition.tendencies
+                ],
+                "traits": [
+                    {
+                        "code": code,
+                        "name": trait_definitions[code].name if code in trait_definitions else code,
+                        "description": trait_definitions[code].description if code in trait_definitions else "",
+                    }
+                    for code in definition.trait_codes
+                ],
+                "companion_marks_granted": PARTNER_SELECT_MARK_COMPENSATION[definition.rarity],
+            })
+        candidates.sort(key=lambda entry: (-entry["rarity"], entry["id"]))
+        return {"candidates": candidates, "eligible_total": len(PARTNER_SELECT_IDS)}
+
+    def use_partner_select_item(self, oauth_sub: str, item_id: str, partner_id: str) -> dict:
+        """使用伙伴邀约函（带 usable 标签的道具），把选中的伙伴迎进小镇。"""
+        item = self.content.item_map.get(item_id)
+        if item is None or not item.has_tag("usable"):
+            raise GameError("item_not_usable", "这个物品不能使用")
+        if partner_id not in PARTNER_SELECT_IDS:
+            raise GameError("partner_not_selectable", "这个伙伴不在邀约名单里")
+        catalog = self.partner_catalog_loader()
+        definition = catalog.partner_map.get(partner_id)
+        if definition is None:
+            raise GameError("partner_not_found", "伙伴配置不存在", 404)
+        now = self._now()
+
+        def mutation(player: PlayerState):
+            if any(owned.partner_id == partner_id for owned in player.owned_partners):
+                raise GameError("partner_already_owned", "你已经有这个伙伴了", 409)
+            try:
+                remove_item(player, item_id, 1)
+            except EconomyError as exc:
+                raise GameError("resource_insufficient", str(exc)) from exc
+            owned = OwnedPartnerState(partner_id=partner_id, stars=definition.rarity, acquired_at=now)
+            player.owned_partners.append(owned)
+            marks = PARTNER_SELECT_MARK_COMPENSATION[definition.rarity]
+            player.companion_marks += marks
+            return {
+                "partner_id": partner_id,
+                "name": definition.name,
+                "stars": definition.rarity,
+                "companion_marks_granted": marks,
             }
 
         player, result = self._update_by_sub(oauth_sub, mutation)

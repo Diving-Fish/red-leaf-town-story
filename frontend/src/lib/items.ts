@@ -5,6 +5,7 @@ export const ITEM_KIND_NAMES: Record<string, string> = {
   produce: '农产品',
   material: '材料',
   product: '加工品',
+  consumable: '消耗品',
 }
 
 export function itemKindName(kind: string): string {

@@ -895,6 +895,31 @@ export interface PartnerDefinition {
   ability_preview?: Record<string, Record<string, number>>
 }
 
+export interface PartnerSelectCandidate {
+  id: string
+  name: string
+  rarity: 3 | 4 | 5
+  description: string
+  growth_curve_name: string
+  artwork: PartnerArtwork | null
+  avatar_crop: AvatarCrop | null
+  tendencies: Array<{ industry: string; name: string; ability: number }>
+  traits: Array<{ code: string; name: string; description: string }>
+  companion_marks_granted: number
+}
+
+export interface PartnerSelectPayload {
+  candidates: PartnerSelectCandidate[]
+  eligible_total: number
+}
+
+export interface PartnerSelectUseResult {
+  partner_id: string
+  name: string
+  stars: number
+  companion_marks_granted: number
+}
+
 export interface PartnerAdminOptions {
   industries: Array<{ id: IndustryId; name: string }>
   growth_curves: Array<{ id: GrowthCurveId; name: string }>

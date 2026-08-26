@@ -10,7 +10,7 @@ import { useGameStore } from '@/stores/game'
 import type { InventoryItem } from '@/types'
 
 const props = defineProps<{ open: boolean; group: InventoryGroup | null }>()
-const emit = defineEmits<{ (event: 'close'): void }>()
+const emit = defineEmits<{ (event: 'close'): void; (event: 'use', bucket: InventoryItem): void }>()
 
 const game = useGameStore()
 
@@ -29,6 +29,10 @@ const subtitle = computed(() => {
   if (!group) return ''
   return `${itemKindName(group.kind)} · ${group.buckets.length} 种品质 · 共 ${group.quantity} 个`
 })
+
+function usable(bucket: InventoryItem) {
+  return bucket.tags?.includes('usable') || false
+}
 
 function draftOf(bucket: InventoryItem) {
   const raw = drafts[bucket.inventory_key] ?? bucket.quantity
@@ -61,7 +65,7 @@ async function sell(bucket: InventoryItem) {
           <strong class="row-count">×{{ bucket.quantity }}</strong>
         </header>
 
-        <p v-if="!bucket.sell_price" class="row-note">种植用种子，商店不收购</p>
+        <p v-if="!bucket.sell_price" class="row-note">{{ bucket.kind === 'seed' ? '种植用种子，商店不收购' : '这个物品商店不收购' }}</p>
         <template v-else>
           <p class="row-price">
             收购价 <em>{{ bucket.sell_price }}</em> 金币/个
@@ -81,6 +85,13 @@ async function sell(bucket: InventoryItem) {
             >出售</ActionButton>
           </div>
         </template>
+        <div v-if="usable(bucket)" class="row-actions row-actions--use">
+          <ActionButton
+            variant="secondary"
+            :action-key="`inventory:${bucket.item_id}:use`"
+            @click="emit('use', bucket)"
+          >使用</ActionButton>
+        </div>
       </article>
     </div>
 
@@ -115,6 +126,7 @@ async function sell(bucket: InventoryItem) {
 .row-multiplier { margin-left: 7px; padding: 1px 7px; color: var(--gold); border: 1px solid color-mix(in srgb, var(--gold) 32%, transparent); border-radius: 999px; }
 .row-note { margin: 0; color: #7f8a80; font-size: 12px; }
 .row-actions { display: flex; align-items: center; gap: 9px; }
+.row-actions--use { justify-content: flex-end; }
 .row-total { flex: 1; min-width: 0; color: var(--gold); font-weight: 700; font-size: 13px; text-align: right; }
 .sell-footer { display: flex; align-items: center; justify-content: space-between; margin: 0; color: #8b968c; font-size: 13px; }
 .sell-footer strong { color: var(--gold); }

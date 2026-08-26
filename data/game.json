@@ -709,6 +709,15 @@
         "units": 10,
         "score": 80
       }
+    },
+    {
+      "id": "partner_invitation",
+      "name": "伙伴邀约函",
+      "icon": "ticket",
+      "kind": "consumable",
+      "sell_price": 0,
+      "has_quality": false,
+      "tags": ["usable"]
     }
   ],
   "crops": [

@@ -1074,6 +1074,19 @@ def create_blueprint(
         )
         return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
 
+    @blueprint.get("/api/red-leaf-town/partner-select/candidates")
+    @login_required
+    async def partner_select_candidates(subject: str):
+        result = get_service().partner_select_candidates(subject)
+        return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
+
+    @blueprint.post("/api/red-leaf-town/inventory/<string:item_id>/use")
+    @login_required
+    async def use_inventory_item(subject: str, item_id: str):
+        payload = await request.get_json(silent=True) or {}
+        result = get_service().use_partner_select_item(subject, item_id, str(payload.get("partner_id", "")))
+        return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
+
     @blueprint.post("/api/red-leaf-town/portals/<string:portal_id>/tributes/<string:tribute_id>/deliver")
     @login_required
     async def deliver_tribute(subject: str, portal_id: str, tribute_id: str):
