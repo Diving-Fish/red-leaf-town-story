@@ -62,9 +62,15 @@ const aquatic = computed(() => game.state?.aquatic || null)
             </p>
             <div class="pond-site-cost">
               <Coins :size="16" />
-              <strong>{{ site.build_cost }}</strong>
+              <strong :class="{ 'is-short': site.unlocked && !site.affordable }">{{ site.build_cost }}</strong>
               <span>红叶币</span>
             </div>
+            <p v-if="!site.unlocked" class="pond-site-locked">
+              <Lock :size="13" />居民等级 {{ site.min_level }} 才能挖这口塘（当前 Lv.{{ game.state.player.level }}）
+            </p>
+            <p v-else-if="!site.affordable" class="pond-site-locked">
+              <Coins :size="13" />红叶币不足，还差 {{ site.build_cost - game.state.player.coins }} 枚
+            </p>
             <ActionButton
               :action-key="`aquatic:pond:${site.id}:build`"
               :disabled="!site.unlocked || !site.affordable"
@@ -93,5 +99,7 @@ const aquatic = computed(() => game.state?.aquatic || null)
 .pond-site-note { margin: 0; color: #7d887f; font-size: 12px; line-height: 1.6; }
 .pond-site-cost { display: flex; align-items: center; gap: 7px; margin-top: auto; color: var(--gold); }
 .pond-site-cost strong { font-size: 19px; }
+.pond-site-cost strong.is-short { color: #b4635a; }
+.pond-site-locked { display: flex; align-items: center; gap: 6px; margin: -4px 0 0; color: #a4736a; font-size: 12px; line-height: 1.5; }
 .pond-site-cost span { color: #7d887f; font-size: 12px; }
 </style>
