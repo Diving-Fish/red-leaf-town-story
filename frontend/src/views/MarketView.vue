@@ -3,31 +3,21 @@ import { computed, ref, watch } from 'vue'
 import { PackageOpen, Search, Store } from 'lucide-vue-next'
 import { useRoute, useRouter } from 'vue-router'
 
-import ActionButton from '@/components/ActionButton.vue'
-import MarketItem from '@/components/MarketItem.vue'
+import BuyItemDialog from '@/components/BuyItemDialog.vue'
+import ItemGridTile from '@/components/ItemGridTile.vue'
+import SellItemDialog from '@/components/SellItemDialog.vue'
 import StateBlock from '@/components/StateBlock.vue'
 import ViewHeader from '@/components/ViewHeader.vue'
-import { itemKindName } from '@/lib/items'
+import { groupInventory, itemKindName } from '@/lib/items'
+import { qualityName } from '@/lib/quality'
 import { useGameStore } from '@/stores/game'
-import { useUiStore } from '@/stores/ui'
 import type { InventoryItem, ShopEntry } from '@/types'
-
-interface SellGroup {
-  itemId: string
-  name: string
-  icon: string
-  kind: string
-  quantity: number
-  value: number
-  buckets: InventoryItem[]
-}
 
 type MarketTab = 'buy' | 'sell'
 
 const TOOLBAR_THRESHOLD = 6
 
 const game = useGameStore()
-const ui = useUiStore()
 const route = useRoute()
 const router = useRouter()
 
@@ -36,26 +26,12 @@ const buyKeyword = ref('')
 const buyKind = ref('all')
 const sellKeyword = ref('')
 const sellKind = ref('all')
-const expandedItems = ref<string[]>([])
+const buyTargetId = ref('')
+const sellTargetId = ref('')
 
 const coins = computed(() => game.player?.coins || 0)
 const shopEntries = computed(() => game.state?.shop || [])
-
-const sellGroups = computed<SellGroup[]>(() => {
-  const groups = new Map<string, SellGroup>()
-  for (const item of game.state?.inventory || []) {
-    let group = groups.get(item.item_id)
-    if (!group) {
-      group = { itemId: item.item_id, name: item.name, icon: item.icon, kind: item.kind, quantity: 0, value: 0, buckets: [] }
-      groups.set(item.item_id, group)
-    }
-    group.quantity += item.quantity
-    group.value += item.sell_price * item.quantity
-    group.buckets.push(item)
-  }
-  for (const group of groups.values()) group.buckets.sort((left, right) => (right.quality || 0) - (left.quality || 0))
-  return [...groups.values()]
-})
+const sellGroups = computed(() => groupInventory(game.state?.inventory || []))
 
 const buyKinds = computed(() => [...new Set(shopEntries.value.map((entry) => entry.item.kind))])
 const sellKinds = computed(() => [...new Set(sellGroups.value.map((group) => group.kind))])
@@ -80,6 +56,9 @@ const visibleSell = computed(() =>
   ),
 )
 
+const buyTarget = computed(() => shopEntries.value.find((entry) => entry.id === buyTargetId.value) || null)
+const sellTarget = computed(() => sellGroups.value.find((group) => group.itemId === sellTargetId.value) || null)
+
 watch(
   () => route.query.tab,
   (value) => (tab.value = value === 'sell' ? 'sell' : 'buy'),
@@ -91,55 +70,26 @@ watch(buyKinds, (kinds) => {
 watch(sellKinds, (kinds) => {
   if (sellKind.value !== 'all' && !kinds.includes(sellKind.value)) sellKind.value = 'all'
 })
+// 卖光最后一件时分组会消失，顺手把详情弹窗收起来。
+watch(sellTarget, (group) => {
+  if (!group) sellTargetId.value = ''
+})
 
 function selectTab(value: MarketTab) {
   tab.value = value
   router.replace({ query: value === 'sell' ? { tab: 'sell' } : {} })
 }
 
-function expanded(itemId: string) {
-  return expandedItems.value.includes(itemId)
+function affordable(entry: ShopEntry) {
+  return coins.value >= entry.price
 }
 
-function toggleGroup(itemId: string) {
-  const index = expandedItems.value.indexOf(itemId)
-  if (index >= 0) expandedItems.value.splice(index, 1)
-  else expandedItems.value.push(itemId)
+function ownedCount(entry: ShopEntry) {
+  return game.inventoryMap.get(entry.item_id)?.quantity || 0
 }
 
-function affordable(entry: ShopEntry, quantity: number) {
-  return coins.value >= entry.price * quantity
-}
-
-function buyReason(entry: ShopEntry, quantity: number) {
-  if (entry.locked) return `等级 ${entry.min_level} 解锁`
-  if (!affordable(entry, quantity)) return '金币不足'
-  return undefined
-}
-
-function buyMeta(entry: ShopEntry) {
-  if (entry.locked) return `等级 ${entry.min_level} 解锁`
-  return `仓库中有 ${game.inventoryMap.get(entry.item_id)?.quantity || 0} 包`
-}
-
-function bucketMeta(item: InventoryItem) {
-  if (!item.sell_price) return '种植用种子'
-  const bonus = item.quality_sale_multiplier > 1 ? ` · ${item.quality_sale_multiplier}×` : ''
-  return `收购价 ${item.sell_price} 金币${bonus}`
-}
-
-function groupMeta(group: SellGroup) {
-  return `${group.buckets.length} 种品质 · 合计 ${group.value} 金币`
-}
-
-async function sellAll(item: InventoryItem) {
-  const accepted = await ui.confirm({
-    title: `出售全部${item.name}？`,
-    description: `${item.quality_name || ''}${item.name} ×${item.quantity} 会一次性卖出，共 ${item.sell_price * item.quantity} 金币。出售之后无法撤销。`,
-    confirmLabel: '全部出售',
-    tone: 'danger',
-  })
-  if (accepted) game.sell(item.item_id, item.quantity, item.quality)
+function bucketLabel(bucket: InventoryItem) {
+  return bucket.quality_name || qualityName(bucket.quality, '无品质')
 }
 </script>
 
@@ -176,43 +126,35 @@ async function sellAll(item: InventoryItem) {
           </template>
         </div>
 
-        <div class="market-list">
-          <MarketItem
+        <div v-if="visibleShop.length" class="item-grid">
+          <ItemGridTile
             v-for="entry in visibleShop"
             :key="entry.id"
             :icon="entry.item.icon"
             :name="entry.item.name"
-            :meta="buyMeta(entry)"
-            :amount="entry.price"
-            amount-unit="金币"
+            :badge="entry.price"
             :locked="entry.locked"
+            :dimmed="!entry.locked && !affordable(entry)"
+            @click="buyTargetId = entry.id"
           >
-            <template #actions>
-              <ActionButton
-                variant="text"
-                :action-key="`shop:${entry.id}:5`"
-                :group="`shop:${entry.id}`"
-                :disabled="entry.locked || !affordable(entry, 5)"
-                :reason="buyReason(entry, 5)"
-                @click="game.buy(entry.id, 5)"
-              >买 5 包</ActionButton>
-              <ActionButton
-                :action-key="`shop:${entry.id}:1`"
-                :group="`shop:${entry.id}`"
-                :disabled="entry.locked || !affordable(entry, 1)"
-                :reason="buyReason(entry, 1)"
-                @click="game.buy(entry.id, 1)"
-              >购买</ActionButton>
+            <template #tooltip>
+              <strong>{{ entry.item.name }}</strong>
+              <span class="tip-muted">{{ itemKindName(entry.item.kind) }}</span>
+              <div class="tip-divider" />
+              <div class="tip-row"><span class="tip-muted">单价</span><span class="tip-total">{{ entry.price }} 金币</span></div>
+              <div class="tip-row"><span class="tip-muted">仓库中有</span><span>{{ ownedCount(entry) }} 个</span></div>
+              <span v-if="entry.locked" class="tip-muted">等级 {{ entry.min_level }} 解锁</span>
+              <span v-else-if="!affordable(entry)" class="tip-muted">金币不足</span>
             </template>
-          </MarketItem>
-
-          <StateBlock
-            v-if="!visibleShop.length"
-            variant="inline"
-            :icon="Store"
-            :title="shopEntries.length ? '没有符合条件的商品' : '今天没有可以买的东西'"
-          />
+          </ItemGridTile>
         </div>
+
+        <StateBlock
+          v-else
+          variant="inline"
+          :icon="Store"
+          :title="shopEntries.length ? '没有符合条件的商品' : '今天没有可以买的东西'"
+        />
       </section>
 
       <section class="market-column market-column--sell">
@@ -236,81 +178,45 @@ async function sellAll(item: InventoryItem) {
           </template>
         </div>
 
-        <div class="market-list">
-          <template v-for="group in visibleSell" :key="group.itemId">
-            <MarketItem
-              v-if="group.buckets.length === 1"
-              :icon="group.icon"
-              :name="group.name"
-              :quality="group.buckets[0].quality"
-              :quality-name="group.buckets[0].quality_name"
-              :meta="bucketMeta(group.buckets[0])"
-              :amount="`×${group.quantity}`"
-            >
-              <template v-if="group.buckets[0].sell_price" #actions>
-                <ActionButton
-                  variant="text"
-                  :action-key="`inventory:${group.itemId}:${group.buckets[0].quality || 0}:1`"
-                  :group="`inventory:${group.itemId}:${group.buckets[0].quality || 0}`"
-                  @click="game.sell(group.itemId, 1, group.buckets[0].quality)"
-                >出售 1 个</ActionButton>
-                <ActionButton
-                  :action-key="`inventory:${group.itemId}:${group.buckets[0].quality || 0}:${group.quantity}`"
-                  :group="`inventory:${group.itemId}:${group.buckets[0].quality || 0}`"
-                  @click="sellAll(group.buckets[0])"
-                >全部出售</ActionButton>
-              </template>
-            </MarketItem>
-
-            <template v-else>
-              <MarketItem
-                expandable
-                :expanded="expanded(group.itemId)"
-                :icon="group.icon"
-                :name="group.name"
-                :meta="groupMeta(group)"
-                :amount="`×${group.quantity}`"
-                @toggle="toggleGroup(group.itemId)"
-              />
-              <div v-if="expanded(group.itemId)" class="market-buckets">
-                <MarketItem
-                  v-for="bucket in group.buckets"
-                  :key="bucket.inventory_key"
-                  nested
-                  :icon="bucket.icon"
-                  :name="bucket.name"
-                  :quality="bucket.quality"
-                  :quality-name="bucket.quality_name"
-                  :meta="bucketMeta(bucket)"
-                  :amount="`×${bucket.quantity}`"
-                >
-                  <template v-if="bucket.sell_price" #actions>
-                    <ActionButton
-                      variant="text"
-                      :action-key="`inventory:${bucket.item_id}:${bucket.quality || 0}:1`"
-                      :group="`inventory:${bucket.item_id}:${bucket.quality || 0}`"
-                      @click="game.sell(bucket.item_id, 1, bucket.quality)"
-                    >出售 1 个</ActionButton>
-                    <ActionButton
-                      :action-key="`inventory:${bucket.item_id}:${bucket.quality || 0}:${bucket.quantity}`"
-                      :group="`inventory:${bucket.item_id}:${bucket.quality || 0}`"
-                      @click="sellAll(bucket)"
-                    >全部出售</ActionButton>
-                  </template>
-                </MarketItem>
+        <div v-if="visibleSell.length" class="item-grid">
+          <ItemGridTile
+            v-for="group in visibleSell"
+            :key="group.itemId"
+            :icon="group.icon"
+            :name="group.name"
+            :quality="group.topQuality"
+            :badge="`×${group.quantity}`"
+            @click="sellTargetId = group.itemId"
+          >
+            <template #tooltip>
+              <strong>{{ group.name }}</strong>
+              <span class="tip-muted">{{ itemKindName(group.kind) }} · {{ group.buckets.length }} 种品质</span>
+              <div class="tip-divider" />
+              <div v-for="bucket in group.buckets" :key="bucket.inventory_key" class="tip-row">
+                <span :class="`quality-tone-${bucket.quality || 1}`">{{ bucketLabel(bucket) }}</span>
+                <span>×{{ bucket.quantity }}</span>
+              </div>
+              <div class="tip-divider" />
+              <div class="tip-row">
+                <span class="tip-muted">总收购价</span>
+                <span v-if="group.sellable" class="tip-total">{{ group.value }} 金币</span>
+                <span v-else class="tip-muted">不可出售</span>
               </div>
             </template>
-          </template>
-
-          <StateBlock
-            v-if="!visibleSell.length"
-            variant="inline"
-            :icon="PackageOpen"
-            :title="sellGroups.length ? '没有符合条件的物品' : '仓库还是空的'"
-          />
+          </ItemGridTile>
         </div>
+
+        <StateBlock
+          v-else
+          variant="inline"
+          :icon="PackageOpen"
+          :title="sellGroups.length ? '没有符合条件的物品' : '仓库还是空的'"
+        />
       </section>
     </div>
+
+    <BuyItemDialog :open="Boolean(buyTarget)" :entry="buyTarget" @close="buyTargetId = ''" />
+    <SellItemDialog :open="Boolean(sellTarget)" :group="sellTarget" @close="sellTargetId = ''" />
   </section>
 </template>
 
@@ -334,8 +240,12 @@ async function sellAll(item: InventoryItem) {
 .filter-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .filter-chip { min-height: 28px; padding: 0 11px; color: #93a094; border: 1px solid var(--line); border-radius: 99px; background: #ffffff05; cursor: pointer; }
 .filter-chip.active { color: #16210f; font-weight: 700; border-color: transparent; background: var(--leaf-bright); }
-.market-list { display: grid; gap: 10px; align-content: start; }
-.market-buckets { display: grid; gap: 6px; margin: -4px 0 4px; padding: 8px 10px 10px; border: 1px solid var(--line); border-top: 0; border-radius: 0 0 13px 13px; background: #0d1310a8; }
+.item-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 10px; align-content: start; }
+.quality-tone-1 { color: var(--quality-1); }
+.quality-tone-2 { color: var(--quality-2); }
+.quality-tone-3 { color: var(--quality-3); }
+.quality-tone-4 { color: var(--quality-4); }
+.quality-tone-5 { color: var(--quality-5); }
 @media (max-width: 900px) {
   .market-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 16px; padding: 5px; border: 1px solid var(--line); border-radius: 12px; background: #ffffff05; }
   .market-tabs button { min-height: 38px; color: #93a094; border: 0; border-radius: 9px; background: transparent; cursor: pointer; }
