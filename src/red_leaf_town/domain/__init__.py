@@ -31,11 +31,12 @@ from .models import (
     TaskQualitySnapshot,
 )
 from .mail import MailMessage, MailScope
-from .production import build_results, draw_count, pick_weighted, roll_unit_qualities
+from .production import build_results, draw_count, draw_weighted_batches, pick_weighted, roll_unit_qualities
 
 __all__ = [
     "build_results",
     "draw_count",
+    "draw_weighted_batches",
     "pick_weighted",
     "roll_unit_qualities",
     "CommissionBoardEntry",

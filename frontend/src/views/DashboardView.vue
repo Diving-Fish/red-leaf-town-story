@@ -38,16 +38,15 @@ const commissionHint = computed(() => {
   return `${today.npc_name}要 ${today.item?.name || today.item_id} ×${today.quantity}`
 })
 
-const weatherOptions = [
-  { name: '晴朗', icon: Sun, accent: '#e0b45d' },
-  { name: '多云', icon: CloudSun, accent: '#a9b6a8' },
-  { name: '小雨', icon: CloudRain, accent: '#7fa4b7' },
-  { name: '山风', icon: Wind, accent: '#91ad9b' },
-]
+const weatherIcons = { sunny: Sun, cloudy: CloudSun, rain: CloudRain, windy: Wind }
 
 const weather = computed(() => {
-  const chinaDay = Math.floor(((game.state?.server_time || 0) + 8 * 3600) / 86400)
-  return weatherOptions[chinaDay % weatherOptions.length]
+  const current = game.state?.world.weather
+  return {
+    name: current?.name || '天气未知',
+    accent: current?.accent || '#a9b6a8',
+    icon: weatherIcons[current?.id as keyof typeof weatherIcons] || CloudSun,
+  }
 })
 
 const experienceProgress = computed(() => {

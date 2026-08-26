@@ -42,6 +42,18 @@ def test_oauth_account_has_exactly_one_player(game):
     assert len(repository.players) == 1
 
 
+def test_world_weather_is_authoritative_and_rolls_over_by_server_day(game):
+    service, _, clock, _ = game
+    first = service.snapshot_by_sub("oauth-sub-1")["world"]
+    clock.advance(24 * 3600)
+    second = service.snapshot_by_sub("oauth-sub-1")["world"]
+
+    assert first["season"] == {"id": "autumn", "name": "秋季"}
+    assert first["day"] != second["day"]
+    assert first["weather"]["id"] != second["weather"]["id"]
+    assert second["weather"]["name"] in {"晴朗", "多云", "小雨", "山风"}
+
+
 def test_buy_plant_wait_harvest_and_sell_is_a_closed_loop(game):
     service, repository, clock, _ = game
     bought = service.buy("oauth-sub-1", "carrot_seed", 1)
@@ -216,7 +228,7 @@ def test_schema_sixteen_rebalances_partner_progress_and_active_task_snapshots_on
 
     partner = player.owned_partners[0]
     task = player.mining_sites[0].task_snapshot
-    assert player.schema_version == 20
+    assert player.schema_version == 21
     assert (partner.level, partner.experience) == (3, 0)
     assert (task.partner_snapshots[0].level, task.partner_snapshots[0].effective_level) == (2, 2)
     assert task.rule_version == 2

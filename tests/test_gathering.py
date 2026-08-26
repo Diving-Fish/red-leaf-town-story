@@ -10,6 +10,7 @@ from red_leaf_town.content import load_content
 from red_leaf_town.domain import PlayerState
 from red_leaf_town.infrastructure import InMemoryPlayerRepository
 from red_leaf_town.partner_content import PartnerCatalog, PartnerDefinition
+from red_leaf_town.partner_traits import record_partner_trait_effect, register_partner_trait
 
 
 class Clock:
@@ -131,6 +132,98 @@ def test_gathering_requires_partner_and_locks_it_until_ready(gathering_game):
     for result in first_results:
         assert inventory[result["item_id"]][result["quality"]] == result["quantity"]
     assert collected["state"]["gathering_sites"][0]["empty"] is True
+
+
+def test_partner_trait_pipeline_modifies_and_freezes_a_task(gathering_game):
+    service, _, _, _ = gathering_game
+    code = "test_gathering_pipeline"
+
+    @register_partner_trait(
+        code,
+        "采集管线测试",
+        "验证开工与抽取阶段",
+        phases=("task_prepare", "output_draw"),
+    )
+    def apply(context):
+        if context["phase"] == "task_prepare":
+            context["duration_multiplier"] *= 0.5
+            context["draw_bonus"] += 1
+            record_partner_trait_effect(context, "duration_multiplier", value=0.5)
+        else:
+            record_partner_trait_effect(context, "reroll_first_duplicate")
+
+    service.partner_catalog_loader().partner_map["gather_one"].trait_codes = [code]
+    service.assign_gathering_partner("gather-sub", "maple_forest", "gather_one")
+    started = service.start_gathering("gather-sub", "maple_forest", "collect_maple_wood")
+    snapshot = started["state"]["gathering_sites"][0]["task_snapshot"]
+
+    assert snapshot["final_duration"] == 15_840
+    assert snapshot["draw_count"] == 9
+    assert snapshot["world_day"] == started["state"]["world"]["day"]
+    assert snapshot["weather_id"] == started["state"]["world"]["weather"]["id"]
+    assert [entry["effect"] for entry in snapshot["applied_effects"]] == [
+        "duration_multiplier",
+        "reroll_first_duplicate",
+    ]
+
+
+def test_real_duration_trait_can_break_the_original_task_minimum(gathering_game):
+    service, _, _, _ = gathering_game
+    service.partner_catalog_loader().partner_map["gather_one"].trait_codes = ["swift_wind_work"]
+    service.assign_gathering_partner("gather-sub", "maple_forest", "gather_one")
+
+    started = service.start_gathering("gather-sub", "maple_forest", "collect_maple_wood")
+    snapshot = started["state"]["gathering_sites"][0]["task_snapshot"]
+
+    assert snapshot["final_duration"] < service.content.gathering_task_map["collect_maple_wood"].minimum_duration_seconds
+    assert snapshot["minimum_duration"] == snapshot["final_duration"]
+    assert any(
+        entry.get("trait_code") == "swift_wind_work"
+        and entry.get("effect") == "duration_multiplier"
+        for entry in snapshot["applied_effects"]
+    )
+
+
+def test_fein_varied_forage_is_frozen_into_the_gathering_task(gathering_game):
+    service, _, _, _ = gathering_game
+    service.partner_catalog_loader().partner_map["gather_one"].trait_codes = ["varied_forage"]
+    service.assign_gathering_partner("gather-sub", "maple_forest", "gather_one")
+
+    started = service.start_gathering("gather-sub", "maple_forest", "collect_maple_wood")
+    snapshot = started["state"]["gathering_sites"][0]["task_snapshot"]
+
+    assert any(
+        entry.get("trait_code") == "varied_forage"
+        and entry.get("effect") == "reroll_first_duplicate"
+        for entry in snapshot["applied_effects"]
+    )
+
+
+def test_luo_nali_freezes_the_current_medicine_candidates(gathering_game):
+    service, repository, _, player = gathering_game
+    service.partner_catalog_loader().partner_map["gather_one"].trait_codes = ["herb_lore"]
+    repository.update(player.player_id, lambda state: setattr(state, "experience", 20))
+    service.snapshot_by_sub("gather-sub")
+    service.assign_gathering_partner("gather-sub", "dew_meadow", "gather_one")
+
+    started = service.start_gathering("gather-sub", "dew_meadow", "collect_autumn_herb")
+    snapshot = next(
+        site["task_snapshot"]
+        for site in started["state"]["gathering_sites"]
+        if site["site_id"] == "dew_meadow"
+    )
+    effect = next(
+        entry
+        for entry in snapshot["applied_effects"]
+        if entry.get("trait_code") == "herb_lore"
+    )
+
+    assert effect["effect"] == "guarantee_tagged_output"
+    assert set(effect["params"]["eligible_item_ids"]) == {
+        "autumn_herb",
+        "morning_dew_flower",
+        "silver_star_moss",
+    }
 
 
 def test_gathering_capacity_is_derived_from_talent_tree(gathering_game):

@@ -4,6 +4,7 @@ import random
 import secrets
 import time
 from collections.abc import Callable
+from datetime import datetime, timedelta, timezone
 from math import ceil, floor
 from typing import NamedTuple
 
@@ -66,7 +67,7 @@ from red_leaf_town.domain.progression import (
     refund_stamina,
     settle_stamina,
 )
-from red_leaf_town.domain.production import build_results, draw_count, pick_weighted
+from red_leaf_town.domain.production import build_results, draw_count, draw_weighted_batches
 from red_leaf_town.domain.quality import QUALITY_NAMES, quality_probabilities, roll_quality
 from red_leaf_town.crossover import (
     CrossoverCampaign,
@@ -83,7 +84,7 @@ from red_leaf_town.partner_content import (
     level_cap_for_breakthrough,
     load_partner_catalog,
 )
-from red_leaf_town.partner_traits import partner_trait_catalog
+from red_leaf_town.partner_traits import execute_partner_traits, partner_trait_catalog
 from red_leaf_town.rewards import serialize_reward, validate_reward_references
 from red_leaf_town.story_assets import StoryAssetCatalog, load_story_asset_catalog
 from red_leaf_town.story_content import StoryCatalog, load_story_catalog, serialize_script
@@ -143,6 +144,36 @@ class GameService:
         self.story_catalog_loader = story_catalog_loader
         self.story_asset_loader = story_asset_loader
         self.gacha_pool_loader = gacha_pool_loader
+
+    def _world_snapshot(self, now: int) -> dict:
+        world = self.content.world
+        local_timezone = timezone(timedelta(seconds=world.utc_offset_seconds))
+        local_date = datetime.fromtimestamp(now, local_timezone).date()
+        day_index = (now + world.utc_offset_seconds) // 86400
+        weather = world.weather_cycle[day_index % len(world.weather_cycle)]
+        return {
+            "day": local_date.isoformat(),
+            "season": {"id": world.season_id, "name": world.season_name},
+            "weather": weather.model_dump(),
+        }
+
+    def _execute_partner_trait_phase(
+        self,
+        partner_ids: list[str],
+        phase: str,
+        context: dict,
+    ) -> list[str]:
+        catalog = self.partner_catalog_loader()
+        executed: list[str] = []
+        context["phase"] = phase
+        for partner_id in partner_ids:
+            definition = catalog.partner_map.get(partner_id)
+            if definition is None:
+                continue
+            context["source_partner_id"] = partner_id
+            executed.extend(execute_partner_traits(definition.trait_codes, context))
+        context.pop("source_partner_id", None)
+        return executed
 
     def _gacha_pool(self, pool_id: str) -> GachaDefinition:
         pool = self.gacha_pool_loader().get(pool_id)
@@ -722,16 +753,37 @@ class GameService:
                 raise GameError("fishing_too_fast", "刚抛完一竿，缓一口气", 429)
 
             combo = self._current_combo(player, spot_id, now)
-            ability = self._aquatic_ability(player, self._fishing_companion_ids(player))
-            draws = self._fishing_draw_count(spot, ability, combo)
-            pool = self._fishing_pool(spot, combo)
+            companion_ids = self._fishing_companion_ids(player)
+            trait_context = {
+                "action": "fishing_cast",
+                "industry": "aquatic",
+                "content_id": spot.id,
+                "world": self._world_snapshot(now),
+                "ability_bonus": 0,
+                "quality_ability_bonus": 0,
+                "draw_bonus": 0,
+                "stamina_multiplier": 1.0,
+                "rare_weight_multiplier": 1.0,
+                "applied_effects": [],
+            }
+            self._execute_partner_trait_phase(companion_ids, "instant_action", trait_context)
+            ability = self._aquatic_ability(player, companion_ids) + int(trait_context["ability_bonus"])
+            draws = max(1, min(
+                FISHING_MAX_DRAWS,
+                self._fishing_draw_count(spot, ability, combo) + int(trait_context["draw_bonus"]),
+            ))
+            pool = self._fishing_pool(spot, combo, float(trait_context["rare_weight_multiplier"]))
+            stamina_cost = max(
+                0,
+                ceil(spot.stamina_cost * max(0.0, float(trait_context["stamina_multiplier"]))),
+            )
             try:
-                consume_stamina(player, spot.stamina_cost, self.content, now)
+                consume_stamina(player, stamina_cost, self.content, now)
             except ValueError as exc:
                 raise GameError("resource_insufficient", str(exc)) from exc
 
             probabilities = quality_probabilities(
-                ability,
+                ability + float(trait_context["quality_ability_bonus"]),
                 spot.quality.thresholds,
                 spot.quality.width,
                 spot.quality.miracle_probability_cap,
@@ -751,12 +803,18 @@ class GameService:
                     continue
                 quantity = self.rng.randint(entry.quantity_min, entry.quantity_max)
                 batches.append(self._roll_batch(entry, quantity))
-            drops = self._grant_fishing_batches(player, batches, probabilities, now)
+            drops = self._grant_fishing_batches(
+                player,
+                batches,
+                probabilities,
+                now,
+                trait_context["applied_effects"],
+            )
             codex = self._record_codex(player, batches, now)
 
             levels = grant_experience(player, spot.cast_xp, self.content)
             milestones = self._claim_codex_milestones(player, now)
-            partner_experience = self._grant_companion_experience(player, spot.stamina_cost)
+            partner_experience = self._grant_companion_experience(player, stamina_cost)
             fishing.spot_id = spot_id
             fishing.combo = min(self._combo_cap(player), combo + 1)
             fishing.combo_updated_at = now
@@ -768,7 +826,7 @@ class GameService:
             return {
                 "spot_id": spot_id,
                 "duplicate": False,
-                "stamina_cost": spot.stamina_cost,
+                "stamina_cost": stamina_cost,
                 "draws": draws,
                 "ability": ability,
                 "combo": fishing.combo,
@@ -778,6 +836,7 @@ class GameService:
                 "codex_discoveries": codex,
                 "codex_milestones": milestones,
                 "partner_experience": partner_experience,
+                "applied_effects": trait_context["applied_effects"],
                 "big_catch": self._big_catch_snapshot(player, now),
             }
 
@@ -884,8 +943,7 @@ class GameService:
             if self._industry_assigned_count(player, "aquatic") > self._industry_partner_capacity(player, "aquatic"):
                 raise GameError("partner_capacity_reached", "当前水产伙伴编制已满", 409)
             # 结算已经在前面用旧能力做完，这里直接写入新的参数快照。
-            pond.ability = self._aquatic_ability(player, pond.assigned_partner_ids)
-            pond.cycle_seconds = self._pond_cycle_seconds(player, pond)
+            self._refresh_pond_trait_snapshot(player, pond, now)
             return {
                 "pond_id": pond_id,
                 "partner_id": partner_id or None,
@@ -956,8 +1014,7 @@ class GameService:
                 pond.settle_remainder = 0
                 pond.growth_remainder = 0
             pond.last_settled_at = now
-            pond.ability = self._aquatic_ability(player, pond.assigned_partner_ids)
-            pond.cycle_seconds = self._pond_cycle_seconds(player, pond)
+            self._refresh_pond_trait_snapshot(player, pond, now)
             # 投苗之后才知道周期，所以入池放在最后：这一批要长满 maturation_cycles 个周期。
             add_fry(pond, quantity, species.maturation_cycles)
             return {
@@ -995,6 +1052,7 @@ class GameService:
                 + self._pond_tier(pond).quality_bonus
                 + player.feed_slot.quality_score
                 + pond.generation_score
+                + pond.quality_bonus
             )
             probabilities = quality_probabilities(
                 quality_ability,
@@ -1138,11 +1196,37 @@ class GameService:
         species = self.content.pond_species_map.get(pond.species_id)
         if species is None:
             return 0
-        return pond_cycle_seconds(
+        base_seconds = pond_cycle_seconds(
             species.base_cycle_seconds,
             self._aquatic_ability(player, pond.assigned_partner_ids),
             species.time_difficulty,
         )
+        return max(1, ceil(base_seconds * pond.cycle_multiplier))
+
+    def _refresh_pond_trait_snapshot(self, player: PlayerState, pond: PondState, now: int) -> None:
+        species = self.content.pond_species_map.get(pond.species_id)
+        produce_item = self.content.item_map.get(species.produce_item_id) if species else None
+        context = {
+            "industry": "aquatic",
+            "action": "pond_segment",
+            "content_id": species.id if species else "",
+            "production_slot_id": f"aquatic:pond:{pond.pond_id}",
+            "world": self._world_snapshot(now),
+            "content_tags": list(produce_item.tags) if produce_item else [],
+            "cycle_multiplier": 1.0,
+            "feed_multiplier": 1.0,
+            "quality_bonus": 0.0,
+            "generation_gain_bonus": 0.0,
+            "applied_effects": [],
+        }
+        self._execute_partner_trait_phase(pond.assigned_partner_ids, "asset_prepare", context)
+        pond.cycle_multiplier = max(0.01, float(context["cycle_multiplier"]))
+        pond.feed_multiplier = max(0.0, float(context["feed_multiplier"]))
+        pond.quality_bonus = float(context["quality_bonus"])
+        pond.generation_gain_bonus = float(context["generation_gain_bonus"])
+        pond.trait_effects = list(context["applied_effects"])
+        pond.ability = self._aquatic_ability(player, pond.assigned_partner_ids)
+        pond.cycle_seconds = self._pond_cycle_seconds(player, pond)
 
     def _pond_parameters(self, player: PlayerState, pond: PondState) -> PondParameters:
         tier = self._pond_tier(pond)
@@ -1155,10 +1239,13 @@ class GameService:
             growth_rate=species.growth_rate if species else 0,
             maturation_cycles=species.maturation_cycles if species else 1,
             steady_ratio=species.steady_ratio if species else 1,
-            generation_gain=species.generation_gain if species else 0,
+            generation_gain=max(
+                0.0,
+                (species.generation_gain if species else 0) + pond.generation_gain_bonus,
+            ),
             generation_decay=species.generation_decay if species else 0,
             generation_cap=generation_cap,
-            feed_per_cycle=tier.feed_per_cycle,
+            feed_per_cycle=tier.feed_per_cycle * pond.feed_multiplier,
         )
 
     def _settle_aquatic(self, player: PlayerState, now: int) -> None:
@@ -1174,8 +1261,7 @@ class GameService:
         self._grant_pond_partner_experience(player, settlement)
         for pond in player.ponds:
             # 推进用旧快照，推进完立刻换成当前参数：天赋和伙伴的改动从下一段开始生效。
-            pond.ability = self._aquatic_ability(player, pond.assigned_partner_ids)
-            pond.cycle_seconds = self._pond_cycle_seconds(player, pond)
+            self._refresh_pond_trait_snapshot(player, pond, now)
 
     def _grant_pond_partner_experience(self, player: PlayerState, settlement) -> None:
         """驻场看塘的伙伴按结算掉的周期数拿经验。停摆的周期没买单，也就不给经验。"""
@@ -1226,9 +1312,16 @@ class GameService:
         multiplier = 1 + spot.draws.ability_bonus * max(0, ability) / (max(0, ability) + spot.draws.difficulty)
         return max(1, min(FISHING_MAX_DRAWS, floor(base * multiplier + 0.5)))
 
-    def _fishing_pool(self, spot, combo: int) -> list[tuple[object, float, bool]]:
+    def _fishing_pool(
+        self,
+        spot,
+        combo: int,
+        trait_rare_multiplier: float = 1.0,
+    ) -> list[tuple[object, float, bool]]:
         """产出池。稀有条目和大物吃聚鱼度的权重加成。"""
-        rare_multiplier = 1 + self.content.fishing_combo.rare_weight_per_layer * combo
+        rare_multiplier = (
+            1 + self.content.fishing_combo.rare_weight_per_layer * combo
+        ) * max(0.0, trait_rare_multiplier)
         pool: list[tuple[object, float, bool]] = [
             (entry, entry.weight * (rare_multiplier if entry.rare else 1), False)
             for entry in spot.outputs
@@ -1267,27 +1360,43 @@ class GameService:
         batches: list[FishingBatch],
         probabilities: list[float],
         now: int,
+        applied_effects: list[dict] | None = None,
     ) -> list[dict]:
         """每件独立判品质。无品质的杂物（鱼苗之类）按 0 档直接进背包。"""
         items = self.content.item_map
-        tally: dict[tuple[str, int], int] = {}
-        order: list[tuple[str, int]] = []
         sizes: dict[str, float] = {}
+        quality_batches: list[tuple[str, int]] = []
+        quality_free: dict[str, int] = {}
+        quality_free_order: list[str] = []
         for batch in batches:
             definition = items.get(batch.item_id)
             if batch.size:
                 sizes[batch.item_id] = max(sizes.get(batch.item_id, 0.0), batch.size)
-            for _ in range(batch.quantity):
-                quality = roll_quality(self.rng, probabilities) if definition and definition.has_quality else 0
-                key = (batch.item_id, quality)
-                if key not in tally:
-                    order.append(key)
-                tally[key] = tally.get(key, 0) + 1
+            if definition and definition.has_quality:
+                quality_batches.append((batch.item_id, batch.quantity))
+                continue
+            if batch.item_id not in quality_free:
+                quality_free_order.append(batch.item_id)
+            quality_free[batch.item_id] = quality_free.get(batch.item_id, 0) + batch.quantity
+        results = build_results(
+            self.rng,
+            quality_batches,
+            probabilities,
+            now,
+            applied_effects or (),
+        )
         drops = []
-        for key in order:
-            item_id, quality = key
-            add_item(player, item_id, tally[key], quality)
-            drops.append(self._fishing_drop(item_id, tally[key], quality, sizes.get(item_id, 0.0)))
+        for result in results:
+            add_item(player, result.item_id, result.quantity, result.quality)
+            drops.append(self._fishing_drop(
+                result.item_id,
+                result.quantity,
+                result.quality,
+                sizes.get(result.item_id, 0.0),
+            ))
+        for item_id in quality_free_order:
+            add_item(player, item_id, quality_free[item_id], 0)
+            drops.append(self._fishing_drop(item_id, quality_free[item_id], 0, sizes.get(item_id, 0.0)))
         return drops
 
     def _fishing_drop(self, item_id: str, quantity: int, quality: int, size: float = 0.0) -> dict:
@@ -1452,7 +1561,8 @@ class GameService:
                     self._aquatic_ability(player, pond.assigned_partner_ids)
                     + self._pond_tier(pond).quality_bonus
                     + player.feed_slot.quality_score
-                    + pond.generation_score,
+                    + pond.generation_score
+                    + pond.quality_bonus,
                     2,
                 ),
                 "empty": pond.empty,
@@ -1776,6 +1886,7 @@ class GameService:
             if hasattr(production_slot, "ready_at"):
                 production_slot.ready_at = completed_at
             task.applied_effects.append({
+                "source_type": "task_item",
                 "task_item_id": definition.id,
                 "name": definition.name,
                 "effect": definition.effect,
@@ -3260,20 +3371,66 @@ class GameService:
         task_item = self._consume_start_task_item(player, task_item_id, industry)
         applied_effects = [
             {
+                "source_type": "task_item",
                 "task_item_id": task_item.id,
                 "name": task_item.name,
                 "effect": task_item.effect,
                 "value": task_item.value,
             }
         ] if task_item else []
+        world = self._world_snapshot(now)
+        content_tags = (
+            list(self.content.item_map[produce_item_id].tags)
+            if produce_item_id in self.content.item_map
+            else []
+        )
+        if industry == "crafting" and content_id in self.content.recipe_map:
+            content_tags = list(self.content.recipe_map[content_id].tags)
+        trait_context = {
+            "industry": industry,
+            "content_id": content_id,
+            "production_slot_id": production_slot_id,
+            "world": world,
+            "content_tags": content_tags,
+            "input_item_tags": {
+                entry.item_id: list(self.content.item_map[entry.item_id].tags)
+                for entry in (consumed_inputs or [])
+                if entry.item_id in self.content.item_map
+            },
+            "output_items": [
+                {
+                    "item_id": entry.item_id,
+                    "tags": list(self.content.item_map[entry.item_id].tags),
+                }
+                for entry in (output_pool or [])
+                if entry.item_id in self.content.item_map
+            ],
+            "duration_multiplier": 1.0,
+            "quality_ability_bonus": 0.0,
+            "quality_ability_multiplier": 1.0,
+            "yield_multiplier": 1.0,
+            "yield_bonus": 0,
+            "draw_bonus": 0,
+            "applied_effects": [],
+        }
+        for phase in ("task_prepare", "output_draw", "quality_roll", "result_finalize"):
+            self._execute_partner_trait_phase(assigned_partner_ids, phase, trait_context)
+        applied_effects.extend(trait_context["applied_effects"])
         time_efficiency = 1 if fixed_duration else 1 + 2 * total_ability / (total_ability + int(time_difficulty))
-        duration_multiplier = task_item.value if task_item and task_item.effect == "duration_multiplier" else 1
+        duration_multiplier = (
+            (task_item.value if task_item and task_item.effect == "duration_multiplier" else 1)
+            * max(0.01, float(trait_context["duration_multiplier"]))
+        )
         final_duration = max(minimum_duration, ceil(base_duration / time_efficiency))
         if duration_multiplier != 1:
-            # 缩时道具压在最小时长之后结算，踩到时长下限的高能力玩家也能吃到这份折扣
-            final_duration = max(1, ceil(final_duration * duration_multiplier))
+            # 缩时道具与伙伴特性压在最小时长之后结算，踩到时长下限也能吃到折扣。
+            final_duration = max(1, min(base_duration, ceil(final_duration * duration_multiplier)))
             minimum_duration = min(minimum_duration, final_duration)
-        quality_ability = total_ability + round(task_item.value if task_item and task_item.effect == "quality_boost" else 0)
+        quality_ability = round(
+            total_ability * max(0.0, float(trait_context["quality_ability_multiplier"]))
+            + float(trait_context["quality_ability_bonus"])
+            + (task_item.value if task_item and task_item.effect == "quality_boost" else 0)
+        )
         miracle_unlocked = bool(task_item and task_item.effect == "unlock_miracle")
         miracle_width_multiplier = task_item.value if miracle_unlocked else 1
         probabilities = quality_probabilities(
@@ -3285,25 +3442,34 @@ class GameService:
             miracle_width_multiplier=miracle_width_multiplier,
             ignore_miracle_cap=miracle_unlocked,
         )
-        effective_yield_min = max(1, floor(yield_min * yield_efficiency))
-        effective_yield_max = max(effective_yield_min, floor(yield_max * yield_efficiency))
-        extra_yield = round(task_item.value) if task_item and task_item.effect == "yield_bonus" else 0
+        trait_yield_multiplier = max(0.0, float(trait_context["yield_multiplier"]))
+        effective_yield_efficiency = max(1.0, yield_efficiency * trait_yield_multiplier)
+        effective_yield_min = max(1, floor(yield_min * effective_yield_efficiency))
+        effective_yield_max = max(effective_yield_min, floor(yield_max * effective_yield_efficiency))
+        extra_yield = (
+            (round(task_item.value) if task_item and task_item.effect == "yield_bonus" else 0)
+            + int(trait_context["yield_bonus"])
+        )
         effective_draw_count = draw_count(
             total_ability,
             draws.base_draws,
             draws.ability_bonus,
             draws.difficulty,
         ) if draws else 0
+        effective_draw_count += int(trait_context["draw_bonus"])
         if extra_yield:
             if draws:
                 effective_draw_count += extra_yield
             else:
                 effective_yield_min += extra_yield
                 effective_yield_max += extra_yield
+        effective_draw_count = max(0, min(60, effective_draw_count))
         return ProductionTaskSnapshot(
             industry=industry,
             content_id=content_id,
             production_slot_id=production_slot_id,
+            world_day=world["day"],
+            weather_id=world["weather"]["id"],
             started_at=now,
             ready_at=now + final_duration,
             assigned_partner_ids=list(assigned_partner_ids),
@@ -3313,7 +3479,7 @@ class GameService:
             character_ability=character_ability,
             total_ability=total_ability,
             time_efficiency=time_efficiency,
-            yield_efficiency=yield_efficiency,
+            yield_efficiency=effective_yield_efficiency,
             base_duration=base_duration,
             minimum_duration=minimum_duration,
             final_duration=final_duration,
@@ -3390,6 +3556,7 @@ class GameService:
                     "name": item.name if item else item_id,
                     "icon": item.icon if item else "package",
                     "kind": item.kind if item else "material",
+                    "tags": list(item.tags) if item else [],
                     "quantity": quantity,
                     "quality": quality or None,
                     "quality_name": grade.name if grade else None,
@@ -3567,6 +3734,7 @@ class GameService:
         )
         return {
             "server_time": now,
+            "world": self._world_snapshot(now),
             "player": {
                 "player_id": player.player_id,
                 "display_name": player.display_name,
@@ -4067,7 +4235,13 @@ class GameService:
         else:
             return
         quantity = self.rng.randint(yield_min, yield_max)
-        production_slot.task_results = build_results(self.rng, [(item_id, quantity)], probabilities, now)
+        production_slot.task_results = build_results(
+            self.rng,
+            [(item_id, quantity)],
+            probabilities,
+            now,
+            task.applied_effects if task else (),
+        )
 
     def _resolve_gathering_outputs(self, site: GatheringSiteState, now: int) -> None:
         task = site.task_snapshot
@@ -4081,17 +4255,25 @@ class GameService:
             quantity_max=task.yield_max,
         )]
         if task.draw_count and any(output.weight > 0 for output in output_pool):
-            batches = [
-                (output.item_id, self.rng.randint(output.quantity_min, output.quantity_max))
-                for output in (pick_weighted(self.rng, output_pool) for _ in range(task.draw_count))
-            ]
+            batches = draw_weighted_batches(
+                self.rng,
+                output_pool,
+                task.draw_count,
+                task.applied_effects,
+            )
         else:
             batches = [
                 (output.item_id, self.rng.randint(output.quantity_min, output.quantity_max))
                 for output in output_pool
                 if output.chance == 1 or self.rng.random() < output.chance
             ]
-        site.task_results = build_results(self.rng, batches, task.quality_parameters.probabilities, now)
+        site.task_results = build_results(
+            self.rng,
+            batches,
+            task.quality_parameters.probabilities,
+            now,
+            task.applied_effects,
+        )
 
     def _result_snapshot(self, result: ProductionResultSnapshot) -> dict:
         item = self.content.item_map.get(result.item_id)

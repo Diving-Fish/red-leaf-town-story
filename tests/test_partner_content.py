@@ -13,7 +13,11 @@ from red_leaf_town.partner_content import (
     load_partner_catalog,
     save_partner_catalog,
 )
-from red_leaf_town.partner_traits import execute_partner_traits, register_partner_trait
+from red_leaf_town.partner_traits import (
+    execute_partner_traits,
+    record_partner_trait_effect,
+    register_partner_trait,
+)
 
 
 def partner_payload():
@@ -134,6 +138,29 @@ def test_python_trait_registry_dispatches_handlers():
     context = {"quality": 3}
     assert execute_partner_traits(["1", code], context) == [code]
     assert context["quality"] == 5
+
+
+def test_trait_registry_filters_phases_and_records_frozen_effects():
+    code = "test_phase_trait"
+
+    @register_partner_trait(code, "阶段测试特性", "用于验证阶段与效果快照", phases=("output_draw",))
+    def apply(context):
+        record_partner_trait_effect(context, "reroll_first_duplicate", stacking_group="output_variety")
+
+    skipped = {"phase": "task_prepare", "source_partner_id": "worker", "applied_effects": []}
+    assert execute_partner_traits([code], skipped) == []
+    assert skipped["applied_effects"] == []
+
+    applied = {"phase": "output_draw", "source_partner_id": "worker", "applied_effects": []}
+    assert execute_partner_traits([code], applied) == [code]
+    assert applied["applied_effects"] == [{
+        "source_type": "partner_trait",
+        "trait_code": code,
+        "source_partner_id": "worker",
+        "phase": "output_draw",
+        "effect": "reroll_first_duplicate",
+        "stacking_group": "output_variety",
+    }]
 
 
 def test_recruitable_requires_a_breakthrough_zero_artwork():

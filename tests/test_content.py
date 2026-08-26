@@ -28,6 +28,23 @@ def test_default_content_is_consistent():
     assert content.mining_site_map["copper_foothill"].min_level == 2
     assert content.mining_task_map["mine_red_copper"].produce_item_id == "red_copper_ore"
     assert content.item_map["red_copper_ore"].has_quality is True
+    assert content.world.season_id == "autumn"
+    assert [entry.id for entry in content.world.weather_cycle] == ["sunny", "cloudy", "rain", "windy"]
+    assert content.item_map["red_copper_ore"].has_tag("mineral")
+    assert content.item_map["stream_fish"].has_tag("fish")
+    assert content.recipe_map["mill_flour"].has_tag("food")
+
+
+def test_unknown_and_duplicate_content_tags_are_rejected():
+    payload = load_content().model_dump()
+    payload["items"][0]["tags"] = ["crop_seed", "crop_seed"]
+    with pytest.raises(ValidationError, match="tags must be unique"):
+        GameContent.model_validate(payload)
+
+    payload = load_content().model_dump()
+    payload["recipes"][0]["tags"] = ["woodworkingg"]
+    with pytest.raises(ValidationError, match="unknown tags"):
+        GameContent.model_validate(payload)
 
 
 def test_gathering_tasks_have_frozen_weighted_pools_and_eight_hour_floor():

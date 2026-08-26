@@ -1,11 +1,38 @@
 {
-  "schema_version": 11,
+  "schema_version": 12,
   "game": {
     "title": "红叶镇物语",
     "starting_coins": 80,
     "starting_maple_flame": 0,
     "starting_guide_leaves": 10,
     "initial_inventory": {}
+  },
+  "world": {
+    "utc_offset_seconds": 28800,
+    "season_id": "autumn",
+    "season_name": "秋季",
+    "weather_cycle": [
+      {
+        "id": "sunny",
+        "name": "晴朗",
+        "accent": "#e0b45d"
+      },
+      {
+        "id": "cloudy",
+        "name": "多云",
+        "accent": "#a9b6a8"
+      },
+      {
+        "id": "rain",
+        "name": "小雨",
+        "accent": "#7fa4b7"
+      },
+      {
+        "id": "windy",
+        "name": "山风",
+        "accent": "#91ad9b"
+      }
+    ]
   },
   "stamina": {
     "restore_seconds": 720
@@ -216,7 +243,8 @@
       "icon": "sprout",
       "kind": "seed",
       "sell_price": 0,
-      "has_quality": false
+      "has_quality": false,
+      "tags": ["crop_seed"]
     },
     {
       "id": "orange_berry",
@@ -224,7 +252,8 @@
       "icon": "citrus",
       "kind": "produce",
       "sell_price": 300,
-      "has_quality": true
+      "has_quality": true,
+      "tags": ["crop", "food"]
     },
     {
       "id": "carrot_seed",
@@ -232,7 +261,8 @@
       "icon": "sprout",
       "kind": "seed",
       "sell_price": 0,
-      "has_quality": false
+      "has_quality": false,
+      "tags": ["crop_seed"]
     },
     {
       "id": "carrot",
@@ -241,6 +271,7 @@
       "kind": "produce",
       "sell_price": 10,
       "has_quality": true,
+      "tags": ["crop", "food", "fodder"],
       "feed": {
         "units": 3,
         "score": 25
@@ -252,7 +283,8 @@
       "icon": "sprout",
       "kind": "seed",
       "sell_price": 0,
-      "has_quality": false
+      "has_quality": false,
+      "tags": ["crop_seed"]
     },
     {
       "id": "potato",
@@ -261,6 +293,7 @@
       "kind": "produce",
       "sell_price": 12,
       "has_quality": true,
+      "tags": ["crop", "food", "fodder"],
       "feed": {
         "units": 3,
         "score": 22
@@ -272,7 +305,8 @@
       "icon": "sprout",
       "kind": "seed",
       "sell_price": 0,
-      "has_quality": false
+      "has_quality": false,
+      "tags": ["crop_seed"]
     },
     {
       "id": "wheat",
@@ -281,6 +315,7 @@
       "kind": "produce",
       "sell_price": 17,
       "has_quality": true,
+      "tags": ["crop", "food", "fodder"],
       "feed": {
         "units": 4,
         "score": 30
@@ -292,7 +327,8 @@
       "icon": "sprout",
       "kind": "seed",
       "sell_price": 0,
-      "has_quality": false
+      "has_quality": false,
+      "tags": ["crop_seed"]
     },
     {
       "id": "pumpkin",
@@ -301,6 +337,7 @@
       "kind": "produce",
       "sell_price": 50,
       "has_quality": true,
+      "tags": ["crop", "food", "fodder"],
       "feed": {
         "units": 8,
         "score": 40
@@ -312,7 +349,8 @@
       "icon": "trees",
       "kind": "material",
       "sell_price": 6,
-      "has_quality": true
+      "has_quality": true,
+      "tags": ["wood", "forage"]
     },
     {
       "id": "woodland_mushroom",
@@ -321,6 +359,7 @@
       "kind": "material",
       "sell_price": 7,
       "has_quality": true,
+      "tags": ["forage", "food", "fodder"],
       "feed": {
         "units": 2,
         "score": 20
@@ -332,7 +371,8 @@
       "icon": "droplets",
       "kind": "material",
       "sell_price": 10,
-      "has_quality": true
+      "has_quality": true,
+      "tags": ["forage"]
     },
     {
       "id": "amber_beeswax",
@@ -340,7 +380,8 @@
       "icon": "shell",
       "kind": "material",
       "sell_price": 16,
-      "has_quality": true
+      "has_quality": true,
+      "tags": ["forage"]
     },
     {
       "id": "tough_fodder",
@@ -349,6 +390,7 @@
       "kind": "material",
       "sell_price": 5,
       "has_quality": true,
+      "tags": ["forage", "fodder"],
       "feed": {
         "units": 5,
         "score": 12
@@ -361,6 +403,7 @@
       "kind": "material",
       "sell_price": 10,
       "has_quality": true,
+      "tags": ["forage", "medicine", "fodder"],
       "feed": {
         "units": 2,
         "score": 35
@@ -372,7 +415,8 @@
       "icon": "flower-2",
       "kind": "material",
       "sell_price": 14,
-      "has_quality": true
+      "has_quality": true,
+      "tags": ["forage", "medicine"]
     },
     {
       "id": "silver_star_moss",
@@ -380,7 +424,8 @@
       "icon": "gem",
       "kind": "material",
       "sell_price": 30,
-      "has_quality": true
+      "has_quality": true,
+      "tags": ["forage", "medicine"]
     },
     {
       "id": "maple_plank",
@@ -388,7 +433,8 @@
       "icon": "panels-top-left",
       "kind": "product",
       "sell_price": 110,
-      "has_quality": true
+      "has_quality": true,
+      "tags": ["wood_product"]
     },
     {
       "id": "herbal_salve",
@@ -396,7 +442,8 @@
       "icon": "flask-conical",
       "kind": "product",
       "sell_price": 120,
-      "has_quality": true
+      "has_quality": true,
+      "tags": ["medicine"]
     },
     {
       "id": "flour",
@@ -404,7 +451,8 @@
       "icon": "package",
       "kind": "product",
       "sell_price": 130,
-      "has_quality": true
+      "has_quality": true,
+      "tags": ["food"]
     },
     {
       "id": "pickled_carrot",
@@ -412,7 +460,8 @@
       "icon": "cooking-pot",
       "kind": "product",
       "sell_price": 130,
-      "has_quality": true
+      "has_quality": true,
+      "tags": ["food"]
     },
     {
       "id": "red_copper_ore",
@@ -420,7 +469,8 @@
       "icon": "pickaxe",
       "kind": "material",
       "sell_price": 12,
-      "has_quality": true
+      "has_quality": true,
+      "tags": ["mineral"]
     },
     {
       "id": "moon_silver_ore",
@@ -428,7 +478,8 @@
       "icon": "gem",
       "kind": "material",
       "sell_price": 24,
-      "has_quality": true
+      "has_quality": true,
+      "tags": ["mineral"]
     },
     {
       "id": "partner_notes_small",
@@ -461,6 +512,7 @@
       "kind": "material",
       "sell_price": 6,
       "has_quality": true,
+      "tags": ["fish", "fodder"],
       "feed": {
         "units": 2,
         "score": 18
@@ -473,6 +525,7 @@
       "kind": "material",
       "sell_price": 34,
       "has_quality": true,
+      "tags": ["fish", "food", "fodder"],
       "feed": {
         "units": 2,
         "score": 20
@@ -485,6 +538,7 @@
       "kind": "material",
       "sell_price": 60,
       "has_quality": true,
+      "tags": ["fish", "food", "fodder"],
       "feed": {
         "units": 2,
         "score": 24
@@ -497,6 +551,7 @@
       "kind": "material",
       "sell_price": 75,
       "has_quality": true,
+      "tags": ["fish", "food", "fodder"],
       "feed": {
         "units": 2,
         "score": 28
@@ -509,6 +564,7 @@
       "kind": "material",
       "sell_price": 20,
       "has_quality": true,
+      "tags": ["fish", "food", "fodder"],
       "feed": {
         "units": 2,
         "score": 19
@@ -521,6 +577,7 @@
       "kind": "material",
       "sell_price": 46,
       "has_quality": true,
+      "tags": ["fish", "food", "fodder"],
       "feed": {
         "units": 2,
         "score": 22
@@ -533,6 +590,7 @@
       "kind": "material",
       "sell_price": 38,
       "has_quality": true,
+      "tags": ["fish", "food", "fodder"],
       "feed": {
         "units": 2,
         "score": 21
@@ -544,7 +602,8 @@
       "icon": "fish-symbol",
       "kind": "material",
       "sell_price": 300,
-      "has_quality": true
+      "has_quality": true,
+      "tags": ["fish", "food"]
     },
     {
       "id": "giant_maple_perch",
@@ -552,7 +611,8 @@
       "icon": "fish-symbol",
       "kind": "material",
       "sell_price": 700,
-      "has_quality": true
+      "has_quality": true,
+      "tags": ["fish", "food"]
     },
     {
       "id": "giant_moon_sturgeon",
@@ -560,7 +620,8 @@
       "icon": "fish-symbol",
       "kind": "material",
       "sell_price": 1500,
-      "has_quality": true
+      "has_quality": true,
+      "tags": ["fish", "food"]
     },
     {
       "id": "fish_fry",
@@ -568,7 +629,8 @@
       "icon": "droplet",
       "kind": "material",
       "sell_price": 3,
-      "has_quality": false
+      "has_quality": false,
+      "tags": ["fish"]
     },
     {
       "id": "river_weed",
@@ -577,6 +639,7 @@
       "kind": "material",
       "sell_price": 3,
       "has_quality": true,
+      "tags": ["forage", "fodder"],
       "feed": {
         "units": 3,
         "score": 6
@@ -589,6 +652,7 @@
       "kind": "material",
       "sell_price": 22,
       "has_quality": true,
+      "tags": ["fish", "food", "fodder"],
       "feed": {
         "units": 2,
         "score": 20
@@ -601,6 +665,7 @@
       "kind": "material",
       "sell_price": 3,
       "has_quality": false,
+      "tags": ["fodder"],
       "feed": {
         "units": 4,
         "score": 5
@@ -613,6 +678,7 @@
       "kind": "product",
       "sell_price": 14,
       "has_quality": true,
+      "tags": ["fodder"],
       "feed": {
         "units": 3,
         "score": 55
@@ -625,6 +691,7 @@
       "kind": "product",
       "sell_price": 18,
       "has_quality": true,
+      "tags": ["fodder"],
       "feed": {
         "units": 10,
         "score": 45
@@ -637,6 +704,7 @@
       "kind": "product",
       "sell_price": 48,
       "has_quality": true,
+      "tags": ["fodder"],
       "feed": {
         "units": 10,
         "score": 80
@@ -1146,6 +1214,7 @@
       "time_difficulty": 100,
       "stamina_cost": 2,
       "collect_xp": 12,
+      "tags": ["wood_product"],
       "quality": {
         "thresholds": [
           45.0,
@@ -1180,6 +1249,7 @@
       "time_difficulty": 125,
       "stamina_cost": 2,
       "collect_xp": 12,
+      "tags": ["medicine"],
       "quality": {
         "thresholds": [
           55.0,
@@ -1214,6 +1284,7 @@
       "time_difficulty": 115,
       "stamina_cost": 2,
       "collect_xp": 12,
+      "tags": ["food"],
       "quality": {
         "thresholds": [
           50.0,
@@ -1248,6 +1319,7 @@
       "time_difficulty": 145,
       "stamina_cost": 2,
       "collect_xp": 12,
+      "tags": ["food"],
       "quality": {
         "thresholds": [
           65.0,
@@ -1282,6 +1354,7 @@
       "time_difficulty": 120,
       "stamina_cost": 2,
       "collect_xp": 12,
+      "tags": ["fodder"],
       "quality": {
         "thresholds": [
           50.0,
@@ -1320,6 +1393,7 @@
       "time_difficulty": 130,
       "stamina_cost": 2,
       "collect_xp": 12,
+      "tags": ["fodder"],
       "quality": {
         "thresholds": [
           55.0,
@@ -1362,6 +1436,7 @@
       "time_difficulty": 150,
       "stamina_cost": 2,
       "collect_xp": 12,
+      "tags": ["fodder"],
       "quality": {
         "thresholds": [
           65.0,

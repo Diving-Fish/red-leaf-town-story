@@ -11,6 +11,7 @@ from red_leaf_town.domain.aquatic import decayed_combo, pond_cycle_seconds
 from red_leaf_town.domain.economy import add_item
 from red_leaf_town.infrastructure import InMemoryPlayerRepository
 from red_leaf_town.partner_content import PartnerCatalog, PartnerDefinition
+from red_leaf_town.partner_traits import record_partner_trait_effect, register_partner_trait
 
 
 HOUR = 3600
@@ -173,11 +174,30 @@ def test_schema_nineteen_migration_starts_from_empty_aquatic_state():
         "created_at": started_at,
         "updated_at": started_at,
     })
-    assert player.schema_version == 20
+    assert player.schema_version == 21
     assert player.ponds == []
     assert player.feed_slot.units == 0 and player.feed_slot.quality_score == 0
     assert player.fishing.combo == 0 and player.fishing.pending_big_catch is None
     assert player.fish_codex.entries == []
+
+
+def test_schema_twenty_one_adds_neutral_pond_trait_parameters():
+    started_at = 1_700_000_000
+    player = PlayerState.model_validate({
+        "schema_version": 20,
+        "player_id": "legacy-pond-traits",
+        "oauth_sub": "legacy-pond-traits-sub",
+        "display_name": "旧鱼塘居民",
+        "stamina_updated_at": started_at,
+        "created_at": started_at,
+        "updated_at": started_at,
+        "ponds": [{"pond_id": "pond_1", "last_settled_at": started_at}],
+    })
+    pond = player.ponds[0]
+    assert player.schema_version == 21
+    assert (pond.cycle_multiplier, pond.feed_multiplier) == (1, 1)
+    assert pond.quality_bonus == pond.generation_gain_bonus == 0
+    assert pond.trait_effects == []
 
 
 # --------------------------------------------------------------------- 钓鱼
@@ -291,6 +311,22 @@ def test_fishing_companion_must_have_the_aquatic_tendency(game):
     with pytest.raises(GameError, match="水产倾向"):
         service.assign_fishing_companion("aquatic-sub", "digger")
     assert service.assign_fishing_companion("aquatic-sub", "angler")["result"]["partner_id"] == "angler"
+
+
+def test_real_fishing_trait_is_reported_by_the_cast(game):
+    service, repository, _, player = game
+    set_level(repository, player.player_id, 2)
+    fill_stamina(repository, player.player_id, 30)
+    service.partner_catalog_loader().partner_map["angler"].trait_codes = ["flow_treasure"]
+    service.assign_fishing_companion("aquatic-sub", "angler")
+
+    result = service.cast_line("aquatic-sub", "town_creek")["result"]
+
+    assert any(
+        entry.get("trait_code") == "flow_treasure"
+        and entry.get("effect") == "rare_weight_multiplier"
+        for entry in result["applied_effects"]
+    )
 
 
 def test_a_partner_stationed_at_a_pond_cannot_also_come_fishing():
@@ -558,6 +594,36 @@ def test_a_stronger_partner_speeds_up_the_fry_already_in_the_pond():
     clock.advance(pond.cycle_seconds)
     service.snapshot_by_sub("aquatic-sub")
     assert repository.get(player.player_id).ponds[0].stock == 5
+
+
+def test_pond_trait_parameters_are_frozen_after_old_time_is_settled():
+    service, repository, _, player = stocked_pond_game()
+    code = "test_pond_parameter_snapshot"
+
+    @register_partner_trait(code, "鱼塘参数测试", "验证资产分段快照", phases=("asset_prepare",))
+    def apply(context):
+        context["cycle_multiplier"] *= 0.9
+        context["feed_multiplier"] *= 0.75
+        context["quality_bonus"] += 12
+        context["generation_gain_bonus"] += 0.5
+        record_partner_trait_effect(context, "pond_parameter_snapshot")
+
+    service.partner_catalog_loader().partner_map["angler"].trait_codes = [code]
+    service.stock_pond("aquatic-sub", "pond_1", "crucian", 4)
+    assigned = service.assign_pond_partner("aquatic-sub", "pond_1", "angler")
+    saved = repository.get(player.player_id).ponds[0]
+    state = assigned["state"]["aquatic"]["ponds"][0]
+
+    assert saved.cycle_multiplier == pytest.approx(0.9)
+    assert saved.feed_multiplier == pytest.approx(0.75)
+    assert saved.quality_bonus == pytest.approx(12)
+    assert saved.generation_gain_bonus == pytest.approx(0.5)
+    assert saved.trait_effects[0]["source_partner_id"] == "angler"
+    assert state["feed_per_cycle"] == pytest.approx(service._pond_tier(saved).feed_per_cycle * 0.75)
+    assert state["generation_gain"] == pytest.approx(
+        service.content.pond_species_map["crucian"].generation_gain + 0.5
+    )
+    assert state["quality_ability"] >= saved.ability + 12
 
 
 def test_newborn_fish_are_fry_as_well():

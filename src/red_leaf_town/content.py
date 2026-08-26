@@ -9,12 +9,60 @@ from typing import Literal
 from pydantic import BaseModel, Field, model_validator
 
 
+CONTENT_TAGS = frozenset({
+    "animal_product",
+    "crop",
+    "crop_seed",
+    "exploration_equipment",
+    "fish",
+    "fodder",
+    "food",
+    "forage",
+    "hide",
+    "medicine",
+    "mineral",
+    "poultry_product",
+    "wood",
+    "wood_product",
+    "wool",
+})
+
+
+def _validate_content_tags(tags: list[str], label: str) -> list[str]:
+    if len(tags) != len(set(tags)):
+        raise ValueError(f"{label} tags must be unique")
+    unknown = set(tags) - CONTENT_TAGS
+    if unknown:
+        raise ValueError(f"{label} uses unknown tags: {', '.join(sorted(unknown))}")
+    return tags
+
+
 class GameMeta(BaseModel):
     title: str
     starting_coins: int = Field(ge=0)
     starting_maple_flame: int = Field(default=0, ge=0)
     starting_guide_leaves: int = Field(default=0, ge=0)
     initial_inventory: dict[str, int] = Field(default_factory=dict)
+
+
+class WeatherDefinition(BaseModel):
+    id: str = Field(min_length=1)
+    name: str = Field(min_length=1)
+    accent: str = Field(pattern=r"^#[0-9a-fA-F]{6}$")
+
+
+class WorldDefinition(BaseModel):
+    utc_offset_seconds: int = Field(default=8 * 3600, ge=-12 * 3600, le=14 * 3600)
+    season_id: str = Field(default="autumn", min_length=1)
+    season_name: str = Field(default="秋季", min_length=1)
+    weather_cycle: list[WeatherDefinition] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def validate_weather_cycle(self):
+        weather_ids = [entry.id for entry in self.weather_cycle]
+        if len(weather_ids) != len(set(weather_ids)):
+            raise ValueError("weather ids must be unique")
+        return self
 
 
 class StaminaDefinition(BaseModel):
@@ -51,6 +99,15 @@ class ItemDefinition(BaseModel):
     sell_price: int = Field(ge=0)
     has_quality: bool = False
     feed: SlotInputDefinition | None = None
+    tags: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def validate_tags(self):
+        self.tags = _validate_content_tags(self.tags, f"item {self.id}")
+        return self
+
+    def has_tag(self, tag: str) -> bool:
+        return tag in self.tags
 
 
 class QualityGradeDefinition(BaseModel):
@@ -230,6 +287,15 @@ class RecipeDefinition(BaseModel):
     collect_xp: int = Field(ge=0)
     quality: QualityCurveDefinition
     unlock_condition: RecipeUnlockCondition
+    tags: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def validate_tags(self):
+        self.tags = _validate_content_tags(self.tags, f"recipe {self.id}")
+        return self
+
+    def has_tag(self, tag: str) -> bool:
+        return tag in self.tags
 
 
 class MiningSiteDefinition(BaseModel):
@@ -662,6 +728,7 @@ class ShopEntry(BaseModel):
 class GameContent(BaseModel):
     schema_version: int = Field(ge=1)
     game: GameMeta
+    world: WorldDefinition
     stamina: StaminaDefinition
     quality: QualitySystemDefinition
     industries: dict[str, IndustryRulesDefinition]

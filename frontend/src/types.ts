@@ -113,6 +113,8 @@ export interface ProductionTaskSnapshot {
   industry: string
   content_id: string
   production_slot_id: string
+  world_day: string
+  weather_id: string
   started_at: number
   ready_at: number
   assigned_partner_ids: string[]
@@ -391,6 +393,7 @@ export interface ItemDefinition {
   kind: string
   sell_price: number
   has_quality: boolean
+  tags: string[]
 }
 
 export type CommissionItem = ItemDefinition
@@ -573,6 +576,7 @@ export interface InventoryItem {
   name: string
   icon: string
   kind: string
+  tags: string[]
   quantity: number
   quality: number | null
   quality_name: string | null
@@ -605,6 +609,7 @@ export interface AquaticItemRef {
   kind: string
   sell_price: number
   has_quality: boolean
+  tags: string[]
 }
 
 export interface FishingSpotState {
@@ -669,6 +674,11 @@ export interface PondState {
   last_settled_at: number
   ability: number
   cycle_seconds: number
+  cycle_multiplier: number
+  feed_multiplier: number
+  quality_bonus: number
+  generation_gain_bonus: number
+  trait_effects: Array<Record<string, unknown>>
   next_cycle_seconds: number
   maturation_seconds: number
   next_maturation_seconds: number
@@ -774,6 +784,7 @@ export interface CastResult {
   experience: number
   codex_discoveries: Array<{ item_id: string; name: string }>
   codex_milestones: Array<{ id: string; name: string; required: number; granted: Reward }>
+  applied_effects: Array<Record<string, unknown>>
   big_catch: PendingBigCatch | null
 }
 
@@ -798,6 +809,11 @@ export interface PondHarvestResult {
 
 export interface GameState {
   server_time: number
+  world: {
+    day: string
+    season: { id: string; name: string }
+    weather: { id: string; name: string; accent: string }
+  }
   player: PlayerSummary
   plots: PlotState[]
   next_plot_level: number | null

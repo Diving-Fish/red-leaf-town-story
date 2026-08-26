@@ -143,6 +143,8 @@ class ProductionTaskSnapshot(BaseModel):
     industry: str = Field(min_length=1)
     content_id: str = Field(min_length=1)
     production_slot_id: str = Field(min_length=1)
+    world_day: str = ""
+    weather_id: str = ""
     started_at: int = Field(ge=0)
     ready_at: int = Field(ge=0)
     assigned_partner_ids: list[str] = Field(default_factory=list, max_length=2)
@@ -275,6 +277,11 @@ class PondState(BaseModel):
     last_settled_at: int = Field(default=0, ge=0)
     ability: int = Field(default=0, ge=0)
     cycle_seconds: int = Field(default=0, ge=0)
+    cycle_multiplier: float = Field(default=1, gt=0)
+    feed_multiplier: float = Field(default=1, ge=0)
+    quality_bonus: float = 0
+    generation_gain_bonus: float = 0
+    trait_effects: list[dict[str, object]] = Field(default_factory=list)
     stalled: bool = False
     assigned_partner_ids: list[str] = Field(default_factory=list, max_length=1)
 
@@ -519,7 +526,7 @@ class MailReceiptState(BaseModel):
 
 
 class PlayerState(BaseModel):
-    schema_version: int = 20
+    schema_version: int = 21
     version: int = 1
     player_id: str
     oauth_sub: str
@@ -657,7 +664,16 @@ class PlayerState(BaseModel):
             migrated.setdefault("fish_codex", {})
         if schema_version < 20:
             migrated.setdefault("crossover_claims", {})
-        migrated["schema_version"] = 20
+        if schema_version < 21:
+            for pond in migrated.get("ponds") or []:
+                if not isinstance(pond, dict):
+                    continue
+                pond.setdefault("cycle_multiplier", 1)
+                pond.setdefault("feed_multiplier", 1)
+                pond.setdefault("quality_bonus", 0)
+                pond.setdefault("generation_gain_bonus", 0)
+                pond.setdefault("trait_effects", [])
+        migrated["schema_version"] = 21
         return migrated
 
     @model_validator(mode="after")
