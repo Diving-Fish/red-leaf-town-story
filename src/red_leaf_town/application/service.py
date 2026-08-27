@@ -993,7 +993,7 @@ class GameService:
         return {"result": result, "state": self._snapshot(player, now)}
 
     def assign_pond_partner(self, oauth_sub: str, pond_id: str, partner_id: str = "") -> dict:
-        """资产格的伙伴驻场即占编制，但随时可以撤下 —— 因为没有需要保持完整性的进行中任务。"""
+        """资产格的伙伴驻场即占编制。周期开头的自由窗口内随时能换，过了就排队到下个周期。"""
         partner_id = str(partner_id or "").strip()
         now = self._now()
         catalog = self.partner_catalog_loader()
@@ -1002,8 +1002,23 @@ class GameService:
             self._settle(player, now)
             pond = self._pond(player, pond_id)
             desired_ids = [partner_id] if partner_id else []
-            if pond.assigned_partner_ids == desired_ids:
+            if pond.assigned_partner_ids == desired_ids and pond.pending_partner_ids is None:
                 return {"pond_id": pond_id, "partner_id": partner_id or None, "changed": False}
+            # 重新安排这口塘自己的队总是自由的：预约还没生效，撤销它不影响任何一个周期。
+            pond.pending_partner_ids = None
+            if pond.assigned_partner_ids == desired_ids:
+                # 又点回在岗的那位，等于取消换人。在岗的人不用再腾一次，腾了反而会被
+                # 自己这口塘的周期挡下来。
+                return {
+                    "pond_id": pond_id,
+                    "partner_id": partner_id or None,
+                    "changed": True,
+                    "queued": False,
+                    "cancelled": True,
+                    "effective_in_seconds": 0,
+                    "ability": pond.ability,
+                    "cycle_seconds": pond.cycle_seconds,
+                }
             if partner_id:
                 owned = next((entry for entry in player.owned_partners if entry.partner_id == partner_id), None)
                 definition = catalog.partner_map.get(partner_id)
@@ -1015,18 +1030,26 @@ class GameService:
                     raise GameError("partner_tendency_mismatch", "这个伙伴没有水产倾向", 409)
                 if self._partner_lock_deadlines(player, now).get(partner_id, 0) > now:
                     raise GameError("partner_locked", "伙伴正在参与进行中的任务，暂时不能移动", 409)
-                self._clear_partner_assignment(player, partner_id)
+                self._clear_partner_assignment(player, partner_id, now)
                 if player.fishing.companion_partner_id == partner_id:
                     player.fishing.companion_partner_id = ""
-            pond.assigned_partner_ids = desired_ids
+            queued = not self._swap_window_is_open(self._pond_cycle_progress(pond))
+            if queued:
+                pond.pending_partner_ids = desired_ids
+            else:
+                pond.assigned_partner_ids = desired_ids
             if self._industry_assigned_count(player, "aquatic") > self._industry_partner_capacity(player, "aquatic"):
                 raise GameError("partner_capacity_reached", "当前水产伙伴编制已满", 409)
-            # 结算已经在前面用旧能力做完，这里直接写入新的参数快照。
-            self._refresh_pond_trait_snapshot(player, pond, now)
+            if not queued:
+                # 结算已经在前面用旧能力做完，这里直接写入新的参数快照。
+                self._refresh_pond_trait_snapshot(player, pond, now)
             return {
                 "pond_id": pond_id,
                 "partner_id": partner_id or None,
                 "changed": True,
+                "queued": queued,
+                "cancelled": False,
+                "effective_in_seconds": self._pond_next_cycle_seconds(pond) if queued else 0,
                 "ability": pond.ability,
                 "cycle_seconds": pond.cycle_seconds,
             }
@@ -1292,7 +1315,7 @@ class GameService:
         return {"result": result, "state": self._snapshot(player, now)}
 
     def assign_livestock_partner(self, oauth_sub: str, facility_id: str, partner_id: str = "") -> dict:
-        """畜栏也是资产格：驻场即占编制，但随时可以撤下。"""
+        """畜栏也是资产格：周期开头的自由窗口内随时能换，过了就排队到下个周期。"""
         partner_id = str(partner_id or "").strip()
         now = self._now()
         catalog = self.partner_catalog_loader()
@@ -1301,8 +1324,22 @@ class GameService:
             self._settle(player, now)
             facility = self._livestock_facility(player, facility_id)
             desired_ids = [partner_id] if partner_id else []
-            if facility.assigned_partner_ids == desired_ids:
+            if facility.assigned_partner_ids == desired_ids and facility.pending_partner_ids is None:
                 return {"facility_id": facility_id, "partner_id": partner_id or None, "changed": False}
+            # 重新安排这一栏自己的队总是自由的：预约还没生效，撤销它不影响任何一个周期。
+            facility.pending_partner_ids = None
+            if facility.assigned_partner_ids == desired_ids:
+                # 又点回在岗的那位，等于取消换人。在岗的人不用再腾一次，腾了反而会被
+                # 自己这一栏的周期挡下来。
+                return {
+                    "facility_id": facility_id,
+                    "partner_id": partner_id or None,
+                    "changed": True,
+                    "queued": False,
+                    "cancelled": True,
+                    "effective_in_seconds": 0,
+                    "trait_effects": list(facility.trait_effects),
+                }
             if partner_id:
                 owned = next((entry for entry in player.owned_partners if entry.partner_id == partner_id), None)
                 definition = catalog.partner_map.get(partner_id)
@@ -1314,18 +1351,26 @@ class GameService:
                     raise GameError("partner_tendency_mismatch", "这个伙伴没有畜牧倾向", 409)
                 if self._partner_lock_deadlines(player, now).get(partner_id, 0) > now:
                     raise GameError("partner_locked", "伙伴正在参与进行中的任务，暂时不能移动", 409)
-                self._clear_partner_assignment(player, partner_id)
+                self._clear_partner_assignment(player, partner_id, now)
                 if player.fishing.companion_partner_id == partner_id:
                     player.fishing.companion_partner_id = ""
-            facility.assigned_partner_ids = desired_ids
+            queued = not self._swap_window_is_open(self._facility_cycle_progress(player, facility))
+            if queued:
+                facility.pending_partner_ids = desired_ids
+            else:
+                facility.assigned_partner_ids = desired_ids
             if self._industry_assigned_count(player, "livestock") > self._industry_partner_capacity(player, "livestock"):
                 raise GameError("partner_capacity_reached", "当前畜牧伙伴编制已满", 409)
-            # 开头已经用旧参数结算过了，这里换上新伙伴的特性快照。
-            self._refresh_livestock_trait_snapshot(player, facility, now)
+            if not queued:
+                # 开头已经用旧参数结算过了，这里换上新伙伴的特性快照。
+                self._refresh_livestock_trait_snapshot(player, facility, now)
             return {
                 "facility_id": facility_id,
                 "partner_id": partner_id or None,
                 "changed": True,
+                "queued": queued,
+                "cancelled": False,
+                "effective_in_seconds": self._facility_next_cycle_seconds(facility) if queued else 0,
                 "trait_effects": list(facility.trait_effects),
             }
 
@@ -2026,6 +2071,13 @@ class GameService:
                 "affection_quality_bonus": facility.affection_quality_bonus,
                 "trait_effects": list(facility.trait_effects),
                 "stalled": facility.stalled,
+                "pending_partner_ids": facility.pending_partner_ids,
+                "pending_partner": (
+                    partner_map.get(facility.pending_partner_ids[0])
+                    if facility.pending_partner_ids else None
+                ),
+                "swap_open": self._swap_window_is_open(self._facility_cycle_progress(player, facility)),
+                "swap_window_seconds": self._swap_window_seconds(parameters.cycle_seconds),
                 "settle_remainder": facility.settle_remainder,
                 "last_settled_at": facility.last_settled_at,
                 "next_cycle_seconds": max(0, parameters.cycle_seconds - facility.settle_remainder),
@@ -2190,6 +2242,57 @@ class GameService:
         )
 
     def _settle_aquatic(self, player: PlayerState, now: int) -> None:
+        """把资产格推进到 now，中途在周期边界上兑现排队的换人。
+
+        排队的伙伴要在【下个周期开始】接手。离线跨了好几个周期时，如果等这一整段跑完
+        再换，这几个周期就会全都记在旧伙伴头上，而排队的人白锁一夜。所以先把时间切到
+        最近的那个边界、换人、再往后跑。
+        """
+
+        for _ in range(len(player.ponds) + len(player.livestock_facilities) + 1):
+            boundary = self._next_asset_swap_at(player)
+            if boundary is None or boundary >= now:
+                break
+            self._advance_aquatic(player, boundary)
+            self._apply_asset_swaps(player, boundary)
+        self._advance_aquatic(player, now)
+        self._apply_asset_swaps(player, now)
+
+    def _next_asset_swap_at(self, player: PlayerState) -> int | None:
+        """最早一个排队换人要生效的时刻，也就是那个格子当前周期跑完的时刻。"""
+
+        cycle = self.content.livestock.cycle_seconds if self.content.livestock else 0
+        boundaries: list[int] = []
+        for pond in player.ponds:
+            # last_settled_at 还没落过盘时算不出边界，交给下一次结算，别推出一个过去的时刻。
+            if pond.pending_partner_ids is None or pond.last_settled_at <= 0:
+                continue
+            if self._pond_cycle_progress(pond) > 0:
+                boundaries.append(pond.last_settled_at + pond.cycle_seconds - pond.settle_remainder)
+        for facility in player.livestock_facilities:
+            if facility.pending_partner_ids is None or facility.last_settled_at <= 0:
+                continue
+            if self._facility_cycle_progress(player, facility) > 0:
+                boundaries.append(facility.last_settled_at + cycle - facility.settle_remainder)
+        return min(boundaries) if boundaries else None
+
+    def _apply_asset_swaps(self, player: PlayerState, now: int) -> None:
+        """周期跑完（或者这个格子本来就没在跑）的时候，把排队的伙伴换上去。"""
+
+        for pond in player.ponds:
+            if pond.pending_partner_ids is None or self._pond_cycle_progress(pond) > 0:
+                continue
+            pond.assigned_partner_ids = list(pond.pending_partner_ids)
+            pond.pending_partner_ids = None
+            self._refresh_pond_trait_snapshot(player, pond, now)
+        for facility in player.livestock_facilities:
+            if facility.pending_partner_ids is None or self._facility_cycle_progress(player, facility) > 0:
+                continue
+            facility.assigned_partner_ids = list(facility.pending_partner_ids)
+            facility.pending_partner_ids = None
+            self._refresh_livestock_trait_snapshot(player, facility, now)
+
+    def _advance_aquatic(self, player: PlayerState, now: int) -> None:
         """鱼塘和畜栏共用一个饲料槽，所以两边一起结算。
 
         先各自报一遍需求，再按同一个比例拿预算 —— 否则谁先结算谁就把槽喝光，另一边
@@ -2547,6 +2650,11 @@ class GameService:
                 ),
                 "empty": pond.empty,
                 "assigned_partners": assigned_partners,
+                "pending_partner": (
+                    partner_map.get(pond.pending_partner_ids[0]) if pond.pending_partner_ids else None
+                ),
+                "swap_open": self._swap_window_is_open(self._pond_cycle_progress(pond)),
+                "swap_window_seconds": self._swap_window_seconds(parameters.cycle_seconds),
             })
         codex_species = {entry.item_id for entry in player.fish_codex.entries}
         codex_pool: list[str] = []
@@ -5176,21 +5284,113 @@ class GameService:
             })
         return snapshots
 
-    def _clear_partner_assignment(self, player: PlayerState, partner_id: str) -> None:
+    def _clear_partner_assignment(self, player: PlayerState, partner_id: str, now: int | None = None) -> None:
+        """把伙伴从别的生产格上腾出来。
+
+        任务型生产格随时可以撤，资产格（鱼塘、畜栏）不行：只有周期开头的自由窗口内才能
+        抽人，过了窗口就得等这个周期跑完，否则在周期末尾把强力伙伴挪过来，整个周期都会
+        按新伙伴结算。排队中的伙伴同样动不了 —— 预约期间他不能去干别的事。
+        """
+
+        now = self._now() if now is None else now
         for production_slot in [
             *player.plots,
             *player.gathering_sites,
             *player.crafting_stations,
             *player.mining_sites,
-            *player.ponds,
         ]:
             if partner_id in production_slot.assigned_partner_ids:
                 production_slot.assigned_partner_ids = []
+        for pond in player.ponds:
+            if pond.pending_partner_ids and partner_id in pond.pending_partner_ids:
+                raise GameError(
+                    "partner_swap_reserved",
+                    f"{self._partner_name(partner_id)}已经预约了{self._pond_name(pond)}，"
+                    "先在那口塘换个安排再说",
+                    409,
+                )
+            if partner_id in pond.assigned_partner_ids:
+                self._require_open_swap_window(self._pond_cycle_progress(pond), self._pond_name(pond))
+                pond.assigned_partner_ids = []
+                pond.pending_partner_ids = None
+                self._refresh_pond_trait_snapshot(player, pond, now)
         for facility in player.livestock_facilities:
+            if facility.pending_partner_ids and partner_id in facility.pending_partner_ids:
+                raise GameError(
+                    "partner_swap_reserved",
+                    f"{self._partner_name(partner_id)}已经预约了{self._facility_name(facility)}，"
+                    "先在那一栏换个安排再说",
+                    409,
+                )
             if partner_id in facility.assigned_partner_ids:
+                self._require_open_swap_window(
+                    self._facility_cycle_progress(player, facility), self._facility_name(facility)
+                )
                 # 被别处挖走也要立刻抹掉特性快照，否则这一栏会白拿一段的加成。
                 facility.assigned_partner_ids = []
-                self._refresh_livestock_trait_snapshot(player, facility, self._now())
+                facility.pending_partner_ids = None
+                self._refresh_livestock_trait_snapshot(player, facility, now)
+
+    # ------------------------------------------------- 资产格换人：自由窗口与排队
+
+    def _partner_name(self, partner_id: str) -> str:
+        definition = self.partner_catalog_loader().partner_map.get(partner_id)
+        return definition.name if definition else partner_id
+
+    def _pond_name(self, pond: PondState) -> str:
+        definition = self._pond_definition(pond)
+        return definition.name if definition else pond.pond_id
+
+    def _facility_name(self, facility: LivestockFacilityState) -> str:
+        definition = self.content.livestock_facility_map.get(facility.facility_id)
+        return definition.name if definition else facility.facility_id
+
+    def _pond_cycle_progress(self, pond: PondState) -> float:
+        """这口塘当前周期跑了多少。空塘和停摆的塘没有在跑的周期，随时可以换人。"""
+
+        if pond.empty or pond.stalled or pond.cycle_seconds <= 0:
+            return 0.0
+        return min(1.0, pond.settle_remainder / pond.cycle_seconds)
+
+    def _facility_cycle_progress(self, player: PlayerState, facility: LivestockFacilityState) -> float:
+        """这一栏当前周期跑了多少。空栏和停摆的栏没有在跑的周期，随时可以换人。"""
+
+        cycle = self.content.livestock.cycle_seconds if self.content.livestock else 0
+        if cycle <= 0 or facility.stalled or not self._animals_in(player, facility.facility_id):
+            return 0.0
+        return min(1.0, facility.settle_remainder / cycle)
+
+    def _pond_next_cycle_seconds(self, pond: PondState) -> int:
+        if pond.empty or pond.cycle_seconds <= 0:
+            return 0
+        return max(0, pond.cycle_seconds - pond.settle_remainder)
+
+    def _facility_next_cycle_seconds(self, facility: LivestockFacilityState) -> int:
+        cycle = self.content.livestock.cycle_seconds if self.content.livestock else 0
+        return max(0, cycle - facility.settle_remainder)
+
+    def _swap_window_seconds(self, cycle_seconds: int) -> int:
+        """自由窗口有多长，前端要拿它写"开工 N 分钟内还能换人"。"""
+
+        return int(max(0, cycle_seconds) * self.content.asset_partner_free_window)
+
+    def _swap_window_is_open(self, progress: float) -> bool:
+        return progress <= self.content.asset_partner_free_window + 1e-9
+
+    def _require_open_swap_window(self, progress: float, name: str) -> None:
+        if not self._swap_window_is_open(progress):
+            raise GameError(
+                "partner_cycle_locked",
+                f"{name}这个周期已经开工了，要等它跑完才能把人调走",
+                409,
+            )
+
+    @staticmethod
+    def _effective_partner_ids(slot) -> list[str]:
+        """算编制时看的是【最终会在岗的人】：排队中的预约到了周期边界就会顶上去。"""
+
+        pending = getattr(slot, "pending_partner_ids", None)
+        return slot.assigned_partner_ids if pending is None else pending
 
     @staticmethod
     def _industry_assigned_count(player: PlayerState, industry: str) -> int:
@@ -5204,9 +5404,12 @@ class GameService:
             return sum(len(site.assigned_partner_ids) for site in player.mining_sites)
         if industry == "aquatic":
             # 陪钓不占编制（不锁定、瞬时完成），驻场在鱼塘的才算。
-            return sum(len(pond.assigned_partner_ids) for pond in player.ponds)
+            return sum(len(GameService._effective_partner_ids(pond)) for pond in player.ponds)
         if industry == "livestock":
-            return sum(len(facility.assigned_partner_ids) for facility in player.livestock_facilities)
+            return sum(
+                len(GameService._effective_partner_ids(facility))
+                for facility in player.livestock_facilities
+            )
         return 0
 
     def _industry_partner_capacity(self, player: PlayerState, industry: str) -> int:

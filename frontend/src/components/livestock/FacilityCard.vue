@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { AlertTriangle, Coins, Egg, HeartHandshake, PackageOpen, Sprout } from 'lucide-vue-next'
+import { AlertTriangle, Coins, Egg, HeartHandshake, PackageOpen, Sparkles, Sprout } from 'lucide-vue-next'
 
 import ActionButton from '@/components/ActionButton.vue'
 import AnimalRow from '@/components/livestock/AnimalRow.vue'
@@ -8,6 +8,7 @@ import GameIcon from '@/components/GameIcon.vue'
 import ItemGridTile from '@/components/ItemGridTile.vue'
 import NameAnimalDialog from '@/components/livestock/NameAnimalDialog.vue'
 import PartnerPicker from '@/components/PartnerPicker.vue'
+import PartnerSwapNote from '@/components/PartnerSwapNote.vue'
 import ProgressBar from '@/components/ProgressBar.vue'
 import { useCountdown } from '@/composables/useCountdown'
 import { formatDuration } from '@/lib/format'
@@ -53,6 +54,27 @@ const eggs = computed(() => {
 })
 
 const breeding = computed(() => species.value?.breeding || null)
+
+// 特性的品质加成和畜牧能力在品质分里同级相加，畜牧又不吃能力算耗时和产量，两者完全
+// 等价，所以直接并进同一格，免得看着像两种能力。
+const livestockAbility = computed(() => props.facility.ability + props.facility.quality_bonus)
+
+/** 剩下的特性加成面板上没有对应字段，补成额外的统计格。 */
+const traitBonuses = computed(() => {
+  const facility = props.facility
+  const stats: { label: string; value: string }[] = []
+  if (facility.feed_multiplier !== 1) {
+    stats.push({ label: '饲料消耗', value: `${Math.round((facility.feed_multiplier - 1) * 100)}%` })
+  }
+  if (facility.special_chance_bonus) {
+    stats.push({ label: '特殊产出', value: `+${(facility.special_chance_bonus * 100).toFixed(1)}%` })
+  }
+  if (facility.affection_quality_bonus) {
+    const cap = props.livestock.rules?.affection_cap || 0
+    stats.push({ label: '满亲密品质', value: `+${(facility.affection_quality_bonus * cap).toFixed(2)}` })
+  }
+  return stats
+})
 
 const adults = computed(() =>
   props.facility.animals.filter((animal) => animal.stage === 'adult' && animal.breeding_cooldown <= 0),
@@ -225,7 +247,14 @@ async function sell(animalId: string) {
       </div>
       <div>
         <dt>畜牧能力</dt>
-        <dd>{{ facility.ability }}</dd>
+        <dd>
+          {{ livestockAbility }}
+          <em v-if="facility.quality_bonus"><Sparkles :size="10" />+{{ facility.quality_bonus }}</em>
+        </dd>
+      </div>
+      <div v-for="stat in traitBonuses" :key="stat.label" class="from-trait">
+        <dt><Sparkles :size="10" />{{ stat.label }}</dt>
+        <dd>{{ stat.value }}</dd>
       </div>
     </dl>
 
@@ -237,6 +266,16 @@ async function sell(animalId: string) {
       dialog-title="畜牧驻场"
       solo-label="自己照看"
       @select="(partnerId) => game.assignLivestockPartner(facility.facility_id, partnerId)"
+    />
+
+    <PartnerSwapNote
+      :pending-ids="facility.pending_partner_ids"
+      :pending-partner="facility.pending_partner"
+      :assigned="facility.assigned_partners[0] || null"
+      :swap-open="facility.swap_open"
+      :ready-at="facility.last_settled_at + facility.next_cycle_seconds"
+      :cycle-seconds="livestock.cycle_seconds"
+      :window-seconds="facility.swap_window_seconds"
     />
 
     <ul v-if="facility.animals.length" class="facility-animals">
@@ -371,6 +410,9 @@ async function sell(animalId: string) {
 .facility-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 0; }
 .facility-stats dt { color: #7d887f; font-size: 11px; }
 .facility-stats dd { margin: 3px 0 0; font-size: 13px; }
+.facility-stats dd em { display: inline-flex; align-items: center; gap: 2px; margin-left: 4px; color: var(--gold); font-style: normal; font-size: 11px; }
+.facility-stats .from-trait dt { display: flex; align-items: center; gap: 3px; color: var(--gold); opacity: .72; }
+.facility-stats .from-trait dd { color: var(--gold); }
 
 .facility-animals { display: grid; gap: 9px; margin: 0; padding: 0; }
 .facility-empty { display: flex; align-items: center; gap: 9px; margin: 0; padding: 16px; color: #7d887f; font-size: 12px; line-height: 1.6; border: 1px dashed var(--line); border-radius: 13px; }

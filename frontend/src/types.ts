@@ -679,6 +679,10 @@ export interface PondState {
   quality_bonus: number
   generation_gain_bonus: number
   trait_effects: Array<Record<string, unknown>>
+  pending_partner_ids: string[] | null
+  pending_partner: OwnedPartner | null
+  swap_open: boolean
+  swap_window_seconds: number
   next_cycle_seconds: number
   maturation_seconds: number
   next_maturation_seconds: number
@@ -857,6 +861,10 @@ export interface LivestockFacilityState {
   affection_quality_bonus: number
   trait_effects: Array<Record<string, unknown>>
   stalled: boolean
+  pending_partner_ids: string[] | null
+  pending_partner: OwnedPartner | null
+  swap_open: boolean
+  swap_window_seconds: number
   settle_remainder: number
   last_settled_at: number
   next_cycle_seconds: number

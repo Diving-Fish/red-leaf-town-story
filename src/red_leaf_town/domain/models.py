@@ -284,6 +284,9 @@ class PondState(BaseModel):
     trait_effects: list[dict[str, object]] = Field(default_factory=list)
     stalled: bool = False
     assigned_partner_ids: list[str] = Field(default_factory=list, max_length=1)
+    # 排队中的换人：None 是没有排队，[] 是排队撤下，[id] 是排队换成这个人。
+    # 过了自由窗口才会用到它，到下个周期开始时由结算搬进 assigned_partner_ids。
+    pending_partner_ids: list[str] | None = Field(default=None, max_length=1)
 
     @property
     def fry_total(self) -> int:
@@ -369,6 +372,8 @@ class LivestockFacilityState(BaseModel):
     affection_quality_bonus: float = Field(default=0, ge=0)
     trait_effects: list[dict[str, object]] = Field(default_factory=list)
     assigned_partner_ids: list[str] = Field(default_factory=list, max_length=1)
+    # 见 PondState.pending_partner_ids。
+    pending_partner_ids: list[str] | None = Field(default=None, max_length=1)
 
 
 class FishingState(BaseModel):

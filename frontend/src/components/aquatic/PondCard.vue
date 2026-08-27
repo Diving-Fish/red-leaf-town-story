@@ -5,6 +5,7 @@ import { AlertTriangle, Droplet, Fish, Hourglass, Sprout } from 'lucide-vue-next
 import ActionButton from '@/components/ActionButton.vue'
 import GameIcon from '@/components/GameIcon.vue'
 import PartnerPicker from '@/components/PartnerPicker.vue'
+import PartnerSwapNote from '@/components/PartnerSwapNote.vue'
 import ProgressBar from '@/components/ProgressBar.vue'
 import { useCountdown } from '@/composables/useCountdown'
 import { formatDuration } from '@/lib/format'
@@ -173,6 +174,16 @@ function harvest() {
       dialog-title="鱼塘驻场"
       solo-label="自己照看"
       @select="(partnerId) => game.assignPondPartner(pond.pond_id, partnerId)"
+    />
+
+    <PartnerSwapNote
+      :pending-ids="pond.pending_partner_ids"
+      :pending-partner="pond.pending_partner"
+      :assigned="pond.assigned_partners[0] || null"
+      :swap-open="pond.swap_open"
+      :ready-at="pond.last_settled_at + pond.next_cycle_seconds"
+      :cycle-seconds="pond.cycle_seconds"
+      :window-seconds="pond.swap_window_seconds"
     />
 
     <div v-if="stockable && stockable.room > 0" class="pond-action">

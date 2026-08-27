@@ -668,6 +668,203 @@ def test_a_partner_can_only_stand_in_one_production_slot(ranch):
     assert assigned["coop_1"] == [] and assigned["barn_1"] == ["herder"]
 
 
+# ----------------------------------------------------------------- 换人的自由窗口
+
+
+def test_a_partner_can_be_swapped_freely_in_the_first_tenth_of_the_cycle(ranch):
+    service, repository, clock, player = ranch
+    service.buy_animal("stock-sub", "coop_1", "chicken")
+
+    clock.advance(int(CYCLE * 0.09))
+    result = service.assign_livestock_partner("stock-sub", "coop_1", "keeper")["result"]
+
+    assert result["queued"] is False
+    facility = stored_facility(repository, player.player_id, "coop_1")
+    assert facility.assigned_partner_ids == ["keeper"]
+    assert facility.pending_partner_ids is None
+    assert facility.quality_bonus == 20
+
+
+def test_after_the_window_the_swap_queues_and_the_running_cycle_keeps_the_old_hand(ranch):
+    service, repository, clock, player = ranch
+    service.buy_animal("stock-sub", "coop_1", "chicken")
+
+    clock.advance(int(CYCLE * 0.5))
+    result = service.assign_livestock_partner("stock-sub", "coop_1", "keeper")["result"]
+
+    assert result["queued"] is True
+    assert result["effective_in_seconds"] == pytest.approx(CYCLE * 0.5, abs=1)
+    facility = stored_facility(repository, player.player_id, "coop_1")
+    # 这个周期还是原来的安排，特性快照一点没动。
+    assert facility.assigned_partner_ids == []
+    assert facility.pending_partner_ids == ["keeper"]
+    assert facility.quality_bonus == 0
+
+
+def test_the_queued_partner_takes_over_when_the_next_cycle_starts(ranch):
+    service, repository, clock, player = ranch
+    service.buy_animal("stock-sub", "coop_1", "chicken")
+
+    clock.advance(int(CYCLE * 0.5))
+    service.assign_livestock_partner("stock-sub", "coop_1", "keeper")
+    clock.advance(int(CYCLE * 0.5))
+    service.snapshot_by_sub("stock-sub")
+
+    facility = stored_facility(repository, player.player_id, "coop_1")
+    assert facility.assigned_partner_ids == ["keeper"]
+    assert facility.pending_partner_ids is None
+    assert facility.quality_bonus == 20
+
+
+def test_going_offline_only_costs_the_queued_partner_the_cycle_that_was_running(ranch):
+    """离线跨了几个周期时，排队的人在第一个边界就上岗，不是等这一整段跑完。"""
+
+    service, repository, clock, player = ranch
+    service.buy_animal("stock-sub", "barn_1", "cow")
+    per_cycle = service.content.livestock_species_map["cow"].feed_per_cycle
+    fill_feed(repository, player.player_id, units=1000, score=60)
+    before = repository.get(player.player_id).feed_slot.units
+
+    clock.advance(int(CYCLE * 0.5))
+    service.assign_livestock_partner("stock-sub", "barn_1", "hoarder")
+    clock.advance(3 * CYCLE)
+    service.snapshot_by_sub("stock-sub")
+
+    facility = stored_facility(repository, player.player_id, "barn_1")
+    assert facility.assigned_partner_ids == ["hoarder"]
+    # 第 1 个周期按原价，后面两个吃到囤仓的 −20%。
+    spent = before - repository.get(player.player_id).feed_slot.units
+    assert spent == pytest.approx(per_cycle + 2 * per_cycle * 0.8)
+
+
+def test_re_queueing_the_same_facility_is_always_free(ranch):
+    service, repository, clock, player = ranch
+    service.buy_animal("stock-sub", "coop_1", "chicken")
+    service.assign_livestock_partner("stock-sub", "coop_1", "keeper")
+
+    clock.advance(int(CYCLE * 0.5))
+    # 预约还没生效，改主意换个人、或者改成撤下，都不该被窗口拦住。
+    service.assign_livestock_partner("stock-sub", "coop_1", "herder")
+    assert stored_facility(repository, player.player_id, "coop_1").pending_partner_ids == ["herder"]
+    service.assign_livestock_partner("stock-sub", "coop_1", "")
+    assert stored_facility(repository, player.player_id, "coop_1").pending_partner_ids == []
+
+
+def test_picking_the_partner_on_duty_again_cancels_the_queued_swap(ranch):
+    service, repository, clock, player = ranch
+    service.buy_animal("stock-sub", "coop_1", "chicken")
+    service.assign_livestock_partner("stock-sub", "coop_1", "keeper")
+
+    clock.advance(int(CYCLE * 0.5))
+    service.assign_livestock_partner("stock-sub", "coop_1", "herder")
+    assert stored_facility(repository, player.player_id, "coop_1").pending_partner_ids == ["herder"]
+
+    # 又点回在岗的 keeper：取消换人，而不是被自己这一栏的周期挡下来。
+    result = service.assign_livestock_partner("stock-sub", "coop_1", "keeper")["result"]
+    assert (result["cancelled"], result["queued"]) == (True, False)
+    facility = stored_facility(repository, player.player_id, "coop_1")
+    assert facility.assigned_partner_ids == ["keeper"]
+    assert facility.pending_partner_ids is None
+
+    clock.advance(int(CYCLE * 0.5))
+    service.snapshot_by_sub("stock-sub")
+    assert stored_facility(repository, player.player_id, "coop_1").assigned_partner_ids == ["keeper"]
+
+
+def test_picking_solo_again_cancels_a_queued_arrival(ranch):
+    service, repository, clock, player = ranch
+    service.buy_animal("stock-sub", "coop_1", "chicken")
+
+    clock.advance(int(CYCLE * 0.5))
+    service.assign_livestock_partner("stock-sub", "coop_1", "keeper")
+    result = service.assign_livestock_partner("stock-sub", "coop_1", "")["result"]
+
+    assert result["cancelled"] is True
+    facility = stored_facility(repository, player.player_id, "coop_1")
+    assert (facility.assigned_partner_ids, facility.pending_partner_ids) == ([], None)
+
+
+def test_taking_the_partner_off_duty_queues_too(ranch):
+    service, repository, clock, player = ranch
+    service.buy_animal("stock-sub", "coop_1", "chicken")
+    service.assign_livestock_partner("stock-sub", "coop_1", "keeper")
+
+    clock.advance(int(CYCLE * 0.5))
+    result = service.assign_livestock_partner("stock-sub", "coop_1", "")["result"]
+
+    assert result["queued"] is True
+    facility = stored_facility(repository, player.player_id, "coop_1")
+    # 撤下也排队：旧伙伴干完这个周期，加成也照给到周期末。
+    assert facility.assigned_partner_ids == ["keeper"]
+    assert facility.pending_partner_ids == []
+    assert facility.quality_bonus == 20
+
+    clock.advance(int(CYCLE * 0.5))
+    service.snapshot_by_sub("stock-sub")
+    facility = stored_facility(repository, player.player_id, "coop_1")
+    assert facility.assigned_partner_ids == []
+    assert facility.quality_bonus == 0
+
+
+def test_a_partner_on_duty_past_the_window_cannot_be_pulled_to_another_facility(ranch):
+    service, repository, clock, player = ranch
+    service.buy_animal("stock-sub", "coop_1", "chicken")
+    service.buy_animal("stock-sub", "barn_1", "cow")
+    service.assign_livestock_partner("stock-sub", "coop_1", "keeper")
+
+    clock.advance(int(CYCLE * 0.5))
+    with pytest.raises(GameError) as excinfo:
+        service.assign_livestock_partner("stock-sub", "barn_1", "keeper")
+
+    assert excinfo.value.code == "partner_cycle_locked"
+    assert stored_facility(repository, player.player_id, "coop_1").assigned_partner_ids == ["keeper"]
+
+
+def test_a_queued_partner_cannot_be_sent_anywhere_else(ranch):
+    service, repository, clock, player = ranch
+    service.buy_animal("stock-sub", "coop_1", "chicken")
+    service.buy_animal("stock-sub", "barn_1", "cow")
+
+    clock.advance(int(CYCLE * 0.5))
+    service.assign_livestock_partner("stock-sub", "coop_1", "keeper")
+    # barn_1 自己还在窗口内，但被预约的人不能去干别的事。
+    with pytest.raises(GameError) as excinfo:
+        service.assign_livestock_partner("stock-sub", "barn_1", "keeper")
+
+    assert excinfo.value.code == "partner_swap_reserved"
+
+
+def test_an_empty_or_stalled_facility_can_always_swap(ranch):
+    service, repository, clock, player = ranch
+
+    # 空栏没有在跑的周期。
+    clock.advance(int(CYCLE * 0.5))
+    assert service.assign_livestock_partner("stock-sub", "coop_1", "keeper")["result"]["queued"] is False
+
+    # 断粮停摆的栏也一样：它什么都没在产。畜牧编制只有一个位子，先把空栏腾出来。
+    service.assign_livestock_partner("stock-sub", "coop_1", "")
+    service.buy_animal("stock-sub", "barn_1", "cow")
+    fill_feed(repository, player.player_id, units=0, score=0)
+    clock.advance(int(CYCLE * 1.5))
+    service.snapshot_by_sub("stock-sub")
+    assert stored_facility(repository, player.player_id, "barn_1").stalled is True
+    assert service.assign_livestock_partner("stock-sub", "barn_1", "hoarder")["result"]["queued"] is False
+
+
+def test_a_queued_swap_still_counts_against_the_livestock_headcount(ranch):
+    service, repository, clock, player = ranch
+    service.buy_animal("stock-sub", "coop_1", "chicken")
+    service.buy_animal("stock-sub", "barn_1", "cow")
+
+    clock.advance(int(CYCLE * 0.5))
+    service.assign_livestock_partner("stock-sub", "coop_1", "keeper")
+    # 编制算的是【最终会在岗的人】，否则排队能把编制上限绕过去。
+    with pytest.raises(GameError) as excinfo:
+        service.assign_livestock_partner("stock-sub", "barn_1", "hoarder")
+
+    assert excinfo.value.code == "partner_capacity_reached"
+
+
 # --------------------------------------------------------------------- 伙伴特性
 
 

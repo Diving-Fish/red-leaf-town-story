@@ -914,6 +914,9 @@ class GameContent(BaseModel):
     fishing_spots: list[FishingSpotDefinition] = Field(default_factory=list)
     fishing_combo: FishingComboDefinition = Field(default_factory=FishingComboDefinition)
     fish_codex_milestones: list[FishCodexMilestoneDefinition] = Field(default_factory=list)
+    # 资产格（鱼塘、畜栏）换伙伴的自由窗口：周期开头这个比例之内随时换，过了就得排队
+    # 到下个周期开始。否则在周期最后一秒换上强力伙伴，整个周期都会按新伙伴结算。
+    asset_partner_free_window: float = Field(default=0.1, ge=0, lt=1)
     pond_tiers: list[PondTierDefinition] = Field(default_factory=list)
     ponds: list[PondSlotDefinition] = Field(default_factory=list)
     pond_species: list[PondSpeciesDefinition] = Field(default_factory=list)

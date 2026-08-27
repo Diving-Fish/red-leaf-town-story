@@ -597,6 +597,49 @@ def test_a_stronger_partner_speeds_up_the_fry_already_in_the_pond():
     assert repository.get(player.player_id).ponds[0].stock == 5
 
 
+def test_a_pond_partner_can_be_swapped_freely_in_the_first_tenth_of_the_cycle():
+    service, repository, clock, player = stocked_pond_game()
+    service.stock_pond("aquatic-sub", "pond_1", "crucian", 4)
+    cycle = repository.get(player.player_id).ponds[0].cycle_seconds
+
+    clock.advance(int(cycle * 0.09))
+    result = service.assign_pond_partner("aquatic-sub", "pond_1", "angler")["result"]
+
+    assert result["queued"] is False
+    pond = repository.get(player.player_id).ponds[0]
+    assert pond.assigned_partner_ids == ["angler"]
+    assert pond.cycle_seconds < 7200
+
+
+def test_a_pond_swap_after_the_window_queues_to_the_next_cycle():
+    service, repository, clock, player = stocked_pond_game()
+    service.stock_pond("aquatic-sub", "pond_1", "crucian", 4)
+    cycle = repository.get(player.player_id).ponds[0].cycle_seconds
+
+    clock.advance(int(cycle * 0.5))
+    result = service.assign_pond_partner("aquatic-sub", "pond_1", "angler")["result"]
+
+    assert result["queued"] is True
+    pond = repository.get(player.player_id).ponds[0]
+    # 这个周期还是原来的安排：周期长度也不能提前缩短，否则等于追认了已经跑掉的一半。
+    assert pond.assigned_partner_ids == []
+    assert pond.pending_partner_ids == ["angler"]
+    assert pond.cycle_seconds == cycle
+
+    clock.advance(int(cycle * 0.5))
+    service.snapshot_by_sub("aquatic-sub")
+    pond = repository.get(player.player_id).ponds[0]
+    assert pond.assigned_partner_ids == ["angler"]
+    assert pond.pending_partner_ids is None
+    assert pond.cycle_seconds < cycle
+
+
+def test_an_empty_pond_can_always_swap():
+    service, repository, clock, player = stocked_pond_game()
+    clock.advance(5 * HOUR)
+    assert service.assign_pond_partner("aquatic-sub", "pond_1", "angler")["result"]["queued"] is False
+
+
 def test_pond_trait_parameters_are_frozen_after_old_time_is_settled():
     service, repository, _, player = stocked_pond_game()
     code = "test_pond_parameter_snapshot"
