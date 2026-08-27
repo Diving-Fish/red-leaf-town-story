@@ -79,6 +79,27 @@ function badge(item: NavItem) {
 }
 .app-nav--bar { display: none; }
 @media (max-width: 760px) {
+  /* 抽屉里的导航在手机上改成网格瓷砖，12 个入口才放得下。 */
+  .app-nav--rail { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .app-nav--rail a {
+    flex-direction: column;
+    justify-content: center;
+    gap: 7px;
+    min-height: 76px;
+    padding: 10px 4px;
+    font-size: 12px;
+    line-height: 1.2;
+    text-align: center;
+    border: 1px solid var(--line);
+    background: rgba(255, 255, 255, .02);
+  }
+  .app-nav--rail a.router-link-active {
+    background: linear-gradient(160deg, rgba(119, 153, 91, .26), rgba(119, 153, 91, .08));
+    border-color: color-mix(in srgb, var(--leaf) 45%, transparent);
+    box-shadow: none;
+  }
+  .app-nav--rail .nav-label { display: block; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
   .app-nav--bar {
     position: fixed;
     left: 0;
