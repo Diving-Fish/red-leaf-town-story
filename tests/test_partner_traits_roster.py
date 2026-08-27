@@ -22,31 +22,32 @@ PARTNER_TRAITS = {
     "guqi": "listen_to_rock",
     "guyu_yu": "ancient_formula",
     "hei_yuchuan": "overcast_worker",
+    "lengyue": "fine_combing",
     "luo_nali": "herb_lore",
+    "manlong": "unhurried",
+    "manlong_2": "full_larder",
     "mami": "meticulous_farming",
     "nuanyu": "warm_soil",
     "sunfeng_liya": "swift_wind_work",
     "xiang_hanyang": "ore_heart",
+    "xiang_hanyuan": "herding_heart",
     "xiao_xingyun": "falling_star",
+    "xixi": "matchmaker",
     "xiyue_kanna": "moonlit_selection",
+    "xuanyuan": "generous_keep",
     "ye_huanan": "peaceful_cooking",
     "ye_lvsu": "seasonal_rhythm",
     "ze_feiyang": "fodder_artisan",
 }
 
+# 只剩探索主倾向的一批，等第三里程碑的探索业务落地再统一设计。
 PENDING_PARTNERS = {
     "aishen",
     "gujian_miao",
     "hongkai",
     "leilei",
-    "lengyue",
-    "manlong",
-    "manlong_2",
     "wujian",
-    "xiang_hanyuan",
     "xiaoha",
-    "xixi",
-    "xuanyuan",
     "zhuoyan",
 }
 
@@ -68,6 +69,11 @@ def trait_context(phase: str, **overrides):
         "rare_weight_multiplier": 1.0,
         "feed_multiplier": 1.0,
         "quality_bonus": 0.0,
+        "overflow_bonus": 0,
+        "special_chance_bonus": 0.0,
+        "affection_quality_bonus": 0.0,
+        "affection_per_care_bonus": 0,
+        "gene_rerolls": 0,
         "applied_effects": [],
     }
     context.update(overrides)
@@ -98,10 +104,19 @@ TRAIT_CASES = [
     ("peaceful_cooking", "result_finalize", {"industry": "crafting", "content_tags": ["food"]}, None, "effect"),
     ("seasonal_rhythm", "task_prepare", {"industry": "gathering", "world": {"weather": {"id": "rain"}}}, "quality_ability_bonus", "increase"),
     ("fodder_artisan", "task_prepare", {"industry": "crafting", "content_tags": ["fodder"]}, "yield_bonus", "increase"),
+    ("herding_heart", "livestock_segment", {"industry": "livestock", "action": "livestock_segment"}, "quality_bonus", "increase"),
+    ("generous_keep", "livestock_segment", {"industry": "livestock", "action": "livestock_segment"}, "special_chance_bonus", "increase"),
+    ("full_larder", "livestock_segment", {"industry": "livestock", "action": "livestock_segment"}, "feed_multiplier", "decrease"),
+    ("unhurried", "livestock_segment", {"industry": "livestock", "action": "livestock_segment"}, "overflow_bonus", "increase"),
+    ("matchmaker", "instant_action", {"industry": "livestock", "action": "livestock_breed"}, "gene_rerolls", "increase"),
+    ("fine_combing", "instant_action", {"industry": "livestock", "action": "livestock_care"}, "affection_per_care_bonus", "increase"),
 ]
 
 SECONDARY_TRAIT_CASES = [
     ("moonlit_selection", "instant_action", {"industry": "aquatic", "action": "fishing_cast"}, None, "effect"),
+    ("matchmaker", "instant_action", {"industry": "livestock", "action": "livestock_incubate"}, None, "effect"),
+    ("fine_combing", "livestock_segment", {"industry": "livestock", "action": "livestock_segment"}, None, "effect"),
+    ("full_larder", "livestock_segment", {"industry": "livestock", "action": "livestock_segment"}, "overflow_bonus", "increase"),
 ]
 
 
@@ -109,7 +124,7 @@ def test_only_partners_with_an_implemented_primary_industry_have_traits():
     catalog = load_partner_catalog()
     definitions = {entry.code: entry for entry in partner_trait_catalog()}
 
-    assert len(PARTNER_TRAITS) == 23
+    assert len(PARTNER_TRAITS) == 29
     for partner_id, trait_code in PARTNER_TRAITS.items():
         assert catalog.partner_map[partner_id].trait_codes == [trait_code]
         assert definitions[trait_code].implemented is True

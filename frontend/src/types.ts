@@ -851,6 +851,11 @@ export interface LivestockFacilityState {
   overflow_cycles: number
   gene_cap: number
   ability: number
+  quality_bonus: number
+  feed_multiplier: number
+  special_chance_bonus: number
+  affection_quality_bonus: number
+  trait_effects: Array<Record<string, unknown>>
   stalled: boolean
   settle_remainder: number
   last_settled_at: number
@@ -924,6 +929,7 @@ export interface CareResult {
   facility_id: string
   stamina_cost: number
   experience: number
+  affection_gain: number
   affection_before: number
   affection: number
   affection_cap: number

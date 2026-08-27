@@ -144,6 +144,22 @@ def achievement_progress(
         return int(any(entry.item_id in big_catch_ids for entry in player.fish_codex.entries)), 1
     if hook == "max_production_quality":
         return stats.max_production_quality, int(params["quality"])
+    if hook == "animals_bred":
+        return stats.animals_bred, int(params["count"])
+    if hook == "animals_cared":
+        return stats.animals_cared, int(params["count"])
+    if hook == "livestock_specials":
+        return stats.livestock_specials, int(params["count"])
+    if hook == "animals_at_max_affection":
+        cap = content.livestock.affection_cap if content.livestock else 100
+        return sum(1 for animal in player.animals if animal.affection >= cap), int(params["count"])
+    if hook == "livestock_gene":
+        gene = int(params["gene"])
+        current = sum(
+            1 for animal in player.animals
+            if animal.quality_gene >= gene and animal.yield_gene >= gene
+        )
+        return current, int(params.get("count", 1))
     if hook == "portal_completed":
         portal_id = str(params["portal_id"])
         return int(any(entry.portal_id == portal_id and entry.completed_at for entry in player.portals)), 1

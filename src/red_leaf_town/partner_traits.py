@@ -490,3 +490,83 @@ def _seasonal_rhythm(context: MutableMapping[str, Any]) -> None:
 def _fodder_artisan(context: MutableMapping[str, Any]) -> None:
     if _industry_is(context, "crafting") and _has_content_tag(context, "fodder"):
         _add(context, "yield_bonus", 1, stacking_group="flat_yield")
+
+
+def _livestock_segment(context: MutableMapping[str, Any]) -> bool:
+    return _industry_is(context, "livestock") and _action_is(context, "livestock_segment")
+
+
+def _livestock_birth(context: MutableMapping[str, Any]) -> bool:
+    return _industry_is(context, "livestock") and str(context.get("action") or "") in {
+        "livestock_breed",
+        "livestock_incubate",
+    }
+
+
+@register_partner_trait(
+    "herding_heart",
+    "牧心",
+    "驻场畜牧设施的品质能力增加20。",
+    phases=("livestock_segment",),
+)
+def _herding_heart(context: MutableMapping[str, Any]) -> None:
+    if _livestock_segment(context):
+        _add(context, "quality_bonus", 20, stacking_group="livestock_quality")
+
+
+@register_partner_trait(
+    "generous_keep",
+    "厚养",
+    "驻场畜牧设施中亲密度已满的牲畜，特殊产出概率提高2个百分点。",
+    phases=("livestock_segment",),
+)
+def _generous_keep(context: MutableMapping[str, Any]) -> None:
+    if _livestock_segment(context):
+        _add(context, "special_chance_bonus", 0.02, stacking_group="livestock_special")
+
+
+@register_partner_trait(
+    "full_larder",
+    "囤仓",
+    "驻场畜牧设施的饲料消耗减少20%，产出溢出上限提高1个周期。",
+    phases=("livestock_segment",),
+)
+def _full_larder(context: MutableMapping[str, Any]) -> None:
+    if _livestock_segment(context):
+        _multiply(context, "feed_multiplier", 0.80, stacking_group="livestock_feed")
+        _add(context, "overflow_bonus", 1, stacking_group="livestock_overflow")
+
+
+@register_partner_trait(
+    "unhurried",
+    "慢条斯理",
+    "驻场畜牧设施的产出溢出上限提高1个周期。",
+    phases=("livestock_segment",),
+)
+def _unhurried(context: MutableMapping[str, Any]) -> None:
+    if _livestock_segment(context):
+        _add(context, "overflow_bonus", 1, stacking_group="livestock_overflow")
+
+
+@register_partner_trait(
+    "matchmaker",
+    "相看",
+    "在驻场畜牧设施配种或孵化时，子代的每条基因各重投一次并取较高值。",
+    phases=("instant_action",),
+)
+def _matchmaker(context: MutableMapping[str, Any]) -> None:
+    if _livestock_birth(context):
+        _add(context, "gene_rerolls", 1, stacking_group="livestock_gene_reroll")
+
+
+@register_partner_trait(
+    "fine_combing",
+    "细梳",
+    "照料驻场畜牧设施的牲畜时亲密度额外增加4点；亲密度满时的品质系数额外提高0.1。",
+    phases=("instant_action", "livestock_segment"),
+)
+def _fine_combing(context: MutableMapping[str, Any]) -> None:
+    if _industry_is(context, "livestock") and _action_is(context, "livestock_care"):
+        _add(context, "affection_per_care_bonus", 4, stacking_group="livestock_affection")
+    elif _livestock_segment(context):
+        _add(context, "affection_quality_bonus", 0.001, stacking_group="livestock_affection_quality")

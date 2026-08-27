@@ -864,6 +864,11 @@ AchievementHook = Literal[
     "fish_codex_entries",
     "big_catch_caught",
     "max_production_quality",
+    "animals_bred",
+    "animals_cared",
+    "livestock_specials",
+    "animals_at_max_affection",
+    "livestock_gene",
     "portal_completed",
 ]
 

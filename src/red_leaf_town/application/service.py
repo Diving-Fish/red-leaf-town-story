@@ -60,6 +60,7 @@ from red_leaf_town.domain.aquatic import (
 from red_leaf_town.domain.livestock import (
     FacilityParameters,
     SpeciesParameters,
+    affection_multiplier as animal_affection_multiplier,
     is_saturated,
     overflow_cap,
     plan_facility,
@@ -1319,7 +1320,14 @@ class GameService:
             facility.assigned_partner_ids = desired_ids
             if self._industry_assigned_count(player, "livestock") > self._industry_partner_capacity(player, "livestock"):
                 raise GameError("partner_capacity_reached", "当前畜牧伙伴编制已满", 409)
-            return {"facility_id": facility_id, "partner_id": partner_id or None, "changed": True}
+            # 开头已经用旧参数结算过了，这里换上新伙伴的特性快照。
+            self._refresh_livestock_trait_snapshot(player, facility, now)
+            return {
+                "facility_id": facility_id,
+                "partner_id": partner_id or None,
+                "changed": True,
+                "trait_effects": list(facility.trait_effects),
+            }
 
         player, result = self._update_by_sub(oauth_sub, mutation)
         return {"result": result, "state": self._snapshot(player, now)}
@@ -1400,6 +1408,7 @@ class GameService:
                     add_item(player, species.special_item_id, animal.pending_special, 0)
                     key = (species.special_item_id, 0)
                     drops[key] = drops.get(key, 0) + animal.pending_special
+                    player.achievement_stats.livestock_specials += animal.pending_special
                 animal.pending_special = 0
             if not drops:
                 raise GameError("livestock_empty", "这里暂时没有可以收取的东西", 409)
@@ -1443,16 +1452,27 @@ class GameService:
             except ValueError as exc:
                 raise GameError("resource_insufficient", str(exc)) from exc
             animal.cared_count += 1
+            player.achievement_stats.animals_cared += 1
+            context = self._livestock_instant_context(
+                player,
+                facility,
+                "livestock_care",
+                now,
+                affection_per_care_bonus=0,
+            )
+            gain = rules.affection_per_care + max(0, int(context["affection_per_care_bonus"]))
             before = animal.affection
-            animal.affection = min(rules.affection_cap, animal.affection + rules.affection_per_care)
+            animal.affection = min(rules.affection_cap, animal.affection + gain)
             levels = grant_experience(player, rules.care_experience, self.content)
             return {
                 "animal_id": animal_id,
                 "facility_id": animal.facility_id,
                 "stamina_cost": rules.care_stamina_cost,
                 "experience": rules.care_experience,
+                "affection_gain": gain,
                 "affection_before": before,
                 "affection": animal.affection,
+                "trait_effects": list(context["applied_effects"]),
                 "affection_cap": rules.affection_cap,
                 "cared_today": animal.cared_count,
                 "care_daily_limit": rules.care_daily_limit,
@@ -1488,21 +1508,35 @@ class GameService:
             gene_cap = definition.tier(facility.tier).gene_cap
             base = breeding.quality_gene_base[quality - 1]
             mutation_chance = breeding.mutation_chance + self._talent_modifier(player, "livestock_mutation_chance")
+            context = self._livestock_instant_context(
+                player,
+                facility,
+                "livestock_incubate",
+                now,
+                gene_rerolls=0,
+            )
+            rerolls = max(0, int(context["gene_rerolls"]))
             animal = self._new_animal(
                 species,
                 facility_id,
                 now,
-                quality_gene=roll_gene(self.rng, base, breeding.gene_sigma, gene_cap, mutation_chance, breeding.mutation_bonus),
-                yield_gene=roll_gene(self.rng, base, breeding.gene_sigma, gene_cap, mutation_chance, breeding.mutation_bonus),
+                quality_gene=roll_gene(
+                    self.rng, base, breeding.gene_sigma, gene_cap, mutation_chance, breeding.mutation_bonus, rerolls,
+                ),
+                yield_gene=roll_gene(
+                    self.rng, base, breeding.gene_sigma, gene_cap, mutation_chance, breeding.mutation_bonus, rerolls,
+                ),
                 stage="incubating",
                 nickname=nickname,
             )
             player.animals.append(animal)
+            player.achievement_stats.animals_bred += 1
             return {
                 "facility_id": facility_id,
                 "quality": quality,
                 "feed_units": breeding.feed_units,
                 "incubate_cycles": breeding.incubate_cycles,
+                "trait_effects": list(context["applied_effects"]),
                 "animal": self._animal_snapshot(player, animal, facility, definition),
             }
 
@@ -1542,15 +1576,28 @@ class GameService:
             mutation_chance = breeding.mutation_chance + self._talent_modifier(player, "livestock_mutation_chance")
             quality_base = (chosen[0].quality_gene + chosen[1].quality_gene) / 2
             yield_base = (chosen[0].yield_gene + chosen[1].yield_gene) / 2
+            context = self._livestock_instant_context(
+                player,
+                facility,
+                "livestock_breed",
+                now,
+                gene_rerolls=0,
+            )
+            rerolls = max(0, int(context["gene_rerolls"]))
             calf = self._new_animal(
                 species,
                 facility_id,
                 now,
-                quality_gene=roll_gene(self.rng, quality_base, breeding.gene_sigma, gene_cap, mutation_chance, breeding.mutation_bonus),
-                yield_gene=roll_gene(self.rng, yield_base, breeding.gene_sigma, gene_cap, mutation_chance, breeding.mutation_bonus),
+                quality_gene=roll_gene(
+                    self.rng, quality_base, breeding.gene_sigma, gene_cap, mutation_chance, breeding.mutation_bonus, rerolls,
+                ),
+                yield_gene=roll_gene(
+                    self.rng, yield_base, breeding.gene_sigma, gene_cap, mutation_chance, breeding.mutation_bonus, rerolls,
+                ),
                 nickname=nickname,
             )
             player.animals.append(calf)
+            player.achievement_stats.animals_bred += 1
             for parent in chosen:
                 parent.breeding_cooldown = float(breeding.cooldown_cycles)
             return {
@@ -1558,6 +1605,7 @@ class GameService:
                 "parent_ids": parents,
                 "feed_units": breeding.feed_units,
                 "cooldown_cycles": breeding.cooldown_cycles,
+                "trait_effects": list(context["applied_effects"]),
                 "parent_quality_gene": round(quality_base, 1),
                 "parent_yield_gene": round(yield_base, 1),
                 "animal": self._animal_snapshot(player, calf, facility, definition),
@@ -1741,7 +1789,8 @@ class GameService:
             cycle_seconds=rules.cycle_seconds,
             capacity=tier.capacity if tier else 0,
             quality_multiplier=tier.quality_multiplier if tier else 1,
-            overflow_cycles=max(1, overflow),
+            # 天赋和伙伴特性都抬溢出上限，允许叠加：它只减少浪费，不加快产出。
+            overflow_cycles=max(1, overflow + facility.overflow_bonus),
             gene_cap=tier.gene_cap if tier else 0,
             ability=self._livestock_ability(player, facility.assigned_partner_ids),
             feed_score=feed_score,
@@ -1749,12 +1798,74 @@ class GameService:
             affection_cap=rules.affection_cap,
             affection_quality_base=rules.affection_quality_base,
             affection_quality_per_point=rules.affection_quality_per_point,
+            quality_bonus=facility.quality_bonus,
+            feed_multiplier=facility.feed_multiplier,
+            special_chance_bonus=facility.special_chance_bonus,
+            affection_quality_bonus=facility.affection_quality_bonus,
             species={
                 species.id: self._species_parameters(species)
                 for species in self.content.livestock_species
                 if species.category == category
             },
         )
+
+    def _refresh_livestock_trait_snapshot(
+        self,
+        player: PlayerState,
+        facility: LivestockFacilityState,
+        now: int,
+    ) -> None:
+        """把驻场伙伴的特性展开成这一栏下一段生效的参数。
+
+        必须在结算之后调用：资产格的规矩是【先用旧参数结算，再写新参数】。
+        """
+
+        definition = self.content.livestock_facility_map.get(facility.facility_id)
+        context = {
+            "industry": "livestock",
+            "action": "livestock_segment",
+            "content_id": facility.facility_id,
+            "production_slot_id": f"livestock:{facility.facility_id}",
+            "world": self._world_snapshot(now),
+            "content_tags": [definition.category] if definition else [],
+            "quality_bonus": 0.0,
+            "feed_multiplier": 1.0,
+            "overflow_bonus": 0,
+            "special_chance_bonus": 0.0,
+            "affection_quality_bonus": 0.0,
+            "applied_effects": [],
+        }
+        self._execute_partner_trait_phase(facility.assigned_partner_ids, "livestock_segment", context)
+        facility.quality_bonus = float(context["quality_bonus"])
+        facility.feed_multiplier = max(0.0, float(context["feed_multiplier"]))
+        facility.overflow_bonus = max(0, int(context["overflow_bonus"]))
+        facility.special_chance_bonus = max(0.0, float(context["special_chance_bonus"]))
+        facility.affection_quality_bonus = max(0.0, float(context["affection_quality_bonus"]))
+        facility.trait_effects = list(context["applied_effects"])
+
+    def _livestock_instant_context(
+        self,
+        player: PlayerState,
+        facility: LivestockFacilityState,
+        action: str,
+        now: int,
+        **fields,
+    ) -> dict:
+        """照料、配种、孵化这类瞬时操作的特性上下文，来源是本栏的驻场伙伴。"""
+
+        definition = self.content.livestock_facility_map.get(facility.facility_id)
+        context = {
+            "industry": "livestock",
+            "action": action,
+            "content_id": facility.facility_id,
+            "production_slot_id": f"livestock:{facility.facility_id}",
+            "world": self._world_snapshot(now),
+            "content_tags": [definition.category] if definition else [],
+            "applied_effects": [],
+            **fields,
+        }
+        self._execute_partner_trait_phase(facility.assigned_partner_ids, "instant_action", context)
+        return context
 
     def _grant_livestock_partner_experience(self, player: PlayerState, settlement) -> None:
         """驻场的伙伴按结算掉的周期数拿经验。停摆的周期没买单，也就不给经验。"""
@@ -1824,7 +1935,7 @@ class GameService:
             "gene_cap": parameters.gene_cap,
             "affection": animal.affection,
             "affection_cap": rules.affection_cap,
-            "affection_multiplier": round(rules.affection_multiplier(animal.affection), 4),
+            "affection_multiplier": round(animal_affection_multiplier(animal, parameters), 4),
             "pending_output": {str(quality): amount for quality, amount in sorted(animal.pending_output.items())},
             "pending_total": animal.pending_total,
             "pending_special": animal.pending_special,
@@ -1849,8 +1960,13 @@ class GameService:
         if rules is None or not player.livestock_facilities:
             return 0.0
         species_map = self.content.livestock_species_map
+        # 每栏的饲料乘算不同，所以按动物所在的栏各乘各的。
+        multipliers = {
+            facility.facility_id: facility.feed_multiplier
+            for facility in player.livestock_facilities
+        }
         per_cycle = sum(
-            species_map[animal.species_id].feed_per_cycle
+            species_map[animal.species_id].feed_per_cycle * multipliers.get(animal.facility_id, 1.0)
             for animal in player.animals
             if animal.species_id in species_map and animal.stage != "incubating"
         )
@@ -1904,6 +2020,11 @@ class GameService:
                 "overflow_cycles": parameters.overflow_cycles,
                 "gene_cap": tier.gene_cap,
                 "ability": parameters.ability,
+                "quality_bonus": facility.quality_bonus,
+                "feed_multiplier": facility.feed_multiplier,
+                "special_chance_bonus": facility.special_chance_bonus,
+                "affection_quality_bonus": facility.affection_quality_bonus,
+                "trait_effects": list(facility.trait_effects),
                 "stalled": facility.stalled,
                 "settle_remainder": facility.settle_remainder,
                 "last_settled_at": facility.last_settled_at,
@@ -2123,6 +2244,9 @@ class GameService:
                 ratio=ratio,
             )
             self._grant_livestock_partner_experience(player, stock)
+            for facility in player.livestock_facilities:
+                # 推进用旧快照，推进完立刻换成当前参数：换伙伴从下一段开始生效。
+                self._refresh_livestock_trait_snapshot(player, facility, now)
         player.feed_slot.updated_at = now
 
     def _grant_pond_partner_experience(self, player: PlayerState, settlement) -> None:
@@ -5052,18 +5176,21 @@ class GameService:
             })
         return snapshots
 
-    @staticmethod
-    def _clear_partner_assignment(player: PlayerState, partner_id: str) -> None:
+    def _clear_partner_assignment(self, player: PlayerState, partner_id: str) -> None:
         for production_slot in [
             *player.plots,
             *player.gathering_sites,
             *player.crafting_stations,
             *player.mining_sites,
             *player.ponds,
-            *player.livestock_facilities,
         ]:
             if partner_id in production_slot.assigned_partner_ids:
                 production_slot.assigned_partner_ids = []
+        for facility in player.livestock_facilities:
+            if partner_id in facility.assigned_partner_ids:
+                # 被别处挖走也要立刻抹掉特性快照，否则这一栏会白拿一段的加成。
+                facility.assigned_partner_ids = []
+                self._refresh_livestock_trait_snapshot(player, facility, self._now())
 
     @staticmethod
     def _industry_assigned_count(player: PlayerState, industry: str) -> int:

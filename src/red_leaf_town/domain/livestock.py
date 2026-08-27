@@ -55,6 +55,11 @@ class FacilityParameters:
     affection_cap: int
     affection_quality_base: float
     affection_quality_per_point: float
+    # 以下四项来自伙伴特性快照，没有驻场伙伴时全是中性值。
+    quality_bonus: float = 0.0
+    feed_multiplier: float = 1.0
+    special_chance_bonus: float = 0.0
+    affection_quality_bonus: float = 0.0
     species: dict[str, SpeciesParameters] = field(default_factory=dict)
 
 
@@ -78,21 +83,28 @@ class LivestockSettlement:
     stalled: bool = False
 
 
+def affection_multiplier(animal: AnimalState, parameters: FacilityParameters) -> float:
+    """亲密度的品质系数。特性只加每点的斜率，起点保持不变：养熟了才兑现。"""
+
+    affection = max(0, min(parameters.affection_cap, animal.affection))
+    per_point = parameters.affection_quality_per_point + parameters.affection_quality_bonus
+    return parameters.affection_quality_base + per_point * affection
+
+
 def quality_ability(animal: AnimalState, parameters: FacilityParameters) -> float:
     """畜产品的品质分。
 
-    加算的三项（能力、饲料、基因）先合并，再乘设施系数和亲密度系数 —— 亲密度是
-    「放大你已经堆出来的底子」，不是一份固定加分。
+    加算的四项（能力、饲料、基因、特性）先合并，再乘设施系数和亲密度系数 —— 亲密度是
+    「放大你已经堆出来的底子」，不是一份固定加分，特性的加算同样吃这一层放大。
     """
 
     base = (
         parameters.ability
         + parameters.feed_score
         + parameters.quality_gene_coefficient * animal.quality_gene
+        + parameters.quality_bonus
     )
-    affection = max(0, min(parameters.affection_cap, animal.affection))
-    multiplier = parameters.affection_quality_base + parameters.affection_quality_per_point * affection
-    return max(0.0, base) * parameters.quality_multiplier * multiplier
+    return max(0.0, base) * parameters.quality_multiplier * affection_multiplier(animal, parameters)
 
 
 def yield_per_cycle(animal: AnimalState, species: SpeciesParameters) -> float:
@@ -167,11 +179,12 @@ def _advance_animal(
         animal.pending_output[quality] = animal.pending_output.get(quality, 0) + 1
         tally[quality] = tally.get(quality, 0) + 1
 
+    special_chance = species.special_chance + parameters.special_chance_bonus
     if (
         species.special_item_id
-        and species.special_chance > 0
+        and special_chance > 0
         and animal.affection >= parameters.affection_cap
-        and rng.random() < species.special_chance
+        and rng.random() < special_chance
     ):
         # 特殊产出不占溢出上限：它是满亲密度的惊喜，不该反过来把正常产出卡住。
         animal.pending_special += 1
@@ -208,7 +221,7 @@ def advance_facility(
                 continue
             working.append((animal, species, saturated))
             if not saturated and animal.stage != "incubating":
-                demand += species.feed_per_cycle
+                demand += species.feed_per_cycle * parameters.feed_multiplier
         if not working:
             advance.saturated = True
             break
@@ -324,14 +337,25 @@ def settle_livestock(
     return settlement
 
 
-def roll_gene(rng: Random, base: float, sigma: float, gene_cap: int, mutation_chance: float, mutation_bonus: int) -> int:
+def roll_gene(
+    rng: Random,
+    base: float,
+    sigma: float,
+    gene_cap: int,
+    mutation_chance: float,
+    mutation_bonus: int,
+    rerolls: int = 0,
+) -> int:
     """一条基因的遗传。
 
     正常范围封在品种上限里，突变可以顶破它 —— 突变是玩家追了几代之后的惊喜，
     被上限吃掉就没意义了。硬顶永远是 100。
+
+    rerolls 来自伙伴特性：多掷几次取最高。它在均值附近有明显正偏移，越靠近品种上限
+    收益越自然收敛，所以不需要另设封顶。
     """
 
-    value = rng.gauss(base, sigma)
+    value = max(rng.gauss(base, sigma) for _ in range(1 + max(0, int(rerolls))))
     value = max(0.0, min(float(gene_cap), value))
     if mutation_chance > 0 and rng.random() < mutation_chance:
         value = min(100.0, value + mutation_bonus)

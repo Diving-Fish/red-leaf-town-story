@@ -99,8 +99,8 @@ async def test_state_exposes_achievement_catalog(client):
     state = (await response.get_json())["data"]
 
     assert response.status_code == 200
-    assert state["achievements"]["total"] == 22
-    assert len(state["achievements"]["entries"]) == 22
+    assert state["achievements"]["total"] == 28
+    assert len(state["achievements"]["entries"]) == 28
     assert {entry["tier"] for entry in state["achievements"]["entries"]} == {"blue", "purple", "gold"}
 
 

@@ -351,13 +351,23 @@ class AnimalState(BaseModel):
 
 
 class LivestockFacilityState(BaseModel):
-    """资产轴生产格。畜牧周期是全局常量，所以这里只需要记余数和结算点。"""
+    """资产轴生产格。畜牧周期是全局常量，所以这里只需要记余数、结算点和伙伴参数快照。
+
+    特性参数是【快照】而不是现算：干跑要先报饲料需求量，鱼塘和畜栏才能按同一个比例
+    分预算。饲料乘算如果等到推进时才算，需求量和实际消耗就对不上了。
+    """
 
     facility_id: str = Field(min_length=1)
     tier: int = Field(default=1, ge=1)
     settle_remainder: int = Field(default=0, ge=0)
     last_settled_at: int = Field(default=0, ge=0)
     stalled: bool = False
+    quality_bonus: float = 0
+    feed_multiplier: float = Field(default=1, ge=0)
+    overflow_bonus: int = Field(default=0, ge=0)
+    special_chance_bonus: float = Field(default=0, ge=0)
+    affection_quality_bonus: float = Field(default=0, ge=0)
+    trait_effects: list[dict[str, object]] = Field(default_factory=list)
     assigned_partner_ids: list[str] = Field(default_factory=list, max_length=1)
 
 
@@ -593,6 +603,9 @@ class AchievementStats(BaseModel):
     commissions_completed: int = Field(default=0, ge=0)
     pond_harvested: dict[str, int] = Field(default_factory=dict)
     max_production_quality: int = Field(default=0, ge=0, le=5)
+    animals_bred: int = Field(default=0, ge=0)
+    animals_cared: int = Field(default=0, ge=0)
+    livestock_specials: int = Field(default=0, ge=0)
 
     @model_validator(mode="after")
     def validate_sets_and_counts(self):
@@ -608,7 +621,7 @@ class AchievementStats(BaseModel):
 
 
 class PlayerState(BaseModel):
-    schema_version: int = 24
+    schema_version: int = 25
     version: int = 1
     player_id: str
     oauth_sub: str
@@ -780,7 +793,18 @@ class PlayerState(BaseModel):
             # 畜牧上线。设施和动物都从空开始，散养地在 normalize 时按等级补发。
             migrated.setdefault("livestock_facilities", [])
             migrated.setdefault("animals", [])
-        migrated["schema_version"] = 24
+        if schema_version < 25:
+            # 畜牧特性上线，给已有畜栏补上中性参数；下一次结算会写回真实快照。
+            for facility in migrated.get("livestock_facilities") or []:
+                if not isinstance(facility, dict):
+                    continue
+                facility.setdefault("quality_bonus", 0)
+                facility.setdefault("feed_multiplier", 1)
+                facility.setdefault("overflow_bonus", 0)
+                facility.setdefault("special_chance_bonus", 0)
+                facility.setdefault("affection_quality_bonus", 0)
+                facility.setdefault("trait_effects", [])
+        migrated["schema_version"] = 25
         return migrated
 
     @model_validator(mode="after")

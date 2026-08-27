@@ -174,7 +174,7 @@ def test_schema_nineteen_migration_starts_from_empty_aquatic_state():
         "created_at": started_at,
         "updated_at": started_at,
     })
-    assert player.schema_version == 24
+    assert player.schema_version == 25
     assert player.ponds == []
     assert player.feed_slot.units == 0 and player.feed_slot.quality_score == 0
     assert player.fishing.combo == 0 and player.fishing.pending_big_catch is None
@@ -194,7 +194,7 @@ def test_schema_twenty_one_adds_neutral_pond_trait_parameters():
         "ponds": [{"pond_id": "pond_1", "last_settled_at": started_at}],
     })
     pond = player.ponds[0]
-    assert player.schema_version == 24
+    assert player.schema_version == 25
     assert (pond.cycle_multiplier, pond.feed_multiplier) == (1, 1)
     assert pond.quality_bonus == pond.generation_gain_bonus == 0
     assert pond.trait_effects == []

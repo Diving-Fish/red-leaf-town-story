@@ -2360,6 +2360,46 @@
       "condition": { "hook": "big_catch_caught", "params": {} }
     },
     {
+      "id": "first_livestock",
+      "name": "第一篮鸡蛋",
+      "description": "第一次从畜牧设施收取产出",
+      "tier": "blue",
+      "reward_maple_flame": 50,
+      "condition": { "hook": "production_collections", "params": { "industry": "livestock", "count": 1 } }
+    },
+    {
+      "id": "first_breeding",
+      "name": "添丁",
+      "description": "第一次通过配种或孵化得到新生牲畜",
+      "tier": "blue",
+      "reward_maple_flame": 50,
+      "condition": { "hook": "animals_bred", "params": { "count": 1 } }
+    },
+    {
+      "id": "care_thirty",
+      "name": "摸熟了脾气",
+      "description": "累计照料牲畜 30 次",
+      "tier": "purple",
+      "reward_maple_flame": 100,
+      "condition": { "hook": "animals_cared", "params": { "count": 30 } }
+    },
+    {
+      "id": "four_familiar_faces",
+      "name": "四张熟脸",
+      "description": "同时拥有 4 只亲密度已满的牲畜",
+      "tier": "purple",
+      "reward_maple_flame": 100,
+      "condition": { "hook": "animals_at_max_affection", "params": { "count": 4 } }
+    },
+    {
+      "id": "livestock_specials_five",
+      "name": "金光乍现",
+      "description": "累计收取 5 件金蛋或浓乳",
+      "tier": "purple",
+      "reward_maple_flame": 100,
+      "condition": { "hook": "livestock_specials", "params": { "count": 5 } }
+    },
+    {
       "id": "miracle_production",
       "name": "奇迹有迹可循",
       "description": "从农业、采集、加工或采矿中获得奇迹品质产物",
@@ -2382,6 +2422,14 @@
       "tier": "gold",
       "reward_maple_flame": 200,
       "condition": { "hook": "partners_owned", "params": { "count": 20 } }
+    },
+    {
+      "id": "prime_bloodline",
+      "name": "良种",
+      "description": "养出一只品质与产量基因都不低于 60 的牲畜",
+      "tier": "gold",
+      "reward_maple_flame": 200,
+      "condition": { "hook": "livestock_gene", "params": { "gene": 60, "count": 1 } }
     }
   ],
   "shop": [
