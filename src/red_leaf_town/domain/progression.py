@@ -5,6 +5,7 @@ from red_leaf_town.content import GameContent
 from .models import (
     CraftingStationState,
     GatheringSiteState,
+    LivestockFacilityState,
     MiningSiteState,
     PlayerState,
     PlotState,
@@ -59,6 +60,7 @@ def grant_experience(player: PlayerState, amount: int, content: GameContent) -> 
     normalize_crafting_stations(player, content)
     normalize_mining_sites(player, content)
     normalize_ponds(player, content)
+    normalize_livestock(player, content)
     return unlocked_levels
 
 
@@ -103,3 +105,37 @@ def normalize_ponds(player: PlayerState, content: GameContent) -> None:
         (pond for pond in player.ponds if pond.pond_id in order),
         key=lambda pond: order[pond.pond_id],
     )
+
+
+def normalize_livestock(player: PlayerState, content: GameContent, now: int = 0) -> None:
+    """散养地到等级白送，鸡舍和畜栏要建。被回收的设施不再补发。
+
+    动物跟着设施走：设施没了（内容删改）动物也留不住，否则会出现无处安放的孤儿个体。
+    """
+
+    order = {definition.id: index for index, definition in enumerate(content.livestock_facilities)}
+    current = {facility.facility_id: facility for facility in player.livestock_facilities}
+    retired = {
+        definition.replaces
+        for definition in content.livestock_facilities
+        if definition.replaces and definition.id in current
+    }
+    facilities: list[LivestockFacilityState] = []
+    for definition in content.livestock_facilities:
+        existing = current.get(definition.id)
+        if existing is not None:
+            if definition.id in retired:
+                continue
+            facilities.append(existing)
+            continue
+        if definition.granted and definition.min_level <= player.level and definition.id not in retired:
+            facilities.append(LivestockFacilityState(facility_id=definition.id, last_settled_at=now))
+    player.livestock_facilities = sorted(facilities, key=lambda entry: order[entry.facility_id])
+
+    live = {facility.facility_id for facility in player.livestock_facilities}
+    species = content.livestock_species_map
+    player.animals = [
+        animal
+        for animal in player.animals
+        if animal.facility_id in live and animal.species_id in species
+    ]

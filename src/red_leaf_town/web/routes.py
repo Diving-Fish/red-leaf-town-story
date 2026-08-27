@@ -972,6 +972,81 @@ def create_blueprint(
         result = get_service().harvest_pond(subject, pond_id, int(payload.get("quantity", 1)))
         return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
 
+    @blueprint.post("/api/red-leaf-town/livestock/facilities/<string:facility_id>/build")
+    @login_required
+    async def build_livestock_facility(subject: str, facility_id: str):
+        result = get_service().build_livestock_facility(subject, facility_id)
+        return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
+
+    @blueprint.put("/api/red-leaf-town/livestock/facilities/<string:facility_id>/partner")
+    @login_required
+    async def assign_livestock_partner(subject: str, facility_id: str):
+        payload = await request.get_json(silent=True) or {}
+        result = get_service().assign_livestock_partner(
+            subject,
+            facility_id,
+            str(payload.get("partner_id", "")),
+        )
+        return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
+
+    @blueprint.post("/api/red-leaf-town/livestock/facilities/<string:facility_id>/buy")
+    @login_required
+    async def buy_animal(subject: str, facility_id: str):
+        payload = await request.get_json(silent=True) or {}
+        result = get_service().buy_animal(
+            subject,
+            facility_id,
+            str(payload.get("species_id", "")),
+            str(payload.get("nickname", "")),
+        )
+        return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
+
+    @blueprint.post("/api/red-leaf-town/livestock/facilities/<string:facility_id>/collect")
+    @login_required
+    async def collect_livestock(subject: str, facility_id: str):
+        payload = await request.get_json(silent=True) or {}
+        result = get_service().collect_livestock(subject, facility_id, str(payload.get("animal_id", "")))
+        return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
+
+    @blueprint.post("/api/red-leaf-town/livestock/facilities/<string:facility_id>/incubate")
+    @login_required
+    async def incubate_egg(subject: str, facility_id: str):
+        payload = await request.get_json(silent=True) or {}
+        result = get_service().incubate_egg(
+            subject,
+            facility_id,
+            int(payload.get("quality", 0)),
+            str(payload.get("nickname", "")),
+        )
+        return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
+
+    @blueprint.post("/api/red-leaf-town/livestock/facilities/<string:facility_id>/breed")
+    @login_required
+    async def breed_animals(subject: str, facility_id: str):
+        payload = await request.get_json(silent=True) or {}
+        parents = payload.get("parent_ids") or []
+        if not isinstance(parents, list):
+            parents = []
+        result = get_service().breed_animals(
+            subject,
+            facility_id,
+            [str(entry) for entry in parents],
+            str(payload.get("nickname", "")),
+        )
+        return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
+
+    @blueprint.post("/api/red-leaf-town/livestock/animals/<string:animal_id>/care")
+    @login_required
+    async def care_animal(subject: str, animal_id: str):
+        result = get_service().care_animal(subject, animal_id)
+        return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
+
+    @blueprint.post("/api/red-leaf-town/livestock/animals/<string:animal_id>/sell")
+    @login_required
+    async def sell_animal(subject: str, animal_id: str):
+        result = get_service().sell_animal(subject, animal_id)
+        return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
+
     @blueprint.post("/api/red-leaf-town/feed-slot/deposit")
     @login_required
     async def deposit_feed(subject: str):

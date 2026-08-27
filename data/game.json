@@ -96,6 +96,12 @@
       "partner_capacity": 1,
       "partner_level_cap": 20,
       "collaborator_slots": 1
+    },
+    "livestock": {
+      "character_base_ability": 0,
+      "partner_capacity": 1,
+      "partner_level_cap": 20,
+      "collaborator_slots": 1
     }
   },
   "levels": [
@@ -173,7 +179,8 @@
       "plot_slots": 6,
       "stamina_cap": 34,
       "unlocks": [
-        "crop:pumpkin"
+        "crop:pumpkin",
+        "livestock:coop"
       ]
     },
     {
@@ -205,7 +212,9 @@
       "total_xp": 4450,
       "plot_slots": 7,
       "stamina_cap": 42,
-      "unlocks": []
+      "unlocks": [
+        "livestock:barn"
+      ]
     },
     {
       "level": 13,
@@ -718,6 +727,42 @@
       "sell_price": 0,
       "has_quality": false,
       "tags": ["usable"]
+    },
+    {
+      "id": "egg",
+      "name": "鸡蛋",
+      "icon": "egg",
+      "kind": "produce",
+      "sell_price": 45,
+      "has_quality": true,
+      "tags": ["poultry_product", "food"]
+    },
+    {
+      "id": "milk",
+      "name": "牛奶",
+      "icon": "milk",
+      "kind": "produce",
+      "sell_price": 100,
+      "has_quality": true,
+      "tags": ["animal_product", "food"]
+    },
+    {
+      "id": "golden_egg",
+      "name": "金蛋",
+      "icon": "egg-fried",
+      "kind": "produce",
+      "sell_price": 500,
+      "has_quality": false,
+      "tags": ["poultry_product"]
+    },
+    {
+      "id": "rich_milk",
+      "name": "浓乳",
+      "icon": "glass-water",
+      "kind": "produce",
+      "sell_price": 850,
+      "has_quality": false,
+      "tags": ["animal_product"]
     }
   ],
   "crops": [
@@ -1195,6 +1240,68 @@
       "modifiers": {
         "pond_harvest_quality_floor": 3
       }
+    },
+    {
+      "id": "livestock_ability_1",
+      "industry": "livestock",
+      "name": "识畜",
+      "description": "全局畜牧能力值增加 10，直接抬高畜产品的品质。",
+      "cost": 1,
+      "min_level": 4,
+      "prerequisites": [],
+      "global_ability_bonus": 10
+    },
+    {
+      "id": "livestock_overflow_1",
+      "industry": "livestock",
+      "name": "宽厩",
+      "description": "畜牧设施的产出溢出上限提高 1 个周期，离线更久也不浪费。",
+      "cost": 1,
+      "min_level": 8,
+      "prerequisites": [
+        "livestock_ability_1"
+      ],
+      "modifiers": {
+        "livestock_overflow_cycles": 1
+      }
+    },
+    {
+      "id": "livestock_ability_2",
+      "industry": "livestock",
+      "name": "通兽性",
+      "description": "全局畜牧能力值再增加 10。",
+      "cost": 1,
+      "min_level": 12,
+      "prerequisites": [
+        "livestock_overflow_1"
+      ],
+      "global_ability_bonus": 10
+    },
+    {
+      "id": "livestock_roster_1",
+      "industry": "livestock",
+      "name": "同栏共牧",
+      "description": "畜牧伙伴同时驻场上限增加 1。",
+      "cost": 1,
+      "min_level": 14,
+      "prerequisites": [
+        "livestock_ability_2"
+      ],
+      "partner_capacity_bonus": 1
+    },
+    {
+      "id": "livestock_mutation_1",
+      "industry": "livestock",
+      "name": "择优留种",
+      "description": "孵化与配种的突变概率提高 5%。",
+      "cost": 1,
+      "min_level": 16,
+      "prerequisites": [
+        "livestock_roster_1"
+      ],
+      "modifiers": {
+        "livestock_mutation_chance": 0.05
+      }
     }
   ],
   "crafting_stations": [
@@ -1647,7 +1754,8 @@
       "partner_notes_medium": 250,
       "partner_notes_large": 900
     },
-    "pond_experience_per_cycle": 3
+    "pond_experience_per_cycle": 3,
+    "livestock_experience_per_cycle": 12
   },
   "portals": [
     {
@@ -1789,6 +1897,8 @@
       "orange_berry",
       "fish_fry",
       "meadow_hay",
+      "golden_egg",
+      "rich_milk",
       "giant_stream_carp",
       "giant_maple_perch",
       "giant_moon_sturgeon"
@@ -1946,6 +2056,14 @@
       },
       {
         "item_id": "refined_fodder",
+        "tier": 3
+      },
+      {
+        "item_id": "egg",
+        "tier": 2
+      },
+      {
+        "item_id": "milk",
         "tier": 3
       }
     ],
@@ -2608,5 +2726,174 @@
       1.45,
       1.8
     ]
-  }
+  },
+  "livestock": {
+    "cycle_seconds": 28800,
+    "quality_gene_coefficient": 0.6,
+    "yield_gene_coefficient": 0.6,
+    "purchase_gene_min": 10,
+    "purchase_gene_max": 30,
+    "affection_cap": 100,
+    "affection_per_care": 8,
+    "affection_quality_base": 0.95,
+    "affection_quality_per_point": 0.0025,
+    "care_stamina_cost": 1,
+    "care_experience": 10,
+    "care_daily_limit": 3,
+    "refund_gene_coefficient": 0.5
+  },
+  "livestock_facilities": [
+    {
+      "id": "free_range",
+      "name": "散养地",
+      "description": "屋后一块围起来的空地。鸡自己刨食，蛋也就那样。",
+      "accent": "#b3a271",
+      "category": "poultry",
+      "min_level": 4,
+      "granted": true,
+      "tiers": [
+        {
+          "level": 1,
+          "capacity": 2,
+          "quality_multiplier": 0.8,
+          "overflow_cycles": 2,
+          "gene_cap": 40,
+          "feed_slot_capacity_bonus": 0,
+          "build_coins": 0,
+          "build_materials": []
+        }
+      ]
+    },
+    {
+      "id": "coop_1",
+      "name": "鸡舍",
+      "description": "有顶有窝，垫着干草。鸡不再乱跑，蛋也终于像样。",
+      "accent": "#d7ad58",
+      "category": "poultry",
+      "min_level": 8,
+      "replaces": "free_range",
+      "tiers": [
+        {
+          "level": 1,
+          "capacity": 4,
+          "quality_multiplier": 1.0,
+          "overflow_cycles": 3,
+          "gene_cap": 70,
+          "feed_slot_capacity_bonus": 200,
+          "build_coins": 3000,
+          "build_materials": [
+            {
+              "item_id": "maple_wood",
+              "quantity": 30
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "barn_1",
+      "name": "畜栏",
+      "description": "结实的木栏和一长条料槽，够几头牛安稳过冬。",
+      "accent": "#c07a4a",
+      "category": "mammal",
+      "min_level": 12,
+      "tiers": [
+        {
+          "level": 1,
+          "capacity": 4,
+          "quality_multiplier": 1.0,
+          "overflow_cycles": 3,
+          "gene_cap": 70,
+          "feed_slot_capacity_bonus": 400,
+          "build_coins": 10000,
+          "build_materials": [
+            {
+              "item_id": "maple_plank",
+              "quantity": 30
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "livestock_species": [
+    {
+      "id": "chicken",
+      "name": "鸡",
+      "icon": "bird",
+      "category": "poultry",
+      "min_level": 4,
+      "purchase_price": 500,
+      "refund_base": 250,
+      "growth_cycles": 3,
+      "produce_item_id": "egg",
+      "base_yield": 1.0,
+      "feed_per_cycle": 8,
+      "special_item_id": "golden_egg",
+      "special_chance": 0.05,
+      "breeding": {
+        "mode": "incubate",
+        "feed_units": 20,
+        "min_feed_score": 0,
+        "gene_sigma": 8,
+        "mutation_chance": 0.06,
+        "mutation_bonus": 15,
+        "incubate_item_id": "egg",
+        "incubate_cycles": 2,
+        "quality_gene_base": [
+          15,
+          30,
+          45,
+          60,
+          80
+        ]
+      },
+      "quality": {
+        "thresholds": [
+          60,
+          110,
+          190,
+          320
+        ],
+        "width": 22,
+        "miracle_probability_cap": 0.003,
+        "miracle_eligible": true
+      }
+    },
+    {
+      "id": "cow",
+      "name": "奶牛",
+      "icon": "beef",
+      "category": "mammal",
+      "min_level": 12,
+      "purchase_price": 4000,
+      "refund_base": 2000,
+      "growth_cycles": 9,
+      "produce_item_id": "milk",
+      "base_yield": 2.0,
+      "feed_per_cycle": 24,
+      "special_item_id": "rich_milk",
+      "special_chance": 0.05,
+      "breeding": {
+        "mode": "pair",
+        "feed_units": 40,
+        "min_feed_score": 40,
+        "gene_sigma": 8,
+        "mutation_chance": 0.06,
+        "mutation_bonus": 15,
+        "cooldown_cycles": 9
+      },
+      "quality": {
+        "thresholds": [
+          60,
+          110,
+          190,
+          320
+        ],
+        "width": 22,
+        "miracle_probability_cap": 0.003,
+        "miracle_eligible": true
+      }
+    }
+  ]
 }

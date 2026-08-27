@@ -1,0 +1,655 @@
+from __future__ import annotations
+
+import random
+from math import ceil
+
+import pytest
+
+from red_leaf_town.application import GameError, GameService
+from red_leaf_town.content import load_content
+from red_leaf_town.domain import PlayerState
+from red_leaf_town.domain.economy import add_item
+from red_leaf_town.domain.livestock import refund_value, roll_gene
+from red_leaf_town.infrastructure import InMemoryPlayerRepository
+from red_leaf_town.partner_content import PartnerCatalog, PartnerDefinition
+
+
+HOUR = 3600
+CYCLE = 8 * HOUR
+
+
+class Clock:
+    def __init__(self, now: int = 1_700_000_000):
+        self.now = now
+
+    def __call__(self):
+        return self.now
+
+    def advance(self, seconds: int):
+        self.now += seconds
+
+
+def partner(partner_id: str, industry: str = "livestock") -> PartnerDefinition:
+    return PartnerDefinition.model_validate({
+        "id": partner_id,
+        "name": partner_id,
+        "rarity": 4,
+        "growth_curve": "linear",
+        "tendencies": [{"industry": industry, "level_1": 40, "level_60": 160}],
+        "avatar_crops": [
+            {"breakthrough": stage, "x": 0, "y": 0, "w": 1, "h": 1}
+            for stage in range(3)
+        ],
+    })
+
+
+def build_game(rng=None, clock: Clock | None = None):
+    content = load_content().model_copy(deep=True)
+    repository = InMemoryPlayerRepository(content)
+    clock = clock or Clock()
+    catalog = PartnerCatalog(partners=[
+        partner("herder", "livestock"),
+        partner("angler", "aquatic"),
+    ])
+    service = GameService(
+        content,
+        repository,
+        clock=clock,
+        rng=rng or random.Random(11),
+        partner_catalog_loader=lambda: catalog,
+    )
+    player = service.ensure_player("stock-sub", "牧场居民")
+    service.admin_grant_partner(player.player_id, "herder")
+    service.admin_grant_partner(player.player_id, "angler")
+    return service, repository, clock, player
+
+
+def set_level(repository, player_id: str, level: int):
+    content = repository.content
+    total_xp = next(entry.total_xp for entry in content.levels if entry.level == level)
+    repository.update(player_id, lambda state: setattr(state, "experience", total_xp))
+
+
+def give(repository, player_id: str, item_id: str, quantity: int, quality: int = 0):
+    repository.update(player_id, lambda state: add_item(state, item_id, quantity, quality))
+
+
+def set_coins(repository, player_id: str, coins: int):
+    repository.update(player_id, lambda state: setattr(state, "coins", coins))
+
+
+def fill_feed(repository, player_id: str, units: float = 4000, score: float = 60):
+    def mutation(state: PlayerState):
+        state.feed_slot.units = units
+        state.feed_slot.quality_score = score
+    repository.update(player_id, mutation)
+
+
+def fill_stamina(repository, player_id: str, amount: int = 60):
+    repository.update(player_id, lambda state: setattr(state, "stamina", amount))
+
+
+@pytest.fixture
+def game():
+    return build_game()
+
+
+@pytest.fixture
+def ranch():
+    """一个到 12 级、鸡舍和畜栏都建好、饲料管够的牧场。"""
+
+    service, repository, clock, player = build_game()
+    set_level(repository, player.player_id, 12)
+    set_coins(repository, player.player_id, 200_000)
+    give(repository, player.player_id, "maple_wood", 30)
+    give(repository, player.player_id, "maple_plank", 30)
+    service.build_livestock_facility("stock-sub", "coop_1")
+    service.build_livestock_facility("stock-sub", "barn_1")
+    fill_feed(repository, player.player_id)
+    return service, repository, clock, player
+
+
+def facility_of(state: dict, facility_id: str) -> dict:
+    return next(entry for entry in state["livestock"]["facilities"] if entry["facility_id"] == facility_id)
+
+
+# --------------------------------------------------------------------- 内容
+
+
+def test_livestock_content_loads_with_rules_facilities_and_species():
+    content = load_content()
+    assert "livestock" in content.industries
+    rules = content.livestock
+    assert rules is not None and rules.cycle_seconds == CYCLE
+    # 周期是硬常量，任何能力都压不动它。
+    assert [entry.id for entry in content.livestock_facilities] == ["free_range", "coop_1", "barn_1"]
+    assert [entry.id for entry in content.livestock_species] == ["chicken", "cow"]
+    coop = content.livestock_facility_map["coop_1"]
+    assert coop.replaces == "free_range" and coop.tier(1).build_coins == 3000
+    assert [(entry.item_id, entry.quantity) for entry in coop.tier(1).build_materials] == [("maple_wood", 30)]
+    barn = content.livestock_facility_map["barn_1"]
+    assert barn.tier(1).build_coins == 10000
+    assert [(entry.item_id, entry.quantity) for entry in barn.tier(1).build_materials] == [("maple_plank", 30)]
+    # 散养地是过渡设施：容量小、品质打折、溢出窗口更窄。
+    free_range = content.livestock_facility_map["free_range"]
+    assert free_range.granted and free_range.tier(1).capacity == 2
+    assert free_range.tier(1).quality_multiplier == 0.8
+    assert free_range.tier(1).gene_cap == 40 and coop.tier(1).gene_cap == 70
+
+
+def test_livestock_species_numbers_hold_the_balance_line():
+    content = load_content()
+    chicken = content.livestock_species_map["chicken"]
+    cow = content.livestock_species_map["cow"]
+    assert (chicken.purchase_price, chicken.growth_cycles, chicken.feed_per_cycle) == (500, 3, 8)
+    assert (cow.purchase_price, cow.growth_cycles, cow.feed_per_cycle) == (4000, 9, 24)
+    assert content.item_map["egg"].sell_price == 45
+    assert content.item_map["milk"].sell_price == 100
+    # 特殊产出没有品质，靠售价本身撑起价值。
+    assert content.item_map["golden_egg"].has_quality is False
+    assert content.item_map["rich_milk"].has_quality is False
+    # 满编一天 4 鸡 + 4 牛 = 384 份，槽扩容后才撑得过两天。
+    daily = (4 * chicken.feed_per_cycle + 4 * cow.feed_per_cycle) * 3
+    assert daily == 384
+
+
+def test_feed_slot_capacity_grows_with_the_facilities(ranch):
+    service, repository, _, player = ranch
+    state = service.snapshot_by_sub("stock-sub")
+    assert state["aquatic"]["feed_slot"]["base_capacity"] == 500
+    assert state["aquatic"]["feed_slot"]["capacity"] == 1100
+
+
+# ----------------------------------------------------------------- 设施建造
+
+
+def test_free_range_arrives_with_the_level_and_is_absorbed_by_the_coop(game):
+    service, repository, _, player = game
+    set_level(repository, player.player_id, 4)
+    state = service.snapshot_by_sub("stock-sub")
+    assert [entry["facility_id"] for entry in state["livestock"]["facilities"]] == ["free_range"]
+
+    set_coins(repository, player.player_id, 5000)
+    give(repository, player.player_id, "maple_wood", 30)
+    set_level(repository, player.player_id, 8)
+    service.buy_animal("stock-sub", "free_range", "chicken")
+    service.buy_animal("stock-sub", "free_range", "chicken")
+
+    result = service.build_livestock_facility("stock-sub", "coop_1")
+    assert result["result"]["migrated_animals"] == 2
+    assert result["result"]["replaced"] == "free_range"
+    facilities = [entry["facility_id"] for entry in result["state"]["livestock"]["facilities"]]
+    # 散养地在同一次更新里被回收，鸡整批迁入鸡舍。
+    assert facilities == ["coop_1"]
+    coop = facility_of(result["state"], "coop_1")
+    assert coop["used"] == 2 and coop["capacity"] == 4
+
+
+def test_building_the_coop_costs_coins_and_materials(game):
+    service, repository, _, player = game
+    set_level(repository, player.player_id, 8)
+    set_coins(repository, player.player_id, 3000)
+    with pytest.raises(GameError, match="枫木"):
+        service.build_livestock_facility("stock-sub", "coop_1")
+    give(repository, player.player_id, "maple_wood", 30)
+    result = service.build_livestock_facility("stock-sub", "coop_1")
+    assert result["result"]["coins"] == 0
+    assert sum(result["state"]["inventory"] and [0]) == 0
+    stored = repository.get(player.player_id)
+    assert sum(stored.inventory.get("maple_wood", {}).values()) == 0
+
+
+def test_the_barn_needs_level_twelve(game):
+    service, repository, _, player = game
+    set_level(repository, player.player_id, 11)
+    set_coins(repository, player.player_id, 20000)
+    give(repository, player.player_id, "maple_plank", 30)
+    with pytest.raises(GameError, match="12 级"):
+        service.build_livestock_facility("stock-sub", "barn_1")
+
+
+def test_the_free_range_cannot_be_built_by_hand(game):
+    service, repository, _, player = game
+    set_level(repository, player.player_id, 8)
+    with pytest.raises(GameError, match="自动开放"):
+        service.build_livestock_facility("stock-sub", "free_range")
+
+
+# --------------------------------------------------------------------- 饲养
+
+
+def test_bought_animals_start_as_juveniles_with_low_genes(ranch):
+    service, repository, _, player = ranch
+    result = service.buy_animal("stock-sub", "coop_1", "chicken")
+    animal = result["result"]["animal"]
+    assert animal["stage"] == "juvenile"
+    assert 10 <= animal["quality_gene"] <= 30
+    assert 10 <= animal["yield_gene"] <= 30
+    assert animal["remaining_stage_cycles"] == 3
+    assert animal["remaining_stage_seconds"] == 3 * CYCLE
+
+
+def test_naming_sticks_to_the_animal_on_every_birth(ranch):
+    service, repository, clock, player = ranch
+    bought = service.buy_animal("stock-sub", "coop_1", "chicken", "阿花")["result"]["animal"]
+    assert (bought["nickname"], bought["name"], bought["species_name"]) == ("阿花", "阿花", "鸡")
+
+    give(repository, player.player_id, "egg", 1, quality=3)
+    hatched = service.incubate_egg("stock-sub", "coop_1", 3, " 二蛋 ")["result"]["animal"]
+    # 首尾空白要修掉，否则列表里会出现看不见的名字。
+    assert hatched["nickname"] == "二蛋"
+
+    service.buy_animal("stock-sub", "barn_1", "cow")
+    service.buy_animal("stock-sub", "barn_1", "cow")
+    clock.advance(9 * CYCLE)
+    service.snapshot_by_sub("stock-sub")
+    parents = [
+        animal.animal_id
+        for animal in repository.get(player.player_id).animals
+        if animal.species_id == "cow"
+    ]
+    calf = service.breed_animals("stock-sub", "barn_1", parents, "小牛犊")["result"]["animal"]
+    assert calf["nickname"] == "小牛犊"
+
+
+def test_an_unnamed_animal_falls_back_to_the_species_name(ranch):
+    service, *_ = ranch
+    animal = service.buy_animal("stock-sub", "coop_1", "chicken")["result"]["animal"]
+    assert animal["nickname"] == "" and animal["name"] == "鸡"
+
+
+def test_an_overlong_name_is_refused(ranch):
+    service, *_ = ranch
+    with pytest.raises(GameError, match="最多"):
+        service.buy_animal("stock-sub", "coop_1", "chicken", "名" * 13)
+
+
+def test_a_barn_will_not_take_poultry(ranch):
+    service, *_ = ranch
+    with pytest.raises(GameError, match="养不了"):
+        service.buy_animal("stock-sub", "barn_1", "chicken")
+
+
+def test_capacity_is_a_hard_stop(ranch):
+    service, *_ = ranch
+    for _ in range(4):
+        service.buy_animal("stock-sub", "coop_1", "chicken")
+    with pytest.raises(GameError, match="住满"):
+        service.buy_animal("stock-sub", "coop_1", "chicken")
+
+
+def test_growth_and_production_run_on_the_eight_hour_cycle(ranch):
+    service, repository, clock, player = ranch
+    service.buy_animal("stock-sub", "coop_1", "chicken")
+
+    clock.advance(2 * CYCLE)
+    coop = facility_of(service.snapshot_by_sub("stock-sub"), "coop_1")
+    assert coop["animals"][0]["stage"] == "juvenile"
+    assert coop["animals"][0]["remaining_stage_cycles"] == 1
+
+    clock.advance(CYCLE)
+    coop = facility_of(service.snapshot_by_sub("stock-sub"), "coop_1")
+    assert coop["animals"][0]["stage"] == "adult"
+    # 成年的那个周期用来长大，产出从下一个周期开始。
+    assert coop["animals"][0]["pending_total"] == 0
+
+    clock.advance(2 * CYCLE)
+    coop = facility_of(service.snapshot_by_sub("stock-sub"), "coop_1")
+    assert coop["animals"][0]["pending_total"] == 2
+
+
+def test_collecting_moves_the_pending_output_into_the_bag(ranch):
+    service, repository, clock, player = ranch
+    service.buy_animal("stock-sub", "coop_1", "chicken")
+    clock.advance(6 * CYCLE)
+    result = service.collect_livestock("stock-sub", "coop_1")
+    assert result["result"]["collected"] == 3
+    stored = repository.get(player.player_id)
+    assert sum(stored.inventory.get("egg", {}).values()) == 3
+    assert all(1 <= quality <= 5 for quality in stored.inventory["egg"])
+    with pytest.raises(GameError, match="收取"):
+        service.collect_livestock("stock-sub", "coop_1")
+
+
+def test_production_stops_at_the_overflow_cap_and_stops_eating(ranch):
+    service, repository, clock, player = ranch
+    service.buy_animal("stock-sub", "coop_1", "chicken")
+    clock.advance(3 * CYCLE)
+    service.snapshot_by_sub("stock-sub")
+    before = repository.get(player.player_id).feed_slot.units
+
+    # 溢出上限是 3 个周期的量，攒满之后既不产出也不吃料。
+    clock.advance(30 * CYCLE)
+    state = service.snapshot_by_sub("stock-sub")
+    animal = facility_of(state, "coop_1")["animals"][0]
+    assert animal["overflow_cap"] == ceil(animal["yield_per_cycle"] * 3)
+    assert animal["pending_total"] == animal["overflow_cap"]
+    assert animal["saturated"] is True
+    spent = before - repository.get(player.player_id).feed_slot.units
+    # 只为攒满那几个周期买了单，剩下 20 多个周期一份没烧。
+    assert spent <= animal["overflow_cap"] * 8
+
+
+def test_an_empty_feed_slot_stalls_the_whole_barn(ranch):
+    service, repository, clock, player = ranch
+    service.buy_animal("stock-sub", "coop_1", "chicken")
+    clock.advance(3 * CYCLE)
+    service.snapshot_by_sub("stock-sub")
+    fill_feed(repository, player.player_id, units=0, score=0)
+
+    clock.advance(5 * CYCLE)
+    coop = facility_of(service.snapshot_by_sub("stock-sub"), "coop_1")
+    assert coop["stalled"] is True
+    assert coop["animals"][0]["pending_total"] == 0
+
+    # 断粮期间没有额外惩罚：补料之后从停摆点原样继续。
+    fill_feed(repository, player.player_id, units=200, score=30)
+    clock.advance(2 * CYCLE)
+    coop = facility_of(service.snapshot_by_sub("stock-sub"), "coop_1")
+    assert coop["stalled"] is False
+    assert coop["animals"][0]["pending_total"] == 2
+
+
+def test_growth_pauses_while_the_slot_is_empty(ranch):
+    service, repository, clock, player = ranch
+    service.buy_animal("stock-sub", "coop_1", "chicken")
+    fill_feed(repository, player.player_id, units=0, score=0)
+    clock.advance(10 * CYCLE)
+    coop = facility_of(service.snapshot_by_sub("stock-sub"), "coop_1")
+    # 用墙上时钟算的话这只鸡早成年了，累计有效周期才是对的口径。
+    assert coop["animals"][0]["stage"] == "juvenile"
+    assert coop["animals"][0]["remaining_stage_cycles"] == 3
+
+
+def test_a_long_offline_stretch_settles_in_one_pass(ranch):
+    service, repository, clock, player = ranch
+    service.buy_animal("stock-sub", "coop_1", "chicken")
+    clock.advance(30 * 24 * HOUR)
+    state = service.snapshot_by_sub("stock-sub")
+    animal = facility_of(state, "coop_1")["animals"][0]
+    assert animal["stage"] == "adult"
+    # 离线一个月和离线一天走同一条代码路径，且被溢出上限截住。
+    assert animal["pending_total"] == animal["overflow_cap"]
+    assert repository.get(player.player_id).feed_slot.units > 0
+
+
+def test_ponds_and_barns_share_the_feed_slot_proportionally(ranch):
+    service, repository, clock, player = ranch
+    service.build_pond("stock-sub", "pond_1")
+    give(repository, player.player_id, "fish_fry", 5)
+    service.stock_pond("stock-sub", "pond_1", "crucian", 5)
+    service.buy_animal("stock-sub", "coop_1", "chicken")
+    fill_feed(repository, player.player_id, units=20, score=30)
+
+    clock.advance(4 * CYCLE)
+    state = service.snapshot_by_sub("stock-sub")
+    # 两边一起报需求、按同一个比例拿预算，谁都不会因为结算顺序单方面被饿死。
+    coop = facility_of(state, "coop_1")
+    pond = state["aquatic"]["ponds"][0]
+    assert coop["stalled"] is True and pond["stalled"] is True
+    # 槽里最多只剩买不起下一个周期的零头。
+    assert repository.get(player.player_id).feed_slot.units < 8
+
+
+# --------------------------------------------------------------------- 照料
+
+
+def test_caring_spends_stamina_for_affection_and_experience(ranch):
+    service, repository, clock, player = ranch
+    fill_stamina(repository, player.player_id, 20)
+    service.buy_animal("stock-sub", "coop_1", "chicken")
+    animal_id = repository.get(player.player_id).animals[0].animal_id
+    before = repository.get(player.player_id).experience
+
+    result = service.care_animal("stock-sub", animal_id)["result"]
+    assert result["stamina_cost"] == 1 and result["experience"] == 10
+    assert result["affection"] == 8
+    stored = repository.get(player.player_id)
+    assert stored.experience == before + 10
+    assert stored.stamina == 19
+
+
+def test_caring_is_capped_per_animal_per_day(ranch):
+    service, repository, clock, player = ranch
+    fill_stamina(repository, player.player_id, 20)
+    service.buy_animal("stock-sub", "coop_1", "chicken")
+    animal_id = repository.get(player.player_id).animals[0].animal_id
+    for _ in range(3):
+        service.care_animal("stock-sub", animal_id)
+    with pytest.raises(GameError, match="照料过"):
+        service.care_animal("stock-sub", animal_id)
+
+    clock.advance(24 * HOUR)
+    fill_stamina(repository, player.player_id, 20)
+    assert service.care_animal("stock-sub", animal_id)["result"]["cared_today"] == 1
+
+
+def test_affection_multiplies_quality_between_zero_point_nine_five_and_one_point_two(ranch):
+    service, repository, clock, player = ranch
+    service.buy_animal("stock-sub", "coop_1", "chicken")
+    state = service.snapshot_by_sub("stock-sub")
+    animal = facility_of(state, "coop_1")["animals"][0]
+    assert animal["affection_multiplier"] == pytest.approx(0.95)
+    bare = animal["quality_ability"]
+
+    def max_affection(stored: PlayerState):
+        stored.animals[0].affection = 100
+    repository.update(player.player_id, max_affection)
+    state = service.snapshot_by_sub("stock-sub")
+    animal = facility_of(state, "coop_1")["animals"][0]
+    assert animal["affection_multiplier"] == pytest.approx(1.2)
+    # 乘算的含义就是「放大你已经堆出来的底子」。
+    assert animal["quality_ability"] == pytest.approx(bare / 0.95 * 1.2, abs=0.02)
+
+
+def test_the_free_range_multiplier_drags_quality_down(game):
+    service, repository, clock, player = game
+    set_level(repository, player.player_id, 4)
+    set_coins(repository, player.player_id, 5000)
+    fill_feed(repository, player.player_id, units=500, score=50)
+    service.buy_animal("stock-sub", "free_range", "chicken")
+    state = service.snapshot_by_sub("stock-sub")
+    facility = facility_of(state, "free_range")
+    assert facility["quality_multiplier"] == 0.8
+    animal = facility["animals"][0]
+    expected = (50 + 0.6 * animal["quality_gene"]) * 0.8 * 0.95
+    assert animal["quality_ability"] == pytest.approx(expected, abs=0.01)
+
+
+# --------------------------------------------------------------------- 繁殖
+
+
+def test_incubating_an_egg_turns_quality_into_genes(ranch):
+    service, repository, clock, player = ranch
+    give(repository, player.player_id, "egg", 1, quality=4)
+    result = service.incubate_egg("stock-sub", "coop_1", 4)["result"]
+    chick = result["animal"]
+    assert chick["stage"] == "incubating"
+    assert chick["remaining_stage_cycles"] == 2
+    # 臻品蛋的基准是 60，正态抖动之后仍应明显高于买来的 10~30。
+    assert chick["quality_gene"] >= 40
+    stored = repository.get(player.player_id)
+    assert sum(stored.inventory.get("egg", {}).values()) == 0
+
+    clock.advance(2 * CYCLE)
+    coop = facility_of(service.snapshot_by_sub("stock-sub"), "coop_1")
+    assert coop["animals"][0]["stage"] == "juvenile"
+
+
+def test_incubation_takes_a_slot_and_a_scoop_of_feed(ranch):
+    service, repository, clock, player = ranch
+    give(repository, player.player_id, "egg", 5, quality=1)
+    before = repository.get(player.player_id).feed_slot.units
+    service.incubate_egg("stock-sub", "coop_1", 1)
+    assert repository.get(player.player_id).feed_slot.units == before - 20
+    for _ in range(3):
+        service.incubate_egg("stock-sub", "coop_1", 1)
+    with pytest.raises(GameError, match="住满"):
+        service.incubate_egg("stock-sub", "coop_1", 1)
+
+
+def test_genes_are_capped_by_the_facility_breed_cap(game):
+    service, repository, clock, player = game
+    set_level(repository, player.player_id, 4)
+    fill_feed(repository, player.player_id, units=500, score=50)
+    give(repository, player.player_id, "egg", 1, quality=5)
+    result = service.incubate_egg("stock-sub", "free_range", 5)["result"]
+    # 奇迹蛋的基准是 80，但散养地的品种上限只有 40。
+    assert result["animal"]["quality_gene"] <= 40 + 15
+    assert result["animal"]["gene_cap"] == 40
+
+
+def test_breeding_needs_two_adult_cows_and_a_decent_slot(ranch):
+    service, repository, clock, player = ranch
+    service.buy_animal("stock-sub", "barn_1", "cow")
+    service.buy_animal("stock-sub", "barn_1", "cow")
+    parents = [animal.animal_id for animal in repository.get(player.player_id).animals]
+
+    with pytest.raises(GameError, match="成年"):
+        service.breed_animals("stock-sub", "barn_1", parents)
+
+    clock.advance(9 * CYCLE)
+    service.snapshot_by_sub("stock-sub")
+    fill_feed(repository, player.player_id, units=500, score=20)
+    with pytest.raises(GameError, match="品质分"):
+        service.breed_animals("stock-sub", "barn_1", parents)
+
+    fill_feed(repository, player.player_id, units=500, score=60)
+    result = service.breed_animals("stock-sub", "barn_1", parents)["result"]
+    assert result["cooldown_cycles"] == 9
+    calf = result["animal"]
+    assert calf["stage"] == "juvenile" and calf["remaining_stage_cycles"] == 9
+    stored = repository.get(player.player_id)
+    assert len(stored.animals) == 3
+    assert all(animal.breeding_cooldown == 9 for animal in stored.animals if animal.animal_id in parents)
+
+    with pytest.raises(GameError, match="冷却"):
+        service.breed_animals("stock-sub", "barn_1", parents)
+
+
+def test_breeding_cooldown_burns_down_with_fed_cycles(ranch):
+    service, repository, clock, player = ranch
+    service.buy_animal("stock-sub", "barn_1", "cow")
+    service.buy_animal("stock-sub", "barn_1", "cow")
+    clock.advance(9 * CYCLE)
+    service.snapshot_by_sub("stock-sub")
+    parents = [animal.animal_id for animal in repository.get(player.player_id).animals]
+    service.breed_animals("stock-sub", "barn_1", parents)
+
+    clock.advance(9 * CYCLE)
+    service.snapshot_by_sub("stock-sub")
+    stored = repository.get(player.player_id)
+    assert all(animal.breeding_cooldown == 0 for animal in stored.animals if animal.animal_id in parents)
+
+
+def test_breeding_will_not_mix_species_or_facilities(ranch):
+    service, repository, clock, player = ranch
+    service.buy_animal("stock-sub", "coop_1", "chicken")
+    service.buy_animal("stock-sub", "barn_1", "cow")
+    ids = [animal.animal_id for animal in repository.get(player.player_id).animals]
+    with pytest.raises(GameError, match="不在这处设施"):
+        service.breed_animals("stock-sub", "barn_1", ids)
+
+
+def test_gene_inheritance_drifts_up_but_respects_the_cap():
+    rng = random.Random(3)
+    values = [roll_gene(rng, 60, 8, 70, 0.0, 15) for _ in range(200)]
+    assert max(values) <= 70
+    assert 55 <= sum(values) / len(values) <= 65
+    # 突变可以顶破品种上限，但硬顶永远是 100。
+    always = random.Random(5)
+    mutated = [roll_gene(always, 70, 8, 70, 1.0, 15) for _ in range(50)]
+    assert max(mutated) <= 100 and max(mutated) > 70
+
+
+# --------------------------------------------------------------------- 出售
+
+
+def test_selling_pays_more_for_better_genes():
+    assert refund_value(2000, 0, 0, 0.5) == 2000
+    assert refund_value(2000, 100, 100, 0.5) == 3000
+    assert refund_value(250, 100, 100, 0.5) == 375
+
+
+def test_selling_an_animal_frees_the_slot(ranch):
+    service, repository, clock, player = ranch
+    service.buy_animal("stock-sub", "coop_1", "chicken")
+    animal_id = repository.get(player.player_id).animals[0].animal_id
+    coins = repository.get(player.player_id).coins
+    result = service.sell_animal("stock-sub", animal_id)["result"]
+    assert result["price"] >= 250
+    stored = repository.get(player.player_id)
+    assert stored.animals == []
+    assert stored.coins == coins + result["price"]
+
+
+def test_selling_refuses_to_throw_away_pending_output(ranch):
+    service, repository, clock, player = ranch
+    service.buy_animal("stock-sub", "coop_1", "chicken")
+    clock.advance(5 * CYCLE)
+    service.snapshot_by_sub("stock-sub")
+    animal_id = repository.get(player.player_id).animals[0].animal_id
+    with pytest.raises(GameError, match="收了"):
+        service.sell_animal("stock-sub", animal_id)
+
+
+# --------------------------------------------------------------------- 伙伴
+
+
+def test_a_resident_partner_lifts_quality_and_earns_experience(ranch):
+    service, repository, clock, player = ranch
+    service.buy_animal("stock-sub", "coop_1", "chicken")
+    bare = facility_of(service.snapshot_by_sub("stock-sub"), "coop_1")["ability"]
+    service.assign_livestock_partner("stock-sub", "coop_1", "herder")
+    staffed = facility_of(service.snapshot_by_sub("stock-sub"), "coop_1")
+    assert staffed["ability"] > bare
+    assert [entry["partner_id"] for entry in staffed["assigned_partners"]] == ["herder"]
+
+    before = next(
+        entry.experience for entry in repository.get(player.player_id).owned_partners
+        if entry.partner_id == "herder"
+    )
+    clock.advance(2 * CYCLE)
+    service.snapshot_by_sub("stock-sub")
+    after_partner = next(
+        entry for entry in repository.get(player.player_id).owned_partners
+        if entry.partner_id == "herder"
+    )
+    assert after_partner.experience != before or after_partner.level > 1
+
+
+def test_a_partner_without_the_tendency_is_refused(ranch):
+    service, *_ = ranch
+    with pytest.raises(GameError, match="畜牧倾向"):
+        service.assign_livestock_partner("stock-sub", "coop_1", "angler")
+
+
+def test_a_partner_can_only_stand_in_one_production_slot(ranch):
+    service, repository, clock, player = ranch
+    service.assign_livestock_partner("stock-sub", "coop_1", "herder")
+    service.assign_livestock_partner("stock-sub", "barn_1", "herder")
+    stored = repository.get(player.player_id)
+    assigned = {
+        facility.facility_id: facility.assigned_partner_ids
+        for facility in stored.livestock_facilities
+    }
+    assert assigned["coop_1"] == [] and assigned["barn_1"] == ["herder"]
+
+
+# --------------------------------------------------------------------- 迁移
+
+
+def test_schema_twenty_four_migration_starts_from_an_empty_ranch():
+    started_at = 1_700_000_000
+    player = PlayerState.model_validate({
+        "schema_version": 23,
+        "player_id": "legacy-ranch",
+        "oauth_sub": "legacy-ranch-sub",
+        "display_name": "旧居民",
+        "stamina_updated_at": started_at,
+        "created_at": started_at,
+        "updated_at": started_at,
+    })
+    assert player.schema_version == 24
+    assert player.livestock_facilities == []
+    assert player.animals == []

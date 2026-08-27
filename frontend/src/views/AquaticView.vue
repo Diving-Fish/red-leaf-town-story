@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { Coins, Lock, Shovel, UsersRound } from 'lucide-vue-next'
 
 import ActionButton from '@/components/ActionButton.vue'
-import FeedSlotPanel from '@/components/aquatic/FeedSlotPanel.vue'
+import SlotPanel from '@/components/SlotPanel.vue'
 import FishingPanel from '@/components/aquatic/FishingPanel.vue'
 import PondCard from '@/components/aquatic/PondCard.vue'
 import StateBlock from '@/components/StateBlock.vue'
@@ -83,7 +83,10 @@ const aquatic = computed(() => game.state?.aquatic || null)
         </div>
       </section>
 
-      <FeedSlotPanel :feed-slot="aquatic.feed_slot" />
+      <SlotPanel
+        :slot="aquatic.feed_slot"
+        description="鱼塘每走完一个繁殖周期从这里扣一次饲料，与周期长短无关；槽内耗尽则停摆，买不起的周期不会推进。饲料的品质分越高，鱼塘产出的品质越好。"
+      />
     </template>
   </section>
 </template>

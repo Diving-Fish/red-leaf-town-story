@@ -214,33 +214,48 @@ def pending_cycles(pond: PondState, parameters: PondParameters, seconds: int) ->
     return (pond.settle_remainder + max(0, int(seconds))) // parameters.cycle_seconds
 
 
-def settle_ponds(
+def plan_ponds(
     ponds: list[PondState],
-    feed_slot: SlotState,
     parameters: dict[str, PondParameters],
     now: int,
-) -> AquaticSettlement:
-    """把所有鱼塘一起推进到 now。
+) -> tuple[dict[str, int], float]:
+    """各塘这一段想跑几个周期、一共要吃多少份。用于和畜牧共用一个槽时先报需求。"""
 
-    饲料【按周期】扣：一个周期一份，跟周期有多长无关，所以水产能力加快的是产出速度，
-    不会顺带摊薄料耗。槽是共享的，不够时按各塘想跑的周期数比例分摊，买不起的周期不跑。
-    """
-
-    settlement = AquaticSettlement()
-    elapsed = {pond.pond_id: max(0, now - pond.last_settled_at) for pond in ponds}
     wanted: dict[str, int] = {}
     demand = 0.0
     for pond in ponds:
         entry = parameters.get(pond.pond_id)
         if entry is None:
             continue
-        cycles = pending_cycles(pond, entry, elapsed[pond.pond_id])
+        cycles = pending_cycles(pond, entry, max(0, now - pond.last_settled_at))
         wanted[pond.pond_id] = cycles
         demand += cycles * entry.feed_per_cycle
-    ratio = 1.0
+    return wanted, demand
+
+
+def settle_ponds(
+    ponds: list[PondState],
+    feed_slot: SlotState,
+    parameters: dict[str, PondParameters],
+    now: int,
+    ratio: float | None = None,
+) -> AquaticSettlement:
+    """把所有鱼塘一起推进到 now。
+
+    饲料【按周期】扣：一个周期一份，跟周期有多长无关，所以水产能力加快的是产出速度，
+    不会顺带摊薄料耗。槽是共享的，不够时按各塘想跑的周期数比例分摊，买不起的周期不跑。
+
+    ratio 可以由调用方给出：饲料槽同时喂着鱼塘和畜栏，谁先结算谁就把槽喝光并不公平，
+    所以两边先各自报需求，再按同一个比例拿预算。
+    """
+
+    settlement = AquaticSettlement()
+    elapsed = {pond.pond_id: max(0, now - pond.last_settled_at) for pond in ponds}
+    wanted, demand = plan_ponds(ponds, parameters, now)
+    if ratio is None:
+        ratio = 1.0 if demand <= 0 else min(1.0, feed_slot.units / demand)
+    ratio = max(0.0, min(1.0, ratio))
     if demand > 0:
-        available = min(feed_slot.units, demand)
-        ratio = available / demand
         settlement.stalled = ratio < 1
     consumed = 0.0
     for pond in ponds:

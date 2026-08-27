@@ -49,6 +49,12 @@ export default createRouter({
       component: () => import('@/views/AquaticView.vue'),
       meta: { title: '水产' },
     },
+    {
+      path: '/livestock',
+      name: 'livestock',
+      component: () => import('@/views/LivestockView.vue'),
+      meta: { title: '畜牧' },
+    },
     { path: '/commissions', name: 'commissions', component: CommissionsView, meta: { title: '今日委托' } },
     { path: '/portals', name: 'portals', component: PortalsView, meta: { title: '传送门' } },
     { path: '/gacha', name: 'gacha', component: GachaView, meta: { title: '异界招募' } },

@@ -699,24 +699,30 @@ export interface PondState {
   produce_item: AquaticItemRef | null
 }
 
-export interface FeedSlotState {
+export interface SlotInputEntry {
+  item_id: string
+  quality: number | null
+  quality_name: string | null
+  quantity: number
+  units: number
+  unit_score: number
+  item: AquaticItemRef
+}
+
+/** 饲料槽和将来的肥料槽共用这一份结构，投料面板也就只有一个。 */
+export interface SlotState {
   name: string
   units: number
   quality_score: number
   capacity: number
+  base_capacity: number
   hourly_rate: number
   runtime_seconds: number
   quality_multipliers: number[]
-  inputs: Array<{
-    item_id: string
-    quality: number | null
-    quality_name: string | null
-    quantity: number
-    units: number
-    unit_score: number
-    item: AquaticItemRef
-  }>
+  inputs: SlotInputEntry[]
 }
+
+export type FeedSlotState = SlotState
 
 export interface FishCodexState {
   recorded: number
@@ -762,6 +768,173 @@ export interface AquaticState {
   next_pond_level: number | null
   species: PondSpeciesState[]
   feed_slot: FeedSlotState
+}
+
+
+// ------------------------------------------------------------------- 畜牧
+
+export interface AnimalState {
+  animal_id: string
+  species_id: string
+  facility_id: string
+  nickname: string
+  name: string
+  species_name: string
+  icon: string
+  stage: 'incubating' | 'juvenile' | 'adult'
+  stage_cycles: number
+  remaining_stage_cycles: number
+  remaining_stage_seconds: number
+  quality_gene: number
+  yield_gene: number
+  gene_cap: number
+  affection: number
+  affection_cap: number
+  affection_multiplier: number
+  pending_output: Record<string, number>
+  pending_total: number
+  pending_special: number
+  overflow_cap: number
+  saturated: boolean
+  yield_per_cycle: number
+  quality_ability: number
+  breeding_cooldown: number
+  breeding_cooldown_seconds: number
+  cared_today: number
+  care_daily_limit: number
+  born_at: number
+  produce_item: AquaticItemRef | null
+}
+
+export interface LivestockSpeciesState {
+  id: string
+  name: string
+  icon: string
+  category: 'poultry' | 'mammal'
+  min_level: number
+  purchase_price: number
+  refund_base: number
+  growth_cycles: number
+  produce_item_id: string
+  base_yield: number
+  feed_per_cycle: number
+  special_item_id: string
+  special_chance: number
+  breeding: {
+    mode: 'incubate' | 'pair'
+    feed_units: number
+    min_feed_score: number
+    gene_sigma: number
+    mutation_chance: number
+    mutation_bonus: number
+    incubate_item_id: string
+    incubate_cycles: number
+    quality_gene_base: number[]
+    cooldown_cycles: number
+  }
+  produce_item: AquaticItemRef
+  special_item: AquaticItemRef | null
+  unlocked: boolean
+  affordable: boolean
+}
+
+export interface LivestockFacilityState {
+  facility_id: string
+  tier: number
+  name: string
+  description: string
+  accent: string
+  category: 'poultry' | 'mammal'
+  capacity: number
+  used: number
+  quality_multiplier: number
+  overflow_cycles: number
+  gene_cap: number
+  ability: number
+  stalled: boolean
+  settle_remainder: number
+  last_settled_at: number
+  next_cycle_seconds: number
+  assigned_partners: OwnedPartner[]
+  animals: AnimalState[]
+  pending_total: number
+  pending_special: number
+  species: LivestockSpeciesState[]
+}
+
+export interface BuildableFacility {
+  facility_id: string
+  name: string
+  description: string
+  accent: string
+  category: 'poultry' | 'mammal'
+  min_level: number
+  unlocked: boolean
+  capacity: number
+  replaces: string | null
+  feed_slot_capacity_bonus: number
+  build_coins: number
+  affordable: boolean
+  build_materials: Array<{ item_id: string; quantity: number; item: AquaticItemRef; owned: number }>
+}
+
+export interface LivestockState {
+  unlocked: boolean
+  cycle_seconds: number
+  ability: number
+  facilities: LivestockFacilityState[]
+  buildable_facilities: BuildableFacility[]
+  next_facility_level: number | null
+  rules: {
+    cycle_seconds: number
+    quality_gene_coefficient: number
+    yield_gene_coefficient: number
+    purchase_gene_min: number
+    purchase_gene_max: number
+    affection_cap: number
+    affection_per_care: number
+    affection_quality_base: number
+    affection_quality_per_point: number
+    care_stamina_cost: number
+    care_experience: number
+    care_daily_limit: number
+    refund_gene_coefficient: number
+  } | null
+}
+
+export interface LivestockDrop {
+  item_id: string
+  name: string
+  icon: string
+  quantity: number
+  quality: number | null
+  quality_name: string | null
+  sell_price: number
+}
+
+export interface LivestockCollectResult {
+  facility_id: string
+  animal_id: string | null
+  collected: number
+  drops: LivestockDrop[]
+}
+
+export interface CareResult {
+  animal_id: string
+  facility_id: string
+  stamina_cost: number
+  experience: number
+  affection_before: number
+  affection: number
+  affection_cap: number
+  cared_today: number
+  care_daily_limit: number
+  unlocked_levels: number[]
+}
+
+export interface AnimalBornResult {
+  facility_id: string
+  animal: AnimalState
 }
 
 export interface FishingDrop {
@@ -865,6 +1038,7 @@ export interface GameState {
   mining_sites: MiningSiteState[]
   next_mining_site_level: number | null
   aquatic: AquaticState
+  livestock: LivestockState
   inventory: InventoryItem[]
   task_items: TaskItemState[]
   partners: OwnedPartner[]

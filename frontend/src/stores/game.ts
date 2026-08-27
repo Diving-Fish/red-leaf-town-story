@@ -11,13 +11,16 @@ import type {
   ActionResult,
   AchievementUnlock,
   AchievementClaimResult,
+  AnimalBornResult,
   BigCatchResult,
+  CareResult,
   CastResult,
   CommissionBoard,
   CrossoverCampaign,
   CrossoverClaimResult,
   GachaResult,
   GameState,
+  LivestockCollectResult,
   MailboxState,
   MailClaimResult,
   PartnerSelectPayload,
@@ -461,6 +464,82 @@ export const useGameStore = defineStore('game', () => {
     return result
   }
 
+  function buildLivestockFacility(facilityId: string) {
+    return action(`livestock:${facilityId}:build`, `${API_ROOT}/livestock/facilities/${facilityId}/build`, {
+      successMessage: '盖好了',
+    })
+  }
+
+  function assignLivestockPartner(facilityId: string, partnerId: string | null) {
+    return action(`livestock:${facilityId}:partner`, `${API_ROOT}/livestock/facilities/${facilityId}/partner`, {
+      payload: { partner_id: partnerId || '' },
+      method: 'PUT',
+      successMessage: partnerId ? '伙伴开始照看牲口' : '伙伴已撤下',
+    })
+  }
+
+  async function buyAnimal(facilityId: string, speciesId: string, nickname = '') {
+    const result = (await action(
+      `livestock:${facilityId}:buy:${speciesId}`,
+      `${API_ROOT}/livestock/facilities/${facilityId}/buy`,
+      { payload: { species_id: speciesId, nickname } },
+    )) as AnimalBornResult | undefined
+    if (result) showNotice(`${result.animal.name}住了进来`)
+    return result
+  }
+
+  async function collectLivestock(facilityId: string, animalId = '') {
+    const result = (await action(
+      `livestock:${facilityId}:collect${animalId ? `:${animalId}` : ''}`,
+      `${API_ROOT}/livestock/facilities/${facilityId}/collect`,
+      { payload: { animal_id: animalId }, cue: 'action:collect_livestock' },
+    )) as LivestockCollectResult | undefined
+    if (result) showNotice(`收下${dropText(result.drops)}`)
+    return result
+  }
+
+  async function careAnimal(animalId: string) {
+    const result = (await action(`livestock:animal:${animalId}:care`, `${API_ROOT}/livestock/animals/${animalId}/care`, {
+      cue: 'action:care_animal',
+    })) as CareResult | undefined
+    if (result) {
+      const full = result.affection >= result.affection_cap
+      showNotice(full ? '它已经很黏你了' : `亲密度 ${result.affection_before} → ${result.affection}`)
+    }
+    return result
+  }
+
+  async function incubateEgg(facilityId: string, quality: number, nickname = '') {
+    const result = (await action(
+      `livestock:${facilityId}:incubate:${quality}`,
+      `${API_ROOT}/livestock/facilities/${facilityId}/incubate`,
+      { payload: { quality, nickname } },
+    )) as AnimalBornResult | undefined
+    if (result) showNotice('蛋已入窝')
+    return result
+  }
+
+  async function breedAnimals(facilityId: string, parentIds: string[], nickname = '') {
+    const result = (await action(
+      `livestock:${facilityId}:breed`,
+      `${API_ROOT}/livestock/facilities/${facilityId}/breed`,
+      { payload: { parent_ids: parentIds, nickname } },
+    )) as AnimalBornResult | undefined
+    if (result) {
+      const calf = result.animal
+      showNotice(`${calf.name}出生了：品质基因 ${calf.quality_gene}、产量基因 ${calf.yield_gene}`)
+    }
+    return result
+  }
+
+  async function sellAnimal(animalId: string) {
+    const result = (await action(`livestock:animal:${animalId}:sell`, `${API_ROOT}/livestock/animals/${animalId}/sell`, {})) as
+      | { price: number }
+      | undefined
+    if (result) showNotice(`卖了 ${result.price} 红叶币`)
+    return result
+  }
+
   function depositFeed(itemId: string, quality: number, count: number) {
     return action(`aquatic:feed:${itemId}:${quality}`, `${API_ROOT}/feed-slot/deposit`, {
       payload: { item_id: itemId, quality, count },
@@ -672,6 +751,14 @@ export const useGameStore = defineStore('game', () => {
     assignPondPartner,
     stockPond,
     harvestPond,
+    buildLivestockFacility,
+    assignLivestockPartner,
+    buyAnimal,
+    collectLivestock,
+    careAnimal,
+    incubateEgg,
+    breedAnimals,
+    sellAnimal,
     depositFeed,
     dumpFeed,
     convertMapleFlame,

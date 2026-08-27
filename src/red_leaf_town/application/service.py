@@ -7,6 +7,7 @@ from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
 from math import ceil, floor
 from typing import NamedTuple
+from uuid import uuid4
 
 from red_leaf_town.achievements import (
     achievement_snapshot,
@@ -16,6 +17,7 @@ from red_leaf_town.achievements import (
 )
 from red_leaf_town.content import GameContent, GatheringDrawDefinition, RewardDefinition
 from red_leaf_town.domain import (
+    AnimalState,
     CommissionBoardEntry,
     CommissionPayout,
     CommissionState,
@@ -25,6 +27,7 @@ from red_leaf_town.domain import (
     GachaPoolProgressState,
     GachaRequestRecord,
     GatheringSiteState,
+    LivestockFacilityState,
     MailMessage,
     MailReceiptState,
     MiningSiteState,
@@ -49,9 +52,22 @@ from red_leaf_town.domain.aquatic import (
     add_fry,
     decayed_combo,
     deposit_into_slot,
+    plan_ponds,
     pond_cycle_seconds,
     settle_ponds,
     slot_runtime_seconds,
+)
+from red_leaf_town.domain.livestock import (
+    FacilityParameters,
+    SpeciesParameters,
+    is_saturated,
+    overflow_cap,
+    plan_facility,
+    quality_ability as animal_quality_ability,
+    refund_value,
+    roll_gene,
+    settle_livestock,
+    yield_per_cycle,
 )
 from red_leaf_town.domain.commissions import (
     commission_day,
@@ -67,6 +83,7 @@ from red_leaf_town.domain.progression import (
     grant_experience,
     normalize_crafting_stations,
     normalize_gathering_sites,
+    normalize_livestock,
     normalize_mining_sites,
     normalize_plot_slots,
     normalize_ponds,
@@ -103,6 +120,7 @@ MAIL_LIST_LIMIT = 60
 # 钓鱼是高频接口且已知有脚本调用，限一个最小间隔，避免重试造成重复发放。
 FISHING_MIN_INTERVAL_SECONDS = 1
 FISHING_MAX_DRAWS = 40
+ANIMAL_NICKNAME_LIMIT = 12
 _UNSEEN = MailReceiptState(mail_id="placeholder")
 
 # 伙伴邀约函可以自选的伙伴名单：当前所有已上线、有突破 0 立绘的伙伴。
@@ -1188,7 +1206,7 @@ class GameService:
             add_units = definition.feed.units * count
             unit_score = definition.feed.score * slot_rules.multiplier(quality)
             try:
-                deposit_into_slot(player.feed_slot, add_units, unit_score, slot_rules.capacity)
+                deposit_into_slot(player.feed_slot, add_units, unit_score, self._feed_slot_capacity(player))
             except SlotError as exc:
                 raise GameError("feed_slot_full", str(exc)) from exc
             return {
@@ -1218,6 +1236,745 @@ class GameService:
 
         player, result = self._update_by_sub(oauth_sub, mutation)
         return {"result": result, "state": self._snapshot(player, now)}
+
+    # --------------------------------------------------------------- 畜牧
+
+    def build_livestock_facility(self, oauth_sub: str, facility_id: str) -> dict:
+        """建鸡舍或畜栏。到等级只是拿到资格，还要付红叶币和材料才动土。"""
+        facility_id = str(facility_id or "").strip()
+        definition = self.content.livestock_facility_map.get(facility_id)
+        if definition is None:
+            raise GameError("livestock_facility_not_found", "没有这处畜牧设施", 404)
+        if definition.granted:
+            raise GameError("livestock_facility_granted", "这处设施到等级会自动开放", 409)
+        tier = definition.tier(1)
+        now = self._now()
+
+        def mutation(player: PlayerState):
+            self._settle(player, now)
+            if any(entry.facility_id == facility_id for entry in player.livestock_facilities):
+                raise GameError("livestock_facility_exists", "这处设施已经建好了", 409)
+            if player.level < definition.min_level:
+                raise GameError("content_locked", f"达到 {definition.min_level} 级之后才能建这处设施")
+            if player.coins < tier.build_coins:
+                raise GameError("resource_insufficient", f"建造需要 {tier.build_coins} 红叶币")
+            for material in tier.build_materials:
+                owned = sum(player.inventory.get(material.item_id, {}).values())
+                if owned < material.quantity:
+                    name = self.content.item_map[material.item_id].name
+                    raise GameError("resource_insufficient", f"建造还差 {material.quantity - owned} 个{name}")
+            player.coins -= tier.build_coins
+            for material in tier.build_materials:
+                self._consume_any_quality(player, material.item_id, material.quantity)
+            player.livestock_facilities.append(
+                LivestockFacilityState(facility_id=facility_id, last_settled_at=now)
+            )
+            migrated = 0
+            if definition.replaces:
+                # 过渡设施在同一次原子更新里回收，栏里的动物整批迁入 —— 容量校验在内容加载时就做过。
+                for animal in player.animals:
+                    if animal.facility_id == definition.replaces:
+                        animal.facility_id = facility_id
+                        migrated += 1
+            normalize_livestock(player, self.content, now)
+            return {
+                "facility_id": facility_id,
+                "name": definition.name,
+                "build_coins": tier.build_coins,
+                "build_materials": [material.model_dump() for material in tier.build_materials],
+                "migrated_animals": migrated,
+                "replaced": definition.replaces or None,
+                "coins": player.coins,
+            }
+
+        player, result = self._update_by_sub(oauth_sub, mutation)
+        return {"result": result, "state": self._snapshot(player, now)}
+
+    def assign_livestock_partner(self, oauth_sub: str, facility_id: str, partner_id: str = "") -> dict:
+        """畜栏也是资产格：驻场即占编制，但随时可以撤下。"""
+        partner_id = str(partner_id or "").strip()
+        now = self._now()
+        catalog = self.partner_catalog_loader()
+
+        def mutation(player: PlayerState):
+            self._settle(player, now)
+            facility = self._livestock_facility(player, facility_id)
+            desired_ids = [partner_id] if partner_id else []
+            if facility.assigned_partner_ids == desired_ids:
+                return {"facility_id": facility_id, "partner_id": partner_id or None, "changed": False}
+            if partner_id:
+                owned = next((entry for entry in player.owned_partners if entry.partner_id == partner_id), None)
+                definition = catalog.partner_map.get(partner_id)
+                if owned is None:
+                    raise GameError("partner_not_owned", "你还没有这个伙伴", 404)
+                if definition is None:
+                    raise GameError("partner_not_found", "伙伴配置不存在", 404)
+                if not any(tendency.industry == "livestock" for tendency in definition.tendencies):
+                    raise GameError("partner_tendency_mismatch", "这个伙伴没有畜牧倾向", 409)
+                if self._partner_lock_deadlines(player, now).get(partner_id, 0) > now:
+                    raise GameError("partner_locked", "伙伴正在参与进行中的任务，暂时不能移动", 409)
+                self._clear_partner_assignment(player, partner_id)
+                if player.fishing.companion_partner_id == partner_id:
+                    player.fishing.companion_partner_id = ""
+            facility.assigned_partner_ids = desired_ids
+            if self._industry_assigned_count(player, "livestock") > self._industry_partner_capacity(player, "livestock"):
+                raise GameError("partner_capacity_reached", "当前畜牧伙伴编制已满", 409)
+            return {"facility_id": facility_id, "partner_id": partner_id or None, "changed": True}
+
+        player, result = self._update_by_sub(oauth_sub, mutation)
+        return {"result": result, "state": self._snapshot(player, now)}
+
+    def buy_animal(self, oauth_sub: str, facility_id: str, species_id: str, nickname: str = "") -> dict:
+        """买一只幼崽。买来的一律是幼年期，基因掷在偏低的区间，育种才有提升空间。"""
+        species_id = str(species_id or "").strip()
+        nickname = self._animal_nickname(nickname)
+        species = self.content.livestock_species_map.get(species_id)
+        if species is None:
+            raise GameError("livestock_species_not_found", "没有这个物种", 404)
+        rules = self._livestock_rules()
+        now = self._now()
+
+        def mutation(player: PlayerState):
+            self._settle(player, now)
+            facility, definition = self._livestock_facility_pair(player, facility_id)
+            if definition.category != species.category:
+                raise GameError("livestock_category_mismatch", "这处设施养不了这种牲畜", 409)
+            if player.level < species.min_level:
+                raise GameError("content_locked", f"达到 {species.min_level} 级之后才能饲养{species.name}")
+            self._require_livestock_room(player, facility, definition)
+            if player.coins < species.purchase_price:
+                raise GameError("resource_insufficient", f"买一只{species.name}需要 {species.purchase_price} 红叶币")
+            player.coins -= species.purchase_price
+            gene_cap = definition.tier(facility.tier).gene_cap
+            animal = self._new_animal(
+                species,
+                facility_id,
+                now,
+                quality_gene=self._purchase_gene(rules, gene_cap),
+                yield_gene=self._purchase_gene(rules, gene_cap),
+                nickname=nickname,
+            )
+            player.animals.append(animal)
+            return {
+                "facility_id": facility_id,
+                "species_id": species_id,
+                "price": species.purchase_price,
+                "coins": player.coins,
+                "animal": self._animal_snapshot(player, animal, facility, definition),
+            }
+
+        player, result = self._update_by_sub(oauth_sub, mutation)
+        return {"result": result, "state": self._snapshot(player, now)}
+
+    def collect_livestock(self, oauth_sub: str, facility_id: str, animal_id: str = "") -> dict:
+        """收取畜产品。不消耗体力：畜牧的成本在幼崽和饲料槽上，它属于资产轴。
+
+        品质在结算的每个周期就掷定了，这里只是把已经定好的东西搬进背包 —— 所以临时
+        倒一槽精饲料再收取，不会追溯提升前面几个周期攒下的产出。
+        """
+        animal_id = str(animal_id or "").strip()
+        now = self._now()
+
+        def mutation(player: PlayerState):
+            self._settle(player, now)
+            facility, definition = self._livestock_facility_pair(player, facility_id)
+            animals = [
+                animal
+                for animal in player.animals
+                if animal.facility_id == facility_id and (not animal_id or animal.animal_id == animal_id)
+            ]
+            if animal_id and not animals:
+                raise GameError("animal_not_found", "找不到这只牲畜", 404)
+            drops: dict[tuple[str, int], int] = {}
+            for animal in animals:
+                species = self.content.livestock_species_map.get(animal.species_id)
+                if species is None:
+                    continue
+                for quality, amount in animal.pending_output.items():
+                    if amount <= 0:
+                        continue
+                    add_item(player, species.produce_item_id, amount, quality)
+                    drops[(species.produce_item_id, quality)] = drops.get((species.produce_item_id, quality), 0) + amount
+                animal.pending_output = {}
+                if animal.pending_special and species.special_item_id:
+                    add_item(player, species.special_item_id, animal.pending_special, 0)
+                    key = (species.special_item_id, 0)
+                    drops[key] = drops.get(key, 0) + animal.pending_special
+                animal.pending_special = 0
+            if not drops:
+                raise GameError("livestock_empty", "这里暂时没有可以收取的东西", 409)
+            collected = sum(drops.values())
+            player.achievement_stats.production_collections["livestock"] = (
+                player.achievement_stats.production_collections.get("livestock", 0) + collected
+            )
+            return {
+                "facility_id": facility_id,
+                "animal_id": animal_id or None,
+                "collected": collected,
+                "drops": [
+                    self._livestock_drop(item_id, amount, quality)
+                    for (item_id, quality), amount in sorted(drops.items())
+                ],
+            }
+
+        player, result = self._update_by_sub(oauth_sub, mutation)
+        return {"result": result, "state": self._snapshot(player, now)}
+
+    def care_animal(self, oauth_sub: str, animal_id: str) -> dict:
+        """照料。不加速产出周期 —— 周期是硬常量，照料换的是亲密度、经验和金蛋。"""
+        animal_id = str(animal_id or "").strip()
+        rules = self._livestock_rules()
+        now = self._now()
+        day = self._commission_day(now)
+
+        def mutation(player: PlayerState):
+            self._settle(player, now)
+            animal = self._animal(player, animal_id)
+            facility, definition = self._livestock_facility_pair(player, animal.facility_id)
+            if animal.stage == "incubating":
+                raise GameError("animal_incubating", "还在孵化，没什么好照料的", 409)
+            if animal.cared_on != day:
+                animal.cared_on = day
+                animal.cared_count = 0
+            if animal.cared_count >= rules.care_daily_limit:
+                raise GameError("care_limit_reached", f"今天已经照料过 {rules.care_daily_limit} 次了", 409)
+            try:
+                consume_stamina(player, rules.care_stamina_cost, self.content, now)
+            except ValueError as exc:
+                raise GameError("resource_insufficient", str(exc)) from exc
+            animal.cared_count += 1
+            before = animal.affection
+            animal.affection = min(rules.affection_cap, animal.affection + rules.affection_per_care)
+            levels = grant_experience(player, rules.care_experience, self.content)
+            return {
+                "animal_id": animal_id,
+                "facility_id": animal.facility_id,
+                "stamina_cost": rules.care_stamina_cost,
+                "experience": rules.care_experience,
+                "affection_before": before,
+                "affection": animal.affection,
+                "affection_cap": rules.affection_cap,
+                "cared_today": animal.cared_count,
+                "care_daily_limit": rules.care_daily_limit,
+                "unlocked_levels": levels,
+            }
+
+        player, result = self._update_by_sub(oauth_sub, mutation)
+        return {"result": result, "state": self._snapshot(player, now)}
+
+    def incubate_egg(self, oauth_sub: str, facility_id: str, quality: int, nickname: str = "") -> dict:
+        """孵蛋。蛋的品质就是种鸡的基因载体：好鸡下好蛋，好蛋孵好鸡。"""
+        quality = int(quality or 0)
+        nickname = self._animal_nickname(nickname)
+        now = self._now()
+
+        def mutation(player: PlayerState):
+            self._settle(player, now)
+            facility, definition = self._livestock_facility_pair(player, facility_id)
+            species = self._breeding_species(definition, "incubate")
+            breeding = species.breeding
+            if quality < 1 or quality > 5:
+                raise GameError("invalid_quality", "只能挑一个具体品质的蛋来孵")
+            self._require_livestock_room(player, facility, definition)
+            if player.feed_slot.quality_score < breeding.min_feed_score:
+                raise GameError("feed_score_too_low", f"饲料槽品质分需要达到 {breeding.min_feed_score:g}", 409)
+            if player.feed_slot.units < breeding.feed_units:
+                raise GameError("resource_insufficient", f"孵化需要 {breeding.feed_units:g} 份饲料")
+            try:
+                remove_item(player, breeding.incubate_item_id, 1, quality)
+            except EconomyError as exc:
+                raise GameError("resource_insufficient", str(exc)) from exc
+            player.feed_slot.units = max(0.0, player.feed_slot.units - breeding.feed_units)
+            gene_cap = definition.tier(facility.tier).gene_cap
+            base = breeding.quality_gene_base[quality - 1]
+            mutation_chance = breeding.mutation_chance + self._talent_modifier(player, "livestock_mutation_chance")
+            animal = self._new_animal(
+                species,
+                facility_id,
+                now,
+                quality_gene=roll_gene(self.rng, base, breeding.gene_sigma, gene_cap, mutation_chance, breeding.mutation_bonus),
+                yield_gene=roll_gene(self.rng, base, breeding.gene_sigma, gene_cap, mutation_chance, breeding.mutation_bonus),
+                stage="incubating",
+                nickname=nickname,
+            )
+            player.animals.append(animal)
+            return {
+                "facility_id": facility_id,
+                "quality": quality,
+                "feed_units": breeding.feed_units,
+                "incubate_cycles": breeding.incubate_cycles,
+                "animal": self._animal_snapshot(player, animal, facility, definition),
+            }
+
+        player, result = self._update_by_sub(oauth_sub, mutation)
+        return {"result": result, "state": self._snapshot(player, now)}
+
+    def breed_animals(self, oauth_sub: str, facility_id: str, parent_ids: list[str], nickname: str = "") -> dict:
+        """配种。不做性别，任意两只同物种成年即可；进步来自选择，不是来自均值。"""
+        parents = [str(entry or "").strip() for entry in (parent_ids or []) if str(entry or "").strip()]
+        nickname = self._animal_nickname(nickname)
+        if len(parents) != 2 or parents[0] == parents[1]:
+            raise GameError("invalid_parents", "配种需要选两只不同的成年牲畜")
+        now = self._now()
+
+        def mutation(player: PlayerState):
+            self._settle(player, now)
+            facility, definition = self._livestock_facility_pair(player, facility_id)
+            species = self._breeding_species(definition, "pair")
+            breeding = species.breeding
+            chosen = [self._animal(player, entry) for entry in parents]
+            for parent in chosen:
+                if parent.facility_id != facility_id:
+                    raise GameError("animal_elsewhere", "亲本不在这处设施里", 409)
+                if parent.species_id != species.id:
+                    raise GameError("livestock_category_mismatch", "只有同物种才能配种", 409)
+                if parent.stage != "adult":
+                    raise GameError("animal_not_adult", "只有成年牲畜才能配种", 409)
+                if parent.breeding_cooldown > 0:
+                    raise GameError("animal_on_cooldown", "亲本还在配种冷却里", 409)
+            self._require_livestock_room(player, facility, definition)
+            if player.feed_slot.quality_score < breeding.min_feed_score:
+                raise GameError("feed_score_too_low", f"饲料槽品质分需要达到 {breeding.min_feed_score:g}", 409)
+            if player.feed_slot.units < breeding.feed_units:
+                raise GameError("resource_insufficient", f"配种需要 {breeding.feed_units:g} 份饲料")
+            player.feed_slot.units = max(0.0, player.feed_slot.units - breeding.feed_units)
+            gene_cap = definition.tier(facility.tier).gene_cap
+            mutation_chance = breeding.mutation_chance + self._talent_modifier(player, "livestock_mutation_chance")
+            quality_base = (chosen[0].quality_gene + chosen[1].quality_gene) / 2
+            yield_base = (chosen[0].yield_gene + chosen[1].yield_gene) / 2
+            calf = self._new_animal(
+                species,
+                facility_id,
+                now,
+                quality_gene=roll_gene(self.rng, quality_base, breeding.gene_sigma, gene_cap, mutation_chance, breeding.mutation_bonus),
+                yield_gene=roll_gene(self.rng, yield_base, breeding.gene_sigma, gene_cap, mutation_chance, breeding.mutation_bonus),
+                nickname=nickname,
+            )
+            player.animals.append(calf)
+            for parent in chosen:
+                parent.breeding_cooldown = float(breeding.cooldown_cycles)
+            return {
+                "facility_id": facility_id,
+                "parent_ids": parents,
+                "feed_units": breeding.feed_units,
+                "cooldown_cycles": breeding.cooldown_cycles,
+                "parent_quality_gene": round(quality_base, 1),
+                "parent_yield_gene": round(yield_base, 1),
+                "animal": self._animal_snapshot(player, calf, facility, definition),
+            }
+
+        player, result = self._update_by_sub(oauth_sub, mutation)
+        return {"result": result, "state": self._snapshot(player, now)}
+
+    def sell_animal(self, oauth_sub: str, animal_id: str) -> dict:
+        """出售牲畜。回收价永远低于买入价，但好基因卖得贵，淘汰差的才有正反馈。"""
+        animal_id = str(animal_id or "").strip()
+        rules = self._livestock_rules()
+        now = self._now()
+
+        def mutation(player: PlayerState):
+            self._settle(player, now)
+            animal = self._animal(player, animal_id)
+            species = self.content.livestock_species_map.get(animal.species_id)
+            if species is None:
+                raise GameError("livestock_species_not_found", "没有这个物种", 404)
+            if animal.pending_total or animal.pending_special:
+                raise GameError("livestock_pending_output", "先把它的产出收了再说", 409)
+            price = refund_value(
+                species.refund_base,
+                animal.quality_gene,
+                animal.yield_gene,
+                rules.refund_gene_coefficient,
+            )
+            grant_coins(player, price)
+            player.animals = [entry for entry in player.animals if entry.animal_id != animal_id]
+            return {
+                "animal_id": animal_id,
+                "species_id": species.id,
+                "price": price,
+                "coins": player.coins,
+            }
+
+        player, result = self._update_by_sub(oauth_sub, mutation)
+        return {"result": result, "state": self._snapshot(player, now)}
+
+    # ------------------------------------------------------- 畜牧：内部实现
+
+    def _livestock_rules(self):
+        rules = self.content.livestock
+        if rules is None:
+            raise GameError("livestock_missing", "畜牧配置缺失，请联系管理员", 409)
+        return rules
+
+    def _livestock_facility(self, player: PlayerState, facility_id: str) -> LivestockFacilityState:
+        facility = next(
+            (entry for entry in player.livestock_facilities if entry.facility_id == facility_id),
+            None,
+        )
+        if facility is None:
+            raise GameError("livestock_facility_locked", "这处畜牧设施尚未开放", 404)
+        return facility
+
+    def _livestock_facility_pair(self, player: PlayerState, facility_id: str):
+        facility = self._livestock_facility(player, facility_id)
+        definition = self.content.livestock_facility_map.get(facility.facility_id)
+        if definition is None:
+            raise GameError("livestock_facility_not_found", "畜牧设施配置缺失，请联系管理员", 409)
+        return facility, definition
+
+    def _animal(self, player: PlayerState, animal_id: str) -> AnimalState:
+        animal = next((entry for entry in player.animals if entry.animal_id == animal_id), None)
+        if animal is None:
+            raise GameError("animal_not_found", "找不到这只牲畜", 404)
+        return animal
+
+    def _animals_in(self, player: PlayerState, facility_id: str) -> list[AnimalState]:
+        return [animal for animal in player.animals if animal.facility_id == facility_id]
+
+    def _require_livestock_room(self, player: PlayerState, facility, definition) -> None:
+        """幼崽和孵化中的蛋一样占容量，否则容量上限形同虚设。"""
+        capacity = definition.tier(facility.tier).capacity
+        if len(self._animals_in(player, facility.facility_id)) >= capacity:
+            raise GameError("livestock_facility_full", f"{definition.name}已经住满了（{capacity} 位）", 409)
+
+    def _breeding_species(self, definition, mode: str):
+        species = next(
+            (
+                entry
+                for entry in self.content.livestock_species
+                if entry.category == definition.category and entry.breeding.mode == mode
+            ),
+            None,
+        )
+        if species is None:
+            raise GameError("livestock_breeding_unavailable", "这处设施不支持这种繁殖方式", 409)
+        return species
+
+    def _purchase_gene(self, rules, gene_cap: int) -> int:
+        low = min(rules.purchase_gene_min, gene_cap)
+        high = min(rules.purchase_gene_max, gene_cap)
+        return self.rng.randint(low, high)
+
+    def _animal_nickname(self, nickname: str) -> str:
+        """起名是纯展示，但仍然要拦住空白名和超长名，免得列表被撑破。"""
+        cleaned = " ".join(str(nickname or "").split())
+        if len(cleaned) > ANIMAL_NICKNAME_LIMIT:
+            raise GameError("invalid_nickname", f"名字最多 {ANIMAL_NICKNAME_LIMIT} 个字")
+        return cleaned
+
+    def _new_animal(
+        self,
+        species,
+        facility_id: str,
+        now: int,
+        *,
+        quality_gene: int,
+        yield_gene: int,
+        stage: str = "juvenile",
+        nickname: str = "",
+    ) -> AnimalState:
+        return AnimalState(
+            animal_id=uuid4().hex,
+            species_id=species.id,
+            facility_id=facility_id,
+            nickname=nickname,
+            stage=stage,
+            quality_gene=quality_gene,
+            yield_gene=yield_gene,
+            born_at=now,
+        )
+
+    def _consume_any_quality(self, player: PlayerState, item_id: str, quantity: int) -> None:
+        """建造材料不挑品质，从低品质开始扣 —— 好东西留给需要品质的地方。"""
+        remaining = quantity
+        for quality in sorted(player.inventory.get(item_id, {})):
+            if remaining <= 0:
+                break
+            available = player.inventory[item_id][quality]
+            take = min(available, remaining)
+            if take <= 0:
+                continue
+            remove_item(player, item_id, take, quality)
+            remaining -= take
+        if remaining > 0:
+            raise GameError("resource_insufficient", "材料不足")
+
+    def _livestock_ability(self, player: PlayerState, partner_ids: list[str]) -> int:
+        try:
+            total, _, _ = self._production_ability(player, list(partner_ids), "livestock")
+        except GameError:
+            rules = self.content.industries["livestock"]
+            return rules.character_base_ability + self._industry_ability_bonus(player, "livestock")
+        return total
+
+    def _species_parameters(self, species) -> SpeciesParameters:
+        rules = self._livestock_rules()
+        return SpeciesParameters(
+            species_id=species.id,
+            growth_cycles=species.growth_cycles,
+            incubate_cycles=species.breeding.incubate_cycles,
+            base_yield=species.base_yield,
+            feed_per_cycle=species.feed_per_cycle,
+            yield_coefficient=rules.yield_gene_coefficient,
+            special_item_id=species.special_item_id,
+            special_chance=species.special_chance,
+            thresholds=tuple(species.quality.thresholds),
+            width=species.quality.width,
+            miracle_probability_cap=species.quality.miracle_probability_cap,
+            miracle_eligible=species.quality.miracle_eligible,
+        )
+
+    def _facility_parameters(
+        self,
+        player: PlayerState,
+        facility: LivestockFacilityState,
+        feed_score: float,
+    ) -> FacilityParameters:
+        rules = self._livestock_rules()
+        definition = self.content.livestock_facility_map.get(facility.facility_id)
+        tier = definition.tier(facility.tier) if definition else None
+        overflow = (tier.overflow_cycles if tier else 1) + int(
+            self._talent_modifier(player, "livestock_overflow_cycles")
+        )
+        category = definition.category if definition else ""
+        return FacilityParameters(
+            cycle_seconds=rules.cycle_seconds,
+            capacity=tier.capacity if tier else 0,
+            quality_multiplier=tier.quality_multiplier if tier else 1,
+            overflow_cycles=max(1, overflow),
+            gene_cap=tier.gene_cap if tier else 0,
+            ability=self._livestock_ability(player, facility.assigned_partner_ids),
+            feed_score=feed_score,
+            quality_gene_coefficient=rules.quality_gene_coefficient,
+            affection_cap=rules.affection_cap,
+            affection_quality_base=rules.affection_quality_base,
+            affection_quality_per_point=rules.affection_quality_per_point,
+            species={
+                species.id: self._species_parameters(species)
+                for species in self.content.livestock_species
+                if species.category == category
+            },
+        )
+
+    def _grant_livestock_partner_experience(self, player: PlayerState, settlement) -> None:
+        """驻场的伙伴按结算掉的周期数拿经验。停摆的周期没买单，也就不给经验。"""
+        per_cycle = self.content.partner_growth.livestock_experience_per_cycle
+        if not per_cycle:
+            return
+        owned_map = {entry.partner_id: entry for entry in player.owned_partners}
+        for facility in player.livestock_facilities:
+            advance = settlement.facilities.get(facility.facility_id)
+            if advance is None or advance.paid_cycles <= 0:
+                continue
+            for partner_id in facility.assigned_partner_ids:
+                owned = owned_map.get(partner_id)
+                if owned is not None:
+                    self._grant_partner_experience(owned, advance.paid_cycles * per_cycle)
+
+    def _livestock_drop(self, item_id: str, quantity: int, quality: int) -> dict:
+        item = self.content.item_map.get(item_id)
+        grade = self.content.quality.grade_map.get(quality)
+        return {
+            "item_id": item_id,
+            "name": item.name if item else item_id,
+            "icon": item.icon if item else "package",
+            "quantity": quantity,
+            "quality": quality or None,
+            "quality_name": grade.name if grade else None,
+            "sell_price": self._quality_unit_price(item.sell_price if item else 0, quality),
+        }
+
+    def _animal_snapshot(
+        self,
+        player: PlayerState,
+        animal: AnimalState,
+        facility,
+        definition,
+        parameters: FacilityParameters | None = None,
+        day: str = "",
+    ) -> dict:
+        rules = self._livestock_rules()
+        species = self.content.livestock_species_map.get(animal.species_id)
+        # 参数快照按栏算一次就够：整栏共用能力、饲料分和设施系数。
+        if parameters is None:
+            parameters = self._facility_parameters(player, facility, player.feed_slot.quality_score)
+        species_parameters = parameters.species.get(animal.species_id)
+        cycle = parameters.cycle_seconds
+        remaining_stage = 0
+        if species_parameters:
+            if animal.stage == "incubating":
+                remaining_stage = max(0, species_parameters.incubate_cycles - int(animal.stage_cycles))
+            elif animal.stage == "juvenile":
+                remaining_stage = max(0, species_parameters.growth_cycles - int(animal.stage_cycles))
+        day = day or self._commission_day(self._now())
+        return {
+            "animal_id": animal.animal_id,
+            "species_id": animal.species_id,
+            "facility_id": animal.facility_id,
+            "nickname": animal.nickname,
+            "name": animal.nickname or (species.name if species else animal.species_id),
+            "species_name": species.name if species else animal.species_id,
+            "icon": species.icon if species else "package",
+            "stage": animal.stage,
+            "stage_cycles": animal.stage_cycles,
+            "remaining_stage_cycles": remaining_stage,
+            "remaining_stage_seconds": remaining_stage * cycle,
+            "quality_gene": animal.quality_gene,
+            "yield_gene": animal.yield_gene,
+            "gene_cap": parameters.gene_cap,
+            "affection": animal.affection,
+            "affection_cap": rules.affection_cap,
+            "affection_multiplier": round(rules.affection_multiplier(animal.affection), 4),
+            "pending_output": {str(quality): amount for quality, amount in sorted(animal.pending_output.items())},
+            "pending_total": animal.pending_total,
+            "pending_special": animal.pending_special,
+            "overflow_cap": overflow_cap(animal, species_parameters, parameters) if species_parameters else 0,
+            "saturated": is_saturated(animal, species_parameters, parameters) if species_parameters else False,
+            "yield_per_cycle": round(yield_per_cycle(animal, species_parameters), 3) if species_parameters else 0,
+            "quality_ability": round(animal_quality_ability(animal, parameters), 2),
+            "breeding_cooldown": animal.breeding_cooldown,
+            "breeding_cooldown_seconds": int(animal.breeding_cooldown * cycle),
+            "cared_today": animal.cared_count if animal.cared_on == day else 0,
+            "care_daily_limit": rules.care_daily_limit,
+            "born_at": animal.born_at,
+            "produce_item": (
+                self.content.item_map[species.produce_item_id].model_dump()
+                if species and species.produce_item_id in self.content.item_map
+                else None
+            ),
+        }
+
+    def _livestock_hourly_rate(self, player: PlayerState) -> float:
+        rules = self.content.livestock
+        if rules is None or not player.livestock_facilities:
+            return 0.0
+        species_map = self.content.livestock_species_map
+        per_cycle = sum(
+            species_map[animal.species_id].feed_per_cycle
+            for animal in player.animals
+            if animal.species_id in species_map and animal.stage != "incubating"
+        )
+        return per_cycle * 3600 / rules.cycle_seconds if rules.cycle_seconds else 0.0
+
+    def _feed_slot_capacity(self, player: PlayerState) -> int:
+        """槽的容量跟着畜牧设施走：满编一天要吃几百份，固定 500 撑不到一天。"""
+        rules = self.content.feed_slot
+        if rules is None:
+            return 0
+        bonus = 0
+        for facility in player.livestock_facilities:
+            definition = self.content.livestock_facility_map.get(facility.facility_id)
+            if definition is None:
+                continue
+            bonus += definition.tier(facility.tier).feed_slot_capacity_bonus
+        return rules.capacity + bonus
+
+    def _livestock_snapshot(self, player: PlayerState, now: int, partner_map: dict[str, dict]) -> dict:
+        rules = self.content.livestock
+        items = self.content.item_map
+        day = self._commission_day(now)
+        built = {facility.facility_id for facility in player.livestock_facilities}
+        facilities = []
+        for facility in player.livestock_facilities:
+            definition = self.content.livestock_facility_map.get(facility.facility_id)
+            if definition is None:
+                continue
+            tier = definition.tier(facility.tier)
+            parameters = self._facility_parameters(player, facility, player.feed_slot.quality_score)
+            animals = self._animals_in(player, facility.facility_id)
+            assigned_partners = [
+                partner_map[partner_id]
+                for partner_id in facility.assigned_partner_ids
+                if partner_id in partner_map
+            ]
+            species_here = [
+                species for species in self.content.livestock_species
+                if species.category == definition.category
+            ]
+            facilities.append({
+                "facility_id": facility.facility_id,
+                "tier": facility.tier,
+                "name": definition.name,
+                "description": definition.description,
+                "accent": definition.accent,
+                "category": definition.category,
+                "capacity": tier.capacity,
+                "used": len(animals),
+                "quality_multiplier": tier.quality_multiplier,
+                "overflow_cycles": parameters.overflow_cycles,
+                "gene_cap": tier.gene_cap,
+                "ability": parameters.ability,
+                "stalled": facility.stalled,
+                "settle_remainder": facility.settle_remainder,
+                "last_settled_at": facility.last_settled_at,
+                "next_cycle_seconds": max(0, parameters.cycle_seconds - facility.settle_remainder),
+                "assigned_partners": assigned_partners,
+                "animals": [
+                    self._animal_snapshot(player, animal, facility, definition, parameters, day)
+                    for animal in animals
+                ],
+                "pending_total": sum(animal.pending_total for animal in animals),
+                "pending_special": sum(animal.pending_special for animal in animals),
+                "species": [
+                    {
+                        **species.model_dump(exclude={"quality"}),
+                        "produce_item": items[species.produce_item_id].model_dump(),
+                        "special_item": (
+                            items[species.special_item_id].model_dump()
+                            if species.special_item_id in items else None
+                        ),
+                        "unlocked": player.level >= species.min_level,
+                        "affordable": player.coins >= species.purchase_price,
+                    }
+                    for species in species_here
+                ],
+            })
+        return {
+            "unlocked": bool(player.livestock_facilities) or any(
+                definition.min_level <= player.level for definition in self.content.livestock_facilities
+            ),
+            "cycle_seconds": rules.cycle_seconds if rules else 0,
+            "ability": self._livestock_ability(player, []),
+            "facilities": facilities,
+            "buildable_facilities": [
+                {
+                    "facility_id": definition.id,
+                    "name": definition.name,
+                    "description": definition.description,
+                    "accent": definition.accent,
+                    "category": definition.category,
+                    "min_level": definition.min_level,
+                    "unlocked": player.level >= definition.min_level,
+                    "capacity": definition.tier(1).capacity,
+                    "replaces": definition.replaces or None,
+                    "feed_slot_capacity_bonus": definition.tier(1).feed_slot_capacity_bonus,
+                    "build_coins": definition.tier(1).build_coins,
+                    "affordable": player.coins >= definition.tier(1).build_coins and all(
+                        sum(player.inventory.get(material.item_id, {}).values()) >= material.quantity
+                        for material in definition.tier(1).build_materials
+                    ),
+                    "build_materials": [
+                        {
+                            **material.model_dump(),
+                            "item": items[material.item_id].model_dump(),
+                            "owned": sum(player.inventory.get(material.item_id, {}).values()),
+                        }
+                        for material in definition.tier(1).build_materials
+                    ],
+                }
+                for definition in self.content.livestock_facilities
+                if definition.id not in built and not definition.granted
+            ],
+            "next_facility_level": next(
+                (
+                    definition.min_level
+                    for definition in self.content.livestock_facilities
+                    if player.level < definition.min_level
+                ),
+                None,
+            ),
+            "rules": rules.model_dump() if rules else None,
+        }
 
     # ------------------------------------------------------- 水产：内部实现
 
@@ -1312,19 +2069,61 @@ class GameService:
         )
 
     def _settle_aquatic(self, player: PlayerState, now: int) -> None:
-        if not player.ponds:
+        """鱼塘和畜栏共用一个饲料槽，所以两边一起结算。
+
+        先各自报一遍需求，再按同一个比例拿预算 —— 否则谁先结算谁就把槽喝光，另一边
+        无缘无故停摆。槽的品质分也要在扣料之前取：先结算的一方把槽喝到 0 会把分数清零，
+        后结算的一方这一段的品质就凭空变差了。
+        """
+
+        if not player.ponds and not player.livestock_facilities:
             player.feed_slot.updated_at = now
             return
-        parameters = {}
+        feed_score = player.feed_slot.quality_score
+
+        pond_parameters = {}
         for pond in player.ponds:
             if pond.last_settled_at <= 0 or pond.last_settled_at > now:
                 pond.last_settled_at = now
-            parameters[pond.pond_id] = self._pond_parameters(player, pond)
-        settlement = settle_ponds(player.ponds, player.feed_slot, parameters, now)
-        self._grant_pond_partner_experience(player, settlement)
-        for pond in player.ponds:
-            # 推进用旧快照，推进完立刻换成当前参数：天赋和伙伴的改动从下一段开始生效。
-            self._refresh_pond_trait_snapshot(player, pond, now)
+            pond_parameters[pond.pond_id] = self._pond_parameters(player, pond)
+        _, pond_demand = plan_ponds(player.ponds, pond_parameters, now)
+
+        stock_parameters = {}
+        stock_demand = 0.0
+        for facility in player.livestock_facilities:
+            if facility.last_settled_at <= 0 or facility.last_settled_at > now:
+                facility.last_settled_at = now
+            entry = self._facility_parameters(player, facility, feed_score)
+            stock_parameters[facility.facility_id] = entry
+            _, units = plan_facility(
+                facility,
+                self._animals_in(player, facility.facility_id),
+                entry,
+                max(0, now - facility.last_settled_at),
+            )
+            stock_demand += units
+
+        demand = pond_demand + stock_demand
+        ratio = 1.0 if demand <= 0 else min(1.0, player.feed_slot.units / demand)
+
+        if player.ponds:
+            settlement = settle_ponds(player.ponds, player.feed_slot, pond_parameters, now, ratio=ratio)
+            self._grant_pond_partner_experience(player, settlement)
+            for pond in player.ponds:
+                # 推进用旧快照，推进完立刻换成当前参数：天赋和伙伴的改动从下一段开始生效。
+                self._refresh_pond_trait_snapshot(player, pond, now)
+        if player.livestock_facilities:
+            stock = settle_livestock(
+                player.livestock_facilities,
+                player.animals,
+                player.feed_slot,
+                stock_parameters,
+                now,
+                self.rng,
+                ratio=ratio,
+            )
+            self._grant_livestock_partner_experience(player, stock)
+        player.feed_slot.updated_at = now
 
     def _grant_pond_partner_experience(self, player: PlayerState, settlement) -> None:
         """驻场看塘的伙伴按结算掉的周期数拿经验。停摆的周期没买单，也就不给经验。"""
@@ -1576,12 +2375,6 @@ class GameService:
                     "expected": self._fishing_draw_count(spot, ability, combo) if unlocked else 0,
                 },
             })
-        # 饲料按周期扣，但"还能撑多久"要按小时说人话，所以折算成每小时的份数。
-        hourly_rate = round(sum(
-            self._pond_parameters(player, pond).feed_per_cycle * 3600 / pond.cycle_seconds
-            for pond in player.ponds
-            if not pond.empty and pond.cycle_seconds > 0
-        ), 2)
         ponds = []
         for pond in player.ponds:
             definition = self._pond_definition(pond)
@@ -1711,33 +2504,50 @@ class GameService:
                 }
                 for species in self.content.pond_species
             ],
-            "feed_slot": {
-                "name": slot_rules.name if slot_rules else "饲料槽",
-                "units": round(player.feed_slot.units, 2),
-                "quality_score": round(player.feed_slot.quality_score, 2),
-                "capacity": slot_rules.capacity if slot_rules else 0,
-                "hourly_rate": hourly_rate,
-                "runtime_seconds": slot_runtime_seconds(player.feed_slot, hourly_rate),
-                "quality_multipliers": slot_rules.quality_multipliers if slot_rules else [],
-                "inputs": [
-                    {
-                        "item_id": item_id,
-                        "quality": quality or None,
-                        "quality_name": QUALITY_NAMES.get(quality),
-                        "quantity": quantity,
-                        "item": items[item_id].model_dump(),
-                        "units": items[item_id].feed.units,
-                        "unit_score": round(
-                            items[item_id].feed.score * (slot_rules.multiplier(quality) if slot_rules else 1),
-                            2,
-                        ),
-                    }
-                    for item_id, qualities in sorted(player.inventory.items())
-                    if item_id in items and items[item_id].feed is not None
-                    for quality, quantity in sorted(qualities.items())
-                    if quantity > 0
-                ],
-            },
+            "feed_slot": self._feed_slot_snapshot(player),
+        }
+
+    def _feed_slot_snapshot(self, player: PlayerState) -> dict:
+        """饲料槽同时喂着鱼塘和畜栏，所以「每小时几份、还能撑多久」要把两边一起算。"""
+
+        slot_rules = self.content.feed_slot
+        items = self.content.item_map
+        hourly_rate = round(
+            sum(
+                self._pond_parameters(player, pond).feed_per_cycle * 3600 / pond.cycle_seconds
+                for pond in player.ponds
+                if not pond.empty and pond.cycle_seconds > 0
+            )
+            + self._livestock_hourly_rate(player),
+            2,
+        )
+        return {
+            "name": slot_rules.name if slot_rules else "饲料槽",
+            "units": round(player.feed_slot.units, 2),
+            "quality_score": round(player.feed_slot.quality_score, 2),
+            "capacity": self._feed_slot_capacity(player),
+            "base_capacity": slot_rules.capacity if slot_rules else 0,
+            "hourly_rate": hourly_rate,
+            "runtime_seconds": slot_runtime_seconds(player.feed_slot, hourly_rate),
+            "quality_multipliers": slot_rules.quality_multipliers if slot_rules else [],
+            "inputs": [
+                {
+                    "item_id": item_id,
+                    "quality": quality or None,
+                    "quality_name": QUALITY_NAMES.get(quality),
+                    "quantity": quantity,
+                    "item": items[item_id].model_dump(),
+                    "units": items[item_id].feed.units,
+                    "unit_score": round(
+                        items[item_id].feed.score * (slot_rules.multiplier(quality) if slot_rules else 1),
+                        2,
+                    ),
+                }
+                for item_id, qualities in sorted(player.inventory.items())
+                if item_id in items and items[item_id].feed is not None
+                for quality, quantity in sorted(qualities.items())
+                if quantity > 0
+            ],
         }
 
     def convert_maple_flame(self, oauth_sub: str, quantity: int) -> dict:
@@ -3450,6 +4260,7 @@ class GameService:
         normalize_crafting_stations(player, self.content)
         normalize_mining_sites(player, self.content)
         normalize_ponds(player, self.content)
+        normalize_livestock(player, self.content, now)
         settle_stamina(player, self.content, now)
         self._settle_aquatic(player, now)
         for plot in player.plots:
@@ -3976,6 +4787,7 @@ class GameService:
             "mining_sites": mining_sites,
             "next_mining_site_level": next_mining_site_level,
             "aquatic": self._aquatic_snapshot(player, now, partner_map),
+            "livestock": self._livestock_snapshot(player, now, partner_map),
             "inventory": inventory,
             "task_items": [
                 {
@@ -4248,6 +5060,7 @@ class GameService:
             *player.crafting_stations,
             *player.mining_sites,
             *player.ponds,
+            *player.livestock_facilities,
         ]:
             if partner_id in production_slot.assigned_partner_ids:
                 production_slot.assigned_partner_ids = []
@@ -4265,6 +5078,8 @@ class GameService:
         if industry == "aquatic":
             # 陪钓不占编制（不锁定、瞬时完成），驻场在鱼塘的才算。
             return sum(len(pond.assigned_partner_ids) for pond in player.ponds)
+        if industry == "livestock":
+            return sum(len(facility.assigned_partner_ids) for facility in player.livestock_facilities)
         return 0
 
     def _industry_partner_capacity(self, player: PlayerState, industry: str) -> int:

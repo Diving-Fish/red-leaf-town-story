@@ -1,5 +1,5 @@
 import type { Component } from 'vue'
-import { DoorOpen, Flame, Hammer, HandHeart, LayoutDashboard, Pickaxe, Sparkles, Sprout, Store, Trees, Waves } from 'lucide-vue-next'
+import { Beef, DoorOpen, Flame, Hammer, HandHeart, LayoutDashboard, Pickaxe, Sparkles, Sprout, Store, Trees, Waves } from 'lucide-vue-next'
 
 import type { GameState } from '@/types'
 
@@ -47,6 +47,13 @@ export const NAV_ITEMS: NavItem[] = [
     icon: Waves,
     primary: false,
     unlocked: (state) => state.aquatic.unlocked,
+  },
+  {
+    to: '/livestock',
+    label: '畜牧',
+    icon: Beef,
+    primary: false,
+    unlocked: (state) => state.livestock.unlocked,
   },
   {
     to: '/commissions',

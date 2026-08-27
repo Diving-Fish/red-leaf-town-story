@@ -129,6 +129,45 @@ async def test_achievement_reward_must_be_claimed_from_achievement_api(client, s
 
 
 @runs
+async def test_livestock_api_builds_buys_and_collects(client, service):
+    authenticate(client)
+    player = service.repository.get_by_sub("route-sub")
+    service.repository.update(player.player_id, lambda state: setattr(state, "coins", 50_000))
+    service.repository.update(
+        player.player_id,
+        lambda state: setattr(state, "experience", next(
+            entry.total_xp for entry in service.content.levels if entry.level == 8
+        )),
+    )
+    service.repository.update(player.player_id, lambda state: add_item(state, "maple_wood", 30))
+
+    built = await client.post("/api/red-leaf-town/livestock/facilities/coop_1/build")
+    assert built.status_code == 200
+    facilities = (await built.get_json())["data"]["state"]["livestock"]["facilities"]
+    # 散养地在同一次请求里被鸡舍回收。
+    assert [entry["facility_id"] for entry in facilities] == ["coop_1"]
+
+    bought = await client.post(
+        "/api/red-leaf-town/livestock/facilities/coop_1/buy",
+        json={"species_id": "chicken"},
+    )
+    assert bought.status_code == 200
+    assert (await bought.get_json())["data"]["result"]["animal"]["stage"] == "juvenile"
+
+    empty = await client.post("/api/red-leaf-town/livestock/facilities/coop_1/collect", json={})
+    assert empty.status_code == 409
+
+    animal_id = service.repository.get(player.player_id).animals[0].animal_id
+    service.repository.update(
+        player.player_id,
+        lambda state: setattr(state, "stamina", 10),
+    )
+    cared = await client.post(f"/api/red-leaf-town/livestock/animals/{animal_id}/care")
+    assert cared.status_code == 200
+    assert (await cared.get_json())["data"]["result"]["affection"] == 8
+
+
+@runs
 async def test_shop_and_plant_api(client):
     authenticate(client)
     bought = await client.post("/api/red-leaf-town/shop/buy", json={"shop_id": "carrot_seed", "quantity": 2})

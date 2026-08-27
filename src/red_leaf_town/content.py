@@ -234,6 +234,8 @@ TALENT_MODIFIER_KEYS: dict[str, str] = {
     "fishing_combo_cap": "聚鱼度层数上限",
     "pond_generation_cap": "鱼塘世代加值上限",
     "pond_harvest_quality_floor": "捞鱼保底品质",
+    "livestock_overflow_cycles": "畜牧产出溢出上限",
+    "livestock_mutation_chance": "孵化与配种突变概率",
 }
 
 
@@ -476,6 +478,126 @@ class FeedSlotDefinition(BaseModel):
         return self.quality_multipliers[index]
 
 
+class LivestockTierDefinition(BaseModel):
+    """设施的一级。本批每种设施只有 Lv1，扩建时只补数据，模型不动。"""
+
+    level: int = Field(ge=1)
+    capacity: int = Field(gt=0)
+    quality_multiplier: float = Field(default=1, gt=0)
+    overflow_cycles: int = Field(gt=0)
+    gene_cap: int = Field(gt=0, le=100)
+    feed_slot_capacity_bonus: int = Field(default=0, ge=0)
+    build_coins: int = Field(default=0, ge=0)
+    build_materials: list[RecipeInputDefinition] = Field(default_factory=list, max_length=6)
+
+
+class LivestockFacilityDefinition(BaseModel):
+    id: str = Field(min_length=1)
+    name: str = Field(min_length=1)
+    description: str = ""
+    accent: str
+    category: Literal["poultry", "mammal"]
+    min_level: int = Field(ge=1)
+    # 散养地免费自动拥有，鸡舍畜栏要建。
+    granted: bool = False
+    # 建成本设施时回收的过渡设施，栏中的动物在同一次原子更新里迁入。
+    replaces: str = ""
+    tiers: list[LivestockTierDefinition] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def validate_tiers(self):
+        levels = [tier.level for tier in self.tiers]
+        if levels != sorted(levels) or len(set(levels)) != len(levels) or levels[0] != 1:
+            raise ValueError(f"livestock facility {self.id} tiers must start at 1 and be unique")
+        if self.granted and self.tiers[0].build_coins:
+            raise ValueError(f"livestock facility {self.id} is granted and cannot cost coins")
+        return self
+
+    def tier(self, level: int) -> LivestockTierDefinition:
+        for entry in self.tiers:
+            if entry.level == level:
+                return entry
+        return self.tiers[0]
+
+
+class LivestockBreedingDefinition(BaseModel):
+    """两条繁殖线：孵蛋走物品品质，配种走双亲均值。"""
+
+    mode: Literal["incubate", "pair"]
+    feed_units: float = Field(ge=0)
+    min_feed_score: float = Field(default=0, ge=0)
+    gene_sigma: float = Field(gt=0)
+    mutation_chance: float = Field(ge=0, le=1)
+    mutation_bonus: int = Field(ge=0, le=100)
+    # incubate 专用
+    incubate_item_id: str = ""
+    incubate_cycles: int = Field(default=0, ge=0)
+    quality_gene_base: list[float] = Field(default_factory=list)
+    # pair 专用
+    cooldown_cycles: int = Field(default=0, ge=0)
+
+    @model_validator(mode="after")
+    def validate_mode(self):
+        if self.mode == "incubate":
+            if not self.incubate_item_id:
+                raise ValueError("incubate breeding requires an item to incubate")
+            if self.incubate_cycles <= 0:
+                raise ValueError("incubate breeding requires a positive incubation length")
+            if len(self.quality_gene_base) != 5:
+                raise ValueError("incubate breeding needs one gene base per quality grade")
+            if any(entry < 0 or entry > 100 for entry in self.quality_gene_base):
+                raise ValueError("incubate gene bases must be between 0 and 100")
+        elif self.cooldown_cycles <= 0:
+            raise ValueError("pair breeding requires a positive cooldown")
+        return self
+
+
+class LivestockSpeciesDefinition(BaseModel):
+    id: str = Field(min_length=1)
+    name: str = Field(min_length=1)
+    icon: str = Field(min_length=1)
+    category: Literal["poultry", "mammal"]
+    min_level: int = Field(ge=1)
+    purchase_price: int = Field(ge=0)
+    refund_base: int = Field(ge=0)
+    growth_cycles: int = Field(gt=0)
+    produce_item_id: str = Field(min_length=1)
+    base_yield: float = Field(gt=0)
+    feed_per_cycle: float = Field(ge=0)
+    special_item_id: str = ""
+    special_chance: float = Field(default=0, ge=0, le=1)
+    breeding: LivestockBreedingDefinition
+    quality: QualityCurveDefinition
+
+
+class LivestockRulesDefinition(BaseModel):
+    """畜牧的全局常量。周期是硬常量，任何能力都压不动它。"""
+
+    cycle_seconds: int = Field(gt=0)
+    quality_gene_coefficient: float = Field(ge=0)
+    yield_gene_coefficient: float = Field(ge=0)
+    purchase_gene_min: int = Field(ge=0, le=100)
+    purchase_gene_max: int = Field(ge=0, le=100)
+    affection_cap: int = Field(gt=0, le=100)
+    affection_per_care: int = Field(gt=0)
+    affection_quality_base: float = Field(gt=0)
+    affection_quality_per_point: float = Field(ge=0)
+    care_stamina_cost: int = Field(ge=0)
+    care_experience: int = Field(ge=0)
+    care_daily_limit: int = Field(gt=0)
+    refund_gene_coefficient: float = Field(ge=0)
+
+    @model_validator(mode="after")
+    def validate_genes(self):
+        if self.purchase_gene_min > self.purchase_gene_max:
+            raise ValueError("purchase gene range is inverted")
+        return self
+
+    def affection_multiplier(self, affection: int) -> float:
+        capped = max(0, min(self.affection_cap, int(affection)))
+        return self.affection_quality_base + self.affection_quality_per_point * capped
+
+
 class TaskItemDefinition(BaseModel):
     id: str = Field(pattern=r"^[a-z][a-z0-9_-]{1,63}$")
     name: str = Field(min_length=1)
@@ -515,6 +637,8 @@ class PartnerGrowthDefinition(BaseModel):
     experience_per_stamina: int = Field(gt=0)
     # 鱼塘是资产轴，没有时长也没有体力，所以驻场伙伴按结算掉的周期数拿经验。
     pond_experience_per_cycle: int = Field(default=0, ge=0)
+    # 畜牧周期是 8 小时，给的点数更高，两个资产轴产业的伙伴日均经验因此对齐。
+    livestock_experience_per_cycle: int = Field(default=0, ge=0)
     level_cost_base: int = Field(gt=0)
     level_cost_growth: int = Field(ge=0)
     experience_books: dict[str, int] = Field(min_length=1)
@@ -789,6 +913,9 @@ class GameContent(BaseModel):
     ponds: list[PondSlotDefinition] = Field(default_factory=list)
     pond_species: list[PondSpeciesDefinition] = Field(default_factory=list)
     feed_slot: FeedSlotDefinition | None = None
+    livestock: LivestockRulesDefinition | None = None
+    livestock_facilities: list[LivestockFacilityDefinition] = Field(default_factory=list)
+    livestock_species: list[LivestockSpeciesDefinition] = Field(default_factory=list)
     task_items: list[TaskItemDefinition] = Field(default_factory=list)
     gacha_economy: GachaEconomyDefinition
     partner_growth: PartnerGrowthDefinition
@@ -818,6 +945,8 @@ class GameContent(BaseModel):
         unique([str(entry.level) for entry in self.pond_tiers], "pond tier")
         unique([entry.id for entry in self.ponds], "pond")
         unique([entry.id for entry in self.pond_species], "pond species")
+        unique([entry.id for entry in self.livestock_facilities], "livestock facility")
+        unique([entry.id for entry in self.livestock_species], "livestock species")
         unique([entry.id for entry in self.task_items], "task item")
         unique([entry.id for entry in self.portals], "portal")
         unique([entry.id for entry in self.achievements], "achievement")
@@ -840,6 +969,8 @@ class GameContent(BaseModel):
         if self.fishing_spots or self.ponds:
             if "aquatic" not in self.industries:
                 raise ValueError("aquatic industry rules are required once aquatic content exists")
+        if self.livestock_facilities and "livestock" not in self.industries:
+            raise ValueError("livestock industry rules are required once livestock content exists")
 
         items = {item.id for item in self.items}
         for crop in self.crops:
@@ -896,6 +1027,7 @@ class GameContent(BaseModel):
         if any(item_id not in items for item_id in self.partner_growth.experience_books):
             raise ValueError("partner growth references an unknown experience book")
         self._validate_aquatic(items)
+        self._validate_livestock(items)
         self._validate_portals(items)
         self._validate_commissions()
         self._validate_achievements()
@@ -933,6 +1065,57 @@ class GameContent(BaseModel):
             raise ValueError("ponds require at least one species to stock")
         if (self.ponds or self.fishing_spots) and self.feed_slot is None:
             raise ValueError("aquatic content requires a feed slot definition")
+
+    def _validate_livestock(self, items: set[str]) -> None:
+        facility_ids = {facility.id for facility in self.livestock_facilities}
+        for facility in self.livestock_facilities:
+            if facility.replaces and facility.replaces not in facility_ids:
+                raise ValueError(f"livestock facility {facility.id} replaces an unknown facility")
+            if facility.replaces == facility.id:
+                raise ValueError(f"livestock facility {facility.id} cannot replace itself")
+            for tier in facility.tiers:
+                for material in tier.build_materials:
+                    if material.item_id not in items:
+                        raise ValueError(f"livestock facility {facility.id} needs an unknown material")
+        replaced = [facility.replaces for facility in self.livestock_facilities if facility.replaces]
+        if len(replaced) != len(set(replaced)):
+            raise ValueError("a livestock facility cannot be replaced by two different buildings")
+        for facility in self.livestock_facilities:
+            successor = next(
+                (entry for entry in self.livestock_facilities if entry.replaces == facility.id),
+                None,
+            )
+            if successor is None:
+                continue
+            # 回收时动物要整栏迁入，装不下就会丢东西。
+            if successor.tier(1).capacity < facility.tier(1).capacity:
+                raise ValueError(f"livestock facility {successor.id} is too small to absorb {facility.id}")
+            if successor.category != facility.category:
+                raise ValueError(f"livestock facility {successor.id} cannot absorb another category")
+        for species in self.livestock_species:
+            if species.produce_item_id not in items:
+                raise ValueError(f"livestock species {species.id} references an unknown item")
+            if not self.item_map[species.produce_item_id].has_quality:
+                raise ValueError(f"livestock species {species.id} output must support quality")
+            if species.special_item_id:
+                if species.special_item_id not in items:
+                    raise ValueError(f"livestock species {species.id} references an unknown special item")
+                if self.item_map[species.special_item_id].has_quality:
+                    raise ValueError(f"livestock species {species.id} special output must be quality-free")
+            breeding = species.breeding
+            if breeding.mode == "incubate":
+                if breeding.incubate_item_id not in items:
+                    raise ValueError(f"livestock species {species.id} incubates an unknown item")
+                if not self.item_map[breeding.incubate_item_id].has_quality:
+                    raise ValueError(f"livestock species {species.id} incubation item must support quality")
+            if not any(facility.category == species.category for facility in self.livestock_facilities):
+                raise ValueError(f"livestock species {species.id} has nowhere to live")
+        if self.livestock_facilities and not self.livestock_species:
+            raise ValueError("livestock facilities require at least one species")
+        if self.livestock_facilities and self.livestock is None:
+            raise ValueError("livestock content requires livestock rules")
+        if self.livestock_facilities and self.feed_slot is None:
+            raise ValueError("livestock content requires a feed slot definition")
 
     def _validate_portals(self, items: set[str]) -> None:
         portal_ids = {portal.id for portal in self.portals}
@@ -1076,6 +1259,14 @@ class GameContent(BaseModel):
     @property
     def pond_species_map(self) -> dict[str, PondSpeciesDefinition]:
         return {entry.id: entry for entry in self.pond_species}
+
+    @property
+    def livestock_facility_map(self) -> dict[str, LivestockFacilityDefinition]:
+        return {entry.id: entry for entry in self.livestock_facilities}
+
+    @property
+    def livestock_species_map(self) -> dict[str, LivestockSpeciesDefinition]:
+        return {entry.id: entry for entry in self.livestock_species}
 
     @property
     def portal_map(self) -> dict[str, PortalDefinition]:

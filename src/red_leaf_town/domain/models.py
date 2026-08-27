@@ -307,6 +307,60 @@ class PendingBigCatchState(BaseModel):
     created_at: int = Field(ge=0)
 
 
+class AnimalState(BaseModel):
+    """一只动物。畜牧是个体建模，与鱼塘的聚合建模相反。
+
+    进度全部记成【累计有效周期】而不是时间戳：断粮会让整栏停摆，用墙上时钟算会把
+    停摆的那段白送给成长和冷却。
+    """
+
+    animal_id: str = Field(min_length=1)
+    species_id: str = Field(min_length=1)
+    facility_id: str = Field(min_length=1)
+    # 玩家起的名字。留空就按物种名显示，不占存档也不影响任何数值。
+    nickname: str = Field(default="", max_length=24)
+    stage: Literal["incubating", "juvenile", "adult"] = "juvenile"
+    stage_cycles: float = Field(default=0, ge=0)
+    quality_gene: int = Field(default=0, ge=0, le=100)
+    yield_gene: int = Field(default=0, ge=0, le=100)
+    affection: int = Field(default=0, ge=0, le=100)
+    # 已产出未收取的量，按品质分桶。品质在结算当周期就掷定，收取时不再重掷。
+    pending_output: dict[int, int] = Field(default_factory=dict)
+    pending_special: int = Field(default=0, ge=0)
+    yield_progress: float = Field(default=0, ge=0)
+    breeding_cooldown: float = Field(default=0, ge=0)
+    cared_on: str = ""
+    cared_count: int = Field(default=0, ge=0)
+    born_at: int = Field(default=0, ge=0)
+
+    @property
+    def pending_total(self) -> int:
+        return sum(self.pending_output.values())
+
+    @model_validator(mode="after")
+    def validate_pending(self):
+        for quality, amount in self.pending_output.items():
+            if quality < 1 or quality > 5:
+                raise ValueError(f"animal {self.animal_id} holds an invalid quality")
+            if amount < 0:
+                raise ValueError(f"animal {self.animal_id} holds a negative amount")
+        self.pending_output = {
+            quality: amount for quality, amount in self.pending_output.items() if amount > 0
+        }
+        return self
+
+
+class LivestockFacilityState(BaseModel):
+    """资产轴生产格。畜牧周期是全局常量，所以这里只需要记余数和结算点。"""
+
+    facility_id: str = Field(min_length=1)
+    tier: int = Field(default=1, ge=1)
+    settle_remainder: int = Field(default=0, ge=0)
+    last_settled_at: int = Field(default=0, ge=0)
+    stalled: bool = False
+    assigned_partner_ids: list[str] = Field(default_factory=list, max_length=1)
+
+
 class FishingState(BaseModel):
     spot_id: str = ""
     combo: int = Field(default=0, ge=0, le=60)
@@ -554,7 +608,7 @@ class AchievementStats(BaseModel):
 
 
 class PlayerState(BaseModel):
-    schema_version: int = 23
+    schema_version: int = 24
     version: int = 1
     player_id: str
     oauth_sub: str
@@ -574,6 +628,8 @@ class PlayerState(BaseModel):
     crafting_stations: list[CraftingStationState] = Field(default_factory=list)
     mining_sites: list[MiningSiteState] = Field(default_factory=list)
     ponds: list[PondState] = Field(default_factory=list)
+    livestock_facilities: list[LivestockFacilityState] = Field(default_factory=list)
+    animals: list[AnimalState] = Field(default_factory=list, max_length=64)
     feed_slot: SlotState = Field(default_factory=SlotState)
     fishing: FishingState = Field(default_factory=FishingState)
     fish_codex: FishCodexState = Field(default_factory=FishCodexState)
@@ -720,7 +776,11 @@ class PlayerState(BaseModel):
                     achievement.setdefault("claimed_at", 0)
             # v22 曾在成就达成时自动发枫火；服务层拿到内容配置后会回收，并把它们恢复成待领取。
             migrated["achievement_auto_rewards_reconciled"] = False
-        migrated["schema_version"] = 23
+        if schema_version < 24:
+            # 畜牧上线。设施和动物都从空开始，散养地在 normalize 时按等级补发。
+            migrated.setdefault("livestock_facilities", [])
+            migrated.setdefault("animals", [])
+        migrated["schema_version"] = 24
         return migrated
 
     @model_validator(mode="after")
