@@ -94,7 +94,7 @@ function harvest() {
         <h3>{{ pond.definition?.name || pond.pond_id }}</h3>
         <small>{{ pond.definition?.description }}</small>
       </div>
-      <span class="pond-stock">{{ pond.stock }}<i>/{{ pond.capacity }}</i></span>
+      <span class="pond-stock">{{ pond.population }}<i>/{{ pond.capacity }}</i></span>
     </header>
 
     <p v-if="pond.stalled" class="pond-alert">

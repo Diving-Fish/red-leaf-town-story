@@ -66,7 +66,7 @@ const title = computed(() =>
     <Clock3 :size="14" class="swap-hint-icon" />
     <div class="swap-copy">
       <strong>这个周期已经开工，换人会排到下个周期</strong>
-      <small>每个周期开工 {{ formatDuration(windowSeconds) }} 内可自由换</small>
+      <small>每个周期开工 {{ formatDuration(windowSeconds) }} 内可自由换人</small>
     </div>
   </div>
 </template>
