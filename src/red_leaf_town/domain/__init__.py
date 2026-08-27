@@ -1,4 +1,6 @@
 from .models import (
+    AchievementCompletionState,
+    AchievementStats,
     CommissionBoardEntry,
     CommissionPayout,
     CommissionState,
@@ -34,6 +36,8 @@ from .mail import MailMessage, MailScope
 from .production import build_results, draw_count, draw_weighted_batches, pick_weighted, roll_unit_qualities
 
 __all__ = [
+    "AchievementCompletionState",
+    "AchievementStats",
     "build_results",
     "draw_count",
     "draw_weighted_batches",

@@ -174,7 +174,7 @@ def test_schema_nineteen_migration_starts_from_empty_aquatic_state():
         "created_at": started_at,
         "updated_at": started_at,
     })
-    assert player.schema_version == 21
+    assert player.schema_version == 23
     assert player.ponds == []
     assert player.feed_slot.units == 0 and player.feed_slot.quality_score == 0
     assert player.fishing.combo == 0 and player.fishing.pending_big_catch is None
@@ -194,7 +194,7 @@ def test_schema_twenty_one_adds_neutral_pond_trait_parameters():
         "ponds": [{"pond_id": "pond_1", "last_settled_at": started_at}],
     })
     pond = player.ponds[0]
-    assert player.schema_version == 21
+    assert player.schema_version == 23
     assert (pond.cycle_multiplier, pond.feed_multiplier) == (1, 1)
     assert pond.quality_bonus == pond.generation_gain_bonus == 0
     assert pond.trait_effects == []
@@ -370,6 +370,7 @@ def test_fighting_a_big_catch_spends_stamina_and_lands_a_recorded_giant():
     assert result["success"] is True
     assert result["stamina_cost"] == 3
     assert result["size"] >= 42
+    assert "first_big_catch" in {entry["achievement_id"] for entry in result["achievements"]}
     saved = repository.get(player.player_id)
     assert saved.stamina == before - 3
     assert saved.inventory["giant_stream_carp"]
@@ -764,6 +765,7 @@ def test_holding_exactly_half_no_longer_protects_the_generation_score():
     result = service.harvest_pond("aquatic-sub", "pond_1", 20)["result"]
     assert result["generation_score"] == pytest.approx(before)
     assert result["steady_stock"] == 24
+    assert [entry["achievement_id"] for entry in result["achievements"]] == ["pond_harvest_20"]
     clock.advance(6 * HOUR)
     service.snapshot_by_sub("aquatic-sub")
     assert repository.get(player.player_id).ponds[0].generation_score == pytest.approx(before - 1.8)

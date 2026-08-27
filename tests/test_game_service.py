@@ -74,6 +74,13 @@ def test_buy_plant_wait_harvest_and_sell_is_a_closed_loop(game):
     assert 2 <= reward["quantity"] <= 4
     assert sum(drop["quantity"] for drop in reward["drops"]) == reward["quantity"]
     assert harvested["state"]["plots"][0]["empty"] is True
+    assert [entry["achievement_id"] for entry in reward["achievements"]] == ["first_harvest"]
+    assert harvested["state"]["player"]["maple_flame"] == 0
+    assert harvested["state"]["achievements"]["claimable"] == 1
+
+    claimed = service.claim_achievement("oauth-sub-1", "first_harvest")
+    assert claimed["result"]["maple_flame"] == 50
+    assert claimed["state"]["player"]["maple_flame"] == 50
 
     for drop in reward["drops"]:
         sold = service.sell("oauth-sub-1", "carrot", drop["quantity"], drop["quality"])
@@ -228,7 +235,7 @@ def test_schema_sixteen_rebalances_partner_progress_and_active_task_snapshots_on
 
     partner = player.owned_partners[0]
     task = player.mining_sites[0].task_snapshot
-    assert player.schema_version == 21
+    assert player.schema_version == 23
     assert (partner.level, partner.experience) == (3, 0)
     assert (task.partner_snapshots[0].level, task.partner_snapshots[0].effective_level) == (2, 2)
     assert task.rule_version == 2

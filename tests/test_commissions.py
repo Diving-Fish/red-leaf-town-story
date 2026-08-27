@@ -150,8 +150,10 @@ def test_submitting_consumes_items_and_pays_the_full_reward(world):
     result = service.submit_commission("owner")["result"]
 
     assert result["maple_flame"] == commission["reward_maple_flame"]
+    assert [entry["achievement_id"] for entry in result["achievements"]] == ["first_commission"]
     state = service.repository.get(player.player_id)
     assert state.maple_flame == before + commission["reward_maple_flame"]
+    assert state.achievements[0].claimed_at == 0
     assert sum(state.inventory.get(commission["item_id"], {}).values()) == 0
     assert state.commission.status == "completed"
 

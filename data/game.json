@@ -1,5 +1,5 @@
 {
-  "schema_version": 12,
+  "schema_version": 13,
   "game": {
     "title": "红叶镇物语",
     "starting_coins": 80,
@@ -2072,6 +2072,200 @@
       }
     ]
   },
+  "achievements": [
+    {
+      "id": "arrival_from_beyond",
+      "name": "风从门那边来",
+      "description": "完成剧情「初到红叶镇」",
+      "tier": "blue",
+      "reward_maple_flame": 50,
+      "condition": { "hook": "story_seen", "params": { "story_id": "opening_arrival" } }
+    },
+    {
+      "id": "first_harvest",
+      "name": "泥土的回礼",
+      "description": "第一次收获作物",
+      "tier": "blue",
+      "reward_maple_flame": 50,
+      "condition": { "hook": "production_collections", "params": { "industry": "farming", "count": 1 } }
+    },
+    {
+      "id": "first_gathering",
+      "name": "林间拾光",
+      "description": "第一次完成采集",
+      "tier": "blue",
+      "reward_maple_flame": 50,
+      "condition": { "hook": "production_collections", "params": { "industry": "gathering", "count": 1 } }
+    },
+    {
+      "id": "first_mining",
+      "name": "山岩应声",
+      "description": "第一次完成采矿",
+      "tier": "blue",
+      "reward_maple_flame": 50,
+      "condition": { "hook": "production_collections", "params": { "industry": "mining", "count": 1 } }
+    },
+    {
+      "id": "first_crafting",
+      "name": "炉火初燃",
+      "description": "第一次完成加工",
+      "tier": "blue",
+      "reward_maple_flame": 50,
+      "condition": { "hook": "production_collections", "params": { "industry": "crafting", "count": 1 } }
+    },
+    {
+      "id": "first_fish",
+      "name": "溪水来信",
+      "description": "第一次钓到鱼",
+      "tier": "blue",
+      "reward_maple_flame": 50,
+      "condition": { "hook": "fish_codex_entries", "params": { "count": 1 } }
+    },
+    {
+      "id": "first_commission",
+      "name": "有约必应",
+      "description": "第一次完成自己的每日委托",
+      "tier": "blue",
+      "reward_maple_flame": 50,
+      "condition": { "hook": "commissions_completed", "params": { "count": 1, "own_only": true } }
+    },
+    {
+      "id": "two_partners",
+      "name": "新的同行者",
+      "description": "持有至少 2 位不同伙伴",
+      "tier": "blue",
+      "reward_maple_flame": 50,
+      "condition": { "hook": "partners_owned", "params": { "count": 2 } }
+    },
+    {
+      "id": "resident_level_5",
+      "name": "初有名气",
+      "description": "居民等级达到 5 级",
+      "tier": "purple",
+      "reward_maple_flame": 100,
+      "condition": { "hook": "player_level", "params": { "level": 5 } }
+    },
+    {
+      "id": "resident_level_10",
+      "name": "扎下根来",
+      "description": "居民等级达到 10 级",
+      "tier": "purple",
+      "reward_maple_flame": 100,
+      "condition": { "hook": "player_level", "params": { "level": 10 } }
+    },
+    {
+      "id": "resident_level_15",
+      "name": "红叶老友",
+      "description": "居民等级达到 15 级",
+      "tier": "purple",
+      "reward_maple_flame": 100,
+      "condition": { "hook": "player_level", "params": { "level": 15 } }
+    },
+    {
+      "id": "four_crops",
+      "name": "满篮秋收",
+      "description": "曾收获胡萝卜、土豆、小麦和南瓜",
+      "tier": "purple",
+      "reward_maple_flame": 100,
+      "condition": {
+        "hook": "crops_harvested",
+        "params": { "crop_ids": ["carrot", "potato", "wheat", "pumpkin"] }
+      }
+    },
+    {
+      "id": "all_recipes",
+      "name": "红叶百工",
+      "description": "当前 7 种加工配方都至少完成一次",
+      "tier": "purple",
+      "reward_maple_flame": 100,
+      "condition": {
+        "hook": "recipes_crafted",
+        "params": {
+          "recipe_ids": [
+            "saw_maple_plank",
+            "make_herbal_salve",
+            "mill_flour",
+            "pickle_carrot",
+            "mill_fish_meal",
+            "mix_fodder",
+            "refine_fodder"
+          ]
+        }
+      }
+    },
+    {
+      "id": "ten_commissions",
+      "name": "一诺十日",
+      "description": "累计完成 10 次自己的或代交的委托",
+      "tier": "purple",
+      "reward_maple_flame": 100,
+      "condition": { "hook": "commissions_completed", "params": { "count": 10 } }
+    },
+    {
+      "id": "eight_partners",
+      "name": "八方来客",
+      "description": "持有至少 8 位不同伙伴",
+      "tier": "purple",
+      "reward_maple_flame": 100,
+      "condition": { "hook": "partners_owned", "params": { "count": 8 } }
+    },
+    {
+      "id": "eight_talents",
+      "name": "枝叶成林",
+      "description": "点亮至少 8 个产业天赋",
+      "tier": "purple",
+      "reward_maple_flame": 100,
+      "condition": { "hook": "talents_unlocked", "params": { "count": 8 } }
+    },
+    {
+      "id": "pond_harvest_20",
+      "name": "一池生机",
+      "description": "从鱼塘累计收获 20 条塘养红鲫",
+      "tier": "purple",
+      "reward_maple_flame": 100,
+      "condition": { "hook": "pond_harvested", "params": { "species_id": "crucian", "count": 20 } }
+    },
+    {
+      "id": "fish_codex_9",
+      "name": "九鳞入册",
+      "description": "鱼类图鉴记录达到 9 种",
+      "tier": "purple",
+      "reward_maple_flame": 100,
+      "condition": { "hook": "fish_codex_entries", "params": { "count": 9 } }
+    },
+    {
+      "id": "first_big_catch",
+      "name": "线那头不对劲",
+      "description": "第一次成功钓到任意巨物",
+      "tier": "purple",
+      "reward_maple_flame": 100,
+      "condition": { "hook": "big_catch_caught", "params": {} }
+    },
+    {
+      "id": "miracle_production",
+      "name": "奇迹有迹可循",
+      "description": "从农业、采集、加工或采矿中获得奇迹品质产物",
+      "tier": "gold",
+      "reward_maple_flame": 200,
+      "condition": { "hook": "max_production_quality", "params": { "quality": 5 } }
+    },
+    {
+      "id": "first_portal_completed",
+      "name": "门扉再开",
+      "description": "完成「第一传送门」的全部贡品",
+      "tier": "gold",
+      "reward_maple_flame": 200,
+      "condition": { "hook": "portal_completed", "params": { "portal_id": "first_gate" } }
+    },
+    {
+      "id": "twenty_partners",
+      "name": "群星满庭",
+      "description": "持有至少 20 位不同伙伴",
+      "tier": "gold",
+      "reward_maple_flame": 200,
+      "condition": { "hook": "partners_owned", "params": { "count": 20 } }
+    }
+  ],
   "shop": [
     {
       "id": "carrot_seed",

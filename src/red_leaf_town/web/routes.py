@@ -997,6 +997,18 @@ def create_blueprint(
         result = get_service().convert_maple_flame(subject, int(payload.get("quantity", 1)))
         return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
 
+    @blueprint.post("/api/red-leaf-town/achievements/<string:achievement_id>/claim")
+    @login_required
+    async def claim_achievement(subject: str, achievement_id: str):
+        result = get_service().claim_achievement(subject, achievement_id)
+        return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
+
+    @blueprint.post("/api/red-leaf-town/achievements/claim-all")
+    @login_required
+    async def claim_all_achievements(subject: str):
+        result = get_service().claim_all_achievements(subject)
+        return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
+
     @blueprint.post("/api/red-leaf-town/gacha/pull")
     @login_required
     async def gacha_pull(subject: str):

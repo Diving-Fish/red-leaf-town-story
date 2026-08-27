@@ -807,6 +807,47 @@ export interface PondHarvestResult {
   drops: FishingDrop[]
 }
 
+export type AchievementTier = 'blue' | 'purple' | 'gold'
+
+export interface AchievementEntry {
+  achievement_id: string
+  name: string
+  description: string
+  tier: AchievementTier
+  tier_name: string
+  reward_maple_flame: number
+  current: number
+  target: number
+  completed: boolean
+  completed_at: number | null
+  claimed: boolean
+  claimed_at: number | null
+  claimable: boolean
+}
+
+export interface AchievementState {
+  completed: number
+  total: number
+  claimed: number
+  claimable: number
+  maple_flame_earned: number
+  claimable_maple_flame: number
+  entries: AchievementEntry[]
+}
+
+export interface AchievementUnlock {
+  achievement_id: string
+  name: string
+  tier: AchievementTier
+  tier_name: string
+  reward_maple_flame: number
+}
+
+export interface AchievementClaimResult {
+  claimed: Array<{ achievement_id: string; name: string; reward_maple_flame: number }>
+  maple_flame: number
+}
+
 export interface GameState {
   server_time: number
   world: {
@@ -835,6 +876,7 @@ export interface GameState {
   portals: PortalState[]
   commissions: CommissionsState
   mail: MailSummary
+  achievements: AchievementState
   crops: CropDefinition[]
   shop: ShopEntry[]
 }

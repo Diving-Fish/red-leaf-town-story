@@ -9,6 +9,8 @@ import { useTickerStore } from '@/stores/ticker'
 import type {
   AccountState,
   ActionResult,
+  AchievementUnlock,
+  AchievementClaimResult,
   BigCatchResult,
   CastResult,
   CommissionBoard,
@@ -120,6 +122,7 @@ export const useGameStore = defineStore('game', () => {
     const granted = (settled.result as { granted?: Reward | null }).granted
     const text = granted ? rewardText(granted) : ''
     if (text) showNotice(text)
+    showAchievementNotice((settled.result as { achievements?: AchievementUnlock[] }).achievements)
   })
 
   function rewardText(reward: Reward) {
@@ -199,6 +202,7 @@ export const useGameStore = defineStore('game', () => {
       })
       acceptState(result.state, startedAt)
       if (options.successMessage) showNotice(options.successMessage)
+      showAchievementNotice((result.result as { achievements?: AchievementUnlock[] }).achievements)
       if (options.cue) story.cue(options.cue)
       return result.result
     } catch (caught) {
@@ -602,6 +606,32 @@ export const useGameStore = defineStore('game', () => {
     }, 2800)
   }
 
+  function showAchievementNotice(achievements: AchievementUnlock[] | undefined) {
+    if (!achievements?.length) return
+    const names = achievements.length === 1
+      ? `「${achievements[0].name}」`
+      : `「${achievements[0].name}」等 ${achievements.length} 项`
+    window.setTimeout(() => showNotice(`达成成就${names}，请前往成就册领取奖励`), 80)
+  }
+
+  async function claimAchievement(achievementId: string) {
+    const result = await action(
+      `achievement:claim:${achievementId}`,
+      `${API_ROOT}/achievements/${achievementId}/claim`,
+    ) as AchievementClaimResult | undefined
+    if (result) showNotice(`成就奖励领取成功，获得 ${result.maple_flame} 枫火`)
+    return result
+  }
+
+  async function claimAllAchievements() {
+    const result = await action(
+      'achievement:claim-all',
+      `${API_ROOT}/achievements/claim-all`,
+    ) as AchievementClaimResult | undefined
+    if (result?.claimed.length) showNotice(`领取 ${result.claimed.length} 项成就奖励，获得 ${result.maple_flame} 枫火`)
+    return result
+  }
+
   function fail(caught: unknown) {
     error.value = caught instanceof Error ? caught.message : '操作失败'
     showNotice(error.value)
@@ -664,6 +694,8 @@ export const useGameStore = defineStore('game', () => {
     loadMailbox,
     readMail,
     claimMail,
+    claimAchievement,
+    claimAllAchievements,
     createBindingCode,
     logout,
     effectiveNow,

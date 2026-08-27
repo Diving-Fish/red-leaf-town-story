@@ -8,6 +8,12 @@ from datetime import datetime, timedelta, timezone
 from math import ceil, floor
 from typing import NamedTuple
 
+from red_leaf_town.achievements import (
+    achievement_snapshot,
+    evaluate_achievements,
+    reconcile_legacy_auto_rewards,
+    record_production_collection,
+)
 from red_leaf_town.content import GameContent, GatheringDrawDefinition, RewardDefinition
 from red_leaf_town.domain import (
     CommissionBoardEntry,
@@ -319,6 +325,7 @@ class GameService:
                 add_item(player, result.item_id, result.quantity, result.quality)
             levels = grant_experience(player, harvest_xp, self.content)
             partner_experience = self._grant_task_partner_experience(player, task)
+            record_production_collection(player, "farming", plot.crop_id, results)
             plot.crop_id = ""
             plot.planted_at = 0
             plot.ready_at = 0
@@ -456,10 +463,12 @@ class GameService:
             if not results:
                 raise GameError("task_content_missing", "采集任务配置缺失，请联系管理员", 409)
             harvest_xp = site.task_snapshot.harvest_xp
+            task_id = site.task_snapshot.content_id
             for result in results:
                 add_item(player, result.item_id, result.quantity, result.quality)
             levels = grant_experience(player, harvest_xp, self.content)
             partner_experience = self._grant_task_partner_experience(player, site.task_snapshot)
+            record_production_collection(player, "gathering", task_id, results)
             site.task_snapshot = None
             site.task_results = []
             return {
@@ -593,10 +602,12 @@ class GameService:
             if not results:
                 raise GameError("task_content_missing", "加工任务配置缺失，请联系管理员", 409)
             collect_xp = station.task_snapshot.harvest_xp
+            recipe_id = station.task_snapshot.content_id
             for result in results:
                 add_item(player, result.item_id, result.quantity, result.quality)
             levels = grant_experience(player, collect_xp, self.content)
             partner_experience = self._grant_task_partner_experience(player, station.task_snapshot)
+            record_production_collection(player, "crafting", recipe_id, results)
             station.task_snapshot = None
             station.task_results = []
             return {
@@ -728,10 +739,12 @@ class GameService:
             if not results:
                 raise GameError("task_content_missing", "采矿任务配置缺失，请联系管理员", 409)
             collect_xp = site.task_snapshot.harvest_xp
+            task_id = site.task_snapshot.content_id
             for result in results:
                 add_item(player, result.item_id, result.quantity, result.quality)
             levels = grant_experience(player, collect_xp, self.content)
             partner_experience = self._grant_task_partner_experience(player, site.task_snapshot)
+            record_production_collection(player, "mining", task_id, results)
             site.task_snapshot = None
             site.task_results = []
             return {
@@ -1129,6 +1142,9 @@ class GameService:
                 pond.stalled = False
             # 捞到门槛以下不在这里扣分：鱼群不稳定，世代加值会在之后的每个周期里自己回落。
             pond.last_settled_at = now
+            player.achievement_stats.pond_harvested[species.id] = (
+                player.achievement_stats.pond_harvested.get(species.id, 0) + quantity
+            )
             return {
                 "pond_id": pond_id,
                 "species_id": species.id,
@@ -2376,6 +2392,8 @@ class GameService:
             commission.completed_at = now
             commission.completed_by_name = state.display_name
             state.maple_flame += commission.reward_maple_flame
+            state.achievement_stats.own_commissions_completed += 1
+            state.achievement_stats.commissions_completed += 1
             return {
                 "commission_id": commission.commission_id,
                 "npc_name": commission.npc_name,
@@ -2386,7 +2404,7 @@ class GameService:
                 "consumed": [snapshot.model_dump() for snapshot in consumed],
             }
 
-        state, result = self.repository.update(player.player_id, mutation)
+        state, result = self._update_player(player.player_id, mutation, now)
         return {"result": result, "state": self._snapshot(state, now)}
 
     def forward_commission(self, oauth_sub: str) -> dict:
@@ -2485,6 +2503,7 @@ class GameService:
                 completed_at=now,
             ))
             del state.commission_takes[:-30]
+            state.achievement_stats.commissions_completed += 1
             return {
                 "commission_id": entry.commission_id,
                 "owner_name": entry.owner_name,
@@ -2497,7 +2516,7 @@ class GameService:
             }
 
         try:
-            state, result = self.repository.update(player.player_id, mutation)
+            state, result = self._update_player(player.player_id, mutation, now)
         except Exception:
             board.release(day, entry.commission_id, player.player_id, payout)
             raise
@@ -3116,6 +3135,62 @@ class GameService:
             "state": state,
         }
 
+    def claim_achievement(self, oauth_sub: str, achievement_id: str) -> dict:
+        achievement_id = str(achievement_id or "").strip()
+        definition = self.content.achievement_map.get(achievement_id)
+        if definition is None:
+            raise GameError("achievement_not_found", "这个成就不存在", 404)
+        now = self._now()
+
+        def mutation(player: PlayerState):
+            evaluate_achievements(player, self.content, now)
+            progress = next(
+                (entry for entry in player.achievements if entry.achievement_id == achievement_id),
+                None,
+            )
+            if progress is None:
+                raise GameError("achievement_incomplete", "这个成就还没有达成", 409)
+            if progress.claimed_at:
+                raise GameError("achievement_claimed", "这个成就奖励已经领取", 409)
+            progress.claimed_at = now
+            player.maple_flame += definition.reward_maple_flame
+            return {
+                "claimed": [{
+                    "achievement_id": definition.id,
+                    "name": definition.name,
+                    "reward_maple_flame": definition.reward_maple_flame,
+                }],
+                "maple_flame": definition.reward_maple_flame,
+            }
+
+        player, result = self._update_by_sub(oauth_sub, mutation)
+        return {"result": result, "state": self._snapshot(player, now)}
+
+    def claim_all_achievements(self, oauth_sub: str) -> dict:
+        now = self._now()
+
+        def mutation(player: PlayerState):
+            evaluate_achievements(player, self.content, now)
+            progress_map = {entry.achievement_id: entry for entry in player.achievements}
+            claimed = []
+            total = 0
+            for definition in self.content.achievements:
+                progress = progress_map.get(definition.id)
+                if progress is None or progress.claimed_at:
+                    continue
+                progress.claimed_at = now
+                total += definition.reward_maple_flame
+                claimed.append({
+                    "achievement_id": definition.id,
+                    "name": definition.name,
+                    "reward_maple_flame": definition.reward_maple_flame,
+                })
+            player.maple_flame += total
+            return {"claimed": claimed, "maple_flame": total}
+
+        player, result = self._update_by_sub(oauth_sub, mutation)
+        return {"result": result, "state": self._snapshot(player, now)}
+
     def admin_search_players(self, query: str = "", limit: int = 50) -> list[dict]:
         bounded_limit = max(1, min(int(limit), 100))
         return [self._admin_player_summary(player) for player in self.repository.search(query, bounded_limit)]
@@ -3188,14 +3263,27 @@ class GameService:
         def mutation(player: PlayerState):
             self._settle(player, now)
 
-        player, _ = self.repository.update(player_id, mutation)
+        player, _ = self._update_player(player_id, mutation, now)
         return self._snapshot(player, now)
+
+    def _update_player(self, player_id: str, mutation, now: int | None = None):
+        completed_at = self._now() if now is None else now
+
+        def wrapped(player: PlayerState):
+            reconcile_legacy_auto_rewards(player, self.content)
+            result = mutation(player)
+            achievements = evaluate_achievements(player, self.content, completed_at)
+            if achievements and isinstance(result, dict):
+                result = {**result, "achievements": achievements}
+            return result
+
+        return self.repository.update(player_id, wrapped)
 
     def _update_by_sub(self, oauth_sub: str, mutation):
         player = self.repository.get_by_sub(oauth_sub)
         if not player:
             raise GameError("player_not_found", "角色不存在", 404)
-        return self.repository.update(player.player_id, mutation)
+        return self._update_player(player.player_id, mutation)
 
     def _roll_gacha_rarity(self, gacha: GachaDefinition, progress: GachaPoolProgressState) -> int | None:
         probabilities = gacha.rarity_probabilities
@@ -3926,6 +4014,7 @@ class GameService:
             "portals": self._portal_snapshot(player),
             "commissions": self._commission_snapshot(player, now),
             "mail": self._mail_summary(player, now),
+            "achievements": achievement_snapshot(player, self.content),
             "crops": [
                 crop.model_dump()
                 for crop in self.content.crops

@@ -726,6 +726,45 @@ class ShopEntry(BaseModel):
     min_level: int = Field(ge=1)
 
 
+AchievementTier = Literal["blue", "purple", "gold"]
+AchievementHook = Literal[
+    "story_seen",
+    "production_collections",
+    "partners_owned",
+    "player_level",
+    "crops_harvested",
+    "recipes_crafted",
+    "commissions_completed",
+    "talents_unlocked",
+    "pond_harvested",
+    "fish_codex_entries",
+    "big_catch_caught",
+    "max_production_quality",
+    "portal_completed",
+]
+
+
+class AchievementConditionDefinition(BaseModel):
+    hook: AchievementHook
+    params: dict[str, object] = Field(default_factory=dict)
+
+
+class AchievementDefinition(BaseModel):
+    id: str = Field(min_length=1)
+    name: str = Field(min_length=1)
+    description: str = Field(min_length=1)
+    tier: AchievementTier
+    reward_maple_flame: int = Field(gt=0)
+    condition: AchievementConditionDefinition
+
+    @model_validator(mode="after")
+    def validate_tier_reward(self):
+        expected = {"blue": 50, "purple": 100, "gold": 200}[self.tier]
+        if self.reward_maple_flame != expected:
+            raise ValueError(f"{self.tier} achievement reward must be {expected} maple flame")
+        return self
+
+
 class GameContent(BaseModel):
     schema_version: int = Field(ge=1)
     game: GameMeta
@@ -755,6 +794,7 @@ class GameContent(BaseModel):
     partner_growth: PartnerGrowthDefinition
     portals: list[PortalDefinition] = Field(default_factory=list)
     commissions: CommissionsDefinition
+    achievements: list[AchievementDefinition] = Field(default_factory=list)
     shop: list[ShopEntry]
 
     @model_validator(mode="after")
@@ -780,6 +820,7 @@ class GameContent(BaseModel):
         unique([entry.id for entry in self.pond_species], "pond species")
         unique([entry.id for entry in self.task_items], "task item")
         unique([entry.id for entry in self.portals], "portal")
+        unique([entry.id for entry in self.achievements], "achievement")
         unique([tribute.id for portal in self.portals for tribute in portal.tributes], "portal tribute")
         levels = [entry.level for entry in self.levels]
         unique([str(level) for level in levels], "level")
@@ -857,6 +898,7 @@ class GameContent(BaseModel):
         self._validate_aquatic(items)
         self._validate_portals(items)
         self._validate_commissions()
+        self._validate_achievements()
         for entry in self.shop:
             if entry.item_id not in items:
                 raise ValueError(f"shop {entry.id} references an unknown item")
@@ -932,6 +974,25 @@ class GameContent(BaseModel):
         )
         if missing:
             raise ValueError(f"commissions do not grade these items: {', '.join(missing)}")
+
+    def _validate_achievements(self) -> None:
+        crop_ids = set(self.crop_map)
+        recipe_ids = set(self.recipe_map)
+        portal_ids = set(self.portal_map)
+        species_ids = set(self.pond_species_map)
+        for achievement in self.achievements:
+            hook = achievement.condition.hook
+            params = achievement.condition.params
+            if hook == "production_collections" and str(params.get("industry")) not in self.industries:
+                raise ValueError(f"achievement {achievement.id} references an unknown industry")
+            if hook == "crops_harvested" and not {str(entry) for entry in params.get("crop_ids", [])} <= crop_ids:
+                raise ValueError(f"achievement {achievement.id} references an unknown crop")
+            if hook == "recipes_crafted" and not {str(entry) for entry in params.get("recipe_ids", [])} <= recipe_ids:
+                raise ValueError(f"achievement {achievement.id} references an unknown recipe")
+            if hook == "portal_completed" and str(params.get("portal_id")) not in portal_ids:
+                raise ValueError(f"achievement {achievement.id} references an unknown portal")
+            if hook == "pond_harvested" and str(params.get("species_id")) not in species_ids:
+                raise ValueError(f"achievement {achievement.id} references an unknown pond species")
 
     def _validate_reward(self, reward: RewardDefinition, items: set[str], label: str) -> None:
         for entry in reward.items:
@@ -1019,6 +1080,10 @@ class GameContent(BaseModel):
     @property
     def portal_map(self) -> dict[str, PortalDefinition]:
         return {entry.id: entry for entry in self.portals}
+
+    @property
+    def achievement_map(self) -> dict[str, AchievementDefinition]:
+        return {entry.id: entry for entry in self.achievements}
 
     @property
     def portal_tribute_map(self) -> dict[str, tuple[PortalDefinition, PortalTributeDefinition]]:

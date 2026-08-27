@@ -525,8 +525,36 @@ class MailReceiptState(BaseModel):
     claimed_at: int = Field(default=0, ge=0)
 
 
+class AchievementCompletionState(BaseModel):
+    achievement_id: str = Field(min_length=1)
+    completed_at: int = Field(ge=0)
+    claimed_at: int = Field(default=0, ge=0)
+
+
+class AchievementStats(BaseModel):
+    production_collections: dict[str, int] = Field(default_factory=dict)
+    harvested_crop_ids: list[str] = Field(default_factory=list)
+    crafted_recipe_ids: list[str] = Field(default_factory=list)
+    own_commissions_completed: int = Field(default=0, ge=0)
+    commissions_completed: int = Field(default=0, ge=0)
+    pond_harvested: dict[str, int] = Field(default_factory=dict)
+    max_production_quality: int = Field(default=0, ge=0, le=5)
+
+    @model_validator(mode="after")
+    def validate_sets_and_counts(self):
+        if len(self.harvested_crop_ids) != len(set(self.harvested_crop_ids)):
+            raise ValueError("achievement stats cannot record the same crop twice")
+        if len(self.crafted_recipe_ids) != len(set(self.crafted_recipe_ids)):
+            raise ValueError("achievement stats cannot record the same recipe twice")
+        if any(count < 0 for count in self.production_collections.values()):
+            raise ValueError("achievement production counts cannot be negative")
+        if any(count < 0 for count in self.pond_harvested.values()):
+            raise ValueError("achievement pond harvest counts cannot be negative")
+        return self
+
+
 class PlayerState(BaseModel):
-    schema_version: int = 21
+    schema_version: int = 23
     version: int = 1
     player_id: str
     oauth_sub: str
@@ -562,6 +590,9 @@ class PlayerState(BaseModel):
     # 联动活动的一次性领取记录：campaign_id -> 领取时刻。存在这里而不是别处，是因为
     # 红叶镇存档和 OAuth 账号一一对应，账号级的「只能领一次」才不会被小号或换角色绕过。
     crossover_claims: dict[str, int] = Field(default_factory=dict)
+    achievement_stats: AchievementStats = Field(default_factory=AchievementStats)
+    achievements: list[AchievementCompletionState] = Field(default_factory=list)
+    achievement_auto_rewards_reconciled: bool = True
     created_at: int
     updated_at: int
 
@@ -673,7 +704,23 @@ class PlayerState(BaseModel):
                 pond.setdefault("quality_bonus", 0)
                 pond.setdefault("generation_gain_bonus", 0)
                 pond.setdefault("trait_effects", [])
-        migrated["schema_version"] = 21
+        if schema_version < 22:
+            own_commissions_completed = 0
+            commission = migrated.get("commission")
+            if isinstance(commission, dict) and commission.get("status") == "completed":
+                own_commissions_completed = 1
+            migrated.setdefault("achievement_stats", {
+                "own_commissions_completed": own_commissions_completed,
+                "commissions_completed": own_commissions_completed + len(migrated.get("commission_takes") or []),
+            })
+            migrated.setdefault("achievements", [])
+        if schema_version < 23:
+            for achievement in migrated.get("achievements") or []:
+                if isinstance(achievement, dict):
+                    achievement.setdefault("claimed_at", 0)
+            # v22 曾在成就达成时自动发枫火；服务层拿到内容配置后会回收，并把它们恢复成待领取。
+            migrated["achievement_auto_rewards_reconciled"] = False
+        migrated["schema_version"] = 23
         return migrated
 
     @model_validator(mode="after")
@@ -701,6 +748,9 @@ class PlayerState(BaseModel):
         mail_ids = [entry.mail_id for entry in self.mail_receipts]
         if len(mail_ids) != len(set(mail_ids)):
             raise ValueError("player cannot record the same mail more than once")
+        achievement_ids = [entry.achievement_id for entry in self.achievements]
+        if len(achievement_ids) != len(set(achievement_ids)):
+            raise ValueError("player cannot complete the same achievement more than once")
         taken_ids = [entry.commission_id for entry in self.commission_takes]
         if len(taken_ids) != len(set(taken_ids)):
             raise ValueError("player cannot take the same commission more than once")

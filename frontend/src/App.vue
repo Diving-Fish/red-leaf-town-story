@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { ChevronRight, Copy, Inbox, Leaf, LogOut, Map, Menu, RefreshCw, RotateCw, UserRound, X } from 'lucide-vue-next'
+import { ChevronRight, Copy, Inbox, Leaf, LogOut, Map, Menu, RefreshCw, RotateCw, Trophy, UserRound, X } from 'lucide-vue-next'
 
 import ActionButton from '@/components/ActionButton.vue'
 import AppNav from '@/components/AppNav.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
+import AchievementPanel from '@/components/achievements/AchievementPanel.vue'
 import MailInbox from '@/components/mail/MailInbox.vue'
 import ProgressBar from '@/components/ProgressBar.vue'
 import ResourcePill from '@/components/ResourcePill.vue'
@@ -139,7 +140,11 @@ async function copyBindingCommand() {
           <ResourcePill kind="coins" />
           <ResourcePill kind="stamina" />
         </div>
-        <button class="icon-button inbox-button" aria-label="收件箱" @click="ui.mailOpen = true">
+        <button class="icon-button achievement-button" aria-label="成就" @click="ui.achievementOpen = true; ui.mailOpen = false">
+          <Trophy :size="18" />
+          <i v-if="game.state.achievements.claimable" class="inbox-badge unclaimed">{{ game.state.achievements.claimable > 99 ? '99+' : game.state.achievements.claimable }}</i>
+        </button>
+        <button class="icon-button inbox-button" aria-label="收件箱" @click="ui.mailOpen = true; ui.achievementOpen = false">
           <Inbox :size="18" />
           <i v-if="mailBadge" class="inbox-badge" :class="mailBadge.tone">{{ mailBadge.count > 99 ? '99+' : mailBadge.count }}</i>
         </button>
@@ -190,6 +195,7 @@ async function copyBindingCommand() {
   </div>
 
   <MailInbox v-if="!isAdminRoute" />
+  <AchievementPanel v-if="!isAdminRoute" />
   <StoryOverlay v-if="!isAdminRoute" />
   <ConfirmDialog />
   <Transition name="toast"><div v-if="game.notice" class="toast">{{ game.notice }}</div></Transition>

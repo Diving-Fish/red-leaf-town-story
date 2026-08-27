@@ -19,6 +19,7 @@ PLUGIN_META = {
     "help_text": """【红叶镇物语】
   红叶镇                  — 查看农场摘要
   红叶镇招募 [1/10]       — 使用引路枫叶招募伙伴
+  红叶镇成就              — 查看成就进度
   红叶镇委托              — 查看今日委托和公共转发池
   红叶镇交委托            — 交付今日委托
   绑定红叶镇 [绑定码]     — 绑定水鱼账号中的红叶镇角色
@@ -71,6 +72,7 @@ summary_command = on_command("红叶镇", force_whitespace=True)
 recruit_command = on_command("红叶镇招募", aliases={"红叶镇抽卡"}, force_whitespace=True)
 commission_command = on_command("红叶镇委托", aliases={"红叶镇今日委托"}, force_whitespace=True)
 commission_submit_command = on_command("红叶镇交委托", aliases={"红叶镇提交委托"}, force_whitespace=True)
+achievement_command = on_command("红叶镇成就", force_whitespace=True)
 
 
 @recruit_command.handle()
@@ -195,6 +197,38 @@ def _commission_lines(state: dict) -> list[str]:
         f"{mark}{today['npc_title']}{today['npc_name']}：{item} ×{today['quantity']}",
         f"报酬 {today['reward_maple_flame']} 枫火 · {status}",
     ]
+
+
+@achievement_command.handle()
+async def achievement_summary(bot: Bot, event: Event):
+    identity = resolve_identity(bot, event)
+    if not identity:
+        await _reply(event, "无法识别当前 QQ 身份。").send()
+        return
+    try:
+        state = get_service().snapshot_by_identity(identity)
+    except GameError as exc:
+        await _reply(event, exc.message).send()
+        return
+    achievements = state["achievements"]
+    tier_names = {"blue": "蓝色", "purple": "紫色", "gold": "金色"}
+    lines = [
+        f"🏆 红叶镇成就 {achievements['completed']}/{achievements['total']}",
+        f"已领取：{achievements['maple_flame_earned']} 枫火 · 待领取：{achievements['claimable_maple_flame']} 枫火",
+    ]
+    for tier, name in tier_names.items():
+        entries = [entry for entry in achievements["entries"] if entry["tier"] == tier]
+        completed = sum(1 for entry in entries if entry["completed"])
+        lines.append(f"{name}：{completed}/{len(entries)}")
+    recent = sorted(
+        (entry for entry in achievements["entries"] if entry["completed"]),
+        key=lambda entry: entry["completed_at"] or 0,
+        reverse=True,
+    )[:3]
+    if recent:
+        lines.append("最近达成：" + "、".join(entry["name"] for entry in recent))
+    lines.append("请前往 Web 成就册领取奖励：https://chiyuki.diving-fish.com/red-leaf-town/")
+    await _reply(event, "\n".join(lines)).send()
 
 
 @commission_command.handle()

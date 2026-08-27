@@ -93,6 +93,42 @@ async def test_state_requires_login(client):
 
 
 @runs
+async def test_state_exposes_achievement_catalog(client):
+    authenticate(client)
+    response = await client.get("/api/red-leaf-town/state")
+    state = (await response.get_json())["data"]
+
+    assert response.status_code == 200
+    assert state["achievements"]["total"] == 22
+    assert len(state["achievements"]["entries"]) == 22
+    assert {entry["tier"] for entry in state["achievements"]["entries"]} == {"blue", "purple", "gold"}
+
+
+@runs
+async def test_achievement_reward_must_be_claimed_from_achievement_api(client, service):
+    player = service.repository.get_by_sub("route-sub")
+    service.repository.update(player.player_id, lambda state: state.seen_story_ids.append("opening_arrival"))
+    authenticate(client)
+
+    state_response = await client.get("/api/red-leaf-town/state")
+    state = (await state_response.get_json())["data"]
+    entry = next(item for item in state["achievements"]["entries"] if item["achievement_id"] == "arrival_from_beyond")
+    assert (entry["completed"], entry["claimable"], entry["claimed"]) == (True, True, False)
+    assert state["player"]["maple_flame"] == 0
+
+    claimed_response = await client.post("/api/red-leaf-town/achievements/arrival_from_beyond/claim")
+    claimed = (await claimed_response.get_json())["data"]
+    assert claimed_response.status_code == 200
+    assert claimed["result"]["maple_flame"] == 50
+    assert claimed["state"]["player"]["maple_flame"] == 50
+    assert claimed["state"]["achievements"]["claimable"] == 0
+
+    replayed = await client.post("/api/red-leaf-town/achievements/arrival_from_beyond/claim")
+    assert replayed.status_code == 409
+    assert (await replayed.get_json())["code"] == "achievement_claimed"
+
+
+@runs
 async def test_shop_and_plant_api(client):
     authenticate(client)
     bought = await client.post("/api/red-leaf-town/shop/buy", json={"shop_id": "carrot_seed", "quantity": 2})
