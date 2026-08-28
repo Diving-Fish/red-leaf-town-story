@@ -393,6 +393,27 @@ def test_growth_pauses_while_the_slot_is_empty(ranch):
     assert coop["animals"][0]["remaining_stage_cycles"] == 3
 
 
+def test_stalling_at_a_cycle_boundary_keeps_the_existing_partial_cycle(ranch):
+    service, repository, clock, player = ranch
+    service.buy_animal("stock-sub", "coop_1", "chicken")
+
+    almost_three_cycles = 3 * CYCLE - 52 * 60
+    clock.advance(almost_three_cycles)
+    coop = facility_of(service.snapshot_by_sub("stock-sub"), "coop_1")
+    assert coop["animals"][0]["remaining_stage_cycles"] == 1
+    assert coop["next_cycle_seconds"] == 52 * 60
+
+    fill_feed(repository, player.player_id, units=0, score=0)
+    clock.advance(52 * 60)
+    coop = facility_of(service.snapshot_by_sub("stock-sub"), "coop_1")
+
+    assert coop["stalled"] is True
+    assert coop["animals"][0]["stage"] == "juvenile"
+    assert coop["animals"][0]["remaining_stage_cycles"] == 1
+    assert coop["settle_remainder"] == almost_three_cycles % CYCLE
+    assert coop["next_cycle_seconds"] == 52 * 60
+
+
 def test_a_long_offline_stretch_settles_in_one_pass(ranch):
     service, repository, clock, player = ranch
     service.buy_animal("stock-sub", "coop_1", "chicken")

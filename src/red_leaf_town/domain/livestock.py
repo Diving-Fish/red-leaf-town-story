@@ -306,7 +306,9 @@ def settle_livestock(
             facility.last_settled_at = now
             continue
         cycle = entry.cycle_seconds
-        elapsed = facility.settle_remainder + max(0, now - facility.last_settled_at)
+        was_stalled = facility.stalled
+        previous_remainder = facility.settle_remainder
+        elapsed = previous_remainder + max(0, now - facility.last_settled_at)
         wanted_cycles = elapsed // cycle if cycle > 0 else 0
         _, units = plans.get(facility.facility_id, (0, 0.0))
         budget = units * max(0.0, min(1.0, ratio))
@@ -320,11 +322,15 @@ def settle_livestock(
         )
         consumed += advance.consumed_units
         if advance.stalled:
-            # 停在最后一个付得起的周期末尾，剩下的时间不补发。
-            facility.settle_remainder = 0
+            # 连下一个周期都买不起时，停在这段结算前已经走到的位置；
+            # 不能把之前的余量清零，否则一只还差几分钟长成的幼崽会倒退整整一个周期。
+            # 若本段已经付过若干整周期，则停在最后一个已付周期的末尾。
+            facility.settle_remainder = 0 if advance.cycles else previous_remainder
         elif cycle > 0:
             facility.settle_remainder = elapsed % cycle
-        facility.stalled = advance.stalled
+        # 两次请求间还没到下一个周期边界时，没有发生新的结算尝试，
+        # 不能因此把上一次的停摆状态擦掉。
+        facility.stalled = advance.stalled or (was_stalled and wanted_cycles <= 0)
         facility.last_settled_at = now
         settlement.facilities[facility.facility_id] = advance
         settlement.stalled = settlement.stalled or advance.stalled
