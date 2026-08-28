@@ -15,6 +15,8 @@ const memberTwo = ref('')
 const memberThree = ref('')
 const resolution = ref<ExplorationResolutionResult | null>(null)
 const selectedActors = ref<Record<string, string>>({})
+const EXPLORATION_PARTY_STORAGE_PREFIX = 'red-leaf-town:exploration-party:'
+let restoredPartyStorageKey = ''
 
 const CHECK_ATTRIBUTES: Record<ExplorationAttribute, { name: string; icon: typeof Dumbbell }> = {
   strength: { name: '力量', icon: Dumbbell },
@@ -41,7 +43,39 @@ const leaders = computed(() => allPartners.value.filter((partner) =>
 const selectedIds = computed(() => [leaderId.value, memberTwo.value, memberThree.value].filter(Boolean))
 
 watchEffect(() => {
-  if (!leaderId.value && leaders.value.length) leaderId.value = leaders.value[0].partner_id
+  const playerId = game.account?.player_id
+  if (!playerId || !game.state || !allPartners.value.length) return
+
+  const storageKey = `${EXPLORATION_PARTY_STORAGE_PREFIX}${playerId}`
+  if (restoredPartyStorageKey === storageKey) return
+  restoredPartyStorageKey = storageKey
+
+  let savedIds: string[] = []
+  try {
+    const parsed = JSON.parse(localStorage.getItem(storageKey) || 'null')
+    if (Array.isArray(parsed)) savedIds = parsed.filter((id): id is string => typeof id === 'string').slice(0, 3)
+  } catch {
+    savedIds = []
+  }
+
+  const desiredSize = savedIds.length || 1
+  const used = new Set<string>()
+  const savedLeader = savedIds[0]
+  const leader = leaders.value.find((partner) => partner.partner_id === savedLeader) || leaders.value[0]
+  if (leader) {
+    leaderId.value = leader.partner_id
+    used.add(leader.partner_id)
+  }
+
+  const restoredMembers = savedIds.slice(1)
+    .map((partnerId) => allPartners.value.find((partner) => partner.partner_id === partnerId)?.partner_id || '')
+    .filter((partnerId) => partnerId && !used.has(partnerId))
+  const replacementMembers = allPartners.value
+    .map((partner) => partner.partner_id)
+    .filter((partnerId) => !used.has(partnerId) && !restoredMembers.includes(partnerId))
+  const members = [...restoredMembers, ...replacementMembers].slice(0, Math.max(0, desiredSize - used.size))
+  memberTwo.value = members[0] || ''
+  memberThree.value = members[1] || ''
 })
 
 function availableFor(slot: number) {
@@ -64,7 +98,18 @@ function explorationAbility(partner: (typeof allPartners.value)[number]) {
 async function start() {
   if (!expedition.value || !leaderId.value) return
   resolution.value = null
-  await game.startExploration(expedition.value.id, selectedIds.value, leaderId.value)
+  const result = await game.startExploration(expedition.value.id, selectedIds.value, leaderId.value)
+  if (result) {
+    try {
+      const playerId = game.account?.player_id
+      if (playerId) localStorage.setItem(
+        `${EXPLORATION_PARTY_STORAGE_PREFIX}${playerId}`,
+        JSON.stringify(selectedIds.value),
+      )
+    } catch {
+      // Local storage may be unavailable in private browsing; the run itself is unaffected.
+    }
+  }
 }
 
 async function resolveChoice(choiceId: string) {
