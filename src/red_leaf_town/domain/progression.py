@@ -16,7 +16,8 @@ def settle_stamina(player: PlayerState, content: GameContent, now: int) -> None:
     level = content.level_definition(player.level)
     cap = level.stamina_cap
     if player.stamina >= cap:
-        player.stamina = cap
+        # 体力药和枫火购买允许把体力顶到上限之上。溢出期间不回不扣，只把计时归零，
+        # 掉回上限以下时就从那一刻重新开始攒。这里不能夹回 cap，否则溢出立刻蒸发。
         player.stamina_updated_at = now
         return
     elapsed = max(0, now - player.stamina_updated_at)
@@ -41,11 +42,22 @@ def consume_stamina(player: PlayerState, amount: int, content: GameContent, now:
 
 
 def refund_stamina(player: PlayerState, amount: int, content: GameContent, now: int) -> None:
+    """退还已经花掉的体力（取消任务）。退回来的不算额外补给，照旧封在上限。"""
     if amount <= 0:
         return
     settle_stamina(player, content, now)
     cap = content.level_definition(player.level).stamina_cap
-    player.stamina = min(cap, player.stamina + amount)
+    # 已经溢出的体力不能被这次退还夹回上限，所以取「原值」和「补到上限」里大的那个。
+    player.stamina = max(player.stamina, min(cap, player.stamina + amount))
+
+
+def grant_stamina(player: PlayerState, amount: int, content: GameContent, now: int) -> int:
+    """体力药、枫火购买这类外部补给，可以把体力顶到上限之上。返回实际加了多少。"""
+    if amount <= 0:
+        return 0
+    settle_stamina(player, content, now)
+    player.stamina += amount
+    return amount
 
 
 def grant_experience(player: PlayerState, amount: int, content: GameContent) -> list[int]:

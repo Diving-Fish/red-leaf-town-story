@@ -35,7 +35,16 @@
     ]
   },
   "stamina": {
-    "restore_seconds": 720
+    "restore_seconds": 720,
+    "potion_item_id": "feien_tonic",
+    "potion_restore": 40,
+    "purchase_restore": 40,
+    "purchase_prices": [
+      50,
+      100,
+      150,
+      200
+    ]
   },
   "quality": {
     "grades": [
@@ -253,7 +262,9 @@
       "kind": "seed",
       "sell_price": 0,
       "has_quality": false,
-      "tags": ["crop_seed"]
+      "tags": [
+        "crop_seed"
+      ]
     },
     {
       "id": "orange_berry",
@@ -262,7 +273,10 @@
       "kind": "produce",
       "sell_price": 300,
       "has_quality": true,
-      "tags": ["crop", "food"]
+      "tags": [
+        "crop",
+        "food"
+      ]
     },
     {
       "id": "carrot_seed",
@@ -271,7 +285,9 @@
       "kind": "seed",
       "sell_price": 0,
       "has_quality": false,
-      "tags": ["crop_seed"]
+      "tags": [
+        "crop_seed"
+      ]
     },
     {
       "id": "carrot",
@@ -280,7 +296,11 @@
       "kind": "produce",
       "sell_price": 10,
       "has_quality": true,
-      "tags": ["crop", "food", "fodder"],
+      "tags": [
+        "crop",
+        "food",
+        "fodder"
+      ],
       "feed": {
         "units": 3,
         "score": 25
@@ -293,7 +313,9 @@
       "kind": "seed",
       "sell_price": 0,
       "has_quality": false,
-      "tags": ["crop_seed"]
+      "tags": [
+        "crop_seed"
+      ]
     },
     {
       "id": "potato",
@@ -302,7 +324,11 @@
       "kind": "produce",
       "sell_price": 12,
       "has_quality": true,
-      "tags": ["crop", "food", "fodder"],
+      "tags": [
+        "crop",
+        "food",
+        "fodder"
+      ],
       "feed": {
         "units": 3,
         "score": 22
@@ -315,7 +341,9 @@
       "kind": "seed",
       "sell_price": 0,
       "has_quality": false,
-      "tags": ["crop_seed"]
+      "tags": [
+        "crop_seed"
+      ]
     },
     {
       "id": "wheat",
@@ -324,7 +352,11 @@
       "kind": "produce",
       "sell_price": 17,
       "has_quality": true,
-      "tags": ["crop", "food", "fodder"],
+      "tags": [
+        "crop",
+        "food",
+        "fodder"
+      ],
       "feed": {
         "units": 4,
         "score": 30
@@ -337,7 +369,9 @@
       "kind": "seed",
       "sell_price": 0,
       "has_quality": false,
-      "tags": ["crop_seed"]
+      "tags": [
+        "crop_seed"
+      ]
     },
     {
       "id": "pumpkin",
@@ -346,7 +380,11 @@
       "kind": "produce",
       "sell_price": 50,
       "has_quality": true,
-      "tags": ["crop", "food", "fodder"],
+      "tags": [
+        "crop",
+        "food",
+        "fodder"
+      ],
       "feed": {
         "units": 8,
         "score": 40
@@ -359,7 +397,10 @@
       "kind": "material",
       "sell_price": 6,
       "has_quality": true,
-      "tags": ["wood", "forage"]
+      "tags": [
+        "wood",
+        "forage"
+      ]
     },
     {
       "id": "woodland_mushroom",
@@ -368,7 +409,11 @@
       "kind": "material",
       "sell_price": 7,
       "has_quality": true,
-      "tags": ["forage", "food", "fodder"],
+      "tags": [
+        "forage",
+        "food",
+        "fodder"
+      ],
       "feed": {
         "units": 2,
         "score": 20
@@ -381,7 +426,9 @@
       "kind": "material",
       "sell_price": 10,
       "has_quality": true,
-      "tags": ["forage"]
+      "tags": [
+        "forage"
+      ]
     },
     {
       "id": "amber_beeswax",
@@ -390,7 +437,9 @@
       "kind": "material",
       "sell_price": 16,
       "has_quality": true,
-      "tags": ["forage"]
+      "tags": [
+        "forage"
+      ]
     },
     {
       "id": "tough_fodder",
@@ -399,7 +448,10 @@
       "kind": "material",
       "sell_price": 5,
       "has_quality": true,
-      "tags": ["forage", "fodder"],
+      "tags": [
+        "forage",
+        "fodder"
+      ],
       "feed": {
         "units": 5,
         "score": 12
@@ -412,7 +464,11 @@
       "kind": "material",
       "sell_price": 10,
       "has_quality": true,
-      "tags": ["forage", "medicine", "fodder"],
+      "tags": [
+        "forage",
+        "medicine",
+        "fodder"
+      ],
       "feed": {
         "units": 2,
         "score": 35
@@ -425,7 +481,10 @@
       "kind": "material",
       "sell_price": 14,
       "has_quality": true,
-      "tags": ["forage", "medicine"]
+      "tags": [
+        "forage",
+        "medicine"
+      ]
     },
     {
       "id": "silver_star_moss",
@@ -434,7 +493,10 @@
       "kind": "material",
       "sell_price": 30,
       "has_quality": true,
-      "tags": ["forage", "medicine"]
+      "tags": [
+        "forage",
+        "medicine"
+      ]
     },
     {
       "id": "maple_plank",
@@ -443,7 +505,9 @@
       "kind": "product",
       "sell_price": 110,
       "has_quality": true,
-      "tags": ["wood_product"]
+      "tags": [
+        "wood_product"
+      ]
     },
     {
       "id": "herbal_salve",
@@ -452,7 +516,9 @@
       "kind": "product",
       "sell_price": 120,
       "has_quality": true,
-      "tags": ["medicine"]
+      "tags": [
+        "medicine"
+      ]
     },
     {
       "id": "flour",
@@ -461,7 +527,9 @@
       "kind": "product",
       "sell_price": 130,
       "has_quality": true,
-      "tags": ["food"]
+      "tags": [
+        "food"
+      ]
     },
     {
       "id": "pickled_carrot",
@@ -470,7 +538,9 @@
       "kind": "product",
       "sell_price": 130,
       "has_quality": true,
-      "tags": ["food"]
+      "tags": [
+        "food"
+      ]
     },
     {
       "id": "red_copper_ore",
@@ -479,7 +549,9 @@
       "kind": "material",
       "sell_price": 12,
       "has_quality": true,
-      "tags": ["mineral"]
+      "tags": [
+        "mineral"
+      ]
     },
     {
       "id": "moon_silver_ore",
@@ -488,7 +560,9 @@
       "kind": "material",
       "sell_price": 24,
       "has_quality": true,
-      "tags": ["mineral"]
+      "tags": [
+        "mineral"
+      ]
     },
     {
       "id": "partner_notes_small",
@@ -521,7 +595,10 @@
       "kind": "material",
       "sell_price": 6,
       "has_quality": true,
-      "tags": ["fish", "fodder"],
+      "tags": [
+        "fish",
+        "fodder"
+      ],
       "feed": {
         "units": 2,
         "score": 18
@@ -534,7 +611,11 @@
       "kind": "material",
       "sell_price": 34,
       "has_quality": true,
-      "tags": ["fish", "food", "fodder"],
+      "tags": [
+        "fish",
+        "food",
+        "fodder"
+      ],
       "feed": {
         "units": 2,
         "score": 20
@@ -547,7 +628,11 @@
       "kind": "material",
       "sell_price": 60,
       "has_quality": true,
-      "tags": ["fish", "food", "fodder"],
+      "tags": [
+        "fish",
+        "food",
+        "fodder"
+      ],
       "feed": {
         "units": 2,
         "score": 24
@@ -560,7 +645,11 @@
       "kind": "material",
       "sell_price": 75,
       "has_quality": true,
-      "tags": ["fish", "food", "fodder"],
+      "tags": [
+        "fish",
+        "food",
+        "fodder"
+      ],
       "feed": {
         "units": 2,
         "score": 28
@@ -573,7 +662,11 @@
       "kind": "material",
       "sell_price": 20,
       "has_quality": true,
-      "tags": ["fish", "food", "fodder"],
+      "tags": [
+        "fish",
+        "food",
+        "fodder"
+      ],
       "feed": {
         "units": 2,
         "score": 19
@@ -586,7 +679,11 @@
       "kind": "material",
       "sell_price": 46,
       "has_quality": true,
-      "tags": ["fish", "food", "fodder"],
+      "tags": [
+        "fish",
+        "food",
+        "fodder"
+      ],
       "feed": {
         "units": 2,
         "score": 22
@@ -599,7 +696,11 @@
       "kind": "material",
       "sell_price": 38,
       "has_quality": true,
-      "tags": ["fish", "food", "fodder"],
+      "tags": [
+        "fish",
+        "food",
+        "fodder"
+      ],
       "feed": {
         "units": 2,
         "score": 21
@@ -612,7 +713,10 @@
       "kind": "material",
       "sell_price": 300,
       "has_quality": true,
-      "tags": ["fish", "food"]
+      "tags": [
+        "fish",
+        "food"
+      ]
     },
     {
       "id": "giant_maple_perch",
@@ -621,7 +725,10 @@
       "kind": "material",
       "sell_price": 700,
       "has_quality": true,
-      "tags": ["fish", "food"]
+      "tags": [
+        "fish",
+        "food"
+      ]
     },
     {
       "id": "giant_moon_sturgeon",
@@ -630,7 +737,10 @@
       "kind": "material",
       "sell_price": 1500,
       "has_quality": true,
-      "tags": ["fish", "food"]
+      "tags": [
+        "fish",
+        "food"
+      ]
     },
     {
       "id": "fish_fry",
@@ -639,7 +749,9 @@
       "kind": "material",
       "sell_price": 3,
       "has_quality": false,
-      "tags": ["fish"]
+      "tags": [
+        "fish"
+      ]
     },
     {
       "id": "river_weed",
@@ -648,7 +760,10 @@
       "kind": "material",
       "sell_price": 3,
       "has_quality": true,
-      "tags": ["forage", "fodder"],
+      "tags": [
+        "forage",
+        "fodder"
+      ],
       "feed": {
         "units": 3,
         "score": 6
@@ -661,7 +776,11 @@
       "kind": "material",
       "sell_price": 22,
       "has_quality": true,
-      "tags": ["fish", "food", "fodder"],
+      "tags": [
+        "fish",
+        "food",
+        "fodder"
+      ],
       "feed": {
         "units": 2,
         "score": 20
@@ -674,7 +793,9 @@
       "kind": "material",
       "sell_price": 3,
       "has_quality": false,
-      "tags": ["fodder"],
+      "tags": [
+        "fodder"
+      ],
       "feed": {
         "units": 4,
         "score": 5
@@ -687,7 +808,9 @@
       "kind": "product",
       "sell_price": 14,
       "has_quality": true,
-      "tags": ["fodder"],
+      "tags": [
+        "fodder"
+      ],
       "feed": {
         "units": 3,
         "score": 55
@@ -700,7 +823,9 @@
       "kind": "product",
       "sell_price": 18,
       "has_quality": true,
-      "tags": ["fodder"],
+      "tags": [
+        "fodder"
+      ],
       "feed": {
         "units": 10,
         "score": 45
@@ -713,7 +838,9 @@
       "kind": "product",
       "sell_price": 48,
       "has_quality": true,
-      "tags": ["fodder"],
+      "tags": [
+        "fodder"
+      ],
       "feed": {
         "units": 10,
         "score": 80
@@ -726,7 +853,9 @@
       "kind": "consumable",
       "sell_price": 0,
       "has_quality": false,
-      "tags": ["usable"]
+      "tags": [
+        "usable"
+      ]
     },
     {
       "id": "egg",
@@ -735,7 +864,10 @@
       "kind": "produce",
       "sell_price": 45,
       "has_quality": true,
-      "tags": ["poultry_product", "food"]
+      "tags": [
+        "poultry_product",
+        "food"
+      ]
     },
     {
       "id": "milk",
@@ -744,7 +876,10 @@
       "kind": "produce",
       "sell_price": 100,
       "has_quality": true,
-      "tags": ["animal_product", "food"]
+      "tags": [
+        "animal_product",
+        "food"
+      ]
     },
     {
       "id": "golden_egg",
@@ -753,7 +888,9 @@
       "kind": "produce",
       "sell_price": 500,
       "has_quality": false,
-      "tags": ["poultry_product"]
+      "tags": [
+        "poultry_product"
+      ]
     },
     {
       "id": "rich_milk",
@@ -762,7 +899,17 @@
       "kind": "produce",
       "sell_price": 850,
       "has_quality": false,
-      "tags": ["animal_product"]
+      "tags": [
+        "animal_product"
+      ]
+    },
+    {
+      "id": "feien_tonic",
+      "name": "绯恩特调",
+      "icon": "flask-conical",
+      "kind": "consumable",
+      "sell_price": 0,
+      "has_quality": false
     }
   ],
   "crops": [
@@ -1330,7 +1477,9 @@
       "time_difficulty": 100,
       "stamina_cost": 2,
       "collect_xp": 12,
-      "tags": ["wood_product"],
+      "tags": [
+        "wood_product"
+      ],
       "quality": {
         "thresholds": [
           45.0,
@@ -1365,7 +1514,9 @@
       "time_difficulty": 125,
       "stamina_cost": 2,
       "collect_xp": 12,
-      "tags": ["medicine"],
+      "tags": [
+        "medicine"
+      ],
       "quality": {
         "thresholds": [
           55.0,
@@ -1400,7 +1551,9 @@
       "time_difficulty": 115,
       "stamina_cost": 2,
       "collect_xp": 12,
-      "tags": ["food"],
+      "tags": [
+        "food"
+      ],
       "quality": {
         "thresholds": [
           50.0,
@@ -1435,7 +1588,9 @@
       "time_difficulty": 145,
       "stamina_cost": 2,
       "collect_xp": 12,
-      "tags": ["food"],
+      "tags": [
+        "food"
+      ],
       "quality": {
         "thresholds": [
           65.0,
@@ -1470,7 +1625,9 @@
       "time_difficulty": 120,
       "stamina_cost": 2,
       "collect_xp": 12,
-      "tags": ["fodder"],
+      "tags": [
+        "fodder"
+      ],
       "quality": {
         "thresholds": [
           50.0,
@@ -1509,7 +1666,9 @@
       "time_difficulty": 130,
       "stamina_cost": 2,
       "collect_xp": 12,
-      "tags": ["fodder"],
+      "tags": [
+        "fodder"
+      ],
       "quality": {
         "thresholds": [
           55.0,
@@ -1552,7 +1711,9 @@
       "time_difficulty": 150,
       "stamina_cost": 2,
       "collect_xp": 12,
-      "tags": ["fodder"],
+      "tags": [
+        "fodder"
+      ],
       "quality": {
         "thresholds": [
           65.0,
@@ -2190,6 +2351,14 @@
       }
     ]
   },
+  "monthly_card": {
+    "duration_days": 30,
+    "max_days": 180,
+    "activation_maple_flame": 300,
+    "daily_maple_flame": 50,
+    "daily_item_id": "feien_tonic",
+    "daily_item_amount": 2
+  },
   "achievements": [
     {
       "id": "arrival_from_beyond",
@@ -2197,7 +2366,12 @@
       "description": "完成剧情「初到红叶镇」",
       "tier": "blue",
       "reward_maple_flame": 50,
-      "condition": { "hook": "story_seen", "params": { "story_id": "opening_arrival" } }
+      "condition": {
+        "hook": "story_seen",
+        "params": {
+          "story_id": "opening_arrival"
+        }
+      }
     },
     {
       "id": "first_harvest",
@@ -2205,7 +2379,13 @@
       "description": "第一次收获作物",
       "tier": "blue",
       "reward_maple_flame": 50,
-      "condition": { "hook": "production_collections", "params": { "industry": "farming", "count": 1 } }
+      "condition": {
+        "hook": "production_collections",
+        "params": {
+          "industry": "farming",
+          "count": 1
+        }
+      }
     },
     {
       "id": "first_gathering",
@@ -2213,7 +2393,13 @@
       "description": "第一次完成采集",
       "tier": "blue",
       "reward_maple_flame": 50,
-      "condition": { "hook": "production_collections", "params": { "industry": "gathering", "count": 1 } }
+      "condition": {
+        "hook": "production_collections",
+        "params": {
+          "industry": "gathering",
+          "count": 1
+        }
+      }
     },
     {
       "id": "first_mining",
@@ -2221,7 +2407,13 @@
       "description": "第一次完成采矿",
       "tier": "blue",
       "reward_maple_flame": 50,
-      "condition": { "hook": "production_collections", "params": { "industry": "mining", "count": 1 } }
+      "condition": {
+        "hook": "production_collections",
+        "params": {
+          "industry": "mining",
+          "count": 1
+        }
+      }
     },
     {
       "id": "first_crafting",
@@ -2229,7 +2421,13 @@
       "description": "第一次完成加工",
       "tier": "blue",
       "reward_maple_flame": 50,
-      "condition": { "hook": "production_collections", "params": { "industry": "crafting", "count": 1 } }
+      "condition": {
+        "hook": "production_collections",
+        "params": {
+          "industry": "crafting",
+          "count": 1
+        }
+      }
     },
     {
       "id": "first_fish",
@@ -2237,7 +2435,12 @@
       "description": "第一次钓到鱼",
       "tier": "blue",
       "reward_maple_flame": 50,
-      "condition": { "hook": "fish_codex_entries", "params": { "count": 1 } }
+      "condition": {
+        "hook": "fish_codex_entries",
+        "params": {
+          "count": 1
+        }
+      }
     },
     {
       "id": "first_commission",
@@ -2245,7 +2448,13 @@
       "description": "第一次完成自己的每日委托",
       "tier": "blue",
       "reward_maple_flame": 50,
-      "condition": { "hook": "commissions_completed", "params": { "count": 1, "own_only": true } }
+      "condition": {
+        "hook": "commissions_completed",
+        "params": {
+          "count": 1,
+          "own_only": true
+        }
+      }
     },
     {
       "id": "two_partners",
@@ -2253,7 +2462,12 @@
       "description": "持有至少 2 位不同伙伴",
       "tier": "blue",
       "reward_maple_flame": 50,
-      "condition": { "hook": "partners_owned", "params": { "count": 2 } }
+      "condition": {
+        "hook": "partners_owned",
+        "params": {
+          "count": 2
+        }
+      }
     },
     {
       "id": "resident_level_5",
@@ -2261,7 +2475,12 @@
       "description": "居民等级达到 5 级",
       "tier": "purple",
       "reward_maple_flame": 100,
-      "condition": { "hook": "player_level", "params": { "level": 5 } }
+      "condition": {
+        "hook": "player_level",
+        "params": {
+          "level": 5
+        }
+      }
     },
     {
       "id": "resident_level_10",
@@ -2269,7 +2488,12 @@
       "description": "居民等级达到 10 级",
       "tier": "purple",
       "reward_maple_flame": 100,
-      "condition": { "hook": "player_level", "params": { "level": 10 } }
+      "condition": {
+        "hook": "player_level",
+        "params": {
+          "level": 10
+        }
+      }
     },
     {
       "id": "resident_level_15",
@@ -2277,7 +2501,12 @@
       "description": "居民等级达到 15 级",
       "tier": "purple",
       "reward_maple_flame": 100,
-      "condition": { "hook": "player_level", "params": { "level": 15 } }
+      "condition": {
+        "hook": "player_level",
+        "params": {
+          "level": 15
+        }
+      }
     },
     {
       "id": "four_crops",
@@ -2287,7 +2516,14 @@
       "reward_maple_flame": 100,
       "condition": {
         "hook": "crops_harvested",
-        "params": { "crop_ids": ["carrot", "potato", "wheat", "pumpkin"] }
+        "params": {
+          "crop_ids": [
+            "carrot",
+            "potato",
+            "wheat",
+            "pumpkin"
+          ]
+        }
       }
     },
     {
@@ -2317,7 +2553,12 @@
       "description": "累计完成 10 次自己的或代交的委托",
       "tier": "purple",
       "reward_maple_flame": 100,
-      "condition": { "hook": "commissions_completed", "params": { "count": 10 } }
+      "condition": {
+        "hook": "commissions_completed",
+        "params": {
+          "count": 10
+        }
+      }
     },
     {
       "id": "eight_partners",
@@ -2325,7 +2566,12 @@
       "description": "持有至少 8 位不同伙伴",
       "tier": "purple",
       "reward_maple_flame": 100,
-      "condition": { "hook": "partners_owned", "params": { "count": 8 } }
+      "condition": {
+        "hook": "partners_owned",
+        "params": {
+          "count": 8
+        }
+      }
     },
     {
       "id": "eight_talents",
@@ -2333,7 +2579,12 @@
       "description": "点亮至少 8 个产业天赋",
       "tier": "purple",
       "reward_maple_flame": 100,
-      "condition": { "hook": "talents_unlocked", "params": { "count": 8 } }
+      "condition": {
+        "hook": "talents_unlocked",
+        "params": {
+          "count": 8
+        }
+      }
     },
     {
       "id": "pond_harvest_20",
@@ -2341,7 +2592,13 @@
       "description": "从鱼塘累计收获 20 条塘养红鲫",
       "tier": "purple",
       "reward_maple_flame": 100,
-      "condition": { "hook": "pond_harvested", "params": { "species_id": "crucian", "count": 20 } }
+      "condition": {
+        "hook": "pond_harvested",
+        "params": {
+          "species_id": "crucian",
+          "count": 20
+        }
+      }
     },
     {
       "id": "fish_codex_9",
@@ -2349,7 +2606,12 @@
       "description": "鱼类图鉴记录达到 9 种",
       "tier": "purple",
       "reward_maple_flame": 100,
-      "condition": { "hook": "fish_codex_entries", "params": { "count": 9 } }
+      "condition": {
+        "hook": "fish_codex_entries",
+        "params": {
+          "count": 9
+        }
+      }
     },
     {
       "id": "first_big_catch",
@@ -2357,7 +2619,10 @@
       "description": "第一次成功钓到任意巨物",
       "tier": "purple",
       "reward_maple_flame": 100,
-      "condition": { "hook": "big_catch_caught", "params": {} }
+      "condition": {
+        "hook": "big_catch_caught",
+        "params": {}
+      }
     },
     {
       "id": "first_livestock",
@@ -2365,7 +2630,13 @@
       "description": "第一次从畜牧设施收取产出",
       "tier": "blue",
       "reward_maple_flame": 50,
-      "condition": { "hook": "production_collections", "params": { "industry": "livestock", "count": 1 } }
+      "condition": {
+        "hook": "production_collections",
+        "params": {
+          "industry": "livestock",
+          "count": 1
+        }
+      }
     },
     {
       "id": "first_breeding",
@@ -2373,7 +2644,12 @@
       "description": "第一次通过配种或孵化得到新生牲畜",
       "tier": "blue",
       "reward_maple_flame": 50,
-      "condition": { "hook": "animals_bred", "params": { "count": 1 } }
+      "condition": {
+        "hook": "animals_bred",
+        "params": {
+          "count": 1
+        }
+      }
     },
     {
       "id": "care_thirty",
@@ -2381,7 +2657,12 @@
       "description": "累计照料牲畜 30 次",
       "tier": "purple",
       "reward_maple_flame": 100,
-      "condition": { "hook": "animals_cared", "params": { "count": 30 } }
+      "condition": {
+        "hook": "animals_cared",
+        "params": {
+          "count": 30
+        }
+      }
     },
     {
       "id": "four_familiar_faces",
@@ -2389,7 +2670,12 @@
       "description": "同时拥有 4 只亲密度已满的牲畜",
       "tier": "purple",
       "reward_maple_flame": 100,
-      "condition": { "hook": "animals_at_max_affection", "params": { "count": 4 } }
+      "condition": {
+        "hook": "animals_at_max_affection",
+        "params": {
+          "count": 4
+        }
+      }
     },
     {
       "id": "livestock_specials_five",
@@ -2397,7 +2683,12 @@
       "description": "累计收取 5 件金蛋或浓乳",
       "tier": "purple",
       "reward_maple_flame": 100,
-      "condition": { "hook": "livestock_specials", "params": { "count": 5 } }
+      "condition": {
+        "hook": "livestock_specials",
+        "params": {
+          "count": 5
+        }
+      }
     },
     {
       "id": "miracle_production",
@@ -2405,7 +2696,12 @@
       "description": "从农业、采集、加工或采矿中获得奇迹品质产物",
       "tier": "gold",
       "reward_maple_flame": 200,
-      "condition": { "hook": "max_production_quality", "params": { "quality": 5 } }
+      "condition": {
+        "hook": "max_production_quality",
+        "params": {
+          "quality": 5
+        }
+      }
     },
     {
       "id": "first_portal_completed",
@@ -2413,7 +2709,12 @@
       "description": "完成「第一传送门」的全部贡品",
       "tier": "gold",
       "reward_maple_flame": 200,
-      "condition": { "hook": "portal_completed", "params": { "portal_id": "first_gate" } }
+      "condition": {
+        "hook": "portal_completed",
+        "params": {
+          "portal_id": "first_gate"
+        }
+      }
     },
     {
       "id": "twenty_partners",
@@ -2421,7 +2722,12 @@
       "description": "持有至少 20 位不同伙伴",
       "tier": "gold",
       "reward_maple_flame": 200,
-      "condition": { "hook": "partners_owned", "params": { "count": 20 } }
+      "condition": {
+        "hook": "partners_owned",
+        "params": {
+          "count": 20
+        }
+      }
     },
     {
       "id": "prime_bloodline",
@@ -2429,7 +2735,13 @@
       "description": "养出一只品质与产量基因都不低于 60 的牲畜",
       "tier": "gold",
       "reward_maple_flame": 200,
-      "condition": { "hook": "livestock_gene", "params": { "gene": 60, "count": 1 } }
+      "condition": {
+        "hook": "livestock_gene",
+        "params": {
+          "gene": 60,
+          "count": 1
+        }
+      }
     }
   ],
   "shop": [

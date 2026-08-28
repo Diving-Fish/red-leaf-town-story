@@ -33,6 +33,12 @@ export default createRouter({
       meta: { title: '镇邮局', admin: true },
     },
     {
+      path: '/admin/codes',
+      name: 'admin-codes',
+      component: () => import('@/views/AdminCodesView.vue'),
+      meta: { title: '激活码', admin: true },
+    },
+    {
       path: '/admin/story',
       name: 'admin-story',
       component: () => import('@/views/AdminStoryView.vue'),

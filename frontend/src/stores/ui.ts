@@ -14,6 +14,8 @@ export const useUiStore = defineStore('ui', () => {
   const accountOpen = ref(false)
   const mailOpen = ref(false)
   const achievementOpen = ref(false)
+  const monthlyCardOpen = ref(false)
+  const staminaOpen = ref(false)
   const confirmRequest = ref<ConfirmOptions | null>(null)
   let resolveConfirm: ((accepted: boolean) => void) | null = null
 
@@ -31,5 +33,15 @@ export const useUiStore = defineStore('ui', () => {
     resolveConfirm = null
   }
 
-  return { navOpen, accountOpen, mailOpen, achievementOpen, confirmRequest, confirm, settleConfirm }
+  return {
+    navOpen,
+    accountOpen,
+    mailOpen,
+    achievementOpen,
+    monthlyCardOpen,
+    staminaOpen,
+    confirmRequest,
+    confirm,
+    settleConfirm,
+  }
 })

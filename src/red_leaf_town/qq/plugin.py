@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import secrets
 
-from nonebot import on_command
+from nonebot import get_driver, on_command
 from nonebot.adapters import Bot, Event, Message
 from nonebot.params import CommandArg
 from nonebot_plugin_alconna import UniMessage
@@ -20,6 +20,8 @@ PLUGIN_META = {
   红叶镇                  — 查看农场摘要
   红叶镇招募 [1/10]       — 使用引路枫叶招募伙伴
   红叶镇成就              — 查看成就进度
+  红叶镇月卡              — 查看月卡状态并领取当日奖励（仅自建 Bot）
+  红叶镇兑换 [激活码]     — 兑换月卡激活码（仅自建 Bot）
   红叶镇委托              — 查看今日委托和公共转发池
   红叶镇交委托            — 交付今日委托
   绑定红叶镇 [绑定码]     — 绑定水鱼账号中的红叶镇角色
@@ -42,8 +44,12 @@ def resolve_identity(bot: Bot, event: Event) -> QQIdentity | None:
 
 
 def _reply(event: Event, text: str) -> UniMessage:
-    message_id = getattr(event, "message_id", None) or getattr(event, "id", None)
-    prefix = UniMessage.reply(message_id) if message_id else UniMessage()
+    # Milky 的 message_id 是 int，官方 QQ 的 id 是 str。alconna 导出引用段时会对它做
+    # split("@")，拿到 int 会直接抛 AttributeError，把整条回复吞掉——这里统一转成字符串。
+    message_id = getattr(event, "message_id", None)
+    if message_id is None:
+        message_id = getattr(event, "id", None)
+    prefix = UniMessage.reply(str(message_id)) if message_id is not None else UniMessage()
     return prefix + UniMessage.text(text)
 
 
@@ -161,6 +167,118 @@ async def farm_summary(bot: Bot, event: Event):
         + f"传送门：已开启 {portals_opened} 座，{portals_active} 座待交贡品\n"
         + "\n".join(_commission_lines(state))
         + "\n前往 Web 页面管理农场：https://chiyuki.diving-fish.com/red-leaf-town/",
+    ).send()
+
+
+# 官方 QQ Bot 的消息要过内容审核，激活码这类明文凭据不该从那条线上走，
+# 月卡相关的命令只在自建 Bot（Milky 适配器）上响应，其他适配器一律静默。
+PRIVATE_ADAPTER = "Milky"
+
+
+def _is_private_bot(bot: Bot) -> bool:
+    return str(bot.type) == PRIVATE_ADAPTER
+
+
+def _is_superuser(event: Event) -> bool:
+    try:
+        user_id = str(event.get_user_id())
+    except (AttributeError, ValueError):
+        return False
+    return bool(user_id) and user_id in get_driver().config.superusers
+
+
+monthly_card_command = on_command("红叶镇月卡", force_whitespace=True)
+redeem_command = on_command("红叶镇兑换", aliases={"红叶镇激活"}, force_whitespace=True)
+generate_code_command = on_command(
+    "红叶镇生成激活码",
+    aliases={"红叶镇生成兑换码"},
+    force_whitespace=True,
+)
+
+
+@monthly_card_command.handle()
+async def monthly_card_status(bot: Bot, event: Event):
+    if not _is_private_bot(bot):
+        return
+    identity = resolve_identity(bot, event)
+    if not identity:
+        await _reply(event, "无法识别当前 QQ 身份。").send()
+        return
+    service = get_service()
+    try:
+        state = service.snapshot_by_identity(identity)
+    except GameError as exc:
+        await _reply(event, exc.message).send()
+        return
+    card = state["monthly_card"]
+    if not card["active"]:
+        await _reply(event, "你还没有生效中的月卡。拿到激活码后发送『红叶镇兑换 激活码』。").send()
+        return
+    if not card["claimable"]:
+        await _reply(
+            event,
+            f"月卡剩余 {card['days_left']} 天，今天的奖励已经领过了。",
+        ).send()
+        return
+    try:
+        result = service.claim_monthly_card_by_identity(identity)
+    except GameError as exc:
+        await _reply(event, exc.message).send()
+        return
+    reward = result["result"]
+    updated = result["state"]["monthly_card"]
+    await _reply(
+        event,
+        f"今日月卡奖励已领取：{reward['maple_flame']} 枫火 + 绯恩特调 ×{reward['item_amount']}\n"
+        f"月卡剩余 {updated['days_left']} 天。",
+    ).send()
+
+
+@redeem_command.handle()
+async def redeem_monthly_card(bot: Bot, event: Event, message: Message = CommandArg()):
+    if not _is_private_bot(bot):
+        return
+    code = message.extract_plain_text().strip()
+    if not code:
+        await _reply(event, "请发送『红叶镇兑换 激活码』。").send()
+        return
+    identity = resolve_identity(bot, event)
+    if not identity:
+        await _reply(event, "无法识别当前 QQ 身份。").send()
+        return
+    try:
+        result = get_service().redeem_code_by_identity(identity, code)
+    except GameError as exc:
+        await _reply(event, exc.message).send()
+        return
+    card = result["state"]["monthly_card"]
+    await _reply(
+        event,
+        f"激活成功，到账 {result['result']['maple_flame']} 枫火，月卡剩余 {card['days_left']} 天。\n"
+        "之后每天发送『红叶镇月卡』领取当日奖励。",
+    ).send()
+
+
+@generate_code_command.handle()
+async def generate_codes(bot: Bot, event: Event, message: Message = CommandArg()):
+    if not _is_private_bot(bot) or not _is_superuser(event):
+        return
+    raw = message.extract_plain_text().strip() or "1"
+    parts = raw.split(maxsplit=1)
+    try:
+        count = int(parts[0])
+    except ValueError:
+        await _reply(event, "用法：红叶镇生成激活码 [数量] [批次备注]").send()
+        return
+    batch = parts[1].strip() if len(parts) > 1 else ""
+    try:
+        codes = get_service().generate_redemption_codes(count, batch)
+    except GameError as exc:
+        await _reply(event, exc.message).send()
+        return
+    await _reply(
+        event,
+        f"已生成 {len(codes)} 个月卡激活码：\n" + "\n".join(codes),
     ).send()
 
 

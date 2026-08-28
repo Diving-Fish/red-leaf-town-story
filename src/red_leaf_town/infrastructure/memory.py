@@ -14,6 +14,7 @@ from red_leaf_town.domain import (
     PlayerState,
     PlotState,
     QQIdentity,
+    RedemptionCode,
 )
 
 T = TypeVar("T")
@@ -212,3 +213,43 @@ class InMemoryMailbox:
             (mail.model_copy(deep=True) for (bucket, _), mail in self.letters.items() if bucket == recipient_id),
             key=lambda mail: (-mail.created_at, mail.mail_id),
         )
+
+
+class InMemoryRedemptionCodes:
+    def __init__(self):
+        self.codes: dict[str, RedemptionCode] = {}
+
+    def create(self, codes: list[RedemptionCode]) -> int:
+        created = 0
+        for entry in codes:
+            if entry.code in self.codes:
+                continue
+            self.codes[entry.code] = entry.model_copy(deep=True)
+            created += 1
+        return created
+
+    def get(self, code: str) -> RedemptionCode | None:
+        entry = self.codes.get(code)
+        return entry.model_copy(deep=True) if entry else None
+
+    def claim(self, code: str, player_id: str, now: int) -> RedemptionCode | None:
+        entry = self.codes.get(code)
+        if entry is None or entry.redeemed:
+            return None
+        entry.redeemed_by = player_id
+        entry.redeemed_at = now
+        return entry.model_copy(deep=True)
+
+    def release(self, code: str, player_id: str) -> None:
+        entry = self.codes.get(code)
+        if entry is None or entry.redeemed_by != player_id:
+            return
+        entry.redeemed_by = ""
+        entry.redeemed_at = 0
+
+    def list_recent(self, limit: int = 200) -> list[RedemptionCode]:
+        entries = sorted(
+            (entry.model_copy(deep=True) for entry in self.codes.values()),
+            key=lambda entry: (-entry.created_at, entry.code),
+        )
+        return entries[:limit]

@@ -80,7 +80,8 @@ export const useGameStore = defineStore('game', () => {
   const liveStamina = computed(() => {
     const current = player.value
     if (!current) return 0
-    if (current.stamina >= current.stamina_cap) return current.stamina_cap
+    // 体力药和枫火购买能把体力顶到上限之上，溢出期间不再自然回复，也不能夹回上限。
+    if (current.stamina >= current.stamina_cap) return current.stamina
     const elapsed = Math.max(0, serverNow.value - current.stamina_updated_at)
     const gained = Math.floor(elapsed / current.stamina_restore_seconds)
     return Math.min(current.stamina_cap, current.stamina + gained)
@@ -651,6 +652,31 @@ export const useGameStore = defineStore('game', () => {
     })
   }
 
+  function redeemCode(code: string) {
+    return action('monthly-card:redeem', `${API_ROOT}/monthly-card/redeem`, {
+      payload: { code },
+      successMessage: '月卡已激活',
+    })
+  }
+
+  function claimMonthlyCard() {
+    return action('monthly-card:claim', `${API_ROOT}/monthly-card/claim`, {
+      successMessage: '今日月卡奖励已领取',
+    })
+  }
+
+  function useStaminaPotion() {
+    return action('stamina:potion', `${API_ROOT}/stamina/potion`, {
+      successMessage: '喝下绯恩特调，体力回来了',
+    })
+  }
+
+  function buyStamina() {
+    return action('stamina:purchase', `${API_ROOT}/stamina/purchase`, {
+      successMessage: '体力已补充',
+    })
+  }
+
   async function createBindingCode() {
     if (isPending('binding-code')) return null
     pending.value.add('binding-code')
@@ -733,6 +759,10 @@ export const useGameStore = defineStore('game', () => {
     nextReadyAt,
     isPending,
     isPendingPrefix,
+    redeemCode,
+    claimMonthlyCard,
+    useStaminaPotion,
+    buyStamina,
     initialize,
     refresh,
     buy,

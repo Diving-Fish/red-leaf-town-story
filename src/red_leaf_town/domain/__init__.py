@@ -35,6 +35,8 @@ from .models import (
     TaskQualitySnapshot,
 )
 from .mail import MailMessage, MailScope
+from .monthly_card import extend_expiry, is_active, remaining_days, shift_day
+from .redemption import RedemptionCode, RedemptionKind, generate_code, normalize_code
 from .production import build_results, draw_count, draw_weighted_batches, pick_weighted, roll_unit_qualities
 
 __all__ = [
@@ -56,6 +58,14 @@ __all__ = [
     "GachaDropRecord",
     "GachaPoolProgressState",
     "GachaRequestRecord",
+    "extend_expiry",
+    "is_active",
+    "remaining_days",
+    "shift_day",
+    "RedemptionCode",
+    "RedemptionKind",
+    "generate_code",
+    "normalize_code",
     "MailMessage",
     "MailReceiptState",
     "MailScope",

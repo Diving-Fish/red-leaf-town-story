@@ -68,6 +68,47 @@ class WorldDefinition(BaseModel):
 
 class StaminaDefinition(BaseModel):
     restore_seconds: int = Field(gt=0)
+    # 体力药和枫火买体力都能把体力顶到上限之上，溢出期间自然回复暂停。
+    potion_item_id: str = Field(default="feien_tonic", min_length=1)
+    potion_restore: int = Field(default=40, gt=0)
+    purchase_restore: int = Field(default=40, gt=0)
+    # 一天之内第 n 次购买的枫火价，列表长度就是每日次数上限。
+    purchase_prices: list[int] = Field(default_factory=lambda: [50, 100, 150, 200], min_length=1)
+
+    @model_validator(mode="after")
+    def validate_prices(self):
+        if any(price <= 0 for price in self.purchase_prices):
+            raise ValueError("stamina purchase prices must be positive")
+        if self.purchase_prices != sorted(self.purchase_prices):
+            raise ValueError("stamina purchase prices must not get cheaper as the day goes on")
+        return self
+
+    @property
+    def purchase_daily_limit(self) -> int:
+        return len(self.purchase_prices)
+
+    def purchase_price(self, used_today: int) -> int | None:
+        """今天已经买过 used_today 次时，下一次的价钱；买满了就是 None。"""
+        if used_today < 0 or used_today >= len(self.purchase_prices):
+            return None
+        return self.purchase_prices[used_today]
+
+
+class MonthlyCardDefinition(BaseModel):
+    """月卡。只靠激活码发放，商店里买不到。"""
+
+    duration_days: int = Field(default=30, gt=0, le=365)
+    max_days: int = Field(default=180, gt=0, le=3650)
+    activation_maple_flame: int = Field(default=300, ge=0)
+    daily_maple_flame: int = Field(default=50, ge=0)
+    daily_item_id: str = Field(default="feien_tonic", min_length=1)
+    daily_item_amount: int = Field(default=2, ge=0)
+
+    @model_validator(mode="after")
+    def validate_duration(self):
+        if self.duration_days > self.max_days:
+            raise ValueError("monthly card duration cannot exceed the maximum stacked days")
+        return self
 
 
 class IndustryRulesDefinition(BaseModel):
@@ -929,6 +970,7 @@ class GameContent(BaseModel):
     partner_growth: PartnerGrowthDefinition
     portals: list[PortalDefinition] = Field(default_factory=list)
     commissions: CommissionsDefinition
+    monthly_card: MonthlyCardDefinition = Field(default_factory=MonthlyCardDefinition)
     achievements: list[AchievementDefinition] = Field(default_factory=list)
     shop: list[ShopEntry]
 
@@ -981,6 +1023,10 @@ class GameContent(BaseModel):
             raise ValueError("livestock industry rules are required once livestock content exists")
 
         items = {item.id for item in self.items}
+        if self.stamina.potion_item_id not in items:
+            raise ValueError("stamina potion references an unknown item")
+        if self.monthly_card.daily_item_amount and self.monthly_card.daily_item_id not in items:
+            raise ValueError("monthly card daily reward references an unknown item")
         for crop in self.crops:
             if crop.seed_item_id not in items or crop.produce_item_id not in items:
                 raise ValueError(f"crop {crop.id} references an unknown item")

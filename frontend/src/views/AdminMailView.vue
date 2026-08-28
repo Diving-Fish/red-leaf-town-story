@@ -239,6 +239,7 @@ async function withdraw(entry: AdminMailEntry) {
           <RouterLink :to="{ name: 'admin-crops' }">作物数值</RouterLink>
           <RouterLink :to="{ name: 'admin-partners' }">伙伴管理</RouterLink>
           <RouterLink :to="{ name: 'admin-story' }">剧情素材</RouterLink>
+          <RouterLink :to="{ name: 'admin-codes' }">激活码</RouterLink>
         </nav>
         <div class="header-actions">
           <span v-if="notice" class="notice"><Check :size="15" />{{ notice }}</span>

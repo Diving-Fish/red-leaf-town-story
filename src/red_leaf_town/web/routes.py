@@ -737,6 +737,36 @@ def create_blueprint(
         result = get_service().admin_delete_mail(mail_id, request.args.get("recipient_id", ""))
         return jsonify({"code": 0, "data": result, "message": "邮件已撤回"})
 
+    @blueprint.get("/api/red-leaf-town/admin/redemption-codes")
+    async def admin_redemption_code_list():
+        if not _is_admin_request():
+            return _admin_error()
+        try:
+            limit = int(request.args.get("limit", 200))
+        except (TypeError, ValueError):
+            limit = 200
+        return jsonify({"code": 0, "data": get_service().list_redemption_codes(limit)})
+
+    @blueprint.post("/api/red-leaf-town/admin/redemption-codes")
+    async def admin_redemption_code_create():
+        if not _is_admin_request():
+            return _admin_error()
+        payload = await request.get_json(silent=True) or {}
+        try:
+            count = int(payload.get("count", 0))
+        except (TypeError, ValueError):
+            return _error("生成数量必须是整数", 400, "invalid_count")
+        codes = get_service().generate_redemption_codes(
+            count,
+            str(payload.get("batch", "")),
+            str(payload.get("note", "")),
+        )
+        return jsonify({
+            "code": 0,
+            "data": {"codes": codes, "count": len(codes)},
+            "message": f"已生成 {len(codes)} 个激活码",
+        })
+
     @blueprint.get("/api/oauth/red-leaf-town/start")
     async def oauth_start():
         from private.libraries.df_oauth import OAuthError, build_authorize_url
@@ -1172,6 +1202,31 @@ def create_blueprint(
     async def use_inventory_item(subject: str, item_id: str):
         payload = await request.get_json(silent=True) or {}
         result = get_service().use_partner_select_item(subject, item_id, str(payload.get("partner_id", "")))
+        return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
+
+    @blueprint.post("/api/red-leaf-town/monthly-card/redeem")
+    @login_required
+    async def redeem_monthly_card(subject: str):
+        payload = await request.get_json(silent=True) or {}
+        result = get_service().redeem_code(subject, str(payload.get("code", "")))
+        return jsonify({"code": 0, "data": _attach_cdn_urls(result), "message": "月卡已激活"})
+
+    @blueprint.post("/api/red-leaf-town/monthly-card/claim")
+    @login_required
+    async def claim_monthly_card(subject: str):
+        result = get_service().claim_monthly_card(subject)
+        return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
+
+    @blueprint.post("/api/red-leaf-town/stamina/potion")
+    @login_required
+    async def use_stamina_potion(subject: str):
+        result = get_service().use_stamina_potion(subject)
+        return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
+
+    @blueprint.post("/api/red-leaf-town/stamina/purchase")
+    @login_required
+    async def buy_stamina(subject: str):
+        result = get_service().buy_stamina(subject)
         return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
 
     @blueprint.post("/api/red-leaf-town/portals/<string:portal_id>/tributes/<string:tribute_id>/deliver")

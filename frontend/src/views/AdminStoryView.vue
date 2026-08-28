@@ -285,6 +285,7 @@ async function saveLayout() {
           <span v-if="notice" class="notice"><Check :size="15" />{{ notice }}</span>
           <RouterLink :to="{ name: 'admin-crops' }">作物数值</RouterLink>
           <RouterLink :to="{ name: 'admin-mail' }">镇邮局</RouterLink>
+          <RouterLink :to="{ name: 'admin-codes' }">激活码</RouterLink>
           <a href="/red-leaf-town/"><ArrowLeft :size="16" />玩家前台</a>
           <button class="save-button" :disabled="busy" @click="reload"><RefreshCw :size="16" />重新读取剧本</button>
         </div>

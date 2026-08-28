@@ -14,7 +14,12 @@ from red_leaf_town.application import GameService
 from red_leaf_town.content import load_content
 from red_leaf_town.domain import QQIdentity
 from red_leaf_town.domain.economy import add_item
-from red_leaf_town.infrastructure import InMemoryCommissionBoard, InMemoryMailbox, InMemoryPlayerRepository
+from red_leaf_town.infrastructure import (
+    InMemoryCommissionBoard,
+    InMemoryMailbox,
+    InMemoryPlayerRepository,
+    InMemoryRedemptionCodes,
+)
 from red_leaf_town.runtime import set_service
 from red_leaf_town.partner_content import load_partner_catalog
 from red_leaf_town.web.routes import COOKIE_NAME, create_blueprint
@@ -36,6 +41,7 @@ def service():
         InMemoryPlayerRepository(content),
         commission_board=InMemoryCommissionBoard(),
         mailbox=InMemoryMailbox(),
+        redemption_codes=InMemoryRedemptionCodes(),
         clock=lambda: 1_700_000_000,
     )
     game.ensure_player("route-sub", "小枫")
@@ -968,3 +974,69 @@ async def test_pond_api(client, service):
     too_many = await client.post("/api/red-leaf-town/ponds/pond_1/harvest", json={"quantity": 99})
     assert too_many.status_code == 400
     assert (await too_many.get_json())["code"] == "invalid_quantity"
+
+
+@runs
+async def test_redemption_code_admin_generates_and_lists(admin_client, service):
+    forbidden = await admin_client.post("/api/red-leaf-town/admin/redemption-codes", json={"count": 3})
+    assert forbidden.status_code == 403
+
+    created = await admin_client.post(
+        "/api/red-leaf-town/admin/redemption-codes",
+        json={"count": 3, "batch": "首发"},
+        headers=admin_headers(),
+    )
+    codes = (await created.get_json())["data"]["codes"]
+    assert len(codes) == 3
+
+    listed = await admin_client.get("/api/red-leaf-town/admin/redemption-codes", headers=admin_headers())
+    records = (await listed.get_json())["data"]
+    assert {record["code"] for record in records} == set(codes)
+    assert all(record["batch"] == "首发" for record in records)
+
+
+@runs
+async def test_monthly_card_redeem_and_claim_over_http(client, service):
+    authenticate(client)
+    code = service.generate_redemption_codes(1, batch="http")[0]
+
+    redeemed = await client.post("/api/red-leaf-town/monthly-card/redeem", json={"code": code})
+    assert redeemed.status_code == 200
+    card = (await redeemed.get_json())["data"]["state"]["monthly_card"]
+    assert card["days_left"] == 30 and card["claimable"] is True
+
+    claimed = await client.post("/api/red-leaf-town/monthly-card/claim")
+    payload = (await claimed.get_json())["data"]
+    assert payload["result"]["maple_flame"] == 50
+    assert payload["state"]["stamina_supply"]["potion_owned"] == 2
+
+    again = await client.post("/api/red-leaf-town/monthly-card/claim")
+    assert again.status_code == 409
+
+
+@runs
+async def test_redeeming_a_bad_code_over_http(client, service):
+    authenticate(client)
+    response = await client.post("/api/red-leaf-town/monthly-card/redeem", json={"code": "NOPE"})
+    assert response.status_code == 404
+    assert (await response.get_json())["code"] == "invalid_code"
+
+
+@runs
+async def test_stamina_supply_endpoints(client, service):
+    authenticate(client)
+    player = service.repository.get_by_sub("route-sub")
+    service.repository.update(player.player_id, lambda entry: setattr(entry, "maple_flame", 300))
+    cap = service.snapshot_by_sub("route-sub")["player"]["stamina_cap"]
+
+    bought = await client.post("/api/red-leaf-town/stamina/purchase")
+    payload = (await bought.get_json())["data"]
+    assert payload["result"]["maple_flame_spent"] == 50
+    assert payload["state"]["player"]["stamina"] == cap + 40
+
+    dry = await client.post("/api/red-leaf-town/stamina/potion")
+    assert dry.status_code == 400
+
+    service.repository.update(player.player_id, lambda entry: add_item(entry, "feien_tonic", 1))
+    used = await client.post("/api/red-leaf-town/stamina/potion")
+    assert (await used.get_json())["data"]["state"]["player"]["stamina"] == cap + 80

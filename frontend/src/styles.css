@@ -105,6 +105,7 @@ button:disabled { cursor: not-allowed; opacity: .48; }
 .resource-pill strong { font-size: 14px; }.resource-pill small { color: #77837a; font-size: 12px; margin-left: auto; }.resource-pill.coins svg { color: var(--gold); }.resource-pill.stamina svg { color: var(--leaf-bright); }
 .inbox-button { position: relative; }
 .achievement-button { position: relative; color: #d8c17e; }
+.monthly-button { position: relative; color: var(--gold); border-color: color-mix(in srgb, var(--gold) 38%, transparent); background: rgba(215, 173, 88, .08); }
 .inbox-badge { position: absolute; right: -5px; top: -5px; min-width: 18px; height: 18px; padding: 0 4px; display: grid; place-items: center; font-size: 10px; font-style: normal; font-weight: 800; border-radius: 99px; box-shadow: 0 0 0 2px #131c17; }
 .inbox-badge.unread { color: #2a140e; background: var(--autumn); }
 .inbox-badge.unclaimed { color: #241d0e; background: var(--gold); }

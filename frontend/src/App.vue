@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { ChevronRight, Copy, Inbox, Leaf, LogOut, Map, Menu, RefreshCw, RotateCw, Trophy, UserRound, X } from 'lucide-vue-next'
+import { ChevronRight, Copy, Inbox, Leaf, LogOut, Map, Menu, RefreshCw, RotateCw, Ticket, Trophy, UserRound, X } from 'lucide-vue-next'
 
 import ActionButton from '@/components/ActionButton.vue'
 import AppNav from '@/components/AppNav.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import AchievementPanel from '@/components/achievements/AchievementPanel.vue'
 import MailInbox from '@/components/mail/MailInbox.vue'
+import MonthlyCardDialog from '@/components/MonthlyCardDialog.vue'
+import StaminaDialog from '@/components/StaminaDialog.vue'
 import ProgressBar from '@/components/ProgressBar.vue'
 import ResourcePill from '@/components/ResourcePill.vue'
 import StoryOverlay from '@/components/story/StoryOverlay.vue'
@@ -39,6 +41,8 @@ const levelProgress = computed(() => {
   const floor = player.current_level_xp
   return Math.max(2, Math.min(100, ((player.experience - floor) / (player.next_level_xp - floor)) * 100))
 })
+// 月卡按钮只在「今天还能领」时挂角标，剩余天数不做角标——那是打开面板才关心的事。
+const monthlyBadge = computed(() => (game.state?.monthly_card?.claimable ? '!' : ''))
 const levelHint = computed(() => {
   const player = game.player
   if (!player) return ''
@@ -142,6 +146,10 @@ async function copyBindingCommand() {
         <button class="icon-button menu-button" @click="ui.navOpen = true"><Menu :size="21" /></button>
         <div class="page-location"><small>当前位置</small><strong>{{ routeTitle }}</strong></div>
         <div class="topbar-actions">
+          <button class="icon-button monthly-button" aria-label="月卡" @click="ui.monthlyCardOpen = true">
+            <Ticket :size="18" />
+            <i v-if="monthlyBadge" class="inbox-badge unclaimed">{{ monthlyBadge }}</i>
+          </button>
           <button class="icon-button achievement-button" aria-label="成就" @click="ui.achievementOpen = true; ui.mailOpen = false">
             <Trophy :size="18" />
             <i v-if="game.state.achievements.claimable" class="inbox-badge unclaimed">{{ game.state.achievements.claimable > 99 ? '99+' : game.state.achievements.claimable }}</i>
@@ -159,7 +167,7 @@ async function copyBindingCommand() {
       <div class="status-strip">
         <div class="resource-strip">
           <ResourcePill kind="coins" />
-          <ResourcePill kind="stamina" />
+          <ResourcePill kind="stamina" @supply="ui.staminaOpen = true" />
         </div>
         <div class="level-chip" :title="levelHint">
           <span>Lv.{{ game.player.level }}</span>
@@ -204,6 +212,8 @@ async function copyBindingCommand() {
     </div>
   </div>
 
+  <MonthlyCardDialog v-if="!isAdminRoute" :open="ui.monthlyCardOpen" @close="ui.monthlyCardOpen = false" />
+  <StaminaDialog v-if="!isAdminRoute" :open="ui.staminaOpen" @close="ui.staminaOpen = false" />
   <MailInbox v-if="!isAdminRoute" />
   <AchievementPanel v-if="!isAdminRoute" />
   <StoryOverlay v-if="!isAdminRoute" />

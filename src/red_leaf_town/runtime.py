@@ -15,6 +15,7 @@ def get_service() -> GameService:
             RedisCommissionBoard,
             RedisMailbox,
             RedisPlayerRepository,
+            RedisRedemptionCodes,
         )
 
         content = load_content()
@@ -23,6 +24,7 @@ def get_service() -> GameService:
             RedisPlayerRepository(redis_global, content),
             commission_board=RedisCommissionBoard(redis_global),
             mailbox=RedisMailbox(redis_global),
+            redemption_codes=RedisRedemptionCodes(redis_global),
         )
     return _service
 

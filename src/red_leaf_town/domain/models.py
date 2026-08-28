@@ -626,7 +626,7 @@ class AchievementStats(BaseModel):
 
 
 class PlayerState(BaseModel):
-    schema_version: int = 25
+    schema_version: int = 26
     version: int = 1
     player_id: str
     oauth_sub: str
@@ -664,6 +664,13 @@ class PlayerState(BaseModel):
     # 联动活动的一次性领取记录：campaign_id -> 领取时刻。存在这里而不是别处，是因为
     # 红叶镇存档和 OAuth 账号一一对应，账号级的「只能领一次」才不会被小号或换角色绕过。
     crossover_claims: dict[str, int] = Field(default_factory=dict)
+    # 月卡。到期日是「最后一个能领奖励的自然日」，按委托的 4 点刷新口径算，空串代表没卡。
+    monthly_card_expires_on: str = ""
+    monthly_card_claimed_on: str = ""
+    monthly_card_redeemed: int = Field(default=0, ge=0)
+    # 当天用枫火买过几次体力。日期一换就重新计数。
+    stamina_purchase_day: str = ""
+    stamina_purchase_count: int = Field(default=0, ge=0)
     achievement_stats: AchievementStats = Field(default_factory=AchievementStats)
     achievements: list[AchievementCompletionState] = Field(default_factory=list)
     achievement_auto_rewards_reconciled: bool = True
@@ -809,7 +816,14 @@ class PlayerState(BaseModel):
                 facility.setdefault("special_chance_bonus", 0)
                 facility.setdefault("affection_quality_bonus", 0)
                 facility.setdefault("trait_effects", [])
-        migrated["schema_version"] = 25
+        if schema_version < 26:
+            # 月卡上线。老存档一律当作没有过卡，也没有买过体力。
+            migrated.setdefault("monthly_card_expires_on", "")
+            migrated.setdefault("monthly_card_claimed_on", "")
+            migrated.setdefault("monthly_card_redeemed", 0)
+            migrated.setdefault("stamina_purchase_day", "")
+            migrated.setdefault("stamina_purchase_count", 0)
+        migrated["schema_version"] = 26
         return migrated
 
     @model_validator(mode="after")

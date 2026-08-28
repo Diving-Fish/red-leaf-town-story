@@ -1063,10 +1063,42 @@ export interface GameState {
   talents: TalentState
   portals: PortalState[]
   commissions: CommissionsState
+  monthly_card: MonthlyCardState
+  stamina_supply: StaminaSupplyState
   mail: MailSummary
   achievements: AchievementState
   crops: CropDefinition[]
   shop: ShopEntry[]
+}
+
+export interface MonthlyCardState {
+  active: boolean
+  days_left: number
+  max_days: number
+  duration_days: number
+  expires_on: string
+  expires_at: number
+  claimable: boolean
+  claimed_today: boolean
+  next_refresh_at: number
+  redeemed_total: number
+  activation_maple_flame: number
+  daily_maple_flame: number
+  daily_item_amount: number
+  daily_item: ItemDefinition | null
+}
+
+export interface StaminaSupplyState {
+  potion_item_id: string
+  potion_restore: number
+  potion_owned: number
+  potion_item: ItemDefinition | null
+  purchase_restore: number
+  purchase_prices: number[]
+  purchase_used_today: number
+  purchase_daily_limit: number
+  purchase_next_price: number | null
+  purchase_resets_at: number
 }
 
 export interface AccountState {

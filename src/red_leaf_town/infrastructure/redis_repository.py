@@ -17,6 +17,7 @@ from red_leaf_town.domain import (
     PlayerState,
     PlotState,
     QQIdentity,
+    RedemptionCode,
 )
 
 T = TypeVar("T")
@@ -391,3 +392,112 @@ class RedisMailbox:
 
     def _key(self, recipient_id: str) -> str:
         return f"{self.PREFIX}player:{recipient_id}" if recipient_id else f"{self.PREFIX}global"
+
+
+_CLAIM_CODE_LUA = """
+if redis.call('HEXISTS', KEYS[1], ARGV[1]) == 0 then return 0 end
+if redis.call('HSETNX', KEYS[2], ARGV[1], ARGV[2]) == 0 then return 0 end
+return 1
+"""
+
+_RELEASE_CODE_LUA = """
+if redis.call('HGET', KEYS[1], ARGV[1]) ~= ARGV[2] then return 0 end
+redis.call('HDEL', KEYS[1], ARGV[1])
+return 1
+"""
+
+
+class RedisRedemptionCodes:
+    """激活码池。码本身存一个哈希，兑换人存另一个哈希，靠 HSETNX 保证一码一人。
+
+    兑换是「先占码、再改存档」：存档那步失败（比如剩余天数已经顶到上限）就把占用释放掉，
+    码留给玩家以后再用。反过来先改存档的话，占码失败就得回滚存档，那才是真正难写对的。
+    """
+
+    PREFIX = "rlt:code:"
+
+    def __init__(self, redis_client: Any):
+        self.redis = redis_client
+        self._claim_script = redis_client.register_script(_CLAIM_CODE_LUA)
+        self._release_script = redis_client.register_script(_RELEASE_CODE_LUA)
+
+    def create(self, codes: list[RedemptionCode]) -> int:
+        created = 0
+        for entry in codes:
+            if self.redis.hsetnx(self._pool_key(), entry.code, entry.model_dump_json()):
+                created += 1
+        return created
+
+    def get(self, code: str) -> RedemptionCode | None:
+        entry = self._parse(self.redis.hget(self._pool_key(), code))
+        if entry is None:
+            return None
+        return self._with_claim(entry)
+
+    def claim(self, code: str, player_id: str, now: int) -> RedemptionCode | None:
+        claimed = self._claim_script(
+            keys=[self._pool_key(), self._claim_key()],
+            args=[code, f"{player_id}|{now}"],
+        )
+        if not claimed:
+            return None
+        entry = self._parse(self.redis.hget(self._pool_key(), code))
+        if entry is None:
+            self.release(code, player_id)
+            return None
+        entry.redeemed_by = player_id
+        entry.redeemed_at = now
+        return entry
+
+    def release(self, code: str, player_id: str) -> None:
+        raw = self.redis.hget(self._claim_key(), code)
+        marker = raw.decode() if isinstance(raw, bytes) else raw
+        if not marker or marker.split("|", 1)[0] != player_id:
+            return
+        self._release_script(keys=[self._claim_key()], args=[code, marker])
+
+    def list_recent(self, limit: int = 200) -> list[RedemptionCode]:
+        entries = [self._parse(raw) for raw in (self.redis.hvals(self._pool_key()) or [])]
+        claims = self.redis.hgetall(self._claim_key()) or {}
+        claims = {
+            (key.decode() if isinstance(key, bytes) else key): (
+                value.decode() if isinstance(value, bytes) else value
+            )
+            for key, value in claims.items()
+        }
+        resolved = []
+        for entry in entries:
+            if entry is None:
+                continue
+            resolved.append(self._apply_claim(entry, claims.get(entry.code)))
+        resolved.sort(key=lambda entry: (-entry.created_at, entry.code))
+        return resolved[:limit]
+
+    def _with_claim(self, entry: RedemptionCode) -> RedemptionCode:
+        raw = self.redis.hget(self._claim_key(), entry.code)
+        marker = raw.decode() if isinstance(raw, bytes) else raw
+        return self._apply_claim(entry, marker)
+
+    @staticmethod
+    def _apply_claim(entry: RedemptionCode, marker: str | None) -> RedemptionCode:
+        if not marker:
+            return entry
+        player_id, _, redeemed_at = marker.partition("|")
+        entry.redeemed_by = player_id
+        entry.redeemed_at = int(redeemed_at or 0)
+        return entry
+
+    @staticmethod
+    def _parse(raw) -> RedemptionCode | None:
+        if not raw:
+            return None
+        try:
+            return RedemptionCode.model_validate_json(raw)
+        except (TypeError, ValueError):
+            return None
+
+    def _pool_key(self) -> str:
+        return f"{self.PREFIX}pool"
+
+    def _claim_key(self) -> str:
+        return f"{self.PREFIX}claim"

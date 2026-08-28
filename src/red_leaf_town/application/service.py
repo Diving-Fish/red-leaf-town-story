@@ -40,6 +40,7 @@ from red_leaf_town.domain import (
     ProductionResultSnapshot,
     ProductionTaskSnapshot,
     QQIdentity,
+    RedemptionCode,
     TakenCommissionRecord,
     TaskPartnerSnapshot,
     TaskInputSnapshot,
@@ -79,9 +80,12 @@ from red_leaf_town.domain.commissions import (
     lucky_weekday,
 )
 from red_leaf_town.domain.economy import EconomyError, add_item, grant_coins, remove_item, spend_coins
+from red_leaf_town.domain.monthly_card import extend_expiry, remaining_days
+from red_leaf_town.domain.redemption import generate_code, normalize_code
 from red_leaf_town.domain.progression import (
     consume_stamina,
     grant_experience,
+    grant_stamina,
     normalize_crafting_stations,
     normalize_gathering_sites,
     normalize_livestock,
@@ -114,10 +118,17 @@ from red_leaf_town.story_assets import StoryAssetCatalog, load_story_asset_catal
 from red_leaf_town.story_content import StoryCatalog, load_story_catalog, serialize_script
 from red_leaf_town.story_triggers import StoryContext, validate_story_cue
 
-from .ports import CommissionBoardRepository, MailRepository, PlayerRepository
+from .ports import (
+    CommissionBoardRepository,
+    MailRepository,
+    PlayerRepository,
+    RedemptionCodeRepository,
+)
 
 
 MAIL_LIST_LIMIT = 60
+MAX_REDEMPTION_CODE_BATCH = 500
+MAX_REDEMPTION_CODE_LIST = 500
 # 钓鱼是高频接口且已知有脚本调用，限一个最小间隔，避免重试造成重复发放。
 FISHING_MIN_INTERVAL_SECONDS = 1
 FISHING_MAX_DRAWS = 40
@@ -191,6 +202,7 @@ class GameService:
         *,
         commission_board: CommissionBoardRepository | None = None,
         mailbox: MailRepository | None = None,
+        redemption_codes: RedemptionCodeRepository | None = None,
         clock: Callable[[], float] = time.time,
         rng: random.Random | random.SystemRandom | None = None,
         partner_catalog_loader: Callable[[], PartnerCatalog] = load_partner_catalog,
@@ -204,6 +216,8 @@ class GameService:
         self.commission_board = commission_board
         # 信箱同样是玩家存档之外的共享存储。不接就当作小镇还没通邮，收件箱恒为空。
         self.mailbox_repository = mailbox
+        # 激活码池。不接就是这个部署不发月卡码，兑换接口一律回「激活码无效」。
+        self.redemption_codes = redemption_codes
         self.clock = clock
         self.rng = rng or random.SystemRandom()
         self.partner_catalog_loader = partner_catalog_loader
@@ -2798,6 +2812,235 @@ class GameService:
         player, result = self._update_by_sub(oauth_sub, mutation)
         return {"result": result, "state": self._snapshot(player)}
 
+    # ------------------------------------------------------------------ 月卡
+
+    def _monthly_card_snapshot(self, player: PlayerState, now: int) -> dict:
+        card = self.content.monthly_card
+        day = self._commission_day(now)
+        left = remaining_days(player.monthly_card_expires_on, day)
+        items = self.content.item_map
+        reward_item = items.get(card.daily_item_id)
+        return {
+            "active": left > 0,
+            "days_left": left,
+            "max_days": card.max_days,
+            "duration_days": card.duration_days,
+            "expires_on": player.monthly_card_expires_on if left else "",
+            "expires_at": self._commission_refresh_at(player.monthly_card_expires_on) if left else 0,
+            "claimable": left > 0 and player.monthly_card_claimed_on != day,
+            "claimed_today": player.monthly_card_claimed_on == day,
+            "next_refresh_at": self._commission_refresh_at(day),
+            "redeemed_total": player.monthly_card_redeemed,
+            "activation_maple_flame": card.activation_maple_flame,
+            "daily_maple_flame": card.daily_maple_flame,
+            "daily_item_amount": card.daily_item_amount,
+            "daily_item": reward_item.model_dump() if reward_item else None,
+        }
+
+    def _stamina_snapshot(self, player: PlayerState, now: int) -> dict:
+        stamina = self.content.stamina
+        day = self._commission_day(now)
+        used = player.stamina_purchase_count if player.stamina_purchase_day == day else 0
+        items = self.content.item_map
+        potion = items.get(stamina.potion_item_id)
+        return {
+            "potion_item_id": stamina.potion_item_id,
+            "potion_restore": stamina.potion_restore,
+            "potion_owned": sum(player.inventory.get(stamina.potion_item_id, {}).values()),
+            "potion_item": potion.model_dump() if potion else None,
+            "purchase_restore": stamina.purchase_restore,
+            "purchase_prices": list(stamina.purchase_prices),
+            "purchase_used_today": used,
+            "purchase_daily_limit": stamina.purchase_daily_limit,
+            "purchase_next_price": stamina.purchase_price(used),
+            "purchase_resets_at": self._commission_refresh_at(day),
+        }
+
+    def redeem_code(self, oauth_sub: str, code: str) -> dict:
+        """兑换激活码。先原子占码再改存档，改不动就把码放回去——玩家不该因为撞上上限丢一张码。"""
+        code = normalize_code(code)
+        if not code:
+            raise GameError("invalid_code", "请输入激活码")
+        if self.redemption_codes is None:
+            raise GameError("invalid_code", "激活码无效或已被使用", 404)
+        player = self.repository.get_by_sub(oauth_sub)
+        if not player:
+            raise GameError("player_not_found", "角色不存在", 404)
+        now = self._now()
+        entry = self.redemption_codes.claim(code, player.player_id, now)
+        if entry is None:
+            existing = self.redemption_codes.get(code)
+            if existing is not None and existing.redeemed_by == player.player_id:
+                raise GameError("code_already_redeemed", "这张激活码你已经兑换过了", 409)
+            if existing is not None:
+                raise GameError("code_already_redeemed", "这张激活码已经被使用了", 409)
+            raise GameError("invalid_code", "激活码无效或已被使用", 404)
+        try:
+            _, result = self._update_player(player.player_id, self._redeem_mutation(entry, now))
+        except Exception:
+            self.redemption_codes.release(code, player.player_id)
+            raise
+        return {"result": result, "state": self._settled_snapshot(player.player_id)}
+
+    def _redeem_mutation(self, entry: RedemptionCode, now: int):
+        card = self.content.monthly_card
+        day = self._commission_day(now)
+
+        def mutation(player: PlayerState):
+            self._settle(player, now)
+            expires_on = extend_expiry(player.monthly_card_expires_on, day, card.duration_days)
+            days_left = remaining_days(expires_on, day)
+            if days_left > card.max_days:
+                raise GameError(
+                    "monthly_card_capped",
+                    f"月卡剩余天数最多 {card.max_days} 天，这张激活码留着以后再用",
+                    409,
+                )
+            player.monthly_card_expires_on = expires_on
+            player.monthly_card_redeemed += 1
+            player.maple_flame += card.activation_maple_flame
+            return {
+                "code": entry.code,
+                "maple_flame": card.activation_maple_flame,
+                "duration_days": card.duration_days,
+                "monthly_card": self._monthly_card_snapshot(player, now),
+            }
+
+        return mutation
+
+    def claim_monthly_card(self, oauth_sub: str) -> dict:
+        """领当天那份月卡奖励。没领就过期，不补发。"""
+        card = self.content.monthly_card
+        now = self._now()
+        day = self._commission_day(now)
+
+        def mutation(player: PlayerState):
+            self._settle(player, now)
+            if remaining_days(player.monthly_card_expires_on, day) <= 0:
+                raise GameError("monthly_card_inactive", "月卡还没激活或者已经到期了", 409)
+            if player.monthly_card_claimed_on == day:
+                raise GameError("monthly_card_claimed", "今天的月卡奖励已经领过了", 409)
+            player.monthly_card_claimed_on = day
+            player.maple_flame += card.daily_maple_flame
+            if card.daily_item_amount:
+                add_item(player, card.daily_item_id, card.daily_item_amount)
+            return {
+                "maple_flame": card.daily_maple_flame,
+                "item_id": card.daily_item_id,
+                "item_amount": card.daily_item_amount,
+                "monthly_card": self._monthly_card_snapshot(player, now),
+            }
+
+        player, result = self._update_by_sub(oauth_sub, mutation)
+        return {"result": result, "state": self._snapshot(player, now)}
+
+    # --------------------------------------------------------------- 体力补给
+
+    def use_stamina_potion(self, oauth_sub: str) -> dict:
+        stamina = self.content.stamina
+        now = self._now()
+
+        def mutation(player: PlayerState):
+            self._settle(player, now)
+            try:
+                remove_item(player, stamina.potion_item_id, 1)
+            except EconomyError as exc:
+                raise GameError("resource_insufficient", "没有绯恩特调了") from exc
+            gained = grant_stamina(player, stamina.potion_restore, self.content, now)
+            return {
+                "item_id": stamina.potion_item_id,
+                "stamina_gained": gained,
+                "stamina": player.stamina,
+            }
+
+        player, result = self._update_by_sub(oauth_sub, mutation)
+        return {"result": result, "state": self._snapshot(player, now)}
+
+    def buy_stamina(self, oauth_sub: str) -> dict:
+        stamina = self.content.stamina
+        now = self._now()
+        day = self._commission_day(now)
+
+        def mutation(player: PlayerState):
+            self._settle(player, now)
+            if player.stamina_purchase_day != day:
+                player.stamina_purchase_day = day
+                player.stamina_purchase_count = 0
+            price = stamina.purchase_price(player.stamina_purchase_count)
+            if price is None:
+                raise GameError(
+                    "stamina_purchase_limit",
+                    f"今天已经买满 {stamina.purchase_daily_limit} 次体力了",
+                    409,
+                )
+            if player.maple_flame < price:
+                raise GameError("resource_insufficient", "枫火不足")
+            player.maple_flame -= price
+            player.stamina_purchase_count += 1
+            gained = grant_stamina(player, stamina.purchase_restore, self.content, now)
+            return {
+                "maple_flame_spent": price,
+                "stamina_gained": gained,
+                "stamina": player.stamina,
+                "purchase_used_today": player.stamina_purchase_count,
+                "purchase_next_price": stamina.purchase_price(player.stamina_purchase_count),
+            }
+
+        player, result = self._update_by_sub(oauth_sub, mutation)
+        return {"result": result, "state": self._snapshot(player, now)}
+
+    # ------------------------------------------------------- 激活码（管理侧）
+
+    def generate_redemption_codes(self, count: int, batch: str = "", note: str = "") -> list[str]:
+        """批量造码。撞号极其罕见，真撞上就少造一张，不重试。"""
+        count = int(count or 0)
+        if count < 1 or count > MAX_REDEMPTION_CODE_BATCH:
+            raise GameError(
+                "invalid_count",
+                f"一次最多生成 {MAX_REDEMPTION_CODE_BATCH} 个激活码",
+            )
+        if self.redemption_codes is None:
+            raise GameError("codes_unavailable", "激活码存储没有接入", 503)
+        now = self._now()
+        batch = str(batch or "").strip()[:40] or datetime.fromtimestamp(now, timezone.utc).strftime("%Y%m%d-%H%M%S")
+        entries = [
+            RedemptionCode(
+                code=generate_code(),
+                kind="monthly_card",
+                batch=batch,
+                note=str(note or "").strip()[:120],
+                created_at=now,
+            )
+            for _ in range(count)
+        ]
+        unique = {entry.code: entry for entry in entries}
+        self.redemption_codes.create(list(unique.values()))
+        return sorted(unique)
+
+    def redeem_code_by_identity(self, identity: QQIdentity, code: str) -> dict:
+        return self.redeem_code(self._sub_for_identity(identity), code)
+
+    def claim_monthly_card_by_identity(self, identity: QQIdentity) -> dict:
+        return self.claim_monthly_card(self._sub_for_identity(identity))
+
+    def list_redemption_codes(self, limit: int = 200) -> list[dict]:
+        if self.redemption_codes is None:
+            return []
+        limit = max(1, min(int(limit or 200), MAX_REDEMPTION_CODE_LIST))
+        records = self.redemption_codes.list_recent(limit)
+        names = {}
+        for record in records:
+            if record.redeemed_by and record.redeemed_by not in names:
+                owner = self.repository.get(record.redeemed_by)
+                names[record.redeemed_by] = owner.display_name if owner else ""
+        return [
+            {
+                **record.model_dump(),
+                "redeemed_by_name": names.get(record.redeemed_by, ""),
+            }
+            for record in records
+        ]
+
     def recruit(self, oauth_sub: str, count: int, request_id: str, pool_id: str) -> dict:
         if count not in (1, 10):
             raise GameError("invalid_pull_count", "只能单次或十次招募")
@@ -5057,6 +5300,8 @@ class GameService:
             "talents": self._talent_snapshot(player),
             "portals": self._portal_snapshot(player),
             "commissions": self._commission_snapshot(player, now),
+            "monthly_card": self._monthly_card_snapshot(player, now),
+            "stamina_supply": self._stamina_snapshot(player, now),
             "mail": self._mail_summary(player, now),
             "achievements": achievement_snapshot(player, self.content),
             "crops": [

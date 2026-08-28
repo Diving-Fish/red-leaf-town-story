@@ -14,7 +14,12 @@ from red_leaf_town.domain import (
     PlayerState,
     QQIdentity,
 )
-from red_leaf_town.infrastructure import RedisCommissionBoard, RedisPlayerRepository
+from red_leaf_town.domain import RedemptionCode
+from red_leaf_town.infrastructure import (
+    RedisCommissionBoard,
+    RedisPlayerRepository,
+    RedisRedemptionCodes,
+)
 from red_leaf_town.partner_content import load_partner_catalog
 from src.data_access.redis import redis_global
 
@@ -237,3 +242,58 @@ def test_restoring_payouts_keeps_them_for_the_next_read(board):
     board.restore_payouts(entry.owner_id, payouts)
 
     assert board.drain_payouts(entry.owner_id) == payouts
+
+
+@pytest.fixture
+def codes():
+    prefix = f"test:rlt:code:{uuid4().hex}:"
+
+    class IsolatedRedisCodes(RedisRedemptionCodes):
+        PREFIX = prefix
+
+    instance = IsolatedRedisCodes(redis_global)
+    yield instance
+    for key in redis_global.scan_iter(match=f"{prefix}*"):
+        redis_global.delete(key)
+
+
+def make_code(value: str) -> RedemptionCode:
+    return RedemptionCode(code=value, batch="redis", created_at=1_700_000_000)
+
+
+def test_redemption_codes_survive_a_round_trip(codes):
+    assert codes.create([make_code("AAAA-1111"), make_code("BBBB-2222")]) == 2
+    assert codes.create([make_code("AAAA-1111")]) == 0
+
+    stored = codes.get("AAAA-1111")
+    assert stored is not None and stored.batch == "redis" and stored.redeemed is False
+    assert {entry.code for entry in codes.list_recent()} == {"AAAA-1111", "BBBB-2222"}
+
+
+def test_only_the_first_claim_on_a_code_wins(codes):
+    codes.create([make_code("CCCC-3333")])
+
+    assert codes.claim("CCCC-3333", "player-a", 1_700_000_100) is not None
+    assert codes.claim("CCCC-3333", "player-b", 1_700_000_200) is None
+
+    stored = codes.get("CCCC-3333")
+    assert stored.redeemed_by == "player-a"
+    assert stored.redeemed_at == 1_700_000_100
+    assert codes.list_recent()[0].redeemed_by == "player-a"
+
+
+def test_releasing_a_claim_puts_the_code_back(codes):
+    """兑换失败（比如撞上 180 天上限）时要能把码放回去，而且只有占码的人放得回去。"""
+    codes.create([make_code("DDDD-4444")])
+    codes.claim("DDDD-4444", "player-a", 1_700_000_100)
+
+    codes.release("DDDD-4444", "player-b")
+    assert codes.get("DDDD-4444").redeemed_by == "player-a"
+
+    codes.release("DDDD-4444", "player-a")
+    assert codes.get("DDDD-4444").redeemed is False
+    assert codes.claim("DDDD-4444", "player-b", 1_700_000_300) is not None
+
+
+def test_claiming_a_code_that_does_not_exist(codes):
+    assert codes.claim("EEEE-5555", "player-a", 1_700_000_100) is None
