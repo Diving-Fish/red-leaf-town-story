@@ -1,5 +1,5 @@
 import type { Component } from 'vue'
-import { Beef, DoorOpen, Flame, Hammer, HandHeart, LayoutDashboard, Pickaxe, Sparkles, Sprout, Store, Trees, Waves } from 'lucide-vue-next'
+import { Beef, Compass, DoorOpen, Flame, Hammer, HandHeart, LayoutDashboard, Pickaxe, Sparkles, Sprout, Store, Trees, Waves } from 'lucide-vue-next'
 
 import type { GameState } from '@/types'
 
@@ -24,6 +24,13 @@ export const NAV_ITEMS: NavItem[] = [
     primary: true,
     readyGroup: 'gathering',
     unlocked: (state) => state.gathering_sites.length > 0,
+  },
+  {
+    to: '/exploration',
+    label: '探索',
+    icon: Compass,
+    primary: false,
+    unlocked: (state) => state.exploration.unlocked,
   },
   {
     to: '/crafting',

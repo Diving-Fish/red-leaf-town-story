@@ -18,6 +18,7 @@ import type {
   CommissionBoard,
   CrossoverCampaign,
   CrossoverClaimResult,
+  ExplorationResolutionResult,
   GachaResult,
   GameState,
   LivestockCollectResult,
@@ -235,6 +236,28 @@ export const useGameStore = defineStore('game', () => {
       successMessage: '种子已放入仓库',
       cue: 'action:buy',
     })
+  }
+
+  function startExploration(expeditionId: string, partnerIds: string[], leaderPartnerId: string) {
+    return action(`exploration:start:${expeditionId}`, `${API_ROOT}/exploration/${expeditionId}/start`, {
+      payload: { partner_ids: partnerIds, leader_partner_id: leaderPartnerId },
+      successMessage: '采运许可已经生效，队伍进入红枫林腹地',
+    })
+  }
+
+  async function resolveExploration(choiceId: string, actorPartnerId = '') {
+    const result = await action('exploration:resolve', `${API_ROOT}/exploration/current/resolve`, {
+      payload: { choice_id: choiceId, actor_partner_id: actorPartnerId },
+    }) as ExplorationResolutionResult | undefined
+    return result
+  }
+
+  async function withdrawExploration() {
+    const result = await action('exploration:withdraw', `${API_ROOT}/exploration/current/withdraw`) as
+      | (ProductionOutcome & { depth?: number })
+      | undefined
+    if (result) showNotice(outcomeText(result, '返程带回了', '战利品') || `从第 ${result.depth || 0} 段路线返程`)
+    return result
   }
 
   function sell(itemId: string, quantity: number, quality: number | null = null) {
@@ -766,6 +789,9 @@ export const useGameStore = defineStore('game', () => {
     initialize,
     refresh,
     buy,
+    startExploration,
+    resolveExploration,
+    withdrawExploration,
     sell,
     plant,
     harvest,

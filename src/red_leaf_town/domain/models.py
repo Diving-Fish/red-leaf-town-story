@@ -625,8 +625,65 @@ class AchievementStats(BaseModel):
         return self
 
 
+class ExplorationEventLog(BaseModel):
+    depth: int = Field(ge=1)
+    event_id: str = Field(min_length=1)
+    choice_id: str = Field(min_length=1)
+    success: bool
+    degree: Literal["automatic_success", "critical_failure", "failure", "success", "critical_success"] = "success"
+    check_attribute: Literal["strength", "agility", "intelligence", "luck"] | None = None
+    check_mode: Literal["best", "sum"] | None = None
+    dice_mode: Literal["normal", "advantage", "disadvantage"] | None = None
+    rolls: list[int] = Field(default_factory=list, max_length=2)
+    kept_roll: int | None = Field(default=None, ge=1, le=20)
+    modifier: int | None = None
+    total: int | None = None
+    actor_partner_ids: list[str] = Field(default_factory=list, max_length=3)
+    text: str = Field(min_length=1)
+    stamina_cost: int = Field(ge=0)
+    rewards: list[ProductionResultSnapshot] = Field(default_factory=list, max_length=20)
+    applied_effects: list[dict[str, object]] = Field(default_factory=list, max_length=20)
+
+
+class ExplorationRunState(BaseModel):
+    run_id: str = Field(min_length=1)
+    expedition_id: str = Field(min_length=1)
+    expedition_kind: Literal["transport", "survey"]
+    status: Literal["active", "completed"] = "active"
+    partner_ids: list[str] = Field(min_length=1, max_length=3)
+    leader_partner_id: str = Field(min_length=1)
+    exploration_ability: int = Field(ge=0)
+    entry_fee: int = Field(gt=0)
+    started_at: int = Field(ge=0)
+    depth: int = Field(default=0, ge=0)
+    current_event_id: str = Field(min_length=1)
+    current_rolls: list[int] = Field(min_length=2, max_length=2)
+    route_stamina_raw: int = Field(default=0, ge=0)
+    action_stamina_spent: int = Field(default=0, ge=0)
+    stamina_spent: int = Field(default=0, ge=0)
+    next_route_discount: int = Field(default=0, ge=0, le=5)
+    pending_rewards: list[ProductionResultSnapshot] = Field(default_factory=list, max_length=100)
+    event_counts: dict[str, int] = Field(default_factory=dict)
+    trait_usage: dict[str, int] = Field(default_factory=dict)
+    logs: list[ExplorationEventLog] = Field(default_factory=list, max_length=20)
+
+    @model_validator(mode="after")
+    def validate_run(self):
+        if len(self.partner_ids) != len(set(self.partner_ids)):
+            raise ValueError("exploration party cannot contain the same partner twice")
+        if self.leader_partner_id not in self.partner_ids:
+            raise ValueError("exploration leader must be in the party")
+        if any(count < 0 for count in self.event_counts.values()):
+            raise ValueError("exploration event counts cannot be negative")
+        if any(count < 0 for count in self.trait_usage.values()):
+            raise ValueError("exploration trait usage cannot be negative")
+        if any(roll < 1 or roll > 20 for roll in self.current_rolls):
+            raise ValueError("exploration rolls must be between 1 and 20")
+        return self
+
+
 class PlayerState(BaseModel):
-    schema_version: int = 26
+    schema_version: int = 29
     version: int = 1
     player_id: str
     oauth_sub: str
@@ -671,6 +728,7 @@ class PlayerState(BaseModel):
     # 当天用枫火买过几次体力。日期一换就重新计数。
     stamina_purchase_day: str = ""
     stamina_purchase_count: int = Field(default=0, ge=0)
+    exploration_run: ExplorationRunState | None = None
     achievement_stats: AchievementStats = Field(default_factory=AchievementStats)
     achievements: list[AchievementCompletionState] = Field(default_factory=list)
     achievement_auto_rewards_reconciled: bool = True
@@ -823,7 +881,19 @@ class PlayerState(BaseModel):
             migrated.setdefault("monthly_card_redeemed", 0)
             migrated.setdefault("stamina_purchase_day", "")
             migrated.setdefault("stamina_purchase_count", 0)
-        migrated["schema_version"] = 26
+        if schema_version < 27:
+            migrated.setdefault("exploration_run", None)
+        if schema_version < 28:
+            run = migrated.get("exploration_run")
+            if isinstance(run, dict) and "current_rolls" not in run:
+                legacy_roll = float(run.pop("current_roll", 0))
+                legacy_die = max(1, min(20, int(legacy_roll * 20) + 1))
+                run["current_rolls"] = [legacy_die, legacy_die]
+        if schema_version < 29:
+            run = migrated.get("exploration_run")
+            if isinstance(run, dict):
+                run.setdefault("trait_usage", {})
+        migrated["schema_version"] = 29
         return migrated
 
     @model_validator(mode="after")
@@ -859,6 +929,10 @@ class PlayerState(BaseModel):
             raise ValueError("player cannot take the same commission more than once")
         if self.commission and self.commission.commission_id in set(taken_ids):
             raise ValueError("player cannot take their own commission")
+        if self.exploration_run:
+            unknown_explorers = set(self.exploration_run.partner_ids) - set(partner_ids)
+            if unknown_explorers:
+                raise ValueError("exploration party cannot contain partners the player does not own")
         pond_ids = [entry.pond_id for entry in self.ponds]
         if len(pond_ids) != len(set(pond_ids)):
             raise ValueError("player cannot record the same pond more than once")

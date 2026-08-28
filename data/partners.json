@@ -1,5 +1,5 @@
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "partners": [
     {
       "id": "ai_xinyu",
@@ -7,6 +7,7 @@
       "rarity": 4,
       "description": "",
       "growth_curve": "linear",
+      "exploration_stats": {"strength": 9, "agility": 14, "intelligence": 11, "luck": 14},
       "tendencies": [
         {
           "industry": "aquatic",
@@ -65,6 +66,7 @@
       "rarity": 5,
       "description": "",
       "growth_curve": "linear",
+      "exploration_stats": {"strength": 11, "agility": 16, "intelligence": 11, "luck": 10},
       "tendencies": [
         {
           "industry": "exploration",
@@ -82,7 +84,7 @@
           "level_60": 134
         }
       ],
-      "trait_codes": [],
+      "trait_codes": ["thunderwing_vanguard"],
       "artworks": [
         {
           "breakthrough": 0,
@@ -123,6 +125,7 @@
       "rarity": 4,
       "description": "",
       "growth_curve": "linear",
+      "exploration_stats": {"strength": 10, "agility": 11, "intelligence": 16, "luck": 11},
       "tendencies": [
         {
           "industry": "farming",
@@ -181,6 +184,7 @@
       "rarity": 3,
       "description": "",
       "growth_curve": "linear",
+      "exploration_stats": {"strength": 9, "agility": 12, "intelligence": 12, "luck": 15},
       "tendencies": [
         {
           "industry": "aquatic",
@@ -229,6 +233,7 @@
       "rarity": 3,
       "description": "",
       "growth_curve": "linear",
+      "exploration_stats": {"strength": 12, "agility": 11, "intelligence": 13, "luck": 12},
       "tendencies": [
         {
           "industry": "crafting",
@@ -282,6 +287,7 @@
       "rarity": 4,
       "description": "",
       "growth_curve": "linear",
+      "exploration_stats": {"strength": 10, "agility": 8, "intelligence": 14, "luck": 16},
       "tendencies": [
         {
           "industry": "gathering",
@@ -340,6 +346,7 @@
       "rarity": 4,
       "description": "",
       "growth_curve": "linear",
+      "exploration_stats": {"strength": 10, "agility": 15, "intelligence": 15, "luck": 8},
       "tendencies": [
         {
           "industry": "mining",
@@ -398,6 +405,7 @@
       "rarity": 3,
       "description": "",
       "growth_curve": "linear",
+      "exploration_stats": {"strength": 10, "agility": 15, "intelligence": 14, "luck": 9},
       "tendencies": [
         {
           "industry": "farming",
@@ -451,6 +459,7 @@
       "rarity": 4,
       "description": "",
       "growth_curve": "linear",
+      "exploration_stats": {"strength": 12, "agility": 12, "intelligence": 13, "luck": 11},
       "tendencies": [
         {
           "industry": "gathering",
@@ -504,6 +513,7 @@
       "rarity": 5,
       "description": "",
       "growth_curve": "linear",
+      "exploration_stats": {"strength": 9, "agility": 13, "intelligence": 15, "luck": 11},
       "tendencies": [
         {
           "industry": "farming",
@@ -557,6 +567,7 @@
       "rarity": 3,
       "description": "",
       "growth_curve": "linear",
+      "exploration_stats": {"strength": 9, "agility": 14, "intelligence": 13, "luck": 12},
       "tendencies": [
         {
           "industry": "farming",
@@ -615,6 +626,7 @@
       "rarity": 5,
       "description": "",
       "growth_curve": "linear",
+      "exploration_stats": {"strength": 10, "agility": 15, "intelligence": 10, "luck": 13},
       "tendencies": [
         {
           "industry": "exploration",
@@ -632,7 +644,7 @@
           "level_60": 134
         }
       ],
-      "trait_codes": [],
+      "trait_codes": ["snowtrace_trick"],
       "artworks": [
         {
           "breakthrough": 0,
@@ -673,6 +685,7 @@
       "rarity": 5,
       "description": "",
       "growth_curve": "linear",
+      "exploration_stats": {"strength": 16, "agility": 9, "intelligence": 14, "luck": 9},
       "tendencies": [
         {
           "industry": "mining",
@@ -726,6 +739,7 @@
       "rarity": 4,
       "description": "",
       "growth_curve": "linear",
+      "exploration_stats": {"strength": 11, "agility": 12, "intelligence": 16, "luck": 9},
       "tendencies": [
         {
           "industry": "crafting",
@@ -779,6 +793,7 @@
       "rarity": 4,
       "description": "",
       "growth_curve": "linear",
+      "exploration_stats": {"strength": 12, "agility": 15, "intelligence": 10, "luck": 11},
       "tendencies": [
         {
           "industry": "farming",
@@ -837,6 +852,7 @@
       "rarity": 4,
       "description": "",
       "growth_curve": "linear",
+      "exploration_stats": {"strength": 14, "agility": 12, "intelligence": 15, "luck": 7},
       "tendencies": [
         {
           "industry": "exploration",
@@ -854,7 +870,7 @@
           "level_60": 134
         }
       ],
-      "trait_codes": [],
+      "trait_codes": ["wilderness_veteran"],
       "artworks": [
         {
           "breakthrough": 0,
@@ -895,6 +911,7 @@
       "rarity": 5,
       "description": "",
       "growth_curve": "linear",
+      "exploration_stats": {"strength": 15, "agility": 11, "intelligence": 14, "luck": 8},
       "tendencies": [
         {
           "industry": "exploration",
@@ -907,7 +924,7 @@
           "level_60": 168
         }
       ],
-      "trait_codes": [],
+      "trait_codes": ["royal_rider_command"],
       "artworks": [
         {
           "breakthrough": 0,
@@ -948,6 +965,7 @@
       "rarity": 3,
       "description": "",
       "growth_curve": "linear",
+      "exploration_stats": {"strength": 16, "agility": 10, "intelligence": 13, "luck": 9},
       "tendencies": [
         {
           "industry": "livestock",
@@ -1001,6 +1019,7 @@
       "rarity": 5,
       "description": "",
       "growth_curve": "linear",
+      "exploration_stats": {"strength": 11, "agility": 13, "intelligence": 15, "luck": 9},
       "tendencies": [
         {
           "industry": "gathering",
@@ -1059,6 +1078,7 @@
       "rarity": 5,
       "description": "",
       "growth_curve": "linear",
+      "exploration_stats": {"strength": 9, "agility": 13, "intelligence": 16, "luck": 10},
       "tendencies": [
         {
           "industry": "farming",
@@ -1112,6 +1132,7 @@
       "rarity": 3,
       "description": "",
       "growth_curve": "linear",
+      "exploration_stats": {"strength": 15, "agility": 9, "intelligence": 13, "luck": 11},
       "tendencies": [
         {
           "industry": "livestock",
@@ -1160,6 +1181,7 @@
       "rarity": 5,
       "description": "",
       "growth_curve": "linear",
+      "exploration_stats": {"strength": 14, "agility": 8, "intelligence": 14, "luck": 12},
       "tendencies": [
         {
           "industry": "livestock",
@@ -1213,6 +1235,7 @@
       "rarity": 4,
       "description": "",
       "growth_curve": "linear",
+      "exploration_stats": {"strength": 8, "agility": 14, "intelligence": 15, "luck": 11},
       "tendencies": [
         {
           "industry": "farming",
@@ -1271,6 +1294,7 @@
       "rarity": 5,
       "description": "",
       "growth_curve": "linear",
+      "exploration_stats": {"strength": 13, "agility": 16, "intelligence": 11, "luck": 8},
       "tendencies": [
         {
           "industry": "gathering",
@@ -1329,6 +1353,7 @@
       "rarity": 3,
       "description": "",
       "growth_curve": "linear",
+      "exploration_stats": {"strength": 16, "agility": 11, "intelligence": 12, "luck": 9},
       "tendencies": [
         {
           "industry": "exploration",
@@ -1336,7 +1361,7 @@
           "level_60": 235
         }
       ],
-      "trait_codes": [],
+      "trait_codes": ["iceflame_breach"],
       "artworks": [
         {
           "breakthrough": 0,
@@ -1377,6 +1402,7 @@
       "rarity": 3,
       "description": "",
       "growth_curve": "linear",
+      "exploration_stats": {"strength": 15, "agility": 9, "intelligence": 16, "luck": 8},
       "tendencies": [
         {
           "industry": "mining",
@@ -1425,6 +1451,7 @@
       "rarity": 5,
       "description": "",
       "growth_curve": "linear",
+      "exploration_stats": {"strength": 13, "agility": 11, "intelligence": 13, "luck": 11},
       "tendencies": [
         {
           "industry": "livestock",
@@ -1473,6 +1500,7 @@
       "rarity": 4,
       "description": "",
       "growth_curve": "linear",
+      "exploration_stats": {"strength": 10, "agility": 15, "intelligence": 10, "luck": 13},
       "tendencies": [
         {
           "industry": "gathering",
@@ -1523,6 +1551,7 @@
       "rarity": 3,
       "description": "",
       "growth_curve": "linear",
+      "exploration_stats": {"strength": 16, "agility": 10, "intelligence": 9, "luck": 13},
       "tendencies": [
         {
           "industry": "exploration",
@@ -1530,7 +1559,7 @@
           "level_60": 235
         }
       ],
-      "trait_codes": [],
+      "trait_codes": ["head_on"],
       "artworks": [
         {
           "breakthrough": 0,
@@ -1571,6 +1600,7 @@
       "rarity": 4,
       "description": "",
       "growth_curve": "linear",
+      "exploration_stats": {"strength": 9, "agility": 13, "intelligence": 14, "luck": 12},
       "tendencies": [
         {
           "industry": "livestock",
@@ -1624,6 +1654,7 @@
       "rarity": 5,
       "description": "",
       "growth_curve": "linear",
+      "exploration_stats": {"strength": 9, "agility": 13, "intelligence": 16, "luck": 10},
       "tendencies": [
         {
           "industry": "gathering",
@@ -1682,6 +1713,7 @@
       "rarity": 5,
       "description": "",
       "growth_curve": "linear",
+      "exploration_stats": {"strength": 13, "agility": 11, "intelligence": 13, "luck": 11},
       "tendencies": [
         {
           "industry": "livestock",
@@ -1740,6 +1772,7 @@
       "rarity": 4,
       "description": "",
       "growth_curve": "linear",
+      "exploration_stats": {"strength": 9, "agility": 15, "intelligence": 15, "luck": 9},
       "tendencies": [
         {
           "industry": "crafting",
@@ -1798,6 +1831,7 @@
       "rarity": 3,
       "description": "",
       "growth_curve": "linear",
+      "exploration_stats": {"strength": 10, "agility": 14, "intelligence": 13, "luck": 11},
       "tendencies": [
         {
           "industry": "farming",
@@ -1856,6 +1890,7 @@
       "rarity": 4,
       "description": "",
       "growth_curve": "linear",
+      "exploration_stats": {"strength": 13, "agility": 12, "intelligence": 13, "luck": 10},
       "tendencies": [
         {
           "industry": "crafting",
@@ -1906,6 +1941,7 @@
       "rarity": 5,
       "description": "",
       "growth_curve": "linear",
+      "exploration_stats": {"strength": 14, "agility": 15, "intelligence": 8, "luck": 11},
       "tendencies": [
         {
           "industry": "exploration",
@@ -1913,7 +1949,7 @@
           "level_60": 235
         }
       ],
-      "trait_codes": [],
+      "trait_codes": ["wildfire_instinct"],
       "artworks": [
         {
           "breakthrough": 0,

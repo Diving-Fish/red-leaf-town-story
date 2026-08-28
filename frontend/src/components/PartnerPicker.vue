@@ -18,6 +18,9 @@ const props = defineProps<{
   lockedLabel?: string
   dialogTitle?: string
   elevated?: boolean
+  candidates?: OwnedPartner[]
+  excludedPartnerIds?: string[]
+  clearable?: boolean
 }>()
 
 const emit = defineEmits<{ (event: 'select', partnerId: string | null): void }>()
@@ -59,6 +62,9 @@ function toggle() {
       :title="dialogTitle"
       :solo-label="soloLabel"
       :elevated="elevated"
+      :candidates="candidates"
+      :excluded-partner-ids="excludedPartnerIds"
+      :clearable="clearable"
       @select="(partnerId) => emit('select', partnerId)"
       @close="open = false"
     />

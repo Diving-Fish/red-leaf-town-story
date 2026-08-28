@@ -1035,6 +1035,142 @@ export interface AchievementClaimResult {
   maple_flame: number
 }
 
+export interface ExplorationExpedition {
+  id: string
+  kind: 'transport' | 'survey'
+  name: string
+  description: string
+  accent: string
+  min_level: number
+  entry_fee: number
+  max_depth: number
+  final_event_id: string
+  quality: QualityCurveDefinition
+  unlocked: boolean
+  affordable: boolean
+}
+
+export interface ExplorationChoice {
+  id: string
+  label: string
+  description: string
+  route_stamina: number
+  action_stamina: number
+  check: {
+    attribute: ExplorationAttribute
+    mode: 'best' | 'sum'
+    dice: 'normal' | 'advantage' | 'disadvantage'
+    dc: number
+  } | null
+  check_attribute: ExplorationAttribute | null
+  check_mode: 'best' | 'sum' | null
+  dice_mode: 'normal' | 'advantage' | 'disadvantage' | null
+  modifier: number | null
+  actor_partner_ids: string[]
+  check_actor_names: string[]
+  actor_partner_id: string | null
+  actor_options: ExplorationActorOption[]
+  success_chance: number
+  stamina_cost_min: number
+  stamina_cost_max: number
+  applied_effects: Array<Record<string, unknown>>
+}
+
+export interface ExplorationActorOption {
+  partner_id: string
+  name: string
+  modifier: number | null
+  dice_mode: 'normal' | 'advantage' | 'disadvantage' | null
+  success_chance: number
+  applied_effects: Array<Record<string, unknown>>
+}
+
+export interface ExplorationDrop extends ProductionResultSnapshot {
+  quality_name: string
+  item: ItemDefinition | null
+}
+
+export interface ExplorationLog {
+  depth: number
+  event_id: string
+  event_name: string
+  choice_id: string
+  success: boolean
+  degree: ExplorationCheckDegree
+  check_attribute: ExplorationAttribute | null
+  check_mode: 'best' | 'sum' | null
+  dice_mode: 'normal' | 'advantage' | 'disadvantage' | null
+  rolls: number[]
+  kept_roll: number | null
+  modifier: number | null
+  total: number | null
+  actor_partner_ids: string[]
+  text: string
+  stamina_cost: number
+  rewards: ExplorationDrop[]
+  applied_effects: Array<Record<string, unknown>>
+}
+
+export type ExplorationCheckDegree = 'automatic_success' | 'critical_failure' | 'failure' | 'success' | 'critical_success'
+
+export interface ExplorationResolutionResult {
+  event_id: string
+  choice_id: string
+  success: boolean
+  degree: ExplorationCheckDegree
+  success_chance: number
+  check_attribute: ExplorationAttribute | null
+  check_mode: 'best' | 'sum' | null
+  dice_mode: 'normal' | 'advantage' | 'disadvantage' | null
+  rolls: number[]
+  kept_roll: number | null
+  modifier: number | null
+  total: number | null
+  actor_partner_ids: string[]
+  text: string
+  stamina_cost: number
+  drops: ExplorationDrop[]
+  completed: boolean
+}
+
+export interface ExplorationRun {
+  run_id: string
+  expedition_id: string
+  expedition_kind: 'transport' | 'survey'
+  status: 'active' | 'completed'
+  partner_ids: string[]
+  leader_partner_id: string
+  exploration_ability: number
+  entry_fee: number
+  started_at: number
+  depth: number
+  current_event_id: string
+  route_stamina_raw: number
+  action_stamina_spent: number
+  stamina_spent: number
+  next_route_discount: number
+  expedition: ExplorationExpedition
+  party: OwnedPartner[]
+  leader: OwnedPartner | null
+  stamina_discount_rate: number
+  pending_rewards: ExplorationDrop[]
+  current_event: {
+    id: string
+    name: string
+    description: string
+    min_depth: number
+    max_depth: number
+    choices: ExplorationChoice[]
+  } | null
+  logs: ExplorationLog[]
+}
+
+export interface ExplorationState {
+  unlocked: boolean
+  expeditions: ExplorationExpedition[]
+  active_run: ExplorationRun | null
+}
+
 export interface GameState {
   server_time: number
   world: {
@@ -1053,6 +1189,7 @@ export interface GameState {
   next_mining_site_level: number | null
   aquatic: AquaticState
   livestock: LivestockState
+  exploration: ExplorationState
   inventory: InventoryItem[]
   task_items: TaskItemState[]
   partners: OwnedPartner[]
@@ -1148,6 +1285,7 @@ export interface PartnerDefinition {
   rarity: 3 | 4 | 5
   description: string
   growth_curve: GrowthCurveId
+  exploration_stats: ExplorationStats
   tendencies: PartnerTendency[]
   trait_codes: string[]
   artworks: PartnerArtwork[]
@@ -1155,6 +1293,15 @@ export interface PartnerDefinition {
   ascensions?: PartnerAscension[]
   complete?: boolean
   ability_preview?: Record<string, Record<string, number>>
+}
+
+export type ExplorationAttribute = 'strength' | 'agility' | 'intelligence' | 'luck'
+
+export interface ExplorationStats {
+  strength: number
+  agility: number
+  intelligence: number
+  luck: number
 }
 
 export interface PartnerSelectCandidate {
@@ -1208,6 +1355,7 @@ export interface OwnedPartnerTrait {
   name: string
   description: string
   implemented: boolean
+  phases: string[]
 }
 
 export interface OwnedPartner {
@@ -1229,6 +1377,7 @@ export interface OwnedPartner {
   avatar_crop?: AvatarCrop | null
   tendencies?: OwnedPartnerTendency[]
   traits?: OwnedPartnerTrait[]
+  exploration_high_stats?: ExplorationAttribute[]
   upgrade_available?: boolean
   breakthrough_available?: boolean
   breakthrough_reason?: string | null

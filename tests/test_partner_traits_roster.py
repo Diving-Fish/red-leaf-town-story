@@ -38,18 +38,16 @@ PARTNER_TRAITS = {
     "ye_huanan": "peaceful_cooking",
     "ye_lvsu": "seasonal_rhythm",
     "ze_feiyang": "fodder_artisan",
+    "aishen": "thunderwing_vanguard",
+    "gujian_miao": "snowtrace_trick",
+    "hongkai": "wilderness_veteran",
+    "leilei": "royal_rider_command",
+    "wujian": "iceflame_breach",
+    "xiaoha": "head_on",
+    "zhuoyan": "wildfire_instinct",
 }
 
-# 只剩探索主倾向的一批，等第三里程碑的探索业务落地再统一设计。
-PENDING_PARTNERS = {
-    "aishen",
-    "gujian_miao",
-    "hongkai",
-    "leilei",
-    "wujian",
-    "xiaoha",
-    "zhuoyan",
-}
+PENDING_PARTNERS: set[str] = set()
 
 
 def trait_context(phase: str, **overrides):
@@ -69,6 +67,10 @@ def trait_context(phase: str, **overrides):
         "rare_weight_multiplier": 1.0,
         "feed_multiplier": 1.0,
         "quality_bonus": 0.0,
+        "check_bonus": 0,
+        "ordinary_failure_stamina_reduction": 0,
+        "critical_failure_stamina_reduction": 0,
+        "critical_success_min": 20,
         "overflow_bonus": 0,
         "special_chance_bonus": 0.0,
         "affection_quality_bonus": 0.0,
@@ -110,6 +112,13 @@ TRAIT_CASES = [
     ("unhurried", "livestock_segment", {"industry": "livestock", "action": "livestock_segment"}, "overflow_bonus", "increase"),
     ("matchmaker", "instant_action", {"industry": "livestock", "action": "livestock_breed"}, "gene_rerolls", "increase"),
     ("fine_combing", "instant_action", {"industry": "livestock", "action": "livestock_care"}, "affection_per_care_bonus", "increase"),
+    ("thunderwing_vanguard", "exploration_event", {"industry": "exploration", "check_attribute": "agility", "base_dice_mode": "normal", "trait_usage": {}, "dice_adjustment": 0}, "dice_adjustment", "increase"),
+    ("snowtrace_trick", "exploration_event", {"industry": "exploration", "check_attribute": "agility", "check_actor_partner_ids": ["gujian_miao"], "source_partner_id": "gujian_miao", "trait_usage": {}}, None, "effect"),
+    ("wilderness_veteran", "exploration_event", {"industry": "exploration", "check_attribute": "strength", "check_actor_partner_ids": ["hongkai"], "source_partner_id": "hongkai"}, "check_bonus", "increase"),
+    ("royal_rider_command", "exploration_event", {"industry": "exploration", "check_attribute": "strength", "check_mode": "sum", "check_base_modifiers": {"leilei": 2}, "check_actor_partner_ids": ["leilei"], "source_partner_id": "leilei", "leader_partner_id": "leilei", "base_dice_mode": "normal", "trait_usage": {}, "dice_adjustment": 0}, "check_bonus", "increase"),
+    ("iceflame_breach", "exploration_event", {"industry": "exploration", "check_attribute": "strength", "check_actor_partner_ids": ["wujian"], "source_partner_id": "wujian"}, "check_bonus", "increase"),
+    ("head_on", "exploration_event", {"industry": "exploration", "check_attribute": "strength", "check_actor_partner_ids": ["xiaoha"], "source_partner_id": "xiaoha"}, "ordinary_failure_stamina_reduction", "increase"),
+    ("wildfire_instinct", "exploration_event", {"industry": "exploration", "check_attribute": "agility", "check_actor_partner_ids": ["zhuoyan"], "source_partner_id": "zhuoyan"}, "critical_success_min", "decrease"),
 ]
 
 SECONDARY_TRAIT_CASES = [
@@ -124,7 +133,6 @@ def test_only_partners_with_an_implemented_primary_industry_have_traits():
     catalog = load_partner_catalog()
     definitions = {entry.code: entry for entry in partner_trait_catalog()}
 
-    assert len(PARTNER_TRAITS) == 29
     for partner_id, trait_code in PARTNER_TRAITS.items():
         assert catalog.partner_map[partner_id].trait_codes == [trait_code]
         assert definitions[trait_code].implemented is True

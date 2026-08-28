@@ -570,3 +570,134 @@ def _fine_combing(context: MutableMapping[str, Any]) -> None:
         _add(context, "affection_per_care_bonus", 4, stacking_group="livestock_affection")
     elif _livestock_segment(context):
         _add(context, "affection_quality_bonus", 0.001, stacking_group="livestock_affection_quality")
+
+
+def _exploration_check(context: MutableMapping[str, Any]) -> bool:
+    return _industry_is(context, "exploration") and bool(context.get("check_attribute"))
+
+
+def _exploration_actor(context: MutableMapping[str, Any]) -> bool:
+    return str(context.get("source_partner_id") or "") in set(context.get("check_actor_partner_ids") or ())
+
+
+def _exploration_once_available(context: MutableMapping[str, Any], key: str) -> bool:
+    return int((context.get("trait_usage") or {}).get(key, 0)) <= 0
+
+
+def _queue_exploration_usage(context: MutableMapping[str, Any], key: str) -> None:
+    pending = context.setdefault("trait_usage_consumptions", [])
+    if key not in pending:
+        pending.append(key)
+
+
+@register_partner_trait(
+    "thunderwing_vanguard",
+    "雷翼先导",
+    "每次探索中，队伍第一次敏捷检定获得优势。",
+    phases=("exploration_event",),
+)
+def _thunderwing_vanguard(context: MutableMapping[str, Any]) -> None:
+    key = "thunderwing_vanguard:agility_advantage"
+    if not _exploration_check(context) or context.get("check_attribute") != "agility":
+        return
+    if context.get("base_dice_mode") == "advantage":
+        return
+    if not _exploration_once_available(context, key):
+        return
+    _add(context, "dice_adjustment", 1, effect="grant_advantage", stacking_group="exploration_dice")
+    _queue_exploration_usage(context, key)
+
+
+@register_partner_trait(
+    "snowtrace_trick",
+    "雪痕戏法",
+    "每次探索限一次：古剑喵执行的普通失败检定可以重投，必须接受新结果。",
+    phases=("exploration_event",),
+)
+def _snowtrace_trick(context: MutableMapping[str, Any]) -> None:
+    key = "snowtrace_trick:failure_reroll"
+    if not _exploration_check(context) or not _exploration_actor(context):
+        return
+    if _exploration_once_available(context, key):
+        context["failure_reroll_usage_key"] = key
+        record_partner_trait_effect(context, "allow_failure_reroll")
+
+
+@register_partner_trait(
+    "wilderness_veteran",
+    "荒野老手",
+    "红凯执行力量或智力检定时调整值+1；普通失败的附加体力消耗减少1。",
+    phases=("exploration_event",),
+)
+def _wilderness_veteran(context: MutableMapping[str, Any]) -> None:
+    if not _exploration_check(context) or not _exploration_actor(context):
+        return
+    if context.get("check_attribute") not in {"strength", "intelligence"}:
+        return
+    _add(context, "check_bonus", 1, stacking_group="exploration_check_bonus")
+    _add(context, "ordinary_failure_stamina_reduction", 1, stacking_group="exploration_failure_stamina")
+
+
+@register_partner_trait(
+    "royal_rider_command",
+    "王骑号令",
+    "全体检定时蕾蕾的调整值计算两次；担任领队时，每次探索第一次全体检定获得优势。",
+    phases=("exploration_event",),
+)
+def _royal_rider_command(context: MutableMapping[str, Any]) -> None:
+    if not _exploration_check(context) or context.get("check_mode") != "sum":
+        return
+    source_partner_id = str(context.get("source_partner_id") or "")
+    contribution = int((context.get("check_base_modifiers") or {}).get(source_partner_id, 0))
+    _add(context, "check_bonus", contribution, effect="double_group_contribution", stacking_group="exploration_group_bonus")
+    key = "royal_rider_command:group_advantage"
+    if (
+        source_partner_id == context.get("leader_partner_id")
+        and context.get("base_dice_mode") != "advantage"
+        and _exploration_once_available(context, key)
+    ):
+        _add(context, "dice_adjustment", 1, effect="grant_advantage", stacking_group="exploration_dice")
+        _queue_exploration_usage(context, key)
+
+
+@register_partner_trait(
+    "iceflame_breach",
+    "冰焰破障",
+    "雾剑执行力量检定时调整值+1。",
+    phases=("exploration_event",),
+)
+def _iceflame_breach(context: MutableMapping[str, Any]) -> None:
+    if _exploration_check(context) and _exploration_actor(context) and context.get("check_attribute") == "strength":
+        _add(context, "check_bonus", 1, stacking_group="exploration_check_bonus")
+
+
+@register_partner_trait(
+    "head_on",
+    "硬碰硬",
+    "小哈执行力量检定普通失败时免除附加体力消耗；大失败时减少2点附加消耗。",
+    phases=("exploration_event",),
+)
+def _head_on(context: MutableMapping[str, Any]) -> None:
+    if not (_exploration_check(context) and _exploration_actor(context) and context.get("check_attribute") == "strength"):
+        return
+    context["ordinary_failure_stamina_reduction"] = 99
+    context["critical_failure_stamina_reduction"] = max(
+        int(context.get("critical_failure_stamina_reduction", 0)),
+        2,
+    )
+    record_partner_trait_effect(context, "reduce_failure_stamina", params={"ordinary": 99, "critical": 2})
+
+
+@register_partner_trait(
+    "wildfire_instinct",
+    "燎原本能",
+    "灼焱执行力量或敏捷检定时，自然19也视为大成功。",
+    phases=("exploration_event",),
+)
+def _wildfire_instinct(context: MutableMapping[str, Any]) -> None:
+    if not _exploration_check(context) or not _exploration_actor(context):
+        return
+    if context.get("check_attribute") not in {"strength", "agility"}:
+        return
+    context["critical_success_min"] = min(int(context.get("critical_success_min", 20)), 19)
+    record_partner_trait_effect(context, "expand_critical_success", value=19)

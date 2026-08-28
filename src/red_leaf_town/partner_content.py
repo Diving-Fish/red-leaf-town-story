@@ -13,6 +13,7 @@ from red_leaf_town.partner_traits import partner_trait_codes
 
 Industry = Literal["farming", "gathering", "mining", "aquatic", "livestock", "crafting", "exploration"]
 GrowthCurve = Literal["early", "linear", "late"]
+ExplorationAttribute = Literal["strength", "agility", "intelligence", "luck"]
 
 INDUSTRY_NAMES: dict[str, str] = {
     "farming": "农作",
@@ -39,6 +40,24 @@ class PartnerTendency(BaseModel):
         if self.level_60 < self.level_1:
             raise ValueError("level_60 must be greater than or equal to level_1")
         return self
+
+
+class ExplorationStats(BaseModel):
+    strength: int = Field(default=10, ge=1, le=20)
+    agility: int = Field(default=10, ge=1, le=20)
+    intelligence: int = Field(default=10, ge=1, le=20)
+    luck: int = Field(default=10, ge=1, le=20)
+
+    def modifier(self, attribute: ExplorationAttribute) -> int:
+        return (getattr(self, attribute) - 10) // 2
+
+    @property
+    def high_attributes(self) -> list[ExplorationAttribute]:
+        return [
+            attribute
+            for attribute in ("strength", "agility", "intelligence", "luck")
+            if getattr(self, attribute) >= 14
+        ]
 
 
 class PartnerArtwork(BaseModel):
@@ -85,6 +104,7 @@ class PartnerDefinition(BaseModel):
     rarity: Literal[3, 4, 5]
     description: str = Field(default="", max_length=500)
     growth_curve: GrowthCurve = "linear"
+    exploration_stats: ExplorationStats = Field(default_factory=ExplorationStats)
     tendencies: list[PartnerTendency] = Field(min_length=1, max_length=3)
     trait_codes: list[str] = Field(default_factory=list)
     artworks: list[PartnerArtwork] = Field(default_factory=list, max_length=3)

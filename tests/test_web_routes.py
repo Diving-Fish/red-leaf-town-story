@@ -197,6 +197,44 @@ async def test_shop_and_plant_api(client):
 
 
 @runs
+async def test_hidden_transport_exploration_api_starts_resolves_and_withdraws(client, service):
+    player = service.repository.get_by_sub("route-sub")
+    service.admin_grant_partner(player.player_id, "aishen")
+
+    def prepare(state):
+        state.experience = service.content.levels[-1].total_xp
+        state.coins = 5000
+        state.stamina = 50
+
+    service.repository.update(player.player_id, prepare)
+    authenticate(client)
+
+    started = await client.post(
+        "/api/red-leaf-town/exploration/red_maple_hinterland/start",
+        json={"partner_ids": ["aishen"], "leader_partner_id": "aishen"},
+    )
+    started_body = (await started.get_json())["data"]
+    assert started.status_code == 200
+    assert started_body["state"]["player"]["coins"] == 4000
+    assert started_body["state"]["exploration"]["active_run"]["current_event"]["id"] == "windfallen_timber"
+
+    resolved = await client.post(
+        "/api/red-leaf-town/exploration/current/resolve",
+        json={"choice_id": "clear_edges"},
+    )
+    resolved_body = (await resolved.get_json())["data"]
+    assert resolved.status_code == 200
+    assert resolved_body["result"]["drops"][0]["item_id"] == "maple_wood"
+    assert resolved_body["state"]["exploration"]["active_run"]["depth"] == 1
+
+    withdrawn = await client.post("/api/red-leaf-town/exploration/current/withdraw")
+    withdrawn_body = (await withdrawn.get_json())["data"]
+    assert withdrawn.status_code == 200
+    assert withdrawn_body["state"]["exploration"]["active_run"] is None
+    assert any(item["item_id"] == "maple_wood" for item in withdrawn_body["state"]["inventory"])
+
+
+@runs
 async def test_gacha_and_partner_growth_apis_commit_domain_actions(client, service):
     from red_leaf_town.domain.economy import add_item
 

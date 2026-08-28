@@ -15,13 +15,21 @@ from red_leaf_town.achievements import (
     reconcile_legacy_auto_rewards,
     record_production_collection,
 )
-from red_leaf_town.content import GameContent, GatheringDrawDefinition, RewardDefinition
+from red_leaf_town.content import (
+    ExplorationChoiceDefinition,
+    ExplorationExpeditionDefinition,
+    GameContent,
+    GatheringDrawDefinition,
+    RewardDefinition,
+)
 from red_leaf_town.domain import (
     AnimalState,
     CommissionBoardEntry,
     CommissionPayout,
     CommissionState,
     CraftingStationState,
+    ExplorationEventLog,
+    ExplorationRunState,
     FishCodexEntry,
     GachaDropRecord,
     GachaPoolProgressState,
@@ -295,6 +303,230 @@ class GameService:
 
         player, result = self._update_by_sub(oauth_sub, mutation)
         return {"result": result, "state": self._snapshot(player)}
+
+    # --------------------------------------------------------------- 探索（采运 / 勘探）
+
+    def start_exploration(
+        self,
+        oauth_sub: str,
+        expedition_id: str,
+        partner_ids: list[str],
+        leader_partner_id: str,
+    ) -> dict:
+        expedition = self.content.exploration_expedition_map.get(str(expedition_id or "").strip())
+        if expedition is None:
+            raise GameError("exploration_not_found", "没有这条探索路线", 404)
+        party = [str(partner_id).strip() for partner_id in partner_ids if str(partner_id).strip()]
+        leader_partner_id = str(leader_partner_id or "").strip()
+        if not 1 <= len(party) <= 3 or len(party) != len(set(party)):
+            raise GameError("exploration_party_invalid", "探索队伍需要一至三名不同伙伴")
+        now = self._now()
+
+        def mutation(player: PlayerState):
+            self._settle(player, now)
+            if player.exploration_run is not None:
+                raise GameError("exploration_active", "当前已有一支队伍在探索中", 409)
+            if player.level < expedition.min_level:
+                raise GameError("content_locked", f"达到 {expedition.min_level} 级后解锁")
+            ability = self._exploration_party_ability(player, party, leader_partner_id)
+            try:
+                spend_coins(player, expedition.entry_fee)
+            except EconomyError as exc:
+                raise GameError("resource_insufficient", str(exc)) from exc
+            run = ExplorationRunState(
+                run_id=str(uuid4()),
+                expedition_id=expedition.id,
+                expedition_kind=expedition.kind,
+                partner_ids=party,
+                leader_partner_id=leader_partner_id,
+                exploration_ability=ability,
+                entry_fee=expedition.entry_fee,
+                started_at=now,
+                current_event_id=self._pick_exploration_event(expedition, None, 1),
+                current_rolls=[self.rng.randint(1, 20), self.rng.randint(1, 20)],
+            )
+            player.exploration_run = run
+            return {
+                "expedition_id": expedition.id,
+                "entry_fee": expedition.entry_fee,
+                "exploration_ability": ability,
+            }
+
+        player, result = self._update_by_sub(oauth_sub, mutation)
+        return {"result": result, "state": self._snapshot(player, now)}
+
+    def resolve_exploration_event(
+        self,
+        oauth_sub: str,
+        choice_id: str,
+        actor_partner_id: str = "",
+    ) -> dict:
+        choice_id = str(choice_id or "").strip()
+        actor_partner_id = str(actor_partner_id or "").strip()
+        now = self._now()
+
+        def mutation(player: PlayerState):
+            self._settle(player, now)
+            run = player.exploration_run
+            if run is None:
+                raise GameError("exploration_inactive", "当前没有进行中的探索", 409)
+            if run.status != "active":
+                raise GameError("exploration_completed", "路线已经走完，请结算返程", 409)
+            expedition = self.content.exploration_expedition_map.get(run.expedition_id)
+            if expedition is None:
+                raise GameError("exploration_content_missing", "探索内容已经失效", 409)
+            event = expedition.event_map.get(run.current_event_id)
+            if event is None:
+                raise GameError("exploration_event_missing", "当前事件已经失效", 409)
+            choice = event.choice_map.get(choice_id)
+            if choice is None:
+                raise GameError("exploration_choice_invalid", "这个事件没有该行动", 404)
+
+            context = {
+                "industry": "exploration",
+                "exploration_type": expedition.kind,
+                "expedition_id": expedition.id,
+                "event_id": event.id,
+                "choice_id": choice.id,
+                "selected_actor_partner_id": actor_partner_id,
+                "check_attribute": choice.check.attribute if choice.check else None,
+                "check_mode": choice.check.mode if choice.check else None,
+                "check_bonus": 0,
+                "dice_adjustment": 0,
+                "critical_success_min": 20,
+                "ordinary_failure_stamina_reduction": 0,
+                "critical_failure_stamina_reduction": 0,
+                "leader_partner_id": run.leader_partner_id,
+                "trait_usage": run.trait_usage,
+                "trait_usage_consumptions": [],
+                "route_stamina_multiplier": 1.0,
+                "reward_quantity_multiplier": 1.0,
+                "quality_ability_bonus": 0,
+                "applied_effects": [],
+                "world": self._world_snapshot(now),
+            }
+            self._prime_exploration_check_context(run, choice, context)
+            self._execute_partner_trait_phase(run.partner_ids, "exploration_event", context)
+            check_result = self._resolve_exploration_check(run, choice, context)
+            for usage_key in context["trait_usage_consumptions"]:
+                run.trait_usage[usage_key] = run.trait_usage.get(usage_key, 0) + 1
+            success = check_result["success"]
+            degree = check_result["degree"]
+            if degree == "critical_success":
+                outcome = choice.critical_success or choice.success
+            elif degree == "critical_failure":
+                outcome = choice.critical_failure or choice.failure
+            else:
+                outcome = choice.success if success or choice.failure is None else choice.failure
+            stamina_surcharge = max(
+                0,
+                outcome.stamina_surcharge - self._exploration_failure_stamina_reduction(context, degree),
+            )
+            cost, route_raw, action_total = self._exploration_choice_cost(
+                run,
+                choice,
+                stamina_surcharge,
+                float(context["route_stamina_multiplier"]),
+            )
+            try:
+                consume_stamina(player, cost, self.content, now)
+            except ValueError as exc:
+                raise GameError("resource_insufficient", str(exc)) from exc
+
+            probability = quality_probabilities(
+                run.exploration_ability
+                + (run.depth + 1) * 8
+                + outcome.quality_ability_bonus
+                + int(context["quality_ability_bonus"]),
+                expedition.quality.thresholds,
+                expedition.quality.width,
+                expedition.quality.miracle_probability_cap,
+                expedition.quality.miracle_eligible,
+            )
+            quantity_multiplier = max(0.0, float(context["reward_quantity_multiplier"]))
+            batches = [
+                (
+                    reward.item_id,
+                    max(1, round(self.rng.randint(reward.quantity_min, reward.quantity_max) * quantity_multiplier)),
+                )
+                for reward in outcome.rewards
+            ]
+            rewards = build_results(
+                self.rng,
+                batches,
+                probability,
+                now,
+                context["applied_effects"],
+            )
+            self._merge_exploration_rewards(run.pending_rewards, rewards)
+            run.route_stamina_raw = route_raw
+            run.action_stamina_spent = action_total
+            run.stamina_spent += cost
+            run.next_route_discount = outcome.next_route_discount
+            run.depth += 1
+            run.event_counts[event.id] = run.event_counts.get(event.id, 0) + 1
+            run.logs.append(ExplorationEventLog(
+                depth=run.depth,
+                event_id=event.id,
+                choice_id=choice.id,
+                success=success,
+                degree=degree,
+                check_attribute=check_result["check_attribute"],
+                check_mode=check_result["check_mode"],
+                dice_mode=check_result["dice_mode"],
+                rolls=check_result["rolls"],
+                kept_roll=check_result["kept_roll"],
+                modifier=check_result["modifier"],
+                total=check_result["total"],
+                actor_partner_ids=check_result["actor_partner_ids"],
+                text=outcome.text,
+                stamina_cost=cost,
+                rewards=rewards,
+                applied_effects=list(context["applied_effects"]),
+            ))
+            if run.depth >= expedition.max_depth:
+                run.status = "completed"
+            else:
+                run.current_event_id = self._pick_exploration_event(expedition, run, run.depth + 1)
+                run.current_rolls = [self.rng.randint(1, 20), self.rng.randint(1, 20)]
+            return {
+                "event_id": event.id,
+                "choice_id": choice.id,
+                "success": success,
+                **check_result,
+                "text": outcome.text,
+                "stamina_cost": cost,
+                "drops": [self._result_snapshot(reward) for reward in rewards],
+                "completed": run.status == "completed",
+            }
+
+        player, result = self._update_by_sub(oauth_sub, mutation)
+        return {"result": result, "state": self._snapshot(player, now)}
+
+    def withdraw_exploration(self, oauth_sub: str) -> dict:
+        now = self._now()
+
+        def mutation(player: PlayerState):
+            self._settle(player, now)
+            run = player.exploration_run
+            if run is None:
+                raise GameError("exploration_inactive", "当前没有进行中的探索", 409)
+            rewards = list(run.pending_rewards)
+            for reward in rewards:
+                add_item(player, reward.item_id, reward.quantity, reward.quality)
+            result = {
+                "expedition_id": run.expedition_id,
+                "completed": run.status == "completed",
+                "depth": run.depth,
+                "stamina_spent": run.stamina_spent,
+                "entry_fee": run.entry_fee,
+                "drops": [self._result_snapshot(reward) for reward in rewards],
+            }
+            player.exploration_run = None
+            return result
+
+        player, result = self._update_by_sub(oauth_sub, mutation)
+        return {"result": result, "state": self._snapshot(player, now)}
 
     def plant(self, oauth_sub: str, slot: int, crop_id: str, task_item_id: str = "") -> dict:
         crop = self.content.crop_map.get(crop_id)
@@ -5037,6 +5269,423 @@ class GameService:
     def _task_releases_partner(task: ProductionTaskSnapshot | None) -> bool:
         return bool(task and any(effect.get("effect") == "release_partner" for effect in task.applied_effects))
 
+    def _exploration_party_ability(
+        self,
+        player: PlayerState,
+        partner_ids: list[str],
+        leader_partner_id: str,
+    ) -> int:
+        if leader_partner_id not in partner_ids:
+            raise GameError("exploration_leader_invalid", "领队必须在探索队伍中")
+        owned_map = {entry.partner_id: entry for entry in player.owned_partners}
+        catalog = self.partner_catalog_loader().partner_map
+        rules = self.content.industries["exploration"]
+        abilities: dict[str, int] = {}
+        for partner_id in partner_ids:
+            owned = owned_map.get(partner_id)
+            definition = catalog.get(partner_id)
+            if owned is None:
+                raise GameError("partner_not_owned", "队伍中有尚未持有的伙伴", 404)
+            if definition is None:
+                raise GameError("partner_not_found", "队伍中的伙伴配置不存在", 404)
+            tendency = next(
+                (entry for entry in definition.tendencies if entry.industry == "exploration"),
+                None,
+            )
+            if tendency is None:
+                abilities[partner_id] = 0
+                continue
+            effective_level = min(
+                owned.level,
+                rules.partner_level_cap,
+                level_cap_for_breakthrough(owned.breakthrough),
+            )
+            abilities[partner_id] = definition.ability_at(
+                "exploration",
+                effective_level,
+                owned.stars,
+            )
+        if abilities.get(leader_partner_id, 0) <= 0:
+            raise GameError("exploration_leader_required", "领队必须具有探索倾向", 409)
+        character_ability = rules.character_base_ability + self._industry_ability_bonus(player, "exploration")
+        support = sum(ability for partner_id, ability in abilities.items() if partner_id != leader_partner_id)
+        return round(character_ability + abilities[leader_partner_id] + support * 0.25)
+
+    def _prime_exploration_check_context(self, run, choice, context: dict) -> None:
+        check = choice.check
+        if check is None:
+            context["check_base_modifiers"] = {}
+            context["check_actor_partner_ids"] = []
+            context["base_dice_mode"] = None
+            return
+        definitions = self.partner_catalog_loader().partner_map
+        candidates = [
+            (partner_id, definitions[partner_id].exploration_stats.modifier(check.attribute))
+            for partner_id in run.partner_ids
+            if partner_id in definitions
+        ]
+        if not candidates:
+            raise GameError("exploration_party_missing", "探索队伍已经失效", 409)
+        selected_actor_id = str(context.get("selected_actor_partner_id") or "").strip()
+        if selected_actor_id and selected_actor_id not in {partner_id for partner_id, _ in candidates}:
+            raise GameError("exploration_actor_invalid", "该伙伴不在当前探索队伍中", 400)
+        if check.mode == "sum":
+            actor_partner_ids = [partner_id for partner_id, _ in candidates]
+        else:
+            actor_partner_id = selected_actor_id or max(candidates, key=lambda entry: entry[1])[0]
+            actor_partner_ids = [actor_partner_id]
+        if selected_actor_id and check.mode != "sum":
+            actor_partner_ids = [selected_actor_id]
+        context["check_base_modifiers"] = dict(candidates)
+        context["check_actor_partner_ids"] = actor_partner_ids
+        context["base_dice_mode"] = check.dice
+
+    def _exploration_check_preview(self, run, choice, context: dict) -> dict:
+        check = choice.check
+        if check is None:
+            return {
+                "check_attribute": None,
+                "check_mode": None,
+                "dice_mode": None,
+                "modifier": None,
+                "actor_partner_ids": [],
+                "success_chance": 1.0,
+            }
+        if "check_base_modifiers" not in context:
+            self._prime_exploration_check_context(run, choice, context)
+        base_modifiers = context["check_base_modifiers"]
+        actor_partner_ids = context["check_actor_partner_ids"]
+        if check.mode == "sum":
+            modifier = sum(base_modifiers.values())
+        else:
+            modifier = base_modifiers[actor_partner_ids[0]]
+        modifier += int(context.get("check_bonus", 0))
+        dice_score = {"disadvantage": -1, "normal": 0, "advantage": 1}[check.dice]
+        dice_score += int(context.get("dice_adjustment", 0))
+        dice_mode = "advantage" if dice_score > 0 else "disadvantage" if dice_score < 0 else "normal"
+        critical_success_min = int(context.get("critical_success_min", 20))
+        successful_faces = sum(
+            1
+            for face in range(1, 21)
+            if face >= critical_success_min or (face != 1 and face + modifier >= check.dc)
+        )
+        normal_chance = successful_faces / 20
+        if dice_mode == "advantage":
+            success_chance = 1 - (1 - normal_chance) ** 2
+        elif dice_mode == "disadvantage":
+            success_chance = normal_chance**2
+        else:
+            success_chance = normal_chance
+            if context.get("failure_reroll_usage_key"):
+                ordinary_failure_faces = sum(
+                    1
+                    for face in range(2, 20)
+                    if face < critical_success_min and face + modifier < check.dc
+                )
+                success_chance += ordinary_failure_faces / 20 * normal_chance
+        return {
+            "check_attribute": check.attribute,
+            "check_mode": check.mode,
+            "dice_mode": dice_mode,
+            "modifier": modifier,
+            "actor_partner_ids": actor_partner_ids,
+            "success_chance": success_chance,
+        }
+
+    def _resolve_exploration_check(self, run, choice, context: dict) -> dict:
+        preview = self._exploration_check_preview(run, choice, context)
+        if choice.check is None:
+            return {
+                **preview,
+                "success": True,
+                "degree": "automatic_success",
+                "rolls": [],
+                "kept_roll": None,
+                "total": None,
+            }
+        dice_mode = preview["dice_mode"]
+        rolls = list(run.current_rolls if dice_mode != "normal" else run.current_rolls[:1])
+        kept_roll = max(rolls) if dice_mode == "advantage" else min(rolls) if dice_mode == "disadvantage" else rolls[0]
+
+        def judge(face: int) -> tuple[bool, str, int]:
+            total_value = face + int(preview["modifier"])
+            if face == 1:
+                return False, "critical_failure", total_value
+            if face >= int(context.get("critical_success_min", 20)):
+                return True, "critical_success", total_value
+            passed = total_value >= choice.check.dc
+            return passed, "success" if passed else "failure", total_value
+
+        success, degree, total = judge(kept_roll)
+        reroll_usage_key = context.get("failure_reroll_usage_key")
+        if degree == "failure" and dice_mode == "normal" and reroll_usage_key:
+            rolls = list(run.current_rolls)
+            kept_roll = rolls[1]
+            success, degree, total = judge(kept_roll)
+            if reroll_usage_key not in context["trait_usage_consumptions"]:
+                context["trait_usage_consumptions"].append(reroll_usage_key)
+        return {
+            **preview,
+            "success": success,
+            "degree": degree,
+            "rolls": rolls,
+            "kept_roll": kept_roll,
+            "total": total,
+        }
+
+    @staticmethod
+    def _exploration_failure_stamina_reduction(context: dict, degree: str) -> int:
+        if degree == "failure":
+            return max(0, int(context.get("ordinary_failure_stamina_reduction", 0)))
+        if degree == "critical_failure":
+            return max(0, int(context.get("critical_failure_stamina_reduction", 0)))
+        return 0
+
+    def _pick_exploration_event(
+        self,
+        expedition: ExplorationExpeditionDefinition,
+        run: ExplorationRunState | None,
+        depth: int,
+    ) -> str:
+        if depth >= expedition.max_depth:
+            return expedition.final_event_id
+        counts = run.event_counts if run else {}
+        eligible = [
+            event
+            for event in expedition.events
+            if event.id != expedition.final_event_id
+            and event.min_depth <= depth <= event.max_depth
+            and counts.get(event.id, 0) < event.max_occurrences
+        ]
+        if not eligible:
+            raise GameError("exploration_route_invalid", "当前深度没有可用的探索事件", 500)
+        draw = self.rng.random() * sum(event.weight for event in eligible)
+        cumulative = 0.0
+        for event in eligible:
+            cumulative += event.weight
+            if draw < cumulative:
+                return event.id
+        return eligible[-1].id
+
+    @staticmethod
+    def _exploration_discount_rate(ability: int) -> float:
+        bounded = max(0, int(ability))
+        return 0.3 * bounded / (bounded + 120)
+
+    def _exploration_choice_cost(
+        self,
+        run: ExplorationRunState,
+        choice: ExplorationChoiceDefinition,
+        surcharge: int,
+        route_multiplier: float = 1,
+    ) -> tuple[int, int, int]:
+        route = max(0, choice.route_stamina - run.next_route_discount)
+        route = max(0, ceil(route * max(0.0, route_multiplier)))
+        route_raw = run.route_stamina_raw + route
+        action_total = run.action_stamina_spent + choice.action_stamina + surcharge
+        projected = action_total + ceil(
+            route_raw * (1 - self._exploration_discount_rate(run.exploration_ability))
+        )
+        return max(0, projected - run.stamina_spent), route_raw, action_total
+
+    def _exploration_actor_options(
+        self,
+        run: ExplorationRunState,
+        choice: ExplorationChoiceDefinition,
+        expedition: ExplorationExpeditionDefinition,
+        event: ExplorationEventDefinition,
+        now: int,
+        partner_map: dict[str, dict],
+    ) -> list[dict]:
+        if choice.check is None or choice.check.mode == "sum":
+            return []
+        options: list[dict] = []
+        for partner_id in run.partner_ids:
+            if partner_id not in partner_map:
+                continue
+            context = {
+                "industry": "exploration",
+                "exploration_type": expedition.kind,
+                "expedition_id": expedition.id,
+                "event_id": event.id,
+                "choice_id": choice.id,
+                "selected_actor_partner_id": partner_id,
+                "check_attribute": choice.check.attribute,
+                "check_mode": choice.check.mode,
+                "check_bonus": 0,
+                "dice_adjustment": 0,
+                "critical_success_min": 20,
+                "ordinary_failure_stamina_reduction": 0,
+                "critical_failure_stamina_reduction": 0,
+                "leader_partner_id": run.leader_partner_id,
+                "trait_usage": run.trait_usage,
+                "trait_usage_consumptions": [],
+                "route_stamina_multiplier": 1.0,
+                "reward_quantity_multiplier": 1.0,
+                "quality_ability_bonus": 0,
+                "applied_effects": [],
+                "world": self._world_snapshot(now),
+            }
+            self._prime_exploration_check_context(run, choice, context)
+            self._execute_partner_trait_phase(run.partner_ids, "exploration_event", context)
+            preview = self._exploration_check_preview(run, choice, context)
+            options.append({
+                "partner_id": partner_id,
+                "name": partner_map[partner_id].get("name", partner_id),
+                "modifier": preview["modifier"],
+                "dice_mode": preview["dice_mode"],
+                "success_chance": preview["success_chance"],
+                "applied_effects": [
+                    effect for effect in context["applied_effects"]
+                    if effect.get("source_partner_id") == partner_id
+                ],
+            })
+        return options
+
+    @staticmethod
+    def _merge_exploration_rewards(
+        current: list[ProductionResultSnapshot],
+        additions: list[ProductionResultSnapshot],
+    ) -> None:
+        for addition in additions:
+            existing = next(
+                (
+                    reward
+                    for reward in current
+                    if reward.item_id == addition.item_id and reward.quality == addition.quality
+                ),
+                None,
+            )
+            if existing is None:
+                current.append(addition.model_copy(deep=True))
+            else:
+                existing.quantity += addition.quantity
+
+    def _exploration_snapshot(self, player: PlayerState, now: int, partner_map: dict[str, dict]) -> dict:
+        expedition_map = self.content.exploration_expedition_map
+        expeditions = [
+            {
+                **expedition.model_dump(exclude={"events"}),
+                "unlocked": player.level >= expedition.min_level,
+                "affordable": player.coins >= expedition.entry_fee,
+            }
+            for expedition in self.content.exploration_expeditions
+        ]
+        run = player.exploration_run
+        if run is None:
+            return {
+                "unlocked": any(player.level >= entry.min_level for entry in self.content.exploration_expeditions),
+                "expeditions": expeditions,
+                "active_run": None,
+            }
+        expedition = expedition_map.get(run.expedition_id)
+        if expedition is None:
+            return {"unlocked": True, "expeditions": expeditions, "active_run": run.model_dump()}
+        event = expedition.event_map.get(run.current_event_id) if run.status == "active" else None
+        choice_snapshots = []
+        if event is not None:
+            for choice in event.choices:
+                actor_partner_id = (
+                    run.leader_partner_id
+                    if choice.check and run.leader_partner_id in run.partner_ids
+                    else run.partner_ids[0]
+                    if choice.check
+                    else ""
+                )
+                context = {
+                    "industry": "exploration",
+                    "exploration_type": expedition.kind,
+                    "expedition_id": expedition.id,
+                    "event_id": event.id,
+                    "choice_id": choice.id,
+                    "selected_actor_partner_id": actor_partner_id,
+                    "check_attribute": choice.check.attribute if choice.check else None,
+                    "check_mode": choice.check.mode if choice.check else None,
+                    "check_bonus": 0,
+                    "dice_adjustment": 0,
+                    "critical_success_min": 20,
+                    "ordinary_failure_stamina_reduction": 0,
+                    "critical_failure_stamina_reduction": 0,
+                    "leader_partner_id": run.leader_partner_id,
+                    "trait_usage": run.trait_usage,
+                    "trait_usage_consumptions": [],
+                    "route_stamina_multiplier": 1.0,
+                    "reward_quantity_multiplier": 1.0,
+                    "quality_ability_bonus": 0,
+                    "applied_effects": [],
+                    "world": self._world_snapshot(now),
+                }
+                self._prime_exploration_check_context(run, choice, context)
+                self._execute_partner_trait_phase(run.partner_ids, "exploration_event", context)
+                check_preview = self._exploration_check_preview(run, choice, context)
+                possible_costs = []
+                outcomes = (
+                    (choice.success, "success"),
+                    (choice.failure, "failure"),
+                    (choice.critical_success, "critical_success"),
+                    (choice.critical_failure, "critical_failure"),
+                )
+                for outcome, degree in outcomes:
+                    if outcome is None:
+                        continue
+                    surcharge = max(
+                        0,
+                        outcome.stamina_surcharge - self._exploration_failure_stamina_reduction(context, degree),
+                    )
+                    cost, _, _ = self._exploration_choice_cost(
+                        run,
+                        choice,
+                        surcharge,
+                        float(context["route_stamina_multiplier"]),
+                    )
+                    possible_costs.append(cost)
+                choice_snapshots.append({
+                    **choice.model_dump(exclude={"success", "failure", "critical_success", "critical_failure"}),
+                    **check_preview,
+                    "actor_partner_id": actor_partner_id if choice.check and choice.check.mode != "sum" else None,
+                    "actor_options": self._exploration_actor_options(
+                        run,
+                        choice,
+                        expedition,
+                        event,
+                        now,
+                        partner_map,
+                    ),
+                    "check_actor_names": [
+                        partner_map[partner_id]["name"]
+                        for partner_id in check_preview["actor_partner_ids"]
+                        if partner_id in partner_map
+                    ],
+                    "stamina_cost_min": min(possible_costs),
+                    "stamina_cost_max": max(possible_costs),
+                    "applied_effects": list(context["applied_effects"]),
+                })
+        return {
+            "unlocked": player.level >= expedition.min_level,
+            "expeditions": expeditions,
+            "active_run": {
+                **run.model_dump(exclude={"pending_rewards", "logs", "current_rolls", "trait_usage"}),
+                "expedition": expedition.model_dump(exclude={"events"}),
+                "party": [partner_map[partner_id] for partner_id in run.partner_ids if partner_id in partner_map],
+                "leader": partner_map.get(run.leader_partner_id),
+                "stamina_discount_rate": self._exploration_discount_rate(run.exploration_ability),
+                "pending_rewards": [self._result_snapshot(reward) for reward in run.pending_rewards],
+                "current_event": {
+                    **event.model_dump(exclude={"choices"}),
+                    "choices": choice_snapshots,
+                } if event else None,
+                "logs": [
+                    {
+                        **log.model_dump(exclude={"rewards"}),
+                        "event_name": expedition.event_map[log.event_id].name
+                        if log.event_id in expedition.event_map else log.event_id,
+                        "rewards": [self._result_snapshot(reward) for reward in log.rewards],
+                    }
+                    for log in run.logs
+                ],
+            },
+        }
+
     def _snapshot(self, player: PlayerState, now: int | None = None) -> dict:
         now = self._now() if now is None else now
         level = self.content.level_definition(player.level)
@@ -5263,6 +5912,7 @@ class GameService:
             "next_mining_site_level": next_mining_site_level,
             "aquatic": self._aquatic_snapshot(player, now, partner_map),
             "livestock": self._livestock_snapshot(player, now, partner_map),
+            "exploration": self._exploration_snapshot(player, now, partner_map),
             "inventory": inventory,
             "task_items": [
                 {
@@ -5381,6 +6031,7 @@ class GameService:
                 "description": definition.description,
                 "growth_curve": definition.growth_curve,
                 "growth_curve_name": GROWTH_CURVE_NAMES[definition.growth_curve],
+                "exploration_high_stats": definition.exploration_stats.high_attributes,
                 "level_cap": level_cap_for_breakthrough(owned.breakthrough),
                 "experience_to_next_level": (
                     self.content.partner_growth.experience_for_next_level(owned.level)
@@ -5399,6 +6050,7 @@ class GameService:
                         "name": trait_definitions[code].name if code in trait_definitions else code,
                         "description": trait_definitions[code].description if code in trait_definitions else "",
                         "implemented": trait_definitions[code].implemented if code in trait_definitions else False,
+                        "phases": sorted(trait_definitions[code].phases) if code in trait_definitions else [],
                     }
                     for code in definition.trait_codes
                 ],

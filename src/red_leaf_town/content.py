@@ -270,6 +270,129 @@ class GatheringTaskDefinition(BaseModel):
         return max(self.outputs, key=lambda entry: entry.weight)
 
 
+class ExplorationRewardDefinition(BaseModel):
+    item_id: str = Field(min_length=1)
+    quantity_min: int = Field(ge=1)
+    quantity_max: int = Field(ge=1)
+
+    @model_validator(mode="after")
+    def validate_quantity(self):
+        if self.quantity_max < self.quantity_min:
+            raise ValueError("exploration reward quantity_max must be >= quantity_min")
+        return self
+
+
+ExplorationCheckAttribute = Literal["strength", "agility", "intelligence", "luck"]
+ExplorationCheckMode = Literal["best", "sum"]
+ExplorationDiceMode = Literal["normal", "advantage", "disadvantage"]
+
+
+class ExplorationCheckDefinition(BaseModel):
+    attribute: ExplorationCheckAttribute
+    mode: ExplorationCheckMode = "best"
+    dice: ExplorationDiceMode = "normal"
+    dc: int = Field(ge=2, le=40)
+
+    @staticmethod
+    def success_probability(modifier: int, dc: int, dice: ExplorationDiceMode = "normal") -> float:
+        successful_faces = sum(
+            1
+            for face in range(1, 21)
+            if face == 20 or (face != 1 and face + modifier >= dc)
+        )
+        normal = successful_faces / 20
+        if dice == "advantage":
+            return 1 - (1 - normal) ** 2
+        if dice == "disadvantage":
+            return normal**2
+        return normal
+
+
+class ExplorationOutcomeDefinition(BaseModel):
+    text: str = Field(min_length=1)
+    rewards: list[ExplorationRewardDefinition] = Field(default_factory=list, max_length=4)
+    stamina_surcharge: int = Field(default=0, ge=0, le=10)
+    next_route_discount: int = Field(default=0, ge=0, le=5)
+    quality_ability_bonus: int = Field(default=0, ge=-200, le=200)
+
+
+class ExplorationChoiceDefinition(BaseModel):
+    id: str = Field(min_length=1)
+    label: str = Field(min_length=1)
+    description: str = ""
+    route_stamina: int = Field(ge=0, le=20)
+    action_stamina: int = Field(ge=0, le=20)
+    check: ExplorationCheckDefinition | None = None
+    success: ExplorationOutcomeDefinition
+    failure: ExplorationOutcomeDefinition | None = None
+    critical_success: ExplorationOutcomeDefinition | None = None
+    critical_failure: ExplorationOutcomeDefinition | None = None
+
+    @model_validator(mode="after")
+    def validate_choice(self):
+        if self.route_stamina + self.action_stamina <= 0:
+            raise ValueError("exploration choices must cost stamina")
+        if self.check is not None and self.failure is None:
+            raise ValueError("checked exploration choices require a failure outcome")
+        if self.check is None and (self.failure or self.critical_success or self.critical_failure):
+            raise ValueError("automatic exploration choices cannot define checked outcomes")
+        return self
+
+
+class ExplorationEventDefinition(BaseModel):
+    id: str = Field(min_length=1)
+    name: str = Field(min_length=1)
+    description: str = Field(min_length=1)
+    min_depth: int = Field(default=1, ge=1)
+    max_depth: int = Field(default=99, ge=1)
+    weight: float = Field(default=1, gt=0)
+    max_occurrences: int = Field(default=99, ge=1)
+    choices: list[ExplorationChoiceDefinition] = Field(min_length=1, max_length=4)
+
+    @model_validator(mode="after")
+    def validate_event(self):
+        if self.max_depth < self.min_depth:
+            raise ValueError(f"exploration event {self.id} has an inverted depth range")
+        choice_ids = [choice.id for choice in self.choices]
+        if len(choice_ids) != len(set(choice_ids)):
+            raise ValueError(f"exploration event {self.id} has duplicate choice ids")
+        return self
+
+    @property
+    def choice_map(self) -> dict[str, ExplorationChoiceDefinition]:
+        return {choice.id: choice for choice in self.choices}
+
+
+class ExplorationExpeditionDefinition(BaseModel):
+    id: str = Field(min_length=1)
+    kind: Literal["transport", "survey"]
+    name: str = Field(min_length=1)
+    description: str = Field(min_length=1)
+    accent: str = Field(pattern=r"^#[0-9a-fA-F]{6}$")
+    min_level: int = Field(ge=1)
+    entry_fee: int = Field(gt=0)
+    max_depth: int = Field(ge=1, le=20)
+    final_event_id: str = Field(min_length=1)
+    quality: QualityCurveDefinition
+    events: list[ExplorationEventDefinition] = Field(min_length=2, max_length=20)
+
+    @model_validator(mode="after")
+    def validate_expedition(self):
+        event_ids = [event.id for event in self.events]
+        if len(event_ids) != len(set(event_ids)):
+            raise ValueError(f"exploration expedition {self.id} has duplicate event ids")
+        if self.final_event_id not in set(event_ids):
+            raise ValueError(f"exploration expedition {self.id} references an unknown final event")
+        final = self.event_map[self.final_event_id]
+        if final.min_depth > self.max_depth or final.max_depth < self.max_depth:
+            raise ValueError(f"exploration expedition {self.id} final event cannot appear at max depth")
+        return self
+
+    @property
+    def event_map(self) -> dict[str, ExplorationEventDefinition]:
+        return {event.id: event for event in self.events}
+
+
 # 特殊效果节点认得的修正键。没登记的键会在内容加载时被拦下，避免写错字静默失效。
 TALENT_MODIFIER_KEYS: dict[str, str] = {
     "fishing_combo_cap": "聚鱼度层数上限",
@@ -947,6 +1070,7 @@ class GameContent(BaseModel):
     crops: list[CropDefinition]
     gathering_sites: list[GatheringSiteDefinition] = Field(default_factory=list)
     gathering_tasks: list[GatheringTaskDefinition] = Field(default_factory=list)
+    exploration_expeditions: list[ExplorationExpeditionDefinition] = Field(default_factory=list)
     talents: list[TalentNodeDefinition] = Field(default_factory=list)
     crafting_stations: list[CraftingStationDefinition] = Field(default_factory=list)
     recipes: list[RecipeDefinition] = Field(default_factory=list)
@@ -985,6 +1109,7 @@ class GameContent(BaseModel):
         unique([entry.id for entry in self.shop], "shop")
         unique([entry.id for entry in self.gathering_sites], "gathering site")
         unique([entry.id for entry in self.gathering_tasks], "gathering task")
+        unique([entry.id for entry in self.exploration_expeditions], "exploration expedition")
         unique([entry.id for entry in self.talents], "talent")
         unique([entry.id for entry in self.crafting_stations], "crafting station")
         unique([entry.id for entry in self.recipes], "recipe")
@@ -1021,6 +1146,8 @@ class GameContent(BaseModel):
                 raise ValueError("aquatic industry rules are required once aquatic content exists")
         if self.livestock_facilities and "livestock" not in self.industries:
             raise ValueError("livestock industry rules are required once livestock content exists")
+        if self.exploration_expeditions and "exploration" not in self.industries:
+            raise ValueError("exploration industry rules are required once exploration content exists")
 
         items = {item.id for item in self.items}
         if self.stamina.potion_item_id not in items:
@@ -1040,6 +1167,20 @@ class GameContent(BaseModel):
                 raise ValueError(f"gathering task {task.id} references an unknown item")
             if any(not self.item_map[output.item_id].has_quality for output in task.outputs):
                 raise ValueError(f"gathering task {task.id} output must support quality")
+        for expedition in self.exploration_expeditions:
+            for event in expedition.events:
+                for choice in event.choices:
+                    outcomes = [choice.success, choice.failure]
+                    for outcome in (entry for entry in outcomes if entry is not None):
+                        for reward in outcome.rewards:
+                            if reward.item_id not in items:
+                                raise ValueError(
+                                    f"exploration event {event.id} references an unknown item"
+                                )
+                            if not self.item_map[reward.item_id].has_quality:
+                                raise ValueError(
+                                    f"exploration event {event.id} reward must support quality"
+                                )
         talent_ids = {talent.id for talent in self.talents}
         for talent in self.talents:
             if talent.industry not in self.industries:
@@ -1273,6 +1414,10 @@ class GameContent(BaseModel):
     @property
     def gathering_task_map(self) -> dict[str, GatheringTaskDefinition]:
         return {entry.id: entry for entry in self.gathering_tasks}
+
+    @property
+    def exploration_expedition_map(self) -> dict[str, ExplorationExpeditionDefinition]:
+        return {entry.id: entry for entry in self.exploration_expeditions}
 
     @property
     def talent_map(self) -> dict[str, TalentNodeDefinition]:

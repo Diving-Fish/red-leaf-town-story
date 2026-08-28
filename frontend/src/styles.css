@@ -28,6 +28,11 @@
   --rarity-5-a: #f4c873;
   --rarity-5-b: #e2703f;
   --rarity-5-soft: rgba(238, 178, 96, .4);
+  --font-caption: 12px;
+  --font-copy: 13px;
+  --font-body: 14px;
+  --font-section-title: 17px;
+  --font-display: Georgia, 'Noto Serif SC', serif;
 }
 
 /* 全局细滚动条：Firefox 走 scrollbar-color，Chromium/WebKit 走伪元素 */
@@ -45,8 +50,8 @@
 
 * { box-sizing: border-box; }
 html, body, #app { min-height: 100%; margin: 0; }
-body, button, input, select, textarea { font-size: 14px; }
-small { font-size: 12px; }
+body, button, input, select, textarea { font-size: var(--font-body); }
+small { font-size: var(--font-caption); }
 body {
   min-width: 320px;
   background-color: var(--bg);
@@ -123,6 +128,12 @@ button:disabled { cursor: not-allowed; opacity: .48; }
 .view-heading p { margin: 0; color: var(--muted); }
 .eyebrow { margin: 0; color: var(--autumn) !important; font-size: 12px; font-weight: 700; letter-spacing: .2em; }
 .season-chip { display: flex; align-items: center; gap: 8px; padding: 9px 13px; color: #bdc9bc; font-size: 12px; border: 1px solid var(--line); border-radius: 99px; white-space: nowrap; }
+
+/* Shared content typography: feature pages should use these instead of inventing local scales. */
+.ui-kicker { margin: 0; color: var(--autumn); font-size: var(--font-caption); font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.ui-section-title { margin: 0; color: var(--cream); font: 600 var(--font-section-title)/1.35 var(--font-display); }
+.ui-description { margin: 0; color: #849087; font-size: var(--font-copy); line-height: 1.7; }
+.ui-label { color: #7f8c81; font-size: var(--font-caption); }
 
 /* Shared surfaces and production UI */
 .surface-card { border: 1px solid var(--line); border-radius: 20px 7px; background: var(--surface); box-shadow: 0 13px 35px #0002; }

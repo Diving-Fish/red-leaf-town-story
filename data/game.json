@@ -1,5 +1,5 @@
 {
-  "schema_version": 13,
+  "schema_version": 15,
   "game": {
     "title": "红叶镇物语",
     "starting_coins": 80,
@@ -111,6 +111,12 @@
       "partner_capacity": 1,
       "partner_level_cap": 20,
       "collaborator_slots": 1
+    },
+    "exploration": {
+      "character_base_ability": 0,
+      "partner_capacity": 3,
+      "partner_level_cap": 20,
+      "collaborator_slots": 1
     }
   },
   "levels": [
@@ -173,7 +179,9 @@
       "total_xp": 400,
       "plot_slots": 5,
       "stamina_cap": 30,
-      "unlocks": []
+      "unlocks": [
+        "system:exploration"
+      ]
     },
     {
       "level": 7,
@@ -1171,6 +1179,204 @@
         "miracle_probability_cap": 0.003,
         "miracle_eligible": true
       }
+    }
+  ],
+  "exploration_expeditions": [
+    {
+      "id": "red_maple_hinterland",
+      "kind": "transport",
+      "name": "红枫林腹地",
+      "description": "持采运许可进入林场腹地，沿途清理风折木并在体力耗尽前带回枫木。",
+      "accent": "#b85f3f",
+      "min_level": 6,
+      "entry_fee": 1000,
+      "max_depth": 7,
+      "final_event_id": "hollow_ancient_maple",
+      "quality": {
+        "thresholds": [40.0, 90.0, 160.0, 260.0],
+        "width": 20.0,
+        "miracle_probability_cap": 0.003,
+        "miracle_eligible": true
+      },
+      "events": [
+        {
+          "id": "windfallen_timber",
+          "name": "风折木群",
+          "description": "山风折断的枫木横在林间。外围容易清理，主干则需要更多力气。",
+          "min_depth": 1,
+          "max_depth": 6,
+          "weight": 4.0,
+          "max_occurrences": 5,
+          "choices": [
+            {
+              "id": "clear_edges",
+              "label": "清理外围木料",
+              "description": "消耗较少，稳定带回一批枫木。",
+              "route_stamina": 2,
+              "action_stamina": 3,
+              "success": {
+                "text": "队伍把散落在外围的木料归拢起来。",
+                "rewards": [{"item_id": "maple_wood", "quantity_min": 8, "quantity_max": 12}]
+              }
+            },
+            {
+              "id": "recover_trunks",
+              "label": "搬运完整主干",
+              "description": "消耗更多体力，成功时获得大量枫木。",
+              "route_stamina": 2,
+              "action_stamina": 4,
+              "check": {"attribute": "strength", "mode": "best", "dice": "normal", "dc": 12},
+              "success": {
+                "text": "完整的主干被顺利运上了回程用的拖架。",
+                "rewards": [
+                  {"item_id": "maple_wood", "quantity_min": 17, "quantity_max": 23},
+                  {"item_id": "maple_resin", "quantity_min": 1, "quantity_max": 2}
+                ],
+                "quality_ability_bonus": 10
+              },
+              "critical_success": {
+                "text": "借着完美的发力时机，整段主干几乎毫发无损地落上拖架。",
+                "rewards": [
+                  {"item_id": "maple_wood", "quantity_min": 24, "quantity_max": 30},
+                  {"item_id": "maple_resin", "quantity_min": 2, "quantity_max": 3}
+                ],
+                "quality_ability_bonus": 25
+              },
+              "failure": {
+                "text": "主干比预想中沉重，队伍只来得及拆下一部分。",
+                "rewards": [{"item_id": "maple_wood", "quantity_min": 8, "quantity_max": 11}],
+                "stamina_surcharge": 1
+              },
+              "critical_failure": {
+                "text": "绳结突然松脱，主干滚回坡下，队伍只抢救出几段断木。",
+                "rewards": [{"item_id": "maple_wood", "quantity_min": 5, "quantity_max": 7}],
+                "stamina_surcharge": 3
+              }
+            }
+          ]
+        },
+        {
+          "id": "mossy_slope",
+          "name": "湿苔陡坡",
+          "description": "湿滑的山坡挡住了前路。绕行稳妥，横穿则可能省下宝贵体力。",
+          "min_depth": 2,
+          "max_depth": 6,
+          "weight": 1.5,
+          "max_occurrences": 2,
+          "choices": [
+            {
+              "id": "detour",
+              "label": "绕行缓坡",
+              "description": "不进行检定，但路途更长。",
+              "route_stamina": 6,
+              "action_stamina": 1,
+              "success": {"text": "队伍沿缓坡绕过了湿滑地带。"}
+            },
+            {
+              "id": "cross",
+              "label": "横穿陡坡",
+              "description": "成功时发现捷径，失败会额外消耗体力。",
+              "route_stamina": 3,
+              "action_stamina": 1,
+              "check": {"attribute": "agility", "mode": "best", "dice": "normal", "dc": 13},
+              "success": {
+                "text": "队伍稳稳穿过陡坡，还记下了一条捷径。",
+                "next_route_discount": 1
+              },
+              "critical_success": {
+                "text": "队伍轻巧越过最险的一段，还发现了一条直通林腹的兽径。",
+                "next_route_discount": 2
+              },
+              "failure": {
+                "text": "几次打滑拖慢了行程，所幸没有人受伤。",
+                "stamina_surcharge": 3
+              },
+              "critical_failure": {
+                "text": "湿苔突然整片剥落，队伍绕了很远才重新找回路线。",
+                "stamina_surcharge": 5
+              }
+            }
+          ]
+        },
+        {
+          "id": "hollow_ancient_maple",
+          "name": "空心古枫",
+          "description": "路线尽头的古枫已经中空，树洞里凝着多年积下的树脂。",
+          "min_depth": 7,
+          "max_depth": 7,
+          "weight": 1.0,
+          "max_occurrences": 1,
+          "choices": [
+            {
+              "id": "inspect_hollow",
+              "label": "检查树洞与年轮",
+              "description": "较省体力，有机会取得高品质树脂。",
+              "route_stamina": 2,
+              "action_stamina": 5,
+              "check": {"attribute": "intelligence", "mode": "best", "dice": "normal", "dc": 14},
+              "success": {
+                "text": "队伍找到了没有腐坏的树心与凝固树脂。",
+                "rewards": [
+                  {"item_id": "maple_wood", "quantity_min": 10, "quantity_max": 15},
+                  {"item_id": "maple_resin", "quantity_min": 3, "quantity_max": 5}
+                ],
+                "quality_ability_bonus": 35
+              },
+              "critical_success": {
+                "text": "年轮与树洞中的痕迹彼此印证，队伍准确找到了保存最完好的树心。",
+                "rewards": [
+                  {"item_id": "maple_wood", "quantity_min": 14, "quantity_max": 18},
+                  {"item_id": "maple_resin", "quantity_min": 5, "quantity_max": 7}
+                ],
+                "quality_ability_bonus": 60
+              },
+              "failure": {
+                "text": "树洞的大半已经腐坏，只剩少量可用木料。",
+                "rewards": [
+                  {"item_id": "maple_wood", "quantity_min": 6, "quantity_max": 9},
+                  {"item_id": "maple_resin", "quantity_min": 1, "quantity_max": 2}
+                ]
+              },
+              "critical_failure": {
+                "text": "误判让一处脆弱树腔塌了下来，只来得及收起少量残料。",
+                "rewards": [{"item_id": "maple_wood", "quantity_min": 4, "quantity_max": 6}],
+                "stamina_surcharge": 2
+              }
+            },
+            {
+              "id": "fell_trunk",
+              "label": "直接处理主干",
+              "description": "放弃调查，消耗更多体力换取稳定的大批枫木。",
+              "route_stamina": 2,
+              "action_stamina": 6,
+              "check": {"attribute": "strength", "mode": "sum", "dice": "normal", "dc": 12},
+              "success": {
+                "text": "古枫主干被分段装上拖架，队伍准备返程。",
+                "rewards": [{"item_id": "maple_wood", "quantity_min": 24, "quantity_max": 32}],
+                "quality_ability_bonus": 15
+              },
+              "critical_success": {
+                "text": "全队配合得严丝合缝，古枫主干被完整而迅速地处理完毕。",
+                "rewards": [
+                  {"item_id": "maple_wood", "quantity_min": 32, "quantity_max": 38},
+                  {"item_id": "maple_resin", "quantity_min": 1, "quantity_max": 2}
+                ],
+                "quality_ability_bonus": 30
+              },
+              "failure": {
+                "text": "队伍没能协调好发力，只处理下主干中较容易搬运的一段。",
+                "rewards": [{"item_id": "maple_wood", "quantity_min": 12, "quantity_max": 18}],
+                "stamina_surcharge": 2
+              },
+              "critical_failure": {
+                "text": "主干倾倒的方向完全失控，队伍费了很大力气才收拾好现场。",
+                "rewards": [{"item_id": "maple_wood", "quantity_min": 6, "quantity_max": 10}],
+                "stamina_surcharge": 4
+              }
+            }
+          ]
+        }
+      ]
     }
   ],
   "talents": [

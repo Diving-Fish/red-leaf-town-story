@@ -47,6 +47,12 @@ export default createRouter({
     { path: '/', name: 'dashboard', component: DashboardView, meta: { title: '总览' } },
     { path: '/farm', name: 'farm', component: FarmView, meta: { title: '农场' } },
     { path: '/gathering', name: 'gathering', component: GatheringView, meta: { title: '采集' } },
+    {
+      path: '/exploration',
+      name: 'exploration',
+      component: () => import('@/views/ExplorationPreviewView.vue'),
+      meta: { title: '探索' },
+    },
     { path: '/crafting', name: 'crafting', component: CraftingView, meta: { title: '加工' } },
     { path: '/mining', name: 'mining', component: MiningView, meta: { title: '矿产' } },
     {

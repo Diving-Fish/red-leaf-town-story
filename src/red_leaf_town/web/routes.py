@@ -891,6 +891,38 @@ def create_blueprint(
         result = get_service().collect_gathering(subject, site_id)
         return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
 
+    @blueprint.post("/api/red-leaf-town/exploration/<string:expedition_id>/start")
+    @login_required
+    async def start_exploration(subject: str, expedition_id: str):
+        payload = await request.get_json(silent=True) or {}
+        partner_ids = payload.get("partner_ids") or []
+        if not isinstance(partner_ids, list):
+            partner_ids = []
+        result = get_service().start_exploration(
+            subject,
+            expedition_id,
+            [str(partner_id) for partner_id in partner_ids],
+            str(payload.get("leader_partner_id", "")),
+        )
+        return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
+
+    @blueprint.post("/api/red-leaf-town/exploration/current/resolve")
+    @login_required
+    async def resolve_exploration_event(subject: str):
+        payload = await request.get_json(silent=True) or {}
+        result = get_service().resolve_exploration_event(
+            subject,
+            str(payload.get("choice_id", "")),
+            str(payload.get("actor_partner_id", "")),
+        )
+        return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
+
+    @blueprint.post("/api/red-leaf-town/exploration/current/withdraw")
+    @login_required
+    async def withdraw_exploration(subject: str):
+        result = get_service().withdraw_exploration(subject)
+        return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
+
     @blueprint.put("/api/red-leaf-town/crafting/stations/<string:station_id>/partner")
     @login_required
     async def assign_crafting_partner(subject: str, station_id: str):

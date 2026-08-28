@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { ArrowDownWideNarrow, Check, Lock, Search, UserRoundX } from 'lucide-vue-next'
+import { ArrowDownWideNarrow, Brain, Check, Clover, Dumbbell, Lock, Search, Sparkles, UserRoundX, Wind } from 'lucide-vue-next'
 
 import ModalSheet from '@/components/ModalSheet.vue'
 import PartnerAvatar from '@/components/PartnerAvatar.vue'
@@ -17,6 +17,9 @@ const props = defineProps<{
   title?: string
   soloLabel?: string
   elevated?: boolean
+  candidates?: OwnedPartner[]
+  excludedPartnerIds?: string[]
+  clearable?: boolean
 }>()
 
 const emit = defineEmits<{ (event: 'select', partnerId: string | null): void; (event: 'close'): void }>()
@@ -34,11 +37,19 @@ const STATUSES = [
   { id: 'assigned', name: '已派驻' },
 ] as const
 
+const EXPLORATION_STATS = {
+  strength: { name: '力量较高', icon: Dumbbell },
+  agility: { name: '敏捷较高', icon: Wind },
+  intelligence: { name: '智力较高', icon: Brain },
+  luck: { name: '幸运较高', icon: Clover },
+} as const
+
 type SortId = (typeof SORTS)[number]['id']
 type StatusId = (typeof STATUSES)[number]['id']
 
 const game = useGameStore()
-const { partners, ability, isBusyElsewhere } = usePartnerRoster(() => props.industry)
+const { partners: rosterPartners, ability, isBusyElsewhere } = usePartnerRoster(() => props.industry)
+const partners = computed(() => props.candidates ?? rosterPartners.value)
 
 const keyword = ref('')
 const sort = ref<SortId>('ability')
@@ -53,6 +64,7 @@ const availableRarities = computed(() =>
 const visible = computed(() => {
   const text = keyword.value.trim().toLowerCase()
   const filtered = partners.value.filter((partner) => {
+    if (props.excludedPartnerIds?.includes(partner.partner_id) && partner.partner_id !== currentId.value) return false
     if (text && !partner.name.toLowerCase().includes(text)) return false
     if (rarities.value.length && !rarities.value.includes(partner.rarity || 0)) return false
     if (status.value === 'free' && (partner.locked || isPartnerAssigned(partner))) return false
@@ -91,6 +103,10 @@ function statusText(partner: OwnedPartner) {
   if (isBusyElsewhere(partner, currentId.value)) return partnerAssignmentLabel(partner, game.state) || '任务中'
   if (partner.partner_id === currentId.value) return '当前派驻在这里'
   return partnerAssignmentLabel(partner, game.state) || '空闲中'
+}
+
+function explorationTraits(partner: OwnedPartner) {
+  return (partner.traits || []).filter((trait) => trait.phases?.includes('exploration_event'))
 }
 </script>
 
@@ -139,7 +155,7 @@ function statusText(partner: OwnedPartner) {
     </template>
 
     <div class="option-list">
-      <button v-if="assigned" class="partner-option solo" @click="choose(null)">
+      <button v-if="assigned && clearable !== false" class="partner-option solo" @click="choose(null)">
         <span class="option-mark"><UserRoundX :size="18" /></span>
         <span class="option-copy">
           <strong>{{ soloLabel || '撤下伙伴' }}</strong>
@@ -158,6 +174,19 @@ function statusText(partner: OwnedPartner) {
         <span class="option-copy">
           <strong>{{ partner.name }}<i v-if="partner.rarity">{{ partner.rarity }}★</i></strong>
           <small>Lv.{{ partner.level }} · {{ statusText(partner) }}</small>
+          <span v-if="industry === 'exploration' && partner.exploration_high_stats?.length" class="exploration-stat-marks">
+            <i
+              v-for="stat in partner.exploration_high_stats"
+              :key="stat"
+              class="exploration-stat-mark"
+              :title="EXPLORATION_STATS[stat].name"
+            ><component :is="EXPLORATION_STATS[stat].icon" :size="13" />{{ EXPLORATION_STATS[stat].name }}</i>
+          </span>
+          <span v-if="industry === 'exploration' && explorationTraits(partner).length" class="exploration-trait-lines">
+            <i v-for="trait in explorationTraits(partner)" :key="trait.code" :title="trait.description">
+              <Sparkles :size="12" />{{ trait.name }}
+            </i>
+          </span>
         </span>
         <span class="option-ability"><strong>{{ ability(partner) }}</strong><small>能力</small></span>
         <Lock v-if="isBusyElsewhere(partner, currentId)" :size="14" class="option-lock" />
@@ -206,6 +235,10 @@ function statusText(partner: OwnedPartner) {
 .option-copy strong { font-size: 13px; }
 .option-copy strong i { margin-left: 6px; color: var(--gold); font-size: 12px; font-style: normal; }
 .option-copy small { margin-top: 3px; color: #79857b; font-size: 12px; }
+.exploration-stat-marks { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
+.exploration-stat-mark { display: inline-flex; align-items: center; gap: 3px; padding: 2px 6px; color: #c9d5c5; font-size: 10px; font-style: normal; border-radius: 99px; background: #ffffff09; }
+.exploration-trait-lines { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.exploration-trait-lines i { display: inline-flex; align-items: center; gap: 3px; color: #d8bb7c; font-size: 10px; font-style: normal; }
 .option-ability { text-align: right; }
 .option-ability strong { display: block; color: var(--leaf-bright); font-size: 15px; }
 .option-ability small { color: #6f7b72; font-size: 12px; }
