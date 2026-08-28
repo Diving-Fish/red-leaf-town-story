@@ -21,10 +21,10 @@ const title = computed(() => (hint.value ? `距离下一点体力 ${hint.value}`
     <component :is="kind === 'coins' ? Coins : BatteryCharging" :size="17" />
     <strong>{{ value }}</strong>
     <small v-if="hint" class="pill-hint">+1 {{ hint }}</small>
-    <small v-else>{{ kind === 'coins' ? '金币' : '体力' }}</small>
+    <small v-else class="pill-label">{{ kind === 'coins' ? '金币' : '体力' }}</small>
   </span>
 </template>
 
 <style scoped>
-.resource-pill .pill-hint { display: inline; color: #93a08f; font-variant-numeric: tabular-nums; }
+.pill-hint { color: #93a08f; font-variant-numeric: tabular-nums; white-space: nowrap; }
 </style>

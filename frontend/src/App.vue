@@ -39,6 +39,11 @@ const levelProgress = computed(() => {
   const floor = player.current_level_xp
   return Math.max(2, Math.min(100, ((player.experience - floor) / (player.next_level_xp - floor)) * 100))
 })
+const levelHint = computed(() => {
+  const player = game.player
+  if (!player) return ''
+  return player.next_level_xp ? `${player.experience} / ${player.next_level_xp} XP` : '已达当前上限'
+})
 
 useReadyWatch()
 
@@ -127,7 +132,7 @@ async function copyBindingCommand() {
       </div>
       <button class="profile-button" @click="ui.accountOpen = true; ui.navOpen = false">
         <span class="avatar">{{ game.player.display_name.slice(0, 1) }}</span>
-        <span><strong>{{ game.player.display_name }}</strong><small>Lv.{{ game.player.level }} · 小镇居民</small></span>
+        <span><strong>{{ game.player.display_name }}</strong><small>Lv.{{ game.player.level }} · {{ levelHint }}</small></span>
         <ChevronRight :size="17" />
       </button>
     </aside>
@@ -136,27 +141,32 @@ async function copyBindingCommand() {
       <header class="topbar">
         <button class="icon-button menu-button" @click="ui.navOpen = true"><Menu :size="21" /></button>
         <div class="page-location"><small>当前位置</small><strong>{{ routeTitle }}</strong></div>
+        <div class="topbar-actions">
+          <button class="icon-button achievement-button" aria-label="成就" @click="ui.achievementOpen = true; ui.mailOpen = false">
+            <Trophy :size="18" />
+            <i v-if="game.state.achievements.claimable" class="inbox-badge unclaimed">{{ game.state.achievements.claimable > 99 ? '99+' : game.state.achievements.claimable }}</i>
+          </button>
+          <button class="icon-button inbox-button" aria-label="收件箱" @click="ui.mailOpen = true; ui.achievementOpen = false">
+            <Inbox :size="18" />
+            <i v-if="mailBadge" class="inbox-badge" :class="mailBadge.tone">{{ mailBadge.count > 99 ? '99+' : mailBadge.count }}</i>
+          </button>
+          <button class="icon-button refresh-button" aria-label="刷新" :class="{ spinning: game.isPending('refresh') }" @click="game.refresh()">
+            <RefreshCw :size="18" />
+          </button>
+        </div>
+      </header>
+
+      <div class="status-strip">
         <div class="resource-strip">
           <ResourcePill kind="coins" />
           <ResourcePill kind="stamina" />
         </div>
-        <button class="icon-button achievement-button" aria-label="成就" @click="ui.achievementOpen = true; ui.mailOpen = false">
-          <Trophy :size="18" />
-          <i v-if="game.state.achievements.claimable" class="inbox-badge unclaimed">{{ game.state.achievements.claimable > 99 ? '99+' : game.state.achievements.claimable }}</i>
-        </button>
-        <button class="icon-button inbox-button" aria-label="收件箱" @click="ui.mailOpen = true; ui.achievementOpen = false">
-          <Inbox :size="18" />
-          <i v-if="mailBadge" class="inbox-badge" :class="mailBadge.tone">{{ mailBadge.count > 99 ? '99+' : mailBadge.count }}</i>
-        </button>
-        <button class="icon-button refresh-button" :class="{ spinning: game.isPending('refresh') }" @click="game.refresh()">
-          <RefreshCw :size="18" />
-        </button>
-      </header>
-
-      <div class="level-ribbon">
-        <span>等级 {{ game.player.level }}</span>
-        <ProgressBar class="level-track" :value="levelProgress" :height="4" track="#27312a" color="linear-gradient(90deg, var(--leaf), var(--gold))" />
-        <small>{{ game.player.next_level_xp ? `${game.player.experience} / ${game.player.next_level_xp} XP` : '已达当前上限' }}</small>
+        <div class="level-chip" :title="levelHint">
+          <span>Lv.{{ game.player.level }}</span>
+          <ProgressBar class="level-track" :value="levelProgress" :height="4" track="#27312a" color="linear-gradient(90deg, var(--leaf), var(--gold))" />
+          <small>{{ levelHint }}</small>
+        </div>
+        <ProgressBar class="level-underline" :value="levelProgress" :height="2" track="transparent" color="linear-gradient(90deg, var(--leaf), var(--gold))" />
       </div>
 
       <div class="page-scroll"><RouterView /></div>
