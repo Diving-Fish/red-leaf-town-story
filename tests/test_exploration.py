@@ -206,3 +206,108 @@ def test_exploration_trait_can_target_transport_without_affecting_other_types(ex
 
     assert choice["stamina_cost_min"] == 4
     assert choice["applied_effects"][0]["effect"] == "route_stamina_multiplier"
+
+
+def advance_to_agility_check(service, repository, player_id: str) -> dict:
+    """走到一个带敏捷检定的事件，并把两颗骰子都压成必定普通失败的点数。"""
+
+    for _ in range(6):
+        run = service.snapshot_by_sub("exploration-sub")["exploration"]["active_run"]
+        event = run["current_event"]
+        checked = next(
+            (
+                choice
+                for choice in event["choices"]
+                if choice.get("actor_options") and choice.get("check_attribute") == "agility"
+            ),
+            None,
+        )
+        if checked is not None:
+            repository.update(
+                player_id,
+                lambda state: setattr(state.exploration_run, "current_rolls", [2, 2]),
+            )
+            return checked
+        plain = next(choice for choice in event["choices"] if not choice.get("actor_options"))
+        service.resolve_exploration_event("exploration-sub", plain["id"])
+    raise AssertionError("路线里没有出现敏捷检定")
+
+
+def last_exploration_log(service):
+    return service.repository.get_by_sub("exploration-sub").exploration_run.logs[-1]
+
+
+def test_pinpoint_shot_rescues_one_ordinary_failure_per_expedition(exploration_game):
+    service, repository, player = exploration_game
+    catalog = service.partner_catalog_loader()
+    catalog.partner_map["scout"].trait_codes = ["pinpoint_shot"]
+    catalog.partner_map["scout"].exploration_stats.agility = 1
+    service.start_exploration(
+        "exploration-sub",
+        "red_maple_hinterland",
+        ["leader", "scout"],
+        "leader",
+    )
+
+    choice = advance_to_agility_check(service, repository, player.player_id)
+    rescued = service.resolve_exploration_event("exploration-sub", choice["id"], "scout")
+
+    assert rescued["result"]["kept_roll"] == 2
+    assert rescued["result"]["success"] is True
+    assert rescued["result"]["degree"] == "success"
+    assert any(
+        entry["effect"] == "allow_failure_rescue"
+        for entry in last_exploration_log(service).applied_effects
+    )
+
+    run = service.repository.get_by_sub("exploration-sub").exploration_run
+    assert run.trait_usage["pinpoint_shot:failure_rescue"] == 1
+
+
+def test_azure_flame_undying_scales_rewards_with_depth(exploration_game):
+    service, _, _ = exploration_game
+    service.partner_catalog_loader().partner_map["leader"].trait_codes = ["azure_flame_undying"]
+    service.start_exploration("exploration-sub", "red_maple_hinterland", ["leader"], "leader")
+
+    multipliers = []
+    for _ in range(3):
+        run = service.snapshot_by_sub("exploration-sub")["exploration"]["active_run"]
+        plain = next(choice for choice in run["current_event"]["choices"] if not choice.get("actor_options"))
+        service.resolve_exploration_event("exploration-sub", plain["id"])
+        effect = next(
+            entry
+            for entry in last_exploration_log(service).applied_effects
+            if entry["effect"] == "reward_quantity_multiplier"
+        )
+        assert effect["trait_code"] == "azure_flame_undying"
+        multipliers.append(effect["value"])
+
+    # 第 1 / 2 / 3 层分别是 +5% / +10% / +15%，越往里走烧得越旺。
+    assert [round(value, 2) for value in multipliers] == [1.05, 1.10, 1.15]
+
+
+class MaxRollRandom(random.Random):
+    """奖励数量恒取上限，让倍率的效果可以被精确断言。"""
+
+    def randint(self, lower: int, upper: int) -> int:
+        return upper
+
+
+def test_exploration_rewards_actually_grow_with_the_multiplier(exploration_game):
+    service, repository, player = exploration_game
+    catalog = service.partner_catalog_loader()
+    service.rng = MaxRollRandom(4)
+    service.start_exploration("exploration-sub", "red_maple_hinterland", ["leader"], "leader")
+    baseline = service.resolve_exploration_event("exploration-sub", "clear_edges")
+
+    assert sum(drop["quantity"] for drop in baseline["result"]["drops"]) == 12
+
+    service.withdraw_exploration("exploration-sub")
+    repository.update(player.player_id, lambda state: setattr(state, "coins", 10_000))
+    catalog.partner_map["leader"].trait_codes = ["azure_flame_undying"]
+    service.rng = MaxRollRandom(4)
+    service.start_exploration("exploration-sub", "red_maple_hinterland", ["leader"], "leader")
+    boosted = service.resolve_exploration_event("exploration-sub", "clear_edges")
+
+    # 第 1 层 +5%：12 → round(12.6) = 13。
+    assert sum(drop["quantity"] for drop in boosted["result"]["drops"]) == 13

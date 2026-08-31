@@ -125,3 +125,124 @@ def test_optional_crafting_partner_contributes_and_is_locked(crafting_game):
     service.snapshot_by_sub("craft-sub")
     collected = service.collect_crafting("craft-sub", "town_workbench")
     assert collected["result"]["partner_experience"][0]["experience_gained"] == 4
+
+
+def test_primordial_return_refunds_one_consumed_input_at_collection(crafting_game):
+    service, repository, clock, player = crafting_game
+    reach_level(repository, player.player_id, 60)
+    service.snapshot_by_sub("craft-sub")
+    service.partner_catalog_loader().partner_map["artisan"].trait_codes = ["primordial_return"]
+    repository.update(player.player_id, lambda state: state.inventory.update({"maple_wood": {1: 2}}))
+    service.assign_crafting_partner("craft-sub", "town_workbench", "artisan")
+
+    started = service.start_crafting("craft-sub", "town_workbench", "saw_maple_plank")
+    task = started["state"]["crafting_stations"][0]["task_snapshot"]
+    refund_effects = [
+        entry for entry in task["applied_effects"] if entry["effect"] == "refund_consumed_input"
+    ]
+    assert refund_effects and refund_effects[0]["params"]["chance"] == 0.35
+    assert repository.get(player.player_id).inventory.get("maple_wood") is None
+
+    clock.advance(task["final_duration"])
+    service.snapshot_by_sub("craft-sub")
+
+    def force_refund(state):
+        # 把冻结在快照里的概率抬到必中，让退料这一段有确定的断言。
+        for entry in state.crafting_stations[0].task_snapshot.applied_effects:
+            if entry.get("effect") == "refund_consumed_input":
+                entry["params"]["chance"] = 1.0
+
+    repository.update(player.player_id, force_refund)
+    collected = service.collect_crafting("craft-sub", "town_workbench")
+
+    refunded = collected["result"]["refunded_inputs"]
+    assert [entry["item_id"] for entry in refunded] == ["maple_wood"]
+    assert refunded[0]["trait_code"] == "primordial_return"
+    inventory = repository.get(player.player_id).inventory
+    assert inventory["maple_wood"][refunded[0]["quality"]] == refunded[0]["quantity"]
+
+
+def test_input_refund_only_fires_when_the_snapshot_carries_the_effect(crafting_game):
+    service, repository, clock, player = crafting_game
+    reach_level(repository, player.player_id, 60)
+    service.snapshot_by_sub("craft-sub")
+    repository.update(player.player_id, lambda state: state.inventory.update({"maple_wood": {1: 2}}))
+
+    started = service.start_crafting("craft-sub", "town_workbench", "saw_maple_plank")
+    clock.advance(started["state"]["crafting_stations"][0]["task_snapshot"]["final_duration"])
+    service.snapshot_by_sub("craft-sub")
+    collected = service.collect_crafting("craft-sub", "town_workbench")
+
+    assert collected["result"]["refunded_inputs"] == []
+    assert repository.get(player.player_id).inventory.get("maple_wood") is None
+
+
+def test_input_refund_returns_every_quality_stack_of_the_chosen_material(crafting_game):
+    service, repository, clock, player = crafting_game
+    reach_level(repository, player.player_id, 60)
+    service.snapshot_by_sub("craft-sub")
+    service.partner_catalog_loader().partner_map["artisan"].trait_codes = ["primordial_return"]
+    # 混品质背包：枫木会被拆成「普通 1」和「上品 1」两条消耗记录。
+    repository.update(player.player_id, lambda state: state.inventory.update({"maple_wood": {1: 1, 3: 2}}))
+    service.assign_crafting_partner("craft-sub", "town_workbench", "artisan")
+
+    started = service.start_crafting("craft-sub", "town_workbench", "saw_maple_plank")
+    task = started["state"]["crafting_stations"][0]["task_snapshot"]
+    assert task["consumed_inputs"] == [
+        {"item_id": "maple_wood", "quality": 1, "quantity": 1},
+        {"item_id": "maple_wood", "quality": 3, "quantity": 1},
+    ]
+
+    clock.advance(task["final_duration"])
+    service.snapshot_by_sub("craft-sub")
+
+    def force_refund(state):
+        for entry in state.crafting_stations[0].task_snapshot.applied_effects:
+            if entry.get("effect") == "refund_consumed_input":
+                entry["params"]["chance"] = 1.0
+
+    repository.update(player.player_id, force_refund)
+    collected = service.collect_crafting("craft-sub", "town_workbench")
+
+    # 退的是「枫木」这一种原料的全部消耗量，不是随机挑一条品质记录。
+    assert [(entry["quality"], entry["quantity"]) for entry in collected["result"]["refunded_inputs"]] == [(1, 1), (3, 1)]
+    assert repository.get(player.player_id).inventory["maple_wood"] == {1: 1, 3: 2}
+
+
+def test_input_refund_returns_only_one_of_several_materials(crafting_game):
+    service, repository, clock, player = crafting_game
+    reach_level(repository, player.player_id, 60)
+    service.snapshot_by_sub("craft-sub")
+    service.partner_catalog_loader().partner_map["artisan"].trait_codes = ["primordial_return"]
+    recipe = service.content.recipe_map["saw_maple_plank"]
+    recipe.inputs = [
+        entry.model_copy(update={"item_id": "maple_wood", "quantity": 2}) for entry in recipe.inputs
+    ] + [recipe.inputs[0].model_copy(update={"item_id": "autumn_herb", "quantity": 2})]
+    repository.update(player.player_id, lambda state: state.inventory.update({
+        "maple_wood": {1: 2},
+        "autumn_herb": {1: 2},
+    }))
+    service.assign_crafting_partner("craft-sub", "town_workbench", "artisan")
+
+    started = service.start_crafting("craft-sub", "town_workbench", "saw_maple_plank")
+    task = started["state"]["crafting_stations"][0]["task_snapshot"]
+    clock.advance(task["final_duration"])
+    service.snapshot_by_sub("craft-sub")
+
+    def force_refund(state):
+        for entry in state.crafting_stations[0].task_snapshot.applied_effects:
+            if entry.get("effect") == "refund_consumed_input":
+                entry["params"]["chance"] = 1.0
+
+    repository.update(player.player_id, force_refund)
+    collected = service.collect_crafting("craft-sub", "town_workbench")
+
+    refunded = collected["result"]["refunded_inputs"]
+    assert {entry["item_id"] for entry in refunded} != {"maple_wood", "autumn_herb"}
+    assert sum(entry["quantity"] for entry in refunded) == 2
+    inventory = repository.get(player.player_id).inventory
+    returned = {
+        item_id: sum(inventory.get(item_id, {}).values())
+        for item_id in ("maple_wood", "autumn_herb")
+    }
+    assert sorted(returned.values()) == [0, 2]

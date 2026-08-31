@@ -2,12 +2,83 @@
   "schema_version": 4,
   "partners": [
     {
+      "id": "ai_liqi",
+      "name": "爱莉栖",
+      "rarity": 5,
+      "description": "",
+      "growth_curve": "linear",
+      "exploration_stats": {
+        "strength": 9,
+        "agility": 14,
+        "intelligence": 15,
+        "luck": 10
+      },
+      "tendencies": [
+        {
+          "industry": "aquatic",
+          "level_1": 32,
+          "level_60": 205
+        },
+        {
+          "industry": "farming",
+          "level_1": 25,
+          "level_60": 158
+        },
+        {
+          "industry": "crafting",
+          "level_1": 22,
+          "level_60": 134
+        }
+      ],
+      "trait_codes": [
+        "attendant_at_hand"
+      ],
+      "artworks": [
+        {
+          "breakthrough": 0,
+          "asset_key": "red-leaf-town/partners/ai_liqi/breakthrough-0-53bbf8cf0b5d4894.webp",
+          "width": 936,
+          "height": 1664,
+          "content_type": "image/webp"
+        }
+      ],
+      "avatar_crops": [
+        {
+          "breakthrough": 0,
+          "x": 356,
+          "y": 105,
+          "w": 422,
+          "h": 422
+        },
+        {
+          "breakthrough": 1,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        },
+        {
+          "breakthrough": 2,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        }
+      ],
+      "ascensions": []
+    },
+    {
       "id": "ai_xinyu",
       "name": "艾欣愉",
       "rarity": 4,
       "description": "",
       "growth_curve": "linear",
-      "exploration_stats": {"strength": 9, "agility": 14, "intelligence": 11, "luck": 14},
+      "exploration_stats": {
+        "strength": 9,
+        "agility": 14,
+        "intelligence": 11,
+        "luck": 14
+      },
       "tendencies": [
         {
           "industry": "aquatic",
@@ -25,7 +96,9 @@
           "level_60": 134
         }
       ],
-      "trait_codes": ["flow_treasure"],
+      "trait_codes": [
+        "flow_treasure"
+      ],
       "artworks": [
         {
           "breakthrough": 0,
@@ -66,7 +139,12 @@
       "rarity": 5,
       "description": "",
       "growth_curve": "linear",
-      "exploration_stats": {"strength": 11, "agility": 16, "intelligence": 11, "luck": 10},
+      "exploration_stats": {
+        "strength": 11,
+        "agility": 16,
+        "intelligence": 11,
+        "luck": 10
+      },
       "tendencies": [
         {
           "industry": "exploration",
@@ -84,7 +162,9 @@
           "level_60": 134
         }
       ],
-      "trait_codes": ["thunderwing_vanguard"],
+      "trait_codes": [
+        "thunderwing_vanguard"
+      ],
       "artworks": [
         {
           "breakthrough": 0,
@@ -125,7 +205,12 @@
       "rarity": 4,
       "description": "",
       "growth_curve": "linear",
-      "exploration_stats": {"strength": 10, "agility": 11, "intelligence": 16, "luck": 11},
+      "exploration_stats": {
+        "strength": 10,
+        "agility": 11,
+        "intelligence": 16,
+        "luck": 11
+      },
       "tendencies": [
         {
           "industry": "farming",
@@ -143,7 +228,9 @@
           "level_60": 134
         }
       ],
-      "trait_codes": ["fodder_fields"],
+      "trait_codes": [
+        "fodder_fields"
+      ],
       "artworks": [
         {
           "breakthrough": 0,
@@ -184,7 +271,12 @@
       "rarity": 3,
       "description": "",
       "growth_curve": "linear",
-      "exploration_stats": {"strength": 9, "agility": 12, "intelligence": 12, "luck": 15},
+      "exploration_stats": {
+        "strength": 9,
+        "agility": 12,
+        "intelligence": 12,
+        "luck": 15
+      },
       "tendencies": [
         {
           "industry": "aquatic",
@@ -192,7 +284,9 @@
           "level_60": 235
         }
       ],
-      "trait_codes": ["golden_line"],
+      "trait_codes": [
+        "golden_line"
+      ],
       "artworks": [
         {
           "breakthrough": 0,
@@ -233,7 +327,12 @@
       "rarity": 3,
       "description": "",
       "growth_curve": "linear",
-      "exploration_stats": {"strength": 12, "agility": 11, "intelligence": 13, "luck": 12},
+      "exploration_stats": {
+        "strength": 12,
+        "agility": 11,
+        "intelligence": 13,
+        "luck": 12
+      },
       "tendencies": [
         {
           "industry": "crafting",
@@ -246,7 +345,9 @@
           "level_60": 168
         }
       ],
-      "trait_codes": ["steady_craft"],
+      "trait_codes": [
+        "steady_craft"
+      ],
       "artworks": [
         {
           "breakthrough": 0,
@@ -282,12 +383,134 @@
       "ascensions": []
     },
     {
+      "id": "bai_lingxue",
+      "name": "白岭雪",
+      "rarity": 4,
+      "description": "",
+      "growth_curve": "linear",
+      "exploration_stats": {
+        "strength": 8,
+        "agility": 14,
+        "intelligence": 16,
+        "luck": 10
+      },
+      "tendencies": [
+        {
+          "industry": "livestock",
+          "level_1": 34,
+          "level_60": 223
+        },
+        {
+          "industry": "gathering",
+          "level_1": 27,
+          "level_60": 168
+        }
+      ],
+      "trait_codes": [
+        "frost_grooming"
+      ],
+      "artworks": [
+        {
+          "breakthrough": 0,
+          "asset_key": "red-leaf-town/partners/bai_lingxue/breakthrough-0-bb51aeb5366273f3.webp",
+          "width": 1053,
+          "height": 1872,
+          "content_type": "image/webp"
+        }
+      ],
+      "avatar_crops": [
+        {
+          "breakthrough": 0,
+          "x": 272,
+          "y": 202,
+          "w": 381,
+          "h": 381
+        },
+        {
+          "breakthrough": 1,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        },
+        {
+          "breakthrough": 2,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        }
+      ],
+      "ascensions": []
+    },
+    {
+      "id": "bai_tiantian",
+      "name": "白天天",
+      "rarity": 5,
+      "description": "",
+      "growth_curve": "linear",
+      "exploration_stats": {
+        "strength": 12,
+        "agility": 12,
+        "intelligence": 12,
+        "luck": 12
+      },
+      "tendencies": [
+        {
+          "industry": "crafting",
+          "level_1": 37,
+          "level_60": 235
+        }
+      ],
+      "trait_codes": [
+        "primordial_return"
+      ],
+      "artworks": [
+        {
+          "breakthrough": 0,
+          "asset_key": "red-leaf-town/partners/bai_tiantian/breakthrough-0-9d32761439b69cea.webp",
+          "width": 936,
+          "height": 1664,
+          "content_type": "image/webp"
+        }
+      ],
+      "avatar_crops": [
+        {
+          "breakthrough": 0,
+          "x": 109,
+          "y": 315,
+          "w": 464,
+          "h": 464
+        },
+        {
+          "breakthrough": 1,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        },
+        {
+          "breakthrough": 2,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        }
+      ],
+      "ascensions": []
+    },
+    {
       "id": "banniang",
       "name": "睡着的板娘",
       "rarity": 4,
       "description": "",
       "growth_curve": "linear",
-      "exploration_stats": {"strength": 10, "agility": 8, "intelligence": 14, "luck": 16},
+      "exploration_stats": {
+        "strength": 10,
+        "agility": 8,
+        "intelligence": 14,
+        "luck": 16
+      },
       "tendencies": [
         {
           "industry": "gathering",
@@ -305,7 +528,9 @@
           "level_60": 134
         }
       ],
-      "trait_codes": ["dream_forage"],
+      "trait_codes": [
+        "dream_forage"
+      ],
       "artworks": [
         {
           "breakthrough": 0,
@@ -346,7 +571,12 @@
       "rarity": 4,
       "description": "",
       "growth_curve": "linear",
-      "exploration_stats": {"strength": 10, "agility": 15, "intelligence": 15, "luck": 8},
+      "exploration_stats": {
+        "strength": 10,
+        "agility": 15,
+        "intelligence": 15,
+        "luck": 8
+      },
       "tendencies": [
         {
           "industry": "mining",
@@ -364,7 +594,9 @@
           "level_60": 134
         }
       ],
-      "trait_codes": ["ore_chaser"],
+      "trait_codes": [
+        "ore_chaser"
+      ],
       "artworks": [
         {
           "breakthrough": 0,
@@ -405,7 +637,12 @@
       "rarity": 3,
       "description": "",
       "growth_curve": "linear",
-      "exploration_stats": {"strength": 10, "agility": 15, "intelligence": 14, "luck": 9},
+      "exploration_stats": {
+        "strength": 10,
+        "agility": 15,
+        "intelligence": 14,
+        "luck": 9
+      },
       "tendencies": [
         {
           "industry": "farming",
@@ -418,7 +655,9 @@
           "level_60": 168
         }
       ],
-      "trait_codes": ["rain_garden"],
+      "trait_codes": [
+        "rain_garden"
+      ],
       "artworks": [
         {
           "breakthrough": 0,
@@ -459,7 +698,12 @@
       "rarity": 4,
       "description": "",
       "growth_curve": "linear",
-      "exploration_stats": {"strength": 12, "agility": 12, "intelligence": 13, "luck": 11},
+      "exploration_stats": {
+        "strength": 12,
+        "agility": 12,
+        "intelligence": 13,
+        "luck": 11
+      },
       "tendencies": [
         {
           "industry": "gathering",
@@ -472,7 +716,9 @@
           "level_60": 205
         }
       ],
-      "trait_codes": ["varied_forage"],
+      "trait_codes": [
+        "varied_forage"
+      ],
       "artworks": [
         {
           "breakthrough": 0,
@@ -508,12 +754,78 @@
       "ascensions": []
     },
     {
+      "id": "fumeng",
+      "name": "浮梦",
+      "rarity": 3,
+      "description": "",
+      "growth_curve": "linear",
+      "exploration_stats": {
+        "strength": 9,
+        "agility": 12,
+        "intelligence": 15,
+        "luck": 12
+      },
+      "tendencies": [
+        {
+          "industry": "crafting",
+          "level_1": 34,
+          "level_60": 223
+        },
+        {
+          "industry": "gathering",
+          "level_1": 27,
+          "level_60": 168
+        }
+      ],
+      "trait_codes": [
+        "warm_broth_ready"
+      ],
+      "artworks": [
+        {
+          "breakthrough": 0,
+          "asset_key": "red-leaf-town/partners/fumeng/breakthrough-0-a1406d00a933c812.webp",
+          "width": 1053,
+          "height": 1872,
+          "content_type": "image/webp"
+        }
+      ],
+      "avatar_crops": [
+        {
+          "breakthrough": 0,
+          "x": 350,
+          "y": 302,
+          "w": 362,
+          "h": 362
+        },
+        {
+          "breakthrough": 1,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        },
+        {
+          "breakthrough": 2,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        }
+      ],
+      "ascensions": []
+    },
+    {
       "id": "guidengdeng",
       "name": "鬼灯灯",
       "rarity": 5,
       "description": "",
       "growth_curve": "linear",
-      "exploration_stats": {"strength": 9, "agility": 13, "intelligence": 15, "luck": 11},
+      "exploration_stats": {
+        "strength": 9,
+        "agility": 13,
+        "intelligence": 15,
+        "luck": 11
+      },
       "tendencies": [
         {
           "industry": "farming",
@@ -526,7 +838,9 @@
           "level_60": 168
         }
       ],
-      "trait_codes": ["ghostfire_refinement"],
+      "trait_codes": [
+        "ghostfire_refinement"
+      ],
       "artworks": [
         {
           "breakthrough": 0,
@@ -567,7 +881,12 @@
       "rarity": 3,
       "description": "",
       "growth_curve": "linear",
-      "exploration_stats": {"strength": 9, "agility": 14, "intelligence": 13, "luck": 12},
+      "exploration_stats": {
+        "strength": 9,
+        "agility": 14,
+        "intelligence": 13,
+        "luck": 12
+      },
       "tendencies": [
         {
           "industry": "farming",
@@ -585,7 +904,9 @@
           "level_60": 134
         }
       ],
-      "trait_codes": ["deep_soil_edge"],
+      "trait_codes": [
+        "deep_soil_edge"
+      ],
       "artworks": [
         {
           "breakthrough": 0,
@@ -626,7 +947,12 @@
       "rarity": 5,
       "description": "",
       "growth_curve": "linear",
-      "exploration_stats": {"strength": 10, "agility": 15, "intelligence": 10, "luck": 13},
+      "exploration_stats": {
+        "strength": 10,
+        "agility": 15,
+        "intelligence": 10,
+        "luck": 13
+      },
       "tendencies": [
         {
           "industry": "exploration",
@@ -644,7 +970,9 @@
           "level_60": 134
         }
       ],
-      "trait_codes": ["snowtrace_trick"],
+      "trait_codes": [
+        "snowtrace_trick"
+      ],
       "artworks": [
         {
           "breakthrough": 0,
@@ -685,7 +1013,12 @@
       "rarity": 5,
       "description": "",
       "growth_curve": "linear",
-      "exploration_stats": {"strength": 16, "agility": 9, "intelligence": 14, "luck": 9},
+      "exploration_stats": {
+        "strength": 16,
+        "agility": 9,
+        "intelligence": 14,
+        "luck": 9
+      },
       "tendencies": [
         {
           "industry": "mining",
@@ -698,7 +1031,9 @@
           "level_60": 168
         }
       ],
-      "trait_codes": ["listen_to_rock"],
+      "trait_codes": [
+        "listen_to_rock"
+      ],
       "artworks": [
         {
           "breakthrough": 0,
@@ -739,7 +1074,12 @@
       "rarity": 4,
       "description": "",
       "growth_curve": "linear",
-      "exploration_stats": {"strength": 11, "agility": 12, "intelligence": 16, "luck": 9},
+      "exploration_stats": {
+        "strength": 11,
+        "agility": 12,
+        "intelligence": 16,
+        "luck": 9
+      },
       "tendencies": [
         {
           "industry": "crafting",
@@ -752,7 +1092,9 @@
           "level_60": 168
         }
       ],
-      "trait_codes": ["ancient_formula"],
+      "trait_codes": [
+        "ancient_formula"
+      ],
       "artworks": [
         {
           "breakthrough": 0,
@@ -793,7 +1135,12 @@
       "rarity": 4,
       "description": "",
       "growth_curve": "linear",
-      "exploration_stats": {"strength": 12, "agility": 15, "intelligence": 10, "luck": 11},
+      "exploration_stats": {
+        "strength": 12,
+        "agility": 15,
+        "intelligence": 10,
+        "luck": 11
+      },
       "tendencies": [
         {
           "industry": "farming",
@@ -811,7 +1158,9 @@
           "level_60": 134
         }
       ],
-      "trait_codes": ["overcast_worker"],
+      "trait_codes": [
+        "overcast_worker"
+      ],
       "artworks": [
         {
           "breakthrough": 0,
@@ -852,7 +1201,12 @@
       "rarity": 4,
       "description": "",
       "growth_curve": "linear",
-      "exploration_stats": {"strength": 14, "agility": 12, "intelligence": 15, "luck": 7},
+      "exploration_stats": {
+        "strength": 14,
+        "agility": 12,
+        "intelligence": 15,
+        "luck": 7
+      },
       "tendencies": [
         {
           "industry": "exploration",
@@ -870,7 +1224,9 @@
           "level_60": 134
         }
       ],
-      "trait_codes": ["wilderness_veteran"],
+      "trait_codes": [
+        "wilderness_veteran"
+      ],
       "artworks": [
         {
           "breakthrough": 0,
@@ -906,12 +1262,139 @@
       "ascensions": []
     },
     {
+      "id": "hongzhijian",
+      "name": "虹之间",
+      "rarity": 3,
+      "description": "",
+      "growth_curve": "linear",
+      "exploration_stats": {
+        "strength": 9,
+        "agility": 13,
+        "intelligence": 10,
+        "luck": 16
+      },
+      "tendencies": [
+        {
+          "industry": "gathering",
+          "level_1": 34,
+          "level_60": 223
+        },
+        {
+          "industry": "livestock",
+          "level_1": 27,
+          "level_60": 168
+        }
+      ],
+      "trait_codes": [
+        "rainbow_pickings"
+      ],
+      "artworks": [
+        {
+          "breakthrough": 0,
+          "asset_key": "red-leaf-town/partners/hongzhijian/breakthrough-0-9979e179c6bf5065.webp",
+          "width": 936,
+          "height": 1664,
+          "content_type": "image/webp"
+        }
+      ],
+      "avatar_crops": [
+        {
+          "breakthrough": 0,
+          "x": 318,
+          "y": 262,
+          "w": 412,
+          "h": 412
+        },
+        {
+          "breakthrough": 1,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        },
+        {
+          "breakthrough": 2,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        }
+      ],
+      "ascensions": []
+    },
+    {
+      "id": "jia_gula",
+      "name": "嘉沽菈",
+      "rarity": 4,
+      "description": "",
+      "growth_curve": "linear",
+      "exploration_stats": {
+        "strength": 15,
+        "agility": 14,
+        "intelligence": 11,
+        "luck": 8
+      },
+      "tendencies": [
+        {
+          "industry": "mining",
+          "level_1": 34,
+          "level_60": 223
+        },
+        {
+          "industry": "exploration",
+          "level_1": 27,
+          "level_60": 168
+        }
+      ],
+      "trait_codes": [
+        "veinbreak_stroke"
+      ],
+      "artworks": [
+        {
+          "breakthrough": 0,
+          "asset_key": "red-leaf-town/partners/jia_gula/breakthrough-0-cfb6d4259fa38866.webp",
+          "width": 936,
+          "height": 1664,
+          "content_type": "image/webp"
+        }
+      ],
+      "avatar_crops": [
+        {
+          "breakthrough": 0,
+          "x": 371,
+          "y": 134,
+          "w": 369,
+          "h": 369
+        },
+        {
+          "breakthrough": 1,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        },
+        {
+          "breakthrough": 2,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        }
+      ],
+      "ascensions": []
+    },
+    {
       "id": "leilei",
       "name": "蕾蕾",
       "rarity": 5,
       "description": "",
       "growth_curve": "linear",
-      "exploration_stats": {"strength": 15, "agility": 11, "intelligence": 14, "luck": 8},
+      "exploration_stats": {
+        "strength": 15,
+        "agility": 11,
+        "intelligence": 14,
+        "luck": 8
+      },
       "tendencies": [
         {
           "industry": "exploration",
@@ -924,7 +1407,9 @@
           "level_60": 168
         }
       ],
-      "trait_codes": ["royal_rider_command"],
+      "trait_codes": [
+        "royal_rider_command"
+      ],
       "artworks": [
         {
           "breakthrough": 0,
@@ -965,7 +1450,12 @@
       "rarity": 3,
       "description": "",
       "growth_curve": "linear",
-      "exploration_stats": {"strength": 16, "agility": 10, "intelligence": 13, "luck": 9},
+      "exploration_stats": {
+        "strength": 16,
+        "agility": 10,
+        "intelligence": 13,
+        "luck": 9
+      },
       "tendencies": [
         {
           "industry": "livestock",
@@ -978,7 +1468,9 @@
           "level_60": 168
         }
       ],
-      "trait_codes": ["fine_combing"],
+      "trait_codes": [
+        "fine_combing"
+      ],
       "artworks": [
         {
           "breakthrough": 0,
@@ -1019,7 +1511,12 @@
       "rarity": 5,
       "description": "",
       "growth_curve": "linear",
-      "exploration_stats": {"strength": 11, "agility": 13, "intelligence": 15, "luck": 9},
+      "exploration_stats": {
+        "strength": 11,
+        "agility": 13,
+        "intelligence": 15,
+        "luck": 9
+      },
       "tendencies": [
         {
           "industry": "gathering",
@@ -1037,7 +1534,9 @@
           "level_60": 134
         }
       ],
-      "trait_codes": ["herb_lore"],
+      "trait_codes": [
+        "herb_lore"
+      ],
       "artworks": [
         {
           "breakthrough": 0,
@@ -1078,7 +1577,12 @@
       "rarity": 5,
       "description": "",
       "growth_curve": "linear",
-      "exploration_stats": {"strength": 9, "agility": 13, "intelligence": 16, "luck": 10},
+      "exploration_stats": {
+        "strength": 9,
+        "agility": 13,
+        "intelligence": 16,
+        "luck": 10
+      },
       "tendencies": [
         {
           "industry": "farming",
@@ -1091,7 +1595,9 @@
           "level_60": 168
         }
       ],
-      "trait_codes": ["meticulous_farming"],
+      "trait_codes": [
+        "meticulous_farming"
+      ],
       "artworks": [
         {
           "breakthrough": 0,
@@ -1132,7 +1638,12 @@
       "rarity": 3,
       "description": "",
       "growth_curve": "linear",
-      "exploration_stats": {"strength": 15, "agility": 9, "intelligence": 13, "luck": 11},
+      "exploration_stats": {
+        "strength": 15,
+        "agility": 9,
+        "intelligence": 13,
+        "luck": 11
+      },
       "tendencies": [
         {
           "industry": "livestock",
@@ -1140,7 +1651,9 @@
           "level_60": 235
         }
       ],
-      "trait_codes": ["unhurried"],
+      "trait_codes": [
+        "unhurried"
+      ],
       "artworks": [
         {
           "breakthrough": 0,
@@ -1181,7 +1694,12 @@
       "rarity": 5,
       "description": "",
       "growth_curve": "linear",
-      "exploration_stats": {"strength": 14, "agility": 8, "intelligence": 14, "luck": 12},
+      "exploration_stats": {
+        "strength": 14,
+        "agility": 8,
+        "intelligence": 14,
+        "luck": 12
+      },
       "tendencies": [
         {
           "industry": "livestock",
@@ -1194,7 +1712,9 @@
           "level_60": 168
         }
       ],
-      "trait_codes": ["full_larder"],
+      "trait_codes": [
+        "full_larder"
+      ],
       "artworks": [
         {
           "breakthrough": 0,
@@ -1235,7 +1755,12 @@
       "rarity": 4,
       "description": "",
       "growth_curve": "linear",
-      "exploration_stats": {"strength": 8, "agility": 14, "intelligence": 15, "luck": 11},
+      "exploration_stats": {
+        "strength": 8,
+        "agility": 14,
+        "intelligence": 15,
+        "luck": 11
+      },
       "tendencies": [
         {
           "industry": "farming",
@@ -1253,7 +1778,9 @@
           "level_60": 134
         }
       ],
-      "trait_codes": ["warm_soil"],
+      "trait_codes": [
+        "warm_soil"
+      ],
       "artworks": [
         {
           "breakthrough": 0,
@@ -1289,12 +1816,139 @@
       "ascensions": []
     },
     {
+      "id": "nuanyu_2",
+      "name": "暖玉",
+      "rarity": 5,
+      "description": "",
+      "growth_curve": "linear",
+      "exploration_stats": {
+        "strength": 13,
+        "agility": 12,
+        "intelligence": 16,
+        "luck": 7
+      },
+      "tendencies": [
+        {
+          "industry": "crafting",
+          "level_1": 34,
+          "level_60": 223
+        },
+        {
+          "industry": "mining",
+          "level_1": 27,
+          "level_60": 168
+        }
+      ],
+      "trait_codes": [
+        "azure_smelt"
+      ],
+      "artworks": [
+        {
+          "breakthrough": 0,
+          "asset_key": "red-leaf-town/partners/nuanyu_2/breakthrough-0-8be43589564c336e.webp",
+          "width": 936,
+          "height": 1664,
+          "content_type": "image/webp"
+        }
+      ],
+      "avatar_crops": [
+        {
+          "breakthrough": 0,
+          "x": 226,
+          "y": 189,
+          "w": 447,
+          "h": 447
+        },
+        {
+          "breakthrough": 1,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        },
+        {
+          "breakthrough": 2,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        }
+      ],
+      "ascensions": []
+    },
+    {
+      "id": "shuiling",
+      "name": "水灵",
+      "rarity": 3,
+      "description": "",
+      "growth_curve": "linear",
+      "exploration_stats": {
+        "strength": 9,
+        "agility": 15,
+        "intelligence": 11,
+        "luck": 13
+      },
+      "tendencies": [
+        {
+          "industry": "aquatic",
+          "level_1": 34,
+          "level_60": 223
+        },
+        {
+          "industry": "farming",
+          "level_1": 27,
+          "level_60": 168
+        }
+      ],
+      "trait_codes": [
+        "ripple_play"
+      ],
+      "artworks": [
+        {
+          "breakthrough": 0,
+          "asset_key": "red-leaf-town/partners/shuiling/breakthrough-0-d31c256dea81d546.webp",
+          "width": 936,
+          "height": 1664,
+          "content_type": "image/webp"
+        }
+      ],
+      "avatar_crops": [
+        {
+          "breakthrough": 0,
+          "x": 325,
+          "y": 279,
+          "w": 485,
+          "h": 485
+        },
+        {
+          "breakthrough": 1,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        },
+        {
+          "breakthrough": 2,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        }
+      ],
+      "ascensions": []
+    },
+    {
       "id": "sunfeng_liya",
       "name": "隼风莉亚",
       "rarity": 5,
       "description": "",
       "growth_curve": "linear",
-      "exploration_stats": {"strength": 13, "agility": 16, "intelligence": 11, "luck": 8},
+      "exploration_stats": {
+        "strength": 13,
+        "agility": 16,
+        "intelligence": 11,
+        "luck": 8
+      },
       "tendencies": [
         {
           "industry": "gathering",
@@ -1312,7 +1966,9 @@
           "level_60": 134
         }
       ],
-      "trait_codes": ["swift_wind_work"],
+      "trait_codes": [
+        "swift_wind_work"
+      ],
       "artworks": [
         {
           "breakthrough": 0,
@@ -1348,12 +2004,78 @@
       "ascensions": []
     },
     {
+      "id": "wei_jiang",
+      "name": "威酱",
+      "rarity": 4,
+      "description": "",
+      "growth_curve": "linear",
+      "exploration_stats": {
+        "strength": 8,
+        "agility": 15,
+        "intelligence": 12,
+        "luck": 13
+      },
+      "tendencies": [
+        {
+          "industry": "farming",
+          "level_1": 34,
+          "level_60": 223
+        },
+        {
+          "industry": "livestock",
+          "level_1": 27,
+          "level_60": 168
+        }
+      ],
+      "trait_codes": [
+        "windborne_sowing"
+      ],
+      "artworks": [
+        {
+          "breakthrough": 0,
+          "asset_key": "red-leaf-town/partners/wei_jiang/breakthrough-0-55614aa60a992c60.webp",
+          "width": 1053,
+          "height": 1872,
+          "content_type": "image/webp"
+        }
+      ],
+      "avatar_crops": [
+        {
+          "breakthrough": 0,
+          "x": 349,
+          "y": 362,
+          "w": 412,
+          "h": 412
+        },
+        {
+          "breakthrough": 1,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        },
+        {
+          "breakthrough": 2,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        }
+      ],
+      "ascensions": []
+    },
+    {
       "id": "wujian",
       "name": "雾剑",
       "rarity": 3,
       "description": "",
       "growth_curve": "linear",
-      "exploration_stats": {"strength": 16, "agility": 11, "intelligence": 12, "luck": 9},
+      "exploration_stats": {
+        "strength": 16,
+        "agility": 11,
+        "intelligence": 12,
+        "luck": 9
+      },
       "tendencies": [
         {
           "industry": "exploration",
@@ -1361,7 +2083,9 @@
           "level_60": 235
         }
       ],
-      "trait_codes": ["iceflame_breach"],
+      "trait_codes": [
+        "iceflame_breach"
+      ],
       "artworks": [
         {
           "breakthrough": 0,
@@ -1402,7 +2126,12 @@
       "rarity": 3,
       "description": "",
       "growth_curve": "linear",
-      "exploration_stats": {"strength": 15, "agility": 9, "intelligence": 16, "luck": 8},
+      "exploration_stats": {
+        "strength": 15,
+        "agility": 9,
+        "intelligence": 16,
+        "luck": 8
+      },
       "tendencies": [
         {
           "industry": "mining",
@@ -1410,7 +2139,9 @@
           "level_60": 235
         }
       ],
-      "trait_codes": ["ore_heart"],
+      "trait_codes": [
+        "ore_heart"
+      ],
       "artworks": [
         {
           "breakthrough": 0,
@@ -1451,7 +2182,12 @@
       "rarity": 5,
       "description": "",
       "growth_curve": "linear",
-      "exploration_stats": {"strength": 13, "agility": 11, "intelligence": 13, "luck": 11},
+      "exploration_stats": {
+        "strength": 13,
+        "agility": 11,
+        "intelligence": 13,
+        "luck": 11
+      },
       "tendencies": [
         {
           "industry": "livestock",
@@ -1459,7 +2195,9 @@
           "level_60": 235
         }
       ],
-      "trait_codes": ["herding_heart"],
+      "trait_codes": [
+        "herding_heart"
+      ],
       "artworks": [
         {
           "breakthrough": 0,
@@ -1500,7 +2238,12 @@
       "rarity": 4,
       "description": "",
       "growth_curve": "linear",
-      "exploration_stats": {"strength": 10, "agility": 15, "intelligence": 10, "luck": 13},
+      "exploration_stats": {
+        "strength": 10,
+        "agility": 15,
+        "intelligence": 10,
+        "luck": 13
+      },
       "tendencies": [
         {
           "industry": "gathering",
@@ -1518,7 +2261,9 @@
           "level_60": 134
         }
       ],
-      "trait_codes": ["falling_star"],
+      "trait_codes": [
+        "falling_star"
+      ],
       "artworks": [],
       "avatar_crops": [
         {
@@ -1551,7 +2296,12 @@
       "rarity": 3,
       "description": "",
       "growth_curve": "linear",
-      "exploration_stats": {"strength": 16, "agility": 10, "intelligence": 9, "luck": 13},
+      "exploration_stats": {
+        "strength": 16,
+        "agility": 10,
+        "intelligence": 9,
+        "luck": 13
+      },
       "tendencies": [
         {
           "industry": "exploration",
@@ -1559,7 +2309,9 @@
           "level_60": 235
         }
       ],
-      "trait_codes": ["head_on"],
+      "trait_codes": [
+        "head_on"
+      ],
       "artworks": [
         {
           "breakthrough": 0,
@@ -1600,7 +2352,12 @@
       "rarity": 4,
       "description": "",
       "growth_curve": "linear",
-      "exploration_stats": {"strength": 9, "agility": 13, "intelligence": 14, "luck": 12},
+      "exploration_stats": {
+        "strength": 9,
+        "agility": 13,
+        "intelligence": 14,
+        "luck": 12
+      },
       "tendencies": [
         {
           "industry": "livestock",
@@ -1613,7 +2370,9 @@
           "level_60": 168
         }
       ],
-      "trait_codes": ["matchmaker"],
+      "trait_codes": [
+        "matchmaker"
+      ],
       "artworks": [
         {
           "breakthrough": 0,
@@ -1654,7 +2413,12 @@
       "rarity": 5,
       "description": "",
       "growth_curve": "linear",
-      "exploration_stats": {"strength": 9, "agility": 13, "intelligence": 16, "luck": 10},
+      "exploration_stats": {
+        "strength": 9,
+        "agility": 13,
+        "intelligence": 16,
+        "luck": 10
+      },
       "tendencies": [
         {
           "industry": "gathering",
@@ -1672,7 +2436,9 @@
           "level_60": 134
         }
       ],
-      "trait_codes": ["moonlit_selection"],
+      "trait_codes": [
+        "moonlit_selection"
+      ],
       "artworks": [
         {
           "breakthrough": 0,
@@ -1713,7 +2479,12 @@
       "rarity": 5,
       "description": "",
       "growth_curve": "linear",
-      "exploration_stats": {"strength": 13, "agility": 11, "intelligence": 13, "luck": 11},
+      "exploration_stats": {
+        "strength": 13,
+        "agility": 11,
+        "intelligence": 13,
+        "luck": 11
+      },
       "tendencies": [
         {
           "industry": "livestock",
@@ -1731,7 +2502,9 @@
           "level_60": 134
         }
       ],
-      "trait_codes": ["generous_keep"],
+      "trait_codes": [
+        "generous_keep"
+      ],
       "artworks": [
         {
           "breakthrough": 0,
@@ -1767,12 +2540,73 @@
       "ascensions": []
     },
     {
+      "id": "ya_ziweier",
+      "name": "雅兹薇尔",
+      "rarity": 5,
+      "description": "",
+      "growth_curve": "linear",
+      "exploration_stats": {
+        "strength": 15,
+        "agility": 15,
+        "intelligence": 11,
+        "luck": 7
+      },
+      "tendencies": [
+        {
+          "industry": "exploration",
+          "level_1": 37,
+          "level_60": 235
+        }
+      ],
+      "trait_codes": [
+        "azure_flame_undying"
+      ],
+      "artworks": [
+        {
+          "breakthrough": 0,
+          "asset_key": "red-leaf-town/partners/ya_ziweier/breakthrough-0-b38c086ae214c157.webp",
+          "width": 936,
+          "height": 1664,
+          "content_type": "image/webp"
+        }
+      ],
+      "avatar_crops": [
+        {
+          "breakthrough": 0,
+          "x": 294,
+          "y": 274,
+          "w": 505,
+          "h": 505
+        },
+        {
+          "breakthrough": 1,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        },
+        {
+          "breakthrough": 2,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        }
+      ],
+      "ascensions": []
+    },
+    {
       "id": "ye_huanan",
       "name": "叶唤安",
       "rarity": 4,
       "description": "",
       "growth_curve": "linear",
-      "exploration_stats": {"strength": 9, "agility": 15, "intelligence": 15, "luck": 9},
+      "exploration_stats": {
+        "strength": 9,
+        "agility": 15,
+        "intelligence": 15,
+        "luck": 9
+      },
       "tendencies": [
         {
           "industry": "crafting",
@@ -1790,7 +2624,9 @@
           "level_60": 134
         }
       ],
-      "trait_codes": ["peaceful_cooking"],
+      "trait_codes": [
+        "peaceful_cooking"
+      ],
       "artworks": [
         {
           "breakthrough": 0,
@@ -1831,7 +2667,12 @@
       "rarity": 3,
       "description": "",
       "growth_curve": "linear",
-      "exploration_stats": {"strength": 10, "agility": 14, "intelligence": 13, "luck": 11},
+      "exploration_stats": {
+        "strength": 10,
+        "agility": 14,
+        "intelligence": 13,
+        "luck": 11
+      },
       "tendencies": [
         {
           "industry": "farming",
@@ -1849,7 +2690,9 @@
           "level_60": 134
         }
       ],
-      "trait_codes": ["seasonal_rhythm"],
+      "trait_codes": [
+        "seasonal_rhythm"
+      ],
       "artworks": [
         {
           "breakthrough": 0,
@@ -1885,12 +2728,83 @@
       "ascensions": []
     },
     {
+      "id": "yuan_huiqin",
+      "name": "原慧琴",
+      "rarity": 4,
+      "description": "",
+      "growth_curve": "linear",
+      "exploration_stats": {
+        "strength": 11,
+        "agility": 15,
+        "intelligence": 15,
+        "luck": 7
+      },
+      "tendencies": [
+        {
+          "industry": "exploration",
+          "level_1": 32,
+          "level_60": 205
+        },
+        {
+          "industry": "farming",
+          "level_1": 25,
+          "level_60": 158
+        },
+        {
+          "industry": "livestock",
+          "level_1": 22,
+          "level_60": 134
+        }
+      ],
+      "trait_codes": [
+        "pinpoint_shot"
+      ],
+      "artworks": [
+        {
+          "breakthrough": 0,
+          "asset_key": "red-leaf-town/partners/yuan_huiqin/breakthrough-0-56fd9714af258244.webp",
+          "width": 936,
+          "height": 1664,
+          "content_type": "image/webp"
+        }
+      ],
+      "avatar_crops": [
+        {
+          "breakthrough": 0,
+          "x": 300,
+          "y": 294,
+          "w": 317,
+          "h": 317
+        },
+        {
+          "breakthrough": 1,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        },
+        {
+          "breakthrough": 2,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        }
+      ],
+      "ascensions": []
+    },
+    {
       "id": "ze_feiyang",
       "name": "泽非羊",
       "rarity": 4,
       "description": "",
       "growth_curve": "linear",
-      "exploration_stats": {"strength": 13, "agility": 12, "intelligence": 13, "luck": 10},
+      "exploration_stats": {
+        "strength": 13,
+        "agility": 12,
+        "intelligence": 13,
+        "luck": 10
+      },
       "tendencies": [
         {
           "industry": "crafting",
@@ -1908,7 +2822,9 @@
           "level_60": 134
         }
       ],
-      "trait_codes": ["fodder_artisan"],
+      "trait_codes": [
+        "fodder_artisan"
+      ],
       "artworks": [],
       "avatar_crops": [
         {
@@ -1936,12 +2852,83 @@
       "ascensions": []
     },
     {
+      "id": "zhake",
+      "name": "扎克",
+      "rarity": 4,
+      "description": "",
+      "growth_curve": "linear",
+      "exploration_stats": {
+        "strength": 11,
+        "agility": 16,
+        "intelligence": 14,
+        "luck": 7
+      },
+      "tendencies": [
+        {
+          "industry": "gathering",
+          "level_1": 32,
+          "level_60": 205
+        },
+        {
+          "industry": "crafting",
+          "level_1": 25,
+          "level_60": 158
+        },
+        {
+          "industry": "mining",
+          "level_1": 22,
+          "level_60": 134
+        }
+      ],
+      "trait_codes": [
+        "appraising_scythe"
+      ],
+      "artworks": [
+        {
+          "breakthrough": 0,
+          "asset_key": "red-leaf-town/partners/zhake/breakthrough-0-69ec098ed2db758e.webp",
+          "width": 936,
+          "height": 1664,
+          "content_type": "image/webp"
+        }
+      ],
+      "avatar_crops": [
+        {
+          "breakthrough": 0,
+          "x": 294,
+          "y": 396,
+          "w": 245,
+          "h": 245
+        },
+        {
+          "breakthrough": 1,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        },
+        {
+          "breakthrough": 2,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        }
+      ],
+      "ascensions": []
+    },
+    {
       "id": "zhuoyan",
       "name": "灼焱",
       "rarity": 5,
       "description": "",
       "growth_curve": "linear",
-      "exploration_stats": {"strength": 14, "agility": 15, "intelligence": 8, "luck": 11},
+      "exploration_stats": {
+        "strength": 14,
+        "agility": 15,
+        "intelligence": 8,
+        "luck": 11
+      },
       "tendencies": [
         {
           "industry": "exploration",
@@ -1949,7 +2936,9 @@
           "level_60": 235
         }
       ],
-      "trait_codes": ["wildfire_instinct"],
+      "trait_codes": [
+        "wildfire_instinct"
+      ],
       "artworks": [
         {
           "breakthrough": 0,

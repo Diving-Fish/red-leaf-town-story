@@ -54,14 +54,15 @@ def marks(repository, player_id) -> int:
 def test_candidates_are_unowned_partners_from_the_hardcoded_roster(game):
     service, repository, player = game
     catalog = load_partner_catalog()
-    roster = {partner.id for partner in catalog.partners if partner.artwork_for(0) is not None}
+    illustrated = {partner.id for partner in catalog.partners if partner.artwork_for(0) is not None}
 
     payload = service.partner_select_candidates("select-sub")
     candidates = {entry["id"] for entry in payload["candidates"]}
 
     assert payload["eligible_total"] == len(PARTNER_SELECT_IDS)
-    assert PARTNER_SELECT_IDS == roster
-    assert candidates == roster
+    # 名单刻意写死，新伙伴要人工确认后才加入；这里只要求名单里的人都画好了立绘。
+    assert PARTNER_SELECT_IDS <= illustrated
+    assert candidates == PARTNER_SELECT_IDS
     for entry in payload["candidates"]:
         assert entry["artwork"]["asset_key"]
         assert entry["avatar_crop"] is not None

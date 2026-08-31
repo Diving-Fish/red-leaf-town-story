@@ -203,9 +203,13 @@ def illustrate(partner: PartnerDefinition) -> None:
     )]
 
 
-def test_newcomer_pool_stays_hidden_while_its_partners_have_no_artwork(growth_game):
+NEWCOMER_POOL_IDS = ["newcomers-1", "newcomers-2"]
+
+
+@pytest.mark.parametrize("pool_id", NEWCOMER_POOL_IDS)
+def test_newcomer_pool_stays_hidden_while_its_partners_have_no_artwork(growth_game, pool_id):
     service, repository, _, player = growth_game
-    pool = load_gacha_pools()["newcomers-1"]
+    pool = load_gacha_pools()[pool_id]
     catalog = load_partner_catalog().model_copy(deep=True)
     for partner in catalog.partners:
         if partner.id in set(pool.partner_ids):
@@ -215,18 +219,19 @@ def test_newcomer_pool_stays_hidden_while_its_partners_have_no_artwork(growth_ga
 
     snapshot = service.snapshot_by_sub("growth-sub")
 
-    assert not any(entry["pool_id"] == "newcomers-1" for entry in snapshot["gacha_pools"])
+    assert not any(entry["pool_id"] == pool_id for entry in snapshot["gacha_pools"])
     assert any(entry["pool_id"] == "standard-1" for entry in snapshot["gacha_pools"])
 
     with pytest.raises(GameError) as closed:
-        service.recruit("growth-sub", 10, "newcomer-closed", "newcomers-1")
+        service.recruit("growth-sub", 10, "newcomer-closed", pool_id)
     assert closed.value.code == "gacha_pool_invalid"
     assert repository.get(player.player_id).guide_leaves == 10
 
 
-def test_newcomer_pool_draws_only_its_own_partners_and_guarantees_a_five_star(growth_game):
+@pytest.mark.parametrize("pool_id", NEWCOMER_POOL_IDS)
+def test_newcomer_pool_draws_only_its_own_partners_and_guarantees_a_five_star(growth_game, pool_id):
     service, repository, _, player = growth_game
-    pool = load_gacha_pools()["newcomers-1"]
+    pool = load_gacha_pools()[pool_id]
     catalog = load_partner_catalog().model_copy(deep=True)
     for partner in catalog.partners:
         if partner.id in set(pool.partner_ids):
@@ -234,11 +239,11 @@ def test_newcomer_pool_draws_only_its_own_partners_and_guarantees_a_five_star(gr
     service.partner_catalog_loader = lambda: catalog
     repository.update(player.player_id, lambda state: setattr(state, "guide_leaves", 20))
 
-    listed = next(entry for entry in service.snapshot_by_sub("growth-sub")["gacha_pools"] if entry["pool_id"] == "newcomers-1")
+    listed = next(entry for entry in service.snapshot_by_sub("growth-sub")["gacha_pools"] if entry["pool_id"] == pool_id)
     assert {entry["partner_id"] for entry in listed["catalog"]} == set(pool.partner_ids)
     assert listed["remaining_pulls"] == 10
 
-    pulled = service.recruit("growth-sub", 10, "newcomer-request-1", "newcomers-1")
+    pulled = service.recruit("growth-sub", 10, "newcomer-request-1", pool_id)
     results = pulled["result"]["results"]
 
     assert len(results) == 10
@@ -247,10 +252,10 @@ def test_newcomer_pool_draws_only_its_own_partners_and_guarantees_a_five_star(gr
     assert any(drop["rarity"] == 5 for drop in results)
 
     with pytest.raises(GameError) as exhausted:
-        service.recruit("growth-sub", 1, "newcomer-request-2", "newcomers-1")
+        service.recruit("growth-sub", 1, "newcomer-request-2", pool_id)
     assert exhausted.value.code == "gacha_pool_exhausted"
     assert not any(
-        entry["pool_id"] == "newcomers-1"
+        entry["pool_id"] == pool_id
         for entry in service.snapshot_by_sub("growth-sub")["gacha_pools"]
     )
 
@@ -367,3 +372,14 @@ def test_partner_books_star_up_and_unconfigured_breakthrough(growth_game):
     with pytest.raises(GameError) as unavailable:
         service.breakthrough_partner("growth-sub", "xiang_hanyang")
     assert unavailable.value.code == "breakthrough_unavailable"
+
+
+def test_every_limited_pool_lists_known_partners_and_can_fill_all_three_rarities():
+    catalog = load_partner_catalog().partner_map
+    for pool in load_gacha_pools().values():
+        if not pool.partner_ids:
+            continue
+        unknown = [partner_id for partner_id in pool.partner_ids if partner_id not in catalog]
+        assert unknown == [], f"{pool.pool_id} 名单里有不存在的伙伴：{unknown}"
+        rarities = {catalog[partner_id].rarity for partner_id in pool.partner_ids}
+        assert rarities == {3, 4, 5}, f"{pool.pool_id} 缺少 {sorted({3, 4, 5} - rarities)} 星，保底会抽空"

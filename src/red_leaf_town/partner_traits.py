@@ -701,3 +701,171 @@ def _wildfire_instinct(context: MutableMapping[str, Any]) -> None:
         return
     context["critical_success_min"] = min(int(context.get("critical_success_min", 20)), 19)
     record_partner_trait_effect(context, "expand_critical_success", value=19)
+
+
+# ---------------------------------------------------------------------------
+# 第三批伙伴特性
+# ---------------------------------------------------------------------------
+
+
+@register_partner_trait(
+    "windborne_sowing",
+    "乘风播绒",
+    "山风天气开始农作任务时，固定额外产出1件，且最终耗时减少10%。",
+    phases=("task_prepare",),
+)
+def _windborne_sowing(context: MutableMapping[str, Any]) -> None:
+    if _industry_is(context, "farming") and _weather_is(context, "windy"):
+        _add(context, "yield_bonus", 1, stacking_group="flat_yield")
+        _multiply(context, "duration_multiplier", 0.90, stacking_group="duration")
+
+
+@register_partner_trait(
+    "primordial_return",
+    "万物归元",
+    "加工任务结算时，有35%概率把本次消耗的其中一种原料全额返还。",
+    phases=("result_finalize",),
+)
+def _primordial_return(context: MutableMapping[str, Any]) -> None:
+    if _industry_is(context, "crafting"):
+        record_partner_trait_effect(
+            context,
+            "refund_consumed_input",
+            params={"chance": 0.35, "count": 1},
+            stacking_group="input_refund",
+        )
+
+
+@register_partner_trait(
+    "attendant_at_hand",
+    "随侍在侧",
+    "驻场鱼塘的品质能力增加15；农作与加工任务的产量效率提高10%。",
+    phases=("asset_prepare", "task_prepare"),
+)
+def _attendant_at_hand(context: MutableMapping[str, Any]) -> None:
+    if _industry_is(context, "aquatic") and _action_is(context, "pond_segment"):
+        _add(context, "quality_bonus", 15, stacking_group="pond_quality")
+    elif _industry_is(context, "farming", "crafting"):
+        _multiply(context, "yield_multiplier", 1.10, stacking_group="yield_efficiency")
+
+
+@register_partner_trait(
+    "frost_grooming",
+    "凛霜细养",
+    "驻场畜牧设施的品质能力增加12；照料牲畜时亲密度额外增加2点。",
+    phases=("livestock_segment", "instant_action"),
+)
+def _frost_grooming(context: MutableMapping[str, Any]) -> None:
+    if _livestock_segment(context):
+        _add(context, "quality_bonus", 12, stacking_group="livestock_quality")
+    elif _industry_is(context, "livestock") and _action_is(context, "livestock_care"):
+        _add(context, "affection_per_care_bonus", 2, stacking_group="livestock_affection")
+
+
+@register_partner_trait(
+    "warm_broth_ready",
+    "热汤常备",
+    "加工食物时固定额外产出1件。",
+    phases=("task_prepare",),
+)
+def _warm_broth_ready(context: MutableMapping[str, Any]) -> None:
+    if _industry_is(context, "crafting") and _has_content_tag(context, "food"):
+        _add(context, "yield_bonus", 1, stacking_group="flat_yield")
+
+
+@register_partner_trait(
+    "veinbreak_stroke",
+    "一刀断脉",
+    "采矿结算时，随机一件产物的品质重投一次并取较高值。",
+    phases=("quality_roll",),
+)
+def _veinbreak_stroke(context: MutableMapping[str, Any]) -> None:
+    if _industry_is(context, "mining"):
+        _reroll_one_quality(context)
+
+
+@register_partner_trait(
+    "appraising_scythe",
+    "甄别之镰",
+    "采集、采矿或加工结算时，有25%概率将最低品质的一件产物提升一级。",
+    phases=("result_finalize",),
+)
+def _appraising_scythe(context: MutableMapping[str, Any]) -> None:
+    if _industry_is(context, "gathering", "mining", "crafting"):
+        _promote_lowest_quality(context, 0.25)
+
+
+@register_partner_trait(
+    "rainbow_pickings",
+    "虹彩拾遗",
+    "采集任务的品质能力增加15。",
+    phases=("task_prepare",),
+)
+def _rainbow_pickings(context: MutableMapping[str, Any]) -> None:
+    if _industry_is(context, "gathering"):
+        _add(context, "quality_ability_bonus", 15, stacking_group="quality_ability")
+
+
+@register_partner_trait(
+    "ripple_play",
+    "戏水涟漪",
+    "陪钓时额外抽取1次产出。",
+    phases=("instant_action",),
+)
+def _ripple_play(context: MutableMapping[str, Any]) -> None:
+    if _industry_is(context, "aquatic") and _action_is(context, "fishing_cast"):
+        _add(context, "draw_bonus", 1, stacking_group="draw_count")
+
+
+@register_partner_trait(
+    "azure_smelt",
+    "蓝焰熔炼",
+    "加工与采矿任务的品质能力提高15%；加工结算时，品质最低的一件成品必定提升到「良品」以上。",
+    phases=("task_prepare", "result_finalize"),
+)
+def _azure_smelt(context: MutableMapping[str, Any]) -> None:
+    if str(context.get("phase") or "") == "task_prepare":
+        if _industry_is(context, "crafting", "mining"):
+            _multiply(context, "quality_ability_multiplier", 1.15, stacking_group="quality_ability")
+    elif _industry_is(context, "crafting"):
+        record_partner_trait_effect(
+            context,
+            "promote_lowest_quality",
+            params={"chance": 1.0, "levels": 1, "minimum": 2},
+            stacking_group="quality_promotion",
+        )
+
+
+@register_partner_trait(
+    "azure_flame_undying",
+    "苍炎不灭",
+    "深入越远，铠甲里的苍炎烧得越旺：探索每深入一层，本次行动的奖励数量提高5%。",
+    phases=("exploration_event",),
+)
+def _azure_flame_undying(context: MutableMapping[str, Any]) -> None:
+    if not _industry_is(context, "exploration"):
+        return
+    layer = max(1, int(context.get("depth", 0)) + 1)
+    _multiply(
+        context,
+        "reward_quantity_multiplier",
+        1 + 0.05 * layer,
+        stacking_group="exploration_reward_quantity",
+    )
+
+
+@register_partner_trait(
+    "pinpoint_shot",
+    "定点狙击",
+    "每次探索限一次：原慧琴执行的智力或敏捷检定若失败，改判为普通成功。",
+    phases=("exploration_event",),
+)
+def _pinpoint_shot(context: MutableMapping[str, Any]) -> None:
+    key = "pinpoint_shot:failure_rescue"
+    if not _exploration_check(context) or not _exploration_actor(context):
+        return
+    if context.get("check_attribute") not in {"intelligence", "agility"}:
+        return
+    if _exploration_once_available(context, key):
+        context["failure_rescue_usage_key"] = key
+        record_partner_trait_effect(context, "allow_failure_rescue")

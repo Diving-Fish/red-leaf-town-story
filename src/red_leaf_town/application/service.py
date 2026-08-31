@@ -388,6 +388,7 @@ class GameService:
                 "expedition_id": expedition.id,
                 "event_id": event.id,
                 "choice_id": choice.id,
+                "depth": run.depth,
                 "selected_actor_partner_id": actor_partner_id,
                 "check_attribute": choice.check.attribute if choice.check else None,
                 "check_mode": choice.check.mode if choice.check else None,
@@ -408,8 +409,6 @@ class GameService:
             self._prime_exploration_check_context(run, choice, context)
             self._execute_partner_trait_phase(run.partner_ids, "exploration_event", context)
             check_result = self._resolve_exploration_check(run, choice, context)
-            for usage_key in context["trait_usage_consumptions"]:
-                run.trait_usage[usage_key] = run.trait_usage.get(usage_key, 0) + 1
             success = check_result["success"]
             degree = check_result["degree"]
             if degree == "critical_success":
@@ -432,6 +431,9 @@ class GameService:
                 consume_stamina(player, cost, self.content, now)
             except ValueError as exc:
                 raise GameError("resource_insufficient", str(exc)) from exc
+            # 消耗先落地再记特性用量，行动因体力不足失败时不白烧一次限定次数。
+            for usage_key in context["trait_usage_consumptions"]:
+                run.trait_usage[usage_key] = run.trait_usage.get(usage_key, 0) + 1
 
             probability = quality_probabilities(
                 run.exploration_ability
@@ -853,6 +855,41 @@ class GameService:
         player, result = self._update_by_sub(oauth_sub, mutation)
         return {"result": result, "state": self._snapshot(player, now)}
 
+    def _refund_crafting_inputs(self, player: PlayerState, task) -> list[dict]:
+        """「万物归元」这类特性：领取成品时按快照掷一次，命中就原样退回其中一种原料。
+
+        掷点放在领取而不是开工，是因为退回要直接写背包；开工阶段只把概率冻进快照。
+        """
+
+        refunded: list[dict] = []
+        for entry in task.applied_effects:
+            if entry.get("effect") != "refund_consumed_input":
+                continue
+            params = entry.get("params") or {}
+            chance = max(0.0, min(1.0, float(params.get("chance", 1))))
+            # 同一种原料会因为品质不同被拆成几条消耗记录，这里先按 item_id 合回去：
+            # 退的是「一种原料的全部消耗量」，不能取决于玩家背包里品质恰好怎么切。
+            stacks_by_item: dict[str, list] = {}
+            for item in task.consumed_inputs:
+                if item.quantity > 0:
+                    stacks_by_item.setdefault(item.item_id, []).append(item)
+            if not stacks_by_item:
+                continue
+            item_ids = sorted(stacks_by_item)
+            for _ in range(max(1, int(params.get("count", 1)))):
+                if chance < 1 and self.rng.random() >= chance:
+                    continue
+                target_id = item_ids[self.rng.randrange(len(item_ids))]
+                for stack in stacks_by_item[target_id]:
+                    add_item(player, stack.item_id, stack.quantity, stack.quality)
+                    refunded.append({
+                        "item_id": stack.item_id,
+                        "quantity": stack.quantity,
+                        "quality": stack.quality,
+                        "trait_code": entry.get("trait_code", ""),
+                    })
+        return refunded
+
     def collect_crafting(self, oauth_sub: str, station_id: str) -> dict:
         now = self._now()
 
@@ -870,6 +907,7 @@ class GameService:
             recipe_id = station.task_snapshot.content_id
             for result in results:
                 add_item(player, result.item_id, result.quantity, result.quality)
+            refunded_inputs = self._refund_crafting_inputs(player, station.task_snapshot)
             levels = grant_experience(player, collect_xp, self.content)
             partner_experience = self._grant_task_partner_experience(player, station.task_snapshot)
             record_production_collection(player, "crafting", recipe_id, results)
@@ -883,6 +921,7 @@ class GameService:
                 "experience": collect_xp,
                 "levels": levels,
                 "partner_experience": partner_experience,
+                "refunded_inputs": refunded_inputs,
             }
 
         player, result = self._update_by_sub(oauth_sub, mutation)
@@ -5383,6 +5422,13 @@ class GameService:
                     if face < critical_success_min and face + modifier < check.dc
                 )
                 success_chance += ordinary_failure_faces / 20 * normal_chance
+        if context.get("failure_rescue_usage_key"):
+            # 改判只放过普通失败，所以剩下的失败面只有大失败（自然 1）。
+            critical_failure_chance = {
+                "advantage": 1 / 400,
+                "disadvantage": 39 / 400,
+            }.get(dice_mode, 1 / 20)
+            success_chance = max(success_chance, 1 - critical_failure_chance)
         return {
             "check_attribute": check.attribute,
             "check_mode": check.mode,
@@ -5424,6 +5470,12 @@ class GameService:
             success, degree, total = judge(kept_roll)
             if reroll_usage_key not in context["trait_usage_consumptions"]:
                 context["trait_usage_consumptions"].append(reroll_usage_key)
+        # 兜底改判排在重投之后：先让重投把骰子用掉，仍是普通失败才动用改判。
+        rescue_usage_key = context.get("failure_rescue_usage_key")
+        if degree == "failure" and rescue_usage_key:
+            success, degree = True, "success"
+            if rescue_usage_key not in context["trait_usage_consumptions"]:
+                context["trait_usage_consumptions"].append(rescue_usage_key)
         return {
             **preview,
             "success": success,
@@ -5509,6 +5561,7 @@ class GameService:
                 "expedition_id": expedition.id,
                 "event_id": event.id,
                 "choice_id": choice.id,
+                "depth": run.depth,
                 "selected_actor_partner_id": partner_id,
                 "check_attribute": choice.check.attribute,
                 "check_mode": choice.check.mode,
@@ -5598,6 +5651,7 @@ class GameService:
                     "expedition_id": expedition.id,
                     "event_id": event.id,
                     "choice_id": choice.id,
+                    "depth": run.depth,
                     "selected_actor_partner_id": actor_partner_id,
                     "check_attribute": choice.check.attribute if choice.check else None,
                     "check_mode": choice.check.mode if choice.check else None,
