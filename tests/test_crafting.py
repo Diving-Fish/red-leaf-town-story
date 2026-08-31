@@ -158,6 +158,10 @@ def test_primordial_return_refunds_one_consumed_input_at_collection(crafting_gam
     refunded = collected["result"]["refunded_inputs"]
     assert [entry["item_id"] for entry in refunded] == ["maple_wood"]
     assert refunded[0]["trait_code"] == "primordial_return"
+    # 提示语要用得上的展示字段，缺一个前端就只能显示 item_id。
+    assert refunded[0]["trait_name"] == "万物归元"
+    assert refunded[0]["item"]["name"] == "枫木"
+    assert refunded[0]["quality_name"]
     inventory = repository.get(player.player_id).inventory
     assert inventory["maple_wood"][refunded[0]["quality"]] == refunded[0]["quantity"]
 

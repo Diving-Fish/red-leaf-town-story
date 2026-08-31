@@ -42,6 +42,14 @@ export interface ProductionOutcome {
     quality_name: string
     item?: { name: string } | null
   }>
+  refunded_inputs?: Array<{
+    item_id: string
+    quantity: number
+    quality: number
+    quality_name: string
+    item?: { name: string } | null
+    trait_name?: string
+  }>
 }
 
 interface ActionOptions {
@@ -218,16 +226,26 @@ export const useGameStore = defineStore('game', () => {
     }
   }
 
+  function refundText(result: ProductionOutcome | undefined) {
+    // 伙伴特性退回的原料是悄悄进仓库的，不写在提示里玩家根本看不出触发过。
+    if (!result?.refunded_inputs?.length) return ''
+    const summary = result.refunded_inputs
+      .map((entry) => `${entry.quality_name || qualityName(entry.quality)}${entry.item?.name || entry.item_id}×${entry.quantity}`)
+      .join('、')
+    const traitName = result.refunded_inputs.find((entry) => entry.trait_name)?.trait_name
+    return `（${traitName ? `${traitName}返还 ` : '返还 '}${summary}）`
+  }
+
   function outcomeText(result: ProductionOutcome | undefined, verb: string, noun: string) {
     if (!result) return ''
     if (result.drops?.length) {
       const summary = result.drops
         .map((drop) => `${drop.quality_name || qualityName(drop.quality)}${drop.item?.name || drop.item_id}×${drop.quantity}`)
         .join('、')
-      return `${verb}${summary}`
+      return `${verb}${summary}${refundText(result)}`
     }
     const quality = result.quality_name || qualityName(result.quality)
-    return `${verb} ${result.quantity} 个${quality}${noun}`
+    return `${verb} ${result.quantity} 个${quality}${noun}${refundText(result)}`
   }
 
   function buy(shopId: string, quantity = 1) {

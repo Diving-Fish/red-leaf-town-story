@@ -862,6 +862,7 @@ class GameService:
         """
 
         refunded: list[dict] = []
+        trait_definitions = {trait.code: trait for trait in partner_trait_catalog()}
         for entry in task.applied_effects:
             if entry.get("effect") != "refund_consumed_input":
                 continue
@@ -880,13 +881,18 @@ class GameService:
                 if chance < 1 and self.rng.random() >= chance:
                     continue
                 target_id = item_ids[self.rng.randrange(len(item_ids))]
+                trait = trait_definitions.get(str(entry.get("trait_code") or ""))
                 for stack in stacks_by_item[target_id]:
                     add_item(player, stack.item_id, stack.quantity, stack.quality)
+                    item = self.content.item_map.get(stack.item_id)
                     refunded.append({
                         "item_id": stack.item_id,
                         "quantity": stack.quantity,
                         "quality": stack.quality,
+                        "quality_name": QUALITY_NAMES[stack.quality],
+                        "item": item.model_dump() if item else None,
                         "trait_code": entry.get("trait_code", ""),
+                        "trait_name": trait.name if trait else "",
                     })
         return refunded
 
