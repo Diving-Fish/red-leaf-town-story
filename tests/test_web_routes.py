@@ -66,6 +66,7 @@ def valid_partner_payload():
         "id": "maple_sprite",
         "name": "枫糖",
         "rarity": 4,
+        "standard_recruitable": False,
         "description": "擅长农作的伙伴",
         "growth_curve": "linear",
         "tendencies": [{"industry": "farming", "level_1": 16, "level_60": 92}],
@@ -499,7 +500,9 @@ async def test_partner_admin_crud(admin_client):
         headers=admin_headers(),
     )
     assert created.status_code == 201
-    assert (await created.get_json())["data"]["complete"] is False
+    created_data = (await created.get_json())["data"]
+    assert created_data["complete"] is False
+    assert created_data["standard_recruitable"] is False
 
     duplicate = await admin_client.post(
         "/api/red-leaf-town/admin/partners",
@@ -521,6 +524,7 @@ async def test_partner_admin_crud(admin_client):
     listed = await admin_client.get("/api/red-leaf-town/admin/partners", headers=admin_headers())
     body = await listed.get_json()
     assert body["data"]["partners"][0]["name"] == "枫糖糖"
+    assert body["data"]["partners"][0]["standard_recruitable"] is False
     assert body["data"]["options"]["breakthrough_level_caps"] == [20, 40, 60]
     assert "configured" in body["data"]["options"]["cdn"]
     assert [trait["code"] for trait in body["data"]["options"]["traits"][:4]] == ["1", "2", "3", "4"]

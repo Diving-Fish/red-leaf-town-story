@@ -4860,13 +4860,15 @@ class GameService:
 
     @staticmethod
     def _pool_partner_candidates(gacha: GachaDefinition, catalog: PartnerCatalog) -> dict[int, list[PartnerDefinition]]:
-        """招募池的候选伙伴：只收画了一破立绘的，partner_ids 非空时再限定在这份名单里。"""
+        """招募池候选：显式名单可纳入限定伙伴，空名单只使用常驻伙伴。"""
         allowed = set(gacha.partner_ids)
         return {
             rarity: [
                 entry
                 for entry in catalog.partners
-                if entry.rarity == rarity and entry.recruitable and (not allowed or entry.id in allowed)
+                if entry.rarity == rarity
+                and entry.recruitable
+                and (entry.id in allowed if allowed else entry.standard_recruitable)
             ]
             for rarity in (3, 4, 5)
         }

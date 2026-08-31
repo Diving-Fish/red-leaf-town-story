@@ -1283,6 +1283,7 @@ export interface PartnerDefinition {
   id: string
   name: string
   rarity: 3 | 4 | 5
+  standard_recruitable: boolean
   description: string
   growth_curve: GrowthCurveId
   exploration_stats: ExplorationStats

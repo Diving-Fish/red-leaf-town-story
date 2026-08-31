@@ -102,6 +102,7 @@ class PartnerDefinition(BaseModel):
     id: str = Field(pattern=r"^[a-z][a-z0-9_-]{1,63}$")
     name: str = Field(min_length=1, max_length=64)
     rarity: Literal[3, 4, 5]
+    standard_recruitable: bool = True
     description: str = Field(default="", max_length=500)
     growth_curve: GrowthCurve = "linear"
     exploration_stats: ExplorationStats = Field(default_factory=ExplorationStats)
@@ -168,7 +169,7 @@ class PartnerDefinition(BaseModel):
 
     @property
     def recruitable(self) -> bool:
-        """没有一破立绘的伙伴还在草稿阶段，不进招募池，也不出现在池子的常驻名单里。"""
+        """没有初始立绘的伙伴还在草稿阶段，不进入任何招募池。"""
         return self.artwork_for(0) is not None
 
     def ability_at(self, industry: str, level: int, stars: int | None = None) -> int:

@@ -48,6 +48,7 @@ def test_growth_curves_share_endpoints_and_have_expected_pacing():
 
 def test_partner_ability_uses_selected_growth_curve():
     partner = PartnerDefinition.model_validate(partner_payload())
+    assert partner.standard_recruitable is True
     assert partner.ability_at("farming", 1) == 18
     assert partner.ability_at("farming", 60) == 96
     assert partner.ability_at("farming", 20) > 43
@@ -113,10 +114,14 @@ def test_artwork_ratio_and_avatar_crop_are_validated():
 
 def test_catalog_round_trip(tmp_path):
     path = tmp_path / "partners.json"
-    catalog = PartnerCatalog(partners=[PartnerDefinition.model_validate(partner_payload())])
+    catalog = PartnerCatalog(partners=[PartnerDefinition.model_validate({
+        **partner_payload(),
+        "standard_recruitable": False,
+    })])
     save_partner_catalog(catalog, path)
     loaded = load_partner_catalog(path)
     assert loaded.partner_map["maple_sprite"].name == "枫糖"
+    assert loaded.partner_map["maple_sprite"].standard_recruitable is False
     assert json.loads(path.read_text(encoding="utf-8"))["schema_version"] == 2
 
 

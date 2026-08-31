@@ -178,6 +178,21 @@ def test_partners_without_a_first_artwork_never_drop_and_stay_out_of_the_pool_ca
     assert all(entry["artwork"] for entry in pool["catalog"])
 
 
+def test_non_standard_partner_only_appears_in_explicit_pool_rosters(growth_game):
+    service, *_ = growth_game
+    catalog = load_partner_catalog().model_copy(deep=True)
+    limited = catalog.partner_map["guqi"]
+    limited.standard_recruitable = False
+
+    standard = load_gacha_pools()["standard-1"]
+    standard_candidates = service._pool_partner_candidates(standard, catalog)
+    assert limited.id not in {entry.id for entry in standard_candidates[limited.rarity]}
+
+    explicit = standard.model_copy(update={"pool_id": "limited-test", "partner_ids": [limited.id]})
+    limited_candidates = service._pool_partner_candidates(explicit, catalog)
+    assert [entry.id for entry in limited_candidates[limited.rarity]] == [limited.id]
+
+
 def test_recruitment_reports_a_broken_pool_when_a_rarity_has_no_illustrated_partner(growth_game):
     service, repository, _, player = growth_game
     catalog = load_partner_catalog().model_copy(deep=True)
