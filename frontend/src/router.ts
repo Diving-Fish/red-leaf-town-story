@@ -12,7 +12,7 @@ import PortalsView from '@/views/PortalsView.vue'
 import GachaView from '@/views/GachaView.vue'
 
 export default createRouter({
-  history: createWebHistory('/red-leaf-town/'),
+  history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
       path: '/admin/crops',
@@ -50,7 +50,7 @@ export default createRouter({
     {
       path: '/exploration',
       name: 'exploration',
-      component: () => import('@/views/ExplorationPreviewView.vue'),
+      component: () => import('@/views/ExplorationView.vue'),
       meta: { title: '探索' },
     },
     { path: '/crafting', name: 'crafting', component: CraftingView, meta: { title: '加工' } },

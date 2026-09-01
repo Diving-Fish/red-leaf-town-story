@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from functools import lru_cache
 from pathlib import Path
 from threading import Lock
@@ -134,19 +135,85 @@ class SlotInputDefinition(BaseModel):
     score: float = Field(ge=0)
 
 
+# 探秘副本的骰子写法，例如 1d10、2d6。骰面只开这几种，避免内容里写出没人认的骰子。
+DELVE_DICE_PATTERN = r"^[1-9]\d?d(4|6|8|10|12)$"
+
+
+class EquipmentDefinition(BaseModel):
+    """探秘副本的装备数值。装备不进五档品质，一件装备就是一组固定数值。"""
+
+    slot: Literal["weapon", "accessory"]
+    # 武器吃哪一维：大剑吃力量、短剑吃敏捷、法书吃智力。饰品不吃属性。
+    attribute: Literal["strength", "agility", "intelligence"] | None = None
+    damage_dice: str = ""
+    attack_bonus: int = Field(default=0, ge=-5, le=10)
+    proficiency_bonus: int = Field(default=0, ge=0, le=5)
+    armor_bonus: int = Field(default=0, ge=0, le=8)
+    initiative_bonus: int = Field(default=0, ge=0, le=8)
+    max_hp_bonus: int = Field(default=0, ge=0, le=60)
+    # 每场战斗可以主动取得优势骰的次数。
+    advantage_uses: int = Field(default=0, ge=0, le=3)
+    description: str = ""
+
+    @model_validator(mode="after")
+    def validate_equipment(self):
+        if self.slot == "weapon":
+            if self.attribute is None:
+                raise ValueError("weapon equipment must name the attribute it scales with")
+            if not re.match(DELVE_DICE_PATTERN, self.damage_dice):
+                raise ValueError("weapon equipment must define a valid damage dice, e.g. 1d10")
+        else:
+            if self.attribute is not None:
+                raise ValueError("accessory equipment cannot scale with an attribute")
+            if self.damage_dice:
+                raise ValueError("accessory equipment cannot define damage dice")
+        return self
+
+
+class DelveUseDefinition(BaseModel):
+    """物品在探秘副本战斗中的用法。没写这个块的物品带不进副本。"""
+
+    effect: Literal["heal"]
+    dice: str = ""
+    flat: int = Field(default=0, ge=0, le=200)
+    # 每高一档品质额外多回这么多，给高品质产物一个去处。
+    quality_bonus: int = Field(default=0, ge=0, le=50)
+
+    @model_validator(mode="after")
+    def validate_use(self):
+        if self.dice and not re.match(DELVE_DICE_PATTERN, self.dice):
+            raise ValueError("delve item dice must look like 2d6")
+        if not self.dice and not self.flat:
+            raise ValueError("delve item must restore something")
+        return self
+
+
 class ItemDefinition(BaseModel):
     id: str
     name: str
     icon: str
-    kind: Literal["seed", "produce", "material", "product", "consumable"]
+    kind: Literal["seed", "produce", "material", "product", "consumable", "equipment"]
     sell_price: int = Field(ge=0)
     has_quality: bool = False
     feed: SlotInputDefinition | None = None
+    equipment: EquipmentDefinition | None = None
+    delve_use: DelveUseDefinition | None = None
     tags: list[str] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def validate_tags(self):
         self.tags = _validate_content_tags(self.tags, f"item {self.id}")
+        return self
+
+    @model_validator(mode="after")
+    def validate_equipment_block(self):
+        if (self.kind == "equipment") != (self.equipment is not None):
+            raise ValueError(f"item {self.id} must carry an equipment block if and only if it is equipment")
+        if self.kind == "equipment":
+            if self.has_quality:
+                raise ValueError(f"equipment {self.id} cannot use the five-tier quality system")
+            if self.delve_use is not None:
+                raise ValueError(f"equipment {self.id} cannot also be a usable delve item")
         return self
 
     def has_tag(self, tag: str) -> bool:
@@ -312,9 +379,44 @@ class ExplorationCheckDefinition(BaseModel):
         return normal
 
 
+class RewardItemDefinition(BaseModel):
+    item_id: str = Field(min_length=1)
+    quantity: int = Field(ge=1)
+    quality: int = Field(default=0, ge=0, le=5)
+
+
+class DelveAttackDefinition(BaseModel):
+    name: str = Field(min_length=1)
+    to_hit: int = Field(ge=-5, le=20)
+    damage_dice: str = Field(pattern=DELVE_DICE_PATTERN)
+    damage_bonus: int = Field(default=0, ge=0, le=20)
+
+
+class DelveEnemyDefinition(BaseModel):
+    id: str = Field(min_length=1)
+    name: str = Field(min_length=1)
+    icon: str = ""
+    description: str = ""
+    max_hp: int = Field(gt=0, le=500)
+    armor_class: int = Field(ge=5, le=25)
+    initiative_bonus: int = Field(default=0, ge=-5, le=10)
+    attacks: list[DelveAttackDefinition] = Field(min_length=1, max_length=4)
+    boss: bool = False
+
+
+class DelveBattleDefinition(BaseModel):
+    """一个探秘节点上的遭遇战。奖励仍然写在选择的 success 里，胜利后才结算。"""
+
+    enemy_ids: list[str] = Field(min_length=1, max_length=4)
+    can_flee: bool = True
+    flee_dc: int = Field(default=12, ge=2, le=30)
+
+
 class ExplorationOutcomeDefinition(BaseModel):
     text: str = Field(min_length=1)
     rewards: list[ExplorationRewardDefinition] = Field(default_factory=list, max_length=4)
+    # 不进品质系统的固定发放（装备），和上面的品质产物分开走。
+    fixed_rewards: list[RewardItemDefinition] = Field(default_factory=list, max_length=4)
     stamina_surcharge: int = Field(default=0, ge=0, le=10)
     next_route_discount: int = Field(default=0, ge=0, le=5)
     quality_ability_bonus: int = Field(default=0, ge=-200, le=200)
@@ -327,6 +429,7 @@ class ExplorationChoiceDefinition(BaseModel):
     route_stamina: int = Field(ge=0, le=20)
     action_stamina: int = Field(ge=0, le=20)
     check: ExplorationCheckDefinition | None = None
+    battle: DelveBattleDefinition | None = None
     success: ExplorationOutcomeDefinition
     failure: ExplorationOutcomeDefinition | None = None
     critical_success: ExplorationOutcomeDefinition | None = None
@@ -340,6 +443,8 @@ class ExplorationChoiceDefinition(BaseModel):
             raise ValueError("checked exploration choices require a failure outcome")
         if self.check is None and (self.failure or self.critical_success or self.critical_failure):
             raise ValueError("automatic exploration choices cannot define checked outcomes")
+        if self.battle is not None and self.check is not None:
+            raise ValueError(f"exploration choice {self.id} cannot roll a check and start a battle")
         return self
 
 
@@ -369,7 +474,9 @@ class ExplorationEventDefinition(BaseModel):
 
 class ExplorationExpeditionDefinition(BaseModel):
     id: str = Field(min_length=1)
-    kind: Literal["transport", "survey"]
+    kind: Literal["transport", "survey", "delve"]
+    # 内测路线只对白名单玩家可见可进，验收之后摘掉这个标记就是正式内容。
+    beta: bool = False
     name: str = Field(min_length=1)
     description: str = Field(min_length=1)
     accent: str = Field(pattern=r"^#[0-9a-fA-F]{6}$")
@@ -815,12 +922,6 @@ class PartnerGrowthDefinition(BaseModel):
         return self.level_cost_base + self.level_cost_growth * max(0, level - 1)
 
 
-class RewardItemDefinition(BaseModel):
-    item_id: str = Field(min_length=1)
-    quantity: int = Field(ge=1)
-    quality: int = Field(default=0, ge=0, le=5)
-
-
 class RewardDefinition(BaseModel):
     """一次性发放的奖励，贡品和传送门全完成共用同一个结构。"""
 
@@ -1075,6 +1176,7 @@ class GameContent(BaseModel):
     gathering_sites: list[GatheringSiteDefinition] = Field(default_factory=list)
     gathering_tasks: list[GatheringTaskDefinition] = Field(default_factory=list)
     exploration_expeditions: list[ExplorationExpeditionDefinition] = Field(default_factory=list)
+    delve_enemies: list[DelveEnemyDefinition] = Field(default_factory=list)
     talents: list[TalentNodeDefinition] = Field(default_factory=list)
     crafting_stations: list[CraftingStationDefinition] = Field(default_factory=list)
     recipes: list[RecipeDefinition] = Field(default_factory=list)
@@ -1114,6 +1216,7 @@ class GameContent(BaseModel):
         unique([entry.id for entry in self.gathering_sites], "gathering site")
         unique([entry.id for entry in self.gathering_tasks], "gathering task")
         unique([entry.id for entry in self.exploration_expeditions], "exploration expedition")
+        unique([entry.id for entry in self.delve_enemies], "delve enemy")
         unique([entry.id for entry in self.talents], "talent")
         unique([entry.id for entry in self.crafting_stations], "crafting station")
         unique([entry.id for entry in self.recipes], "recipe")
@@ -1171,10 +1274,26 @@ class GameContent(BaseModel):
                 raise ValueError(f"gathering task {task.id} references an unknown item")
             if any(not self.item_map[output.item_id].has_quality for output in task.outputs):
                 raise ValueError(f"gathering task {task.id} output must support quality")
+        enemy_ids = {enemy.id for enemy in self.delve_enemies}
         for expedition in self.exploration_expeditions:
             for event in expedition.events:
                 for choice in event.choices:
-                    outcomes = [choice.success, choice.failure]
+                    if choice.battle is not None:
+                        if expedition.kind != "delve":
+                            raise ValueError(
+                                f"exploration choice {choice.id} can only start a battle on a delve expedition"
+                            )
+                        unknown = [entry for entry in choice.battle.enemy_ids if entry not in enemy_ids]
+                        if unknown:
+                            raise ValueError(
+                                f"exploration choice {choice.id} references unknown enemies: {', '.join(unknown)}"
+                            )
+                    outcomes = [
+                        choice.success,
+                        choice.failure,
+                        choice.critical_success,
+                        choice.critical_failure,
+                    ]
                     for outcome in (entry for entry in outcomes if entry is not None):
                         for reward in outcome.rewards:
                             if reward.item_id not in items:
@@ -1184,6 +1303,15 @@ class GameContent(BaseModel):
                             if not self.item_map[reward.item_id].has_quality:
                                 raise ValueError(
                                     f"exploration event {event.id} reward must support quality"
+                                )
+                        for reward in outcome.fixed_rewards:
+                            if reward.item_id not in items:
+                                raise ValueError(
+                                    f"exploration event {event.id} references an unknown item"
+                                )
+                            if self.item_map[reward.item_id].has_quality:
+                                raise ValueError(
+                                    f"exploration event {event.id} fixed reward must be a quality-free item"
                                 )
         talent_ids = {talent.id for talent in self.talents}
         for talent in self.talents:
@@ -1422,6 +1550,10 @@ class GameContent(BaseModel):
     @property
     def exploration_expedition_map(self) -> dict[str, ExplorationExpeditionDefinition]:
         return {entry.id: entry for entry in self.exploration_expeditions}
+
+    @property
+    def delve_enemy_map(self) -> dict[str, DelveEnemyDefinition]:
+        return {entry.id: entry for entry in self.delve_enemies}
 
     @property
     def talent_map(self) -> dict[str, TalentNodeDefinition]:

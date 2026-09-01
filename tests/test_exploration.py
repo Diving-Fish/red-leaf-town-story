@@ -174,7 +174,7 @@ def test_player_schema_29_adds_an_empty_exploration_run():
         "updated_at": 1,
     })
 
-    assert migrated.schema_version == 29
+    assert migrated.schema_version == 30
     assert migrated.exploration_run is None
 
 
@@ -311,3 +311,24 @@ def test_exploration_rewards_actually_grow_with_the_multiplier(exploration_game)
 
     # 第 1 层 +5%：12 → round(12.6) = 13。
     assert sum(drop["quantity"] for drop in boosted["result"]["drops"]) == 13
+
+
+def test_beta_expeditions_stay_hidden_until_the_player_is_whitelisted(exploration_game, monkeypatch):
+    service, _, player = exploration_game
+
+    monkeypatch.delenv("RED_LEAF_TOWN_BETA_PLAYERS", raising=False)
+    hidden = service.snapshot_by_sub("exploration-sub")["exploration"]
+
+    assert "moonfall_hollow" not in [entry["id"] for entry in hidden["expeditions"]]
+    with pytest.raises(GameError, match="内测"):
+        service.start_exploration(
+            "exploration-sub",
+            "moonfall_hollow",
+            ["leader", "scout", "helper"],
+            "leader",
+        )
+
+    monkeypatch.setenv("RED_LEAF_TOWN_BETA_PLAYERS", f"someone-else,{player.player_id}")
+    visible = service.snapshot_by_sub("exploration-sub")["exploration"]
+
+    assert "moonfall_hollow" in [entry["id"] for entry in visible["expeditions"]]

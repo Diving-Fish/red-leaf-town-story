@@ -13,7 +13,7 @@
 - `frontend/`：Vue 3 前端
 - `tests/`：单元和接口测试
 
-居民等级表已经开到 16 级，经验按限流强度分档（矿产 12 / 加工与钓鱼 6 XP 每点体力）。设计约束和后续系统扩展方式见 [`docs/architecture.md`](docs/architecture.md)，伙伴、主角天赋、逐格生产和品质公式见 [`docs/game-design-foundations.md`](docs/game-design-foundations.md)。水产、畜牧与好友系统的完整设计见 [`docs/milestone-2-aquatic-livestock.md`](docs/milestone-2-aquatic-livestock.md)，剩余待办与实装时改过的口径见 [`docs/milestone-2-todo.md`](docs/milestone-2-todo.md)。
+居民等级表已经开到 16 级，经验按限流强度分档（矿产 12 / 加工与钓鱼 6 XP 每点体力）。设计约束和后续系统扩展方式见 [`docs/architecture.md`](docs/architecture.md)，伙伴、主角天赋、逐格生产和品质公式见 [`docs/game-design-foundations.md`](docs/game-design-foundations.md)。水产、畜牧与好友系统的完整设计见 [`docs/milestone-2-aquatic-livestock.md`](docs/milestone-2-aquatic-livestock.md)，剩余待办与实装时改过的口径见 [`docs/milestone-2-todo.md`](docs/milestone-2-todo.md)，探秘副本的装备、战斗数值与内测流程见 [`docs/delve-dungeon.md`](docs/delve-dungeon.md)。
 
 玩家首页 `/red-leaf-town/` 是经营 Dashboard，集中展示居民等级、经验、当日天气、快捷入口和七个产业方向共享的天赋树。农场位于 `/red-leaf-town/farm`；采集页只负责派驻与采集任务，不再重复展示天赋树。购买和出售合并在 `/red-leaf-town/market`，桌面端左右分栏、移动端用标签页切换，商品与库存物品共用 `MarketItem` 组件；出售侧按 `item_id` 折叠品质分桶（多品质的物品点开才列出各桶），两侧在条目超过 6 个或出现多种物品类型时自动显示搜索框与种类筛选；旧的 `/shop` 与 `/inventory` 会重定向过去。
 
@@ -34,8 +34,12 @@ npm run dev
 生产构建与静态资源部署：
 
 ```bash
-./build-front.sh
+./build-front.sh          # 正式站 /red-leaf-town/
+./build-front.sh --beta   # 内测站 /red-leaf-town-beta/，只写 frontend/dist-beta
 ```
+
+两个站共用同一个后端和同一份存档，内测内容靠路线上的 `beta` 标记加 `RED_LEAF_TOWN_BETA_PLAYERS`
+白名单隔离。首次启用内测站需要重启一次后端注册静态路由，之后改内测前端只要重跑构建。
 
 伙伴卡片后台位于 `/red-leaf-town/admin/partners`。它使用管理员 Token 鉴权，包含卡片配置和玩家存档两个面板（玩家存档面板可以发放伙伴，也可以彻底删除一个角色：存档、OAuth 索引和 QQ 绑定一起清掉，需要把角色名打一遍确认）；插画上传沿用宿主的统一 CDN provider，伙伴数值和图片 object key 保存在 `data/partners.json`。玩家登录后可以从 `/red-leaf-town/partners` 管理自己的伙伴仓库。
 
@@ -43,7 +47,9 @@ npm run dev
 
 采集页面位于 `/red-leaf-town/gathering`。采集必须派遣具有采集倾向的伙伴，玩家不能独自执行；枫木和秋露草等采集物同样使用五档品质。采集编制由产业基础值和玩家已经点亮的采集天赋节点共同决定，任务开始后伙伴会锁定至服务器判定的完成时间。
 
-探索页面位于 `/red-leaf-town/exploration`，在探索系统解锁后加入玩家导航。首条路线“红枫林腹地”在 6 级开放，支付 1000 红叶币组织一至三名伙伴出发，具有探索倾向的领队贡献完整探索能力，其他探索伙伴各贡献 25%；逐节点消耗体力并冻结事件结果与临时战利品，主动撤离或走完七段路线后才把战利品结入仓库。探索能力继续负责体力与品质，事件成败改由力量、敏捷、智力、幸运四维进行 d20 检定，支持最高角色、全队调整值之和及优势/劣势骰；自然 1 / 20 分别为大失败 / 大成功。36 名伙伴的初始四维审阅表见 `docs/partner-exploration-stats.tsv`。探索伙伴特性通过 `exploration_event` 阶段按 `exploration_type=transport/survey` 区分采运和勘探。
+探索页面位于 `/red-leaf-town/exploration`，在探索系统解锁后加入玩家导航。首条路线“红枫林腹地”在 6 级开放，支付 1000 红叶币组织一至三名伙伴出发，具有探索倾向的领队贡献完整探索能力，其他探索伙伴各贡献 25%；逐节点消耗体力并冻结事件结果与临时战利品，主动撤离或走完七段路线后才把战利品结入仓库。探索能力继续负责体力与品质，事件成败改由力量、敏捷、智力、幸运四维进行 d20 检定，支持最高角色、全队调整值之和及优势/劣势骰；自然 1 / 20 分别为大失败 / 大成功。36 名伙伴的初始四维审阅表见 `docs/partner-exploration-stats.tsv`。探索伙伴特性通过 `exploration_event` 阶段按 `exploration_type` 区分路线类型。
+
+第二类路线是**探秘副本**（`kind: "delve"`），首条「月落矿脉」10 级开放，目前带 `beta: true`，只有 `RED_LEAF_TOWN_BETA_PLAYERS` 里列出的 `player_id` 能看到和进入，前端走内测站 `/red-leaf-town-beta/`（`./build-front.sh --beta` 构建，正式站不受影响）。探秘固定三人满编，每人可以带一把武器和一件饰品，出发时把装备数值和道具清单一起冻结成快照——装备不消耗、卖掉也不影响已经出发的队伍，道具当场从仓库扣除、没用完的随撤离退回。伙伴在副本里有 HP（`24 + 2×等级 + 2×力量 + 装备`）和 AC（`10 + 敏捷调整值 + 装备`）；武器分别吃力量、敏捷和智力，饰品给熟练加值、护甲、先攻或每场一次的优势骰。战斗是轻回合制：开场掷一次先攻定序，命中用 `d20 + 属性调整值 + 装备加成` 对敌人 AC，自然 1 必失，达到暴击线（`20 - 幸运调整值`，最多压到 18）翻倍伤害骰；幸运同时给战利品品质加成。战斗节点不推进深度，打赢才结算这一节点的奖励并抽下一层，战斗期间不能撤离；全灭只损失冻结的战利品，装备和伙伴都不受损。体力仍然只在进入节点时扣，体力见底时这趟路线会挂在原地等自然回复。装备的加工配方等内测验收后再随外放一起加入。
 
 加工页面位于 `/red-leaf-town/crafting`，居民 3 级开放。加工会原子扣除最低品质优先的原料并保存实际消耗快照，成品使用五档品质；具有加工倾向的伙伴可以选择性驻场。每份配方都必须配置由 Python 注册表解释的 `unlock_condition`，缺失、未知 hook 或非法参数会阻止内容加载，不存在默认解锁配方。
 

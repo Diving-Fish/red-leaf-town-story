@@ -395,6 +395,8 @@ export interface ItemDefinition {
   sell_price: number
   has_quality: boolean
   tags: string[]
+  equipment?: EquipmentDefinition | null
+  delve_use?: DelveUseDefinition | null
 }
 
 export type CommissionItem = ItemDefinition
@@ -578,6 +580,8 @@ export interface InventoryItem {
   icon: string
   kind: string
   tags: string[]
+  equipment?: EquipmentDefinition | null
+  delve_use?: DelveUseDefinition | null
   quantity: number
   quality: number | null
   quality_name: string | null
@@ -1036,9 +1040,117 @@ export interface AchievementClaimResult {
   maple_flame: number
 }
 
+export type ExplorationKind = 'transport' | 'survey' | 'delve'
+
+export interface EquipmentDefinition {
+  slot: 'weapon' | 'accessory'
+  attribute: 'strength' | 'agility' | 'intelligence' | null
+  damage_dice: string
+  attack_bonus: number
+  proficiency_bonus: number
+  armor_bonus: number
+  initiative_bonus: number
+  max_hp_bonus: number
+  advantage_uses: number
+  description: string
+}
+
+export interface DelveUseDefinition {
+  effect: 'heal'
+  dice: string
+  flat: number
+  quality_bonus: number
+}
+
+export interface DelveLoadout {
+  weapon_item_id: string
+  weapon_name: string
+  accessory_item_id: string
+  accessory_name: string
+  attack_attribute: 'strength' | 'agility' | 'intelligence'
+  damage_dice: string
+  attack_bonus: number
+  proficiency_bonus: number
+  armor_bonus: number
+  initiative_bonus: number
+  max_hp_bonus: number
+  advantage_uses: number
+}
+
+export interface DelveMemberState {
+  max_hp: number
+  hp: number
+  armor_class: number
+  initiative_bonus: number
+}
+
+export interface DelveEnemy {
+  key: string
+  enemy_id: string
+  name: string
+  icon: string
+  max_hp: number
+  hp: number
+  armor_class: number
+  boss: boolean
+}
+
+export interface DelveBattleLog {
+  round: number
+  actor: string
+  actor_name: string
+  action: 'attack' | 'item' | 'flee' | 'advantage'
+  target: string
+  target_name: string
+  roll: number | null
+  rolls: number[]
+  modifier: number | null
+  total: number | null
+  hit: boolean | null
+  critical: boolean
+  damage: number
+  healing: number
+  text: string
+}
+
+export interface DelveBattleState {
+  battle_id: string
+  event_id: string
+  choice_id: string
+  depth: number
+  round: number
+  can_flee: boolean
+  flee_dc: number
+  enemies: DelveEnemy[]
+  order: Array<{ key: string; is_party: boolean; name: string }>
+  turn_index: number
+  advantage_ready: Record<string, boolean>
+  advantage_uses_left: Record<string, number>
+  current_actor: string
+  current_actor_is_party: boolean
+  current_actor_name: string
+  logs: DelveBattleLog[]
+}
+
+export interface DelveCarriedItem {
+  item_id: string
+  quality: number
+  quantity: number
+  item: ItemDefinition | null
+}
+
+export interface DelveBattleActionResult {
+  action: string
+  outcome: 'ongoing' | 'victory' | 'wiped' | 'fled'
+  logs: DelveBattleLog[]
+  drops?: ExplorationDrop[]
+  completed: boolean
+}
+
 export interface ExplorationExpedition {
   id: string
-  kind: 'transport' | 'survey'
+  kind: ExplorationKind
+  beta: boolean
   name: string
   description: string
   accent: string
@@ -1057,6 +1169,7 @@ export interface ExplorationChoice {
   description: string
   route_stamina: number
   action_stamina: number
+  battle: { enemy_ids: string[]; can_flee: boolean; flee_dc: number } | null
   check: {
     attribute: ExplorationAttribute
     mode: 'best' | 'sum'
@@ -1115,6 +1228,7 @@ export interface ExplorationLog {
 export type ExplorationCheckDegree = 'automatic_success' | 'critical_failure' | 'failure' | 'success' | 'critical_success'
 
 export interface ExplorationResolutionResult {
+  battle_started?: boolean
   event_id: string
   choice_id: string
   success: boolean
@@ -1137,7 +1251,7 @@ export interface ExplorationResolutionResult {
 export interface ExplorationRun {
   run_id: string
   expedition_id: string
-  expedition_kind: 'transport' | 'survey'
+  expedition_kind: ExplorationKind
   status: 'active' | 'completed'
   partner_ids: string[]
   leader_partner_id: string
@@ -1151,7 +1265,10 @@ export interface ExplorationRun {
   stamina_spent: number
   next_route_discount: number
   expedition: ExplorationExpedition
-  party: OwnedPartner[]
+  party: Array<OwnedPartner & { loadout: DelveLoadout | null; combat: DelveMemberState | null }>
+  carried_items: DelveCarriedItem[]
+  pending_fixed_rewards: DelveCarriedItem[]
+  battle: DelveBattleState | null
   leader: OwnedPartner | null
   stamina_discount_rate: number
   pending_rewards: ExplorationDrop[]

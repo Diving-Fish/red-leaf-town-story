@@ -232,3 +232,77 @@ def test_mining_task_requires_known_site_and_quality_item():
     payload["mining_tasks"][0]["produce_item_id"] = "carrot_seed"
     with pytest.raises(ValidationError, match="output must support quality"):
         GameContent.model_validate(payload)
+
+
+def test_delve_content_is_wired_up():
+    content = load_content()
+    expedition = content.exploration_expedition_map["moonfall_hollow"]
+    battle_choice = expedition.event_map["warden_chamber"].choices[0]
+
+    assert expedition.kind == "delve"
+    assert expedition.beta is True
+    assert battle_choice.battle.enemy_ids == ["moonlit_warden"]
+    assert battle_choice.battle.can_flee is False
+    assert content.delve_enemy_map["moonlit_warden"].boss is True
+    assert content.item_map["red_copper_greatsword"].equipment.attribute == "strength"
+    assert content.item_map["moon_silver_dagger"].equipment.attribute == "agility"
+    assert content.item_map["maple_flame_tome"].equipment.attribute == "intelligence"
+    assert content.item_map["hunters_charm"].equipment.slot == "accessory"
+    assert content.item_map["herbal_salve"].delve_use.effect == "heal"
+
+
+def test_equipment_items_cannot_use_the_quality_system():
+    payload = load_content().model_dump()
+    equipment = next(item for item in payload["items"] if item["id"] == "red_copper_greatsword")
+    equipment["has_quality"] = True
+
+    with pytest.raises(ValidationError, match="quality"):
+        GameContent.model_validate(payload)
+
+
+def test_weapons_must_name_an_attribute_and_a_damage_dice():
+    payload = load_content().model_dump()
+    equipment = next(item for item in payload["items"] if item["id"] == "red_copper_greatsword")
+    equipment["equipment"]["damage_dice"] = "1d7"
+
+    with pytest.raises(ValidationError, match="damage dice"):
+        GameContent.model_validate(payload)
+
+
+def test_battles_are_rejected_outside_delve_expeditions_and_with_unknown_enemies():
+    payload = load_content().model_dump()
+    transport = next(
+        entry for entry in payload["exploration_expeditions"] if entry["id"] == "red_maple_hinterland"
+    )
+    transport["events"][0]["choices"][0]["battle"] = {"enemy_ids": ["stone_gnawer"]}
+
+    with pytest.raises(ValidationError, match="delve expedition"):
+        GameContent.model_validate(payload)
+
+    payload = load_content().model_dump()
+    delve = next(entry for entry in payload["exploration_expeditions"] if entry["id"] == "moonfall_hollow")
+    delve["events"][0]["choices"][0]["battle"]["enemy_ids"] = ["nobody"]
+
+    with pytest.raises(ValidationError, match="unknown enemies"):
+        GameContent.model_validate(payload)
+
+
+def test_a_checked_choice_cannot_also_start_a_battle():
+    payload = load_content().model_dump()
+    delve = next(entry for entry in payload["exploration_expeditions"] if entry["id"] == "moonfall_hollow")
+    choice = delve["events"][0]["choices"][0]
+    choice["check"] = {"attribute": "strength", "mode": "best", "dice": "normal", "dc": 12}
+    choice["failure"] = {"text": "失手了。"}
+
+    with pytest.raises(ValidationError, match="start a battle"):
+        GameContent.model_validate(payload)
+
+
+def test_fixed_rewards_must_be_quality_free_items():
+    payload = load_content().model_dump()
+    delve = next(entry for entry in payload["exploration_expeditions"] if entry["id"] == "moonfall_hollow")
+    camp = next(entry for entry in delve["events"] if entry["id"] == "abandoned_camp")
+    camp["choices"][0]["success"]["fixed_rewards"] = [{"item_id": "moon_silver_ore", "quantity": 1}]
+
+    with pytest.raises(ValidationError, match="quality-free"):
+        GameContent.model_validate(payload)

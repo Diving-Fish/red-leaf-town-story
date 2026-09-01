@@ -236,6 +236,67 @@ async def test_hidden_transport_exploration_api_starts_resolves_and_withdraws(cl
 
 
 @runs
+async def test_delve_api_gates_on_the_beta_list_and_runs_a_battle_turn(client, service, monkeypatch):
+    from red_leaf_town.domain.economy import add_item
+
+    player = service.repository.get_by_sub("route-sub")
+    for partner_id in ("aishen", "gujian_miao", "leilei"):
+        service.admin_grant_partner(player.player_id, partner_id)
+
+    def prepare(state):
+        state.experience = service.content.levels[-1].total_xp
+        state.coins = 20_000
+        state.stamina = 60
+        add_item(state, "red_copper_greatsword", 3)
+
+    service.repository.update(player.player_id, prepare)
+    authenticate(client)
+    payload = {
+        "partner_ids": ["aishen", "gujian_miao", "leilei"],
+        "leader_partner_id": "aishen",
+        "loadout": {
+            partner_id: {"weapon_item_id": "red_copper_greatsword"}
+            for partner_id in ("aishen", "gujian_miao", "leilei")
+        },
+    }
+
+    monkeypatch.delenv("RED_LEAF_TOWN_BETA_PLAYERS", raising=False)
+    blocked = await client.post("/api/red-leaf-town/exploration/moonfall_hollow/start", json=payload)
+    assert blocked.status_code == 400
+    assert "内测" in (await blocked.get_json())["message"]
+
+    monkeypatch.setenv("RED_LEAF_TOWN_BETA_PLAYERS", player.player_id)
+    started = await client.post("/api/red-leaf-town/exploration/moonfall_hollow/start", json=payload)
+    started_body = (await started.get_json())["data"]
+    assert started.status_code == 200
+    run = started_body["state"]["exploration"]["active_run"]
+    assert run["party"][0]["combat"]["hp"] > 0
+
+    battle_choice = next(
+        (choice["id"] for choice in run["current_event"]["choices"] if choice.get("battle")),
+        "",
+    )
+    if not battle_choice:
+        return
+    resolved = await client.post(
+        "/api/red-leaf-town/exploration/current/resolve",
+        json={"choice_id": battle_choice},
+    )
+    battle = (await resolved.get_json())["data"]["state"]["exploration"]["active_run"]["battle"]
+    assert resolved.status_code == 200
+    assert battle is not None
+
+    acted = await client.post(
+        "/api/red-leaf-town/exploration/current/battle/act",
+        json={"action": "attack", "target": battle["enemies"][0]["key"]},
+    )
+    acted_body = (await acted.get_json())["data"]
+    assert acted.status_code == 200
+    assert acted_body["result"]["outcome"] in ("ongoing", "victory")
+    assert acted_body["result"]["logs"]
+
+
+@runs
 async def test_gacha_and_partner_growth_apis_commit_domain_actions(client, service):
     from red_leaf_town.domain.economy import add_item
 

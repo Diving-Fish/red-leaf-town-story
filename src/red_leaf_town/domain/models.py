@@ -645,10 +645,91 @@ class ExplorationEventLog(BaseModel):
     applied_effects: list[dict[str, object]] = Field(default_factory=list, max_length=20)
 
 
+class DelveLoadoutSnapshot(BaseModel):
+    """出发时冻结的一名伙伴的装备数值。存的是数值不是 item_id，所以本次探索期间
+    把原物品卖了也不影响已经出发的队伍，不需要额外的库存占用逻辑。"""
+
+    weapon_item_id: str = ""
+    weapon_name: str = ""
+    accessory_item_id: str = ""
+    accessory_name: str = ""
+    attack_attribute: Literal["strength", "agility", "intelligence"] = "strength"
+    damage_dice: str = "1d4"
+    attack_bonus: int = 0
+    proficiency_bonus: int = 0
+    armor_bonus: int = 0
+    initiative_bonus: int = 0
+    max_hp_bonus: int = 0
+    advantage_uses: int = Field(default=0, ge=0, le=3)
+
+
+class DelveMemberState(BaseModel):
+    max_hp: int = Field(gt=0)
+    hp: int = Field(ge=0)
+    armor_class: int = Field(ge=1)
+    initiative_bonus: int = 0
+
+    @property
+    def down(self) -> bool:
+        return self.hp <= 0
+
+
+class CarriedItemSnapshot(BaseModel):
+    item_id: str = Field(min_length=1)
+    quality: int = Field(ge=0, le=5)
+    quantity: int = Field(ge=0)
+
+
+class DelveEnemyState(BaseModel):
+    key: str = Field(min_length=1)
+    enemy_id: str = Field(min_length=1)
+    name: str = Field(min_length=1)
+    icon: str = ""
+    max_hp: int = Field(gt=0)
+    hp: int = Field(ge=0)
+    armor_class: int = Field(ge=1)
+    boss: bool = False
+
+
+class DelveBattleLog(BaseModel):
+    round: int = Field(ge=1)
+    actor: str = Field(min_length=1)
+    actor_name: str = Field(min_length=1)
+    action: Literal["attack", "item", "flee", "advantage"]
+    target: str = ""
+    target_name: str = ""
+    roll: int | None = None
+    rolls: list[int] = Field(default_factory=list, max_length=2)
+    modifier: int | None = None
+    total: int | None = None
+    hit: bool | None = None
+    critical: bool = False
+    damage: int = 0
+    healing: int = 0
+    text: str = Field(min_length=1)
+
+
+class DelveBattleState(BaseModel):
+    battle_id: str = Field(min_length=1)
+    event_id: str = Field(min_length=1)
+    choice_id: str = Field(min_length=1)
+    depth: int = Field(ge=1)
+    round: int = Field(default=1, ge=1)
+    can_flee: bool = True
+    flee_dc: int = Field(default=12, ge=2, le=30)
+    enemies: list[DelveEnemyState] = Field(min_length=1, max_length=4)
+    # 先攻定序的结果，元素是伙伴 id 或敌人 key，整场固定。
+    order: list[str] = Field(min_length=1, max_length=7)
+    turn_index: int = Field(default=0, ge=0)
+    advantage_ready: dict[str, bool] = Field(default_factory=dict)
+    advantage_uses_left: dict[str, int] = Field(default_factory=dict)
+    logs: list[DelveBattleLog] = Field(default_factory=list, max_length=60)
+
+
 class ExplorationRunState(BaseModel):
     run_id: str = Field(min_length=1)
     expedition_id: str = Field(min_length=1)
-    expedition_kind: Literal["transport", "survey"]
+    expedition_kind: Literal["transport", "survey", "delve"]
     status: Literal["active", "completed"] = "active"
     partner_ids: list[str] = Field(min_length=1, max_length=3)
     leader_partner_id: str = Field(min_length=1)
@@ -666,6 +747,13 @@ class ExplorationRunState(BaseModel):
     event_counts: dict[str, int] = Field(default_factory=dict)
     trait_usage: dict[str, int] = Field(default_factory=dict)
     logs: list[ExplorationEventLog] = Field(default_factory=list, max_length=20)
+    # 以下四项只有探秘（delve）路线会用到，采运 run 一直保持空值。
+    loadout: dict[str, DelveLoadoutSnapshot] = Field(default_factory=dict)
+    combat_party: dict[str, DelveMemberState] = Field(default_factory=dict)
+    carried_items: list[CarriedItemSnapshot] = Field(default_factory=list, max_length=6)
+    # 冻结的装备类战利品。它们不进五档品质，所以和 pending_rewards 分开存。
+    pending_fixed_rewards: list[CarriedItemSnapshot] = Field(default_factory=list, max_length=20)
+    battle: DelveBattleState | None = None
 
     @model_validator(mode="after")
     def validate_run(self):
@@ -679,11 +767,15 @@ class ExplorationRunState(BaseModel):
             raise ValueError("exploration trait usage cannot be negative")
         if any(roll < 1 or roll > 20 for roll in self.current_rolls):
             raise ValueError("exploration rolls must be between 1 and 20")
+        if set(self.loadout) - set(self.partner_ids):
+            raise ValueError("exploration loadout cannot cover partners outside the party")
+        if set(self.combat_party) - set(self.partner_ids):
+            raise ValueError("exploration hit points cannot cover partners outside the party")
         return self
 
 
 class PlayerState(BaseModel):
-    schema_version: int = 29
+    schema_version: int = 30
     version: int = 1
     player_id: str
     oauth_sub: str
@@ -893,7 +985,16 @@ class PlayerState(BaseModel):
             run = migrated.get("exploration_run")
             if isinstance(run, dict):
                 run.setdefault("trait_usage", {})
-        migrated["schema_version"] = 29
+        if schema_version < 30:
+            # 探秘副本上线。采运的进行中路线没有装备、HP 和战斗状态，一律补空。
+            run = migrated.get("exploration_run")
+            if isinstance(run, dict):
+                run.setdefault("loadout", {})
+                run.setdefault("combat_party", {})
+                run.setdefault("carried_items", [])
+                run.setdefault("pending_fixed_rewards", [])
+                run.setdefault("battle", None)
+        migrated["schema_version"] = 30
         return migrated
 
     @model_validator(mode="after")

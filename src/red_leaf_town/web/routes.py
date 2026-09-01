@@ -48,9 +48,12 @@ from red_leaf_town.story_triggers import story_trigger_hook_codes
 
 
 HOME_PATH = "/red-leaf-town/"
+# 内测站。前端另外构建一份 base=/red-leaf-town-beta/ 的产物，后端和线上共用同一套数据。
+BETA_HOME_PATH = "/red-leaf-town-beta/"
 COOKIE_NAME = "divingfish_red_leaf_town_token"
 COOKIE_MAX_AGE = 86400 * 30
 FRONTEND_DIST = Path(__file__).resolve().parents[3] / "frontend" / "dist"
+FRONTEND_DIST_BETA = Path(__file__).resolve().parents[3] / "frontend" / "dist-beta"
 MAX_PARTNER_ARTWORK_SIZE = 12 * 1024 * 1024
 MAX_PARTNER_ARTWORK_PIXELS = 60_000_000
 MAX_PARTNER_ARTWORK_UNIT = 120
@@ -62,7 +65,7 @@ MAX_STORY_ASSET_EDGE = {"background": 2560, "portrait": 1920}
 
 def _safe_next(value: str) -> str:
     candidate = str(value or "").strip()
-    if not candidate.startswith(HOME_PATH):
+    if not candidate.startswith((HOME_PATH, BETA_HOME_PATH)):
         return ""
     if candidate.startswith("//") or candidate.startswith("/\\"):
         return ""
@@ -899,11 +902,15 @@ def create_blueprint(
         partner_ids = payload.get("partner_ids") or []
         if not isinstance(partner_ids, list):
             partner_ids = []
+        loadout = payload.get("loadout")
+        carried_items = payload.get("carried_items")
         result = get_service().start_exploration(
             subject,
             expedition_id,
             [str(partner_id) for partner_id in partner_ids],
             str(payload.get("leader_partner_id", "")),
+            loadout if isinstance(loadout, dict) else None,
+            carried_items if isinstance(carried_items, list) else None,
         )
         return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
 
@@ -915,6 +922,23 @@ def create_blueprint(
             subject,
             str(payload.get("choice_id", "")),
             str(payload.get("actor_partner_id", "")),
+        )
+        return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
+
+    @blueprint.post("/api/red-leaf-town/exploration/current/battle/act")
+    @login_required
+    async def resolve_delve_battle_action(subject: str):
+        payload = await request.get_json(silent=True) or {}
+        try:
+            item_quality = int(payload.get("item_quality", 0) or 0)
+        except (TypeError, ValueError):
+            item_quality = 0
+        result = get_service().resolve_delve_battle_action(
+            subject,
+            str(payload.get("action", "")),
+            str(payload.get("target", "")),
+            str(payload.get("item_id", "")),
+            item_quality,
         )
         return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
 
@@ -1359,17 +1383,25 @@ def create_blueprint(
             },
         })
 
+    async def _serve_frontend(dist: Path, asset_path: str):
+        if asset_path:
+            candidate = dist / asset_path
+            if candidate.is_file():
+                return await send_from_directory(dist, asset_path)
+        index = dist / "index.html"
+        if not index.is_file():
+            return _error("前端尚未构建", 503, "frontend_not_built")
+        return await send_from_directory(dist, "index.html")
+
     @blueprint.get("/red-leaf-town/")
     @blueprint.get("/red-leaf-town/<path:asset_path>")
     async def frontend(asset_path: str = ""):
-        if asset_path:
-            candidate = FRONTEND_DIST / asset_path
-            if candidate.is_file():
-                return await send_from_directory(FRONTEND_DIST, asset_path)
-        index = FRONTEND_DIST / "index.html"
-        if not index.is_file():
-            return _error("前端尚未构建", 503, "frontend_not_built")
-        return await send_from_directory(FRONTEND_DIST, "index.html")
+        return await _serve_frontend(FRONTEND_DIST, asset_path)
+
+    @blueprint.get("/red-leaf-town-beta/")
+    @blueprint.get("/red-leaf-town-beta/<path:asset_path>")
+    async def frontend_beta(asset_path: str = ""):
+        return await _serve_frontend(FRONTEND_DIST_BETA, asset_path)
 
     return blueprint
 

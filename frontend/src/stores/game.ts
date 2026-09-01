@@ -18,6 +18,7 @@ import type {
   CommissionBoard,
   CrossoverCampaign,
   CrossoverClaimResult,
+  DelveBattleActionResult,
   ExplorationResolutionResult,
   GachaResult,
   GameState,
@@ -256,11 +257,35 @@ export const useGameStore = defineStore('game', () => {
     })
   }
 
-  function startExploration(expeditionId: string, partnerIds: string[], leaderPartnerId: string) {
+  function startExploration(
+    expeditionId: string,
+    partnerIds: string[],
+    leaderPartnerId: string,
+    loadout?: Record<string, { weapon_item_id?: string; accessory_item_id?: string }>,
+    carriedItems?: Array<{ item_id: string; quality: number; quantity: number }>,
+  ) {
     return action(`exploration:start:${expeditionId}`, `${API_ROOT}/exploration/${expeditionId}/start`, {
-      payload: { partner_ids: partnerIds, leader_partner_id: leaderPartnerId },
-      successMessage: '采运许可已经生效，队伍进入红枫林腹地',
+      payload: {
+        partner_ids: partnerIds,
+        leader_partner_id: leaderPartnerId,
+        ...(loadout ? { loadout } : {}),
+        ...(carriedItems ? { carried_items: carriedItems } : {}),
+      },
+      successMessage: '队伍已经出发',
     })
+  }
+
+  async function resolveDelveBattleAction(
+    battleAction: 'attack' | 'item' | 'flee' | 'advantage',
+    target = '',
+    itemId = '',
+    itemQuality = 0,
+  ) {
+    const result = await action('exploration:battle', `${API_ROOT}/exploration/current/battle/act`, {
+      payload: { action: battleAction, target, item_id: itemId, item_quality: itemQuality },
+    }) as DelveBattleActionResult | undefined
+    if (result?.outcome === 'wiped') showNotice('队伍失去了战斗力，冻结的战利品全部损失')
+    return result
   }
 
   async function resolveExploration(choiceId: string, actorPartnerId = '') {
@@ -809,6 +834,7 @@ export const useGameStore = defineStore('game', () => {
     buy,
     startExploration,
     resolveExploration,
+    resolveDelveBattleAction,
     withdrawExploration,
     sell,
     plant,

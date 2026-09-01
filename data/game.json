@@ -567,6 +567,7 @@
     },
     {
       "id": "herbal_salve",
+      "delve_use": {"effect": "heal", "dice": "2d6", "flat": 4, "quality_bonus": 3},
       "name": "秋露药膏",
       "icon": "flask-conical",
       "kind": "product",
@@ -966,6 +967,126 @@
       "kind": "consumable",
       "sell_price": 0,
       "has_quality": false
+    },
+    {
+      "id": "red_copper_greatsword",
+      "name": "赤铜大剑",
+      "icon": "sword",
+      "kind": "equipment",
+      "sell_price": 900,
+      "has_quality": false,
+      "tags": [
+        "exploration_equipment"
+      ],
+      "equipment": {
+        "slot": "weapon",
+        "attribute": "strength",
+        "damage_dice": "1d10",
+        "description": "赤铜锻成的厚背长剑，挥起来慢，砸下去疼。"
+      }
+    },
+    {
+      "id": "moon_silver_dagger",
+      "name": "月银短剑",
+      "icon": "swords",
+      "kind": "equipment",
+      "sell_price": 1100,
+      "has_quality": false,
+      "tags": [
+        "exploration_equipment"
+      ],
+      "equipment": {
+        "slot": "weapon",
+        "attribute": "agility",
+        "damage_dice": "1d6",
+        "attack_bonus": 2,
+        "initiative_bonus": 2,
+        "description": "月银打磨的轻刃，出手快，命中稳，单下伤害不高。"
+      }
+    },
+    {
+      "id": "maple_flame_tome",
+      "name": "枫火之书",
+      "icon": "book-open",
+      "kind": "equipment",
+      "sell_price": 1200,
+      "has_quality": false,
+      "tags": [
+        "exploration_equipment"
+      ],
+      "equipment": {
+        "slot": "weapon",
+        "attribute": "intelligence",
+        "damage_dice": "1d8",
+        "attack_bonus": 1,
+        "description": "以枫火写就的咒本，掷出的火星不看臂力，只看念得准不准。"
+      }
+    },
+    {
+      "id": "hunters_charm",
+      "name": "猎人护符",
+      "icon": "target",
+      "kind": "equipment",
+      "sell_price": 700,
+      "has_quality": false,
+      "tags": [
+        "exploration_equipment"
+      ],
+      "equipment": {
+        "slot": "accessory",
+        "proficiency_bonus": 1,
+        "description": "老猎人留下的骨符，握着它出手总能更准一点。"
+      }
+    },
+    {
+      "id": "ironwood_bracer",
+      "name": "铁木护腕",
+      "icon": "shield",
+      "kind": "equipment",
+      "sell_price": 700,
+      "has_quality": false,
+      "tags": [
+        "exploration_equipment"
+      ],
+      "equipment": {
+        "slot": "accessory",
+        "armor_bonus": 2,
+        "max_hp_bonus": 8,
+        "description": "枫木浸胶压成的护腕，挨一下总比空手强。"
+      }
+    },
+    {
+      "id": "moonlit_pendant",
+      "name": "月辉坠饰",
+      "icon": "moon",
+      "kind": "equipment",
+      "sell_price": 1500,
+      "has_quality": false,
+      "tags": [
+        "exploration_equipment"
+      ],
+      "equipment": {
+        "slot": "accessory",
+        "advantage_uses": 1,
+        "description": "含着一缕月光的坠子。每场战斗可以屏息一次，下一击以优势骰进行。"
+      }
+    },
+    {
+      "id": "swiftfoot_anklet",
+      "name": "迅足足环",
+      "icon": "footprints",
+      "kind": "equipment",
+      "sell_price": 800,
+      "has_quality": false,
+      "tags": [
+        "exploration_equipment"
+      ],
+      "equipment": {
+        "slot": "accessory",
+        "initiative_bonus": 4,
+        "armor_bonus": 1,
+        "description": "轻得几乎没有分量，戴上它总能比别人先动一步。"
+      }
     }
   ],
   "crops": [
@@ -1479,6 +1600,532 @@
               }
             }
           ]
+        }
+      ]
+    },
+    {
+      "id": "moonfall_hollow",
+      "kind": "delve",
+      "beta": true,
+      "name": "月落矿脉",
+      "description": "月石深洞往下还有一条没人走完的矿脉。带齐装备和药，三个人一起下去。",
+      "accent": "#6f7fb0",
+      "min_level": 10,
+      "entry_fee": 2500,
+      "max_depth": 8,
+      "final_event_id": "warden_chamber",
+      "quality": {
+        "thresholds": [
+          50.0,
+          110.0,
+          190.0,
+          300.0
+        ],
+        "width": 22.0,
+        "miracle_probability_cap": 0.004,
+        "miracle_eligible": true
+      },
+      "events": [
+        {
+          "id": "gnawer_ambush",
+          "name": "岩隙伏击",
+          "description": "碎石堆里窜出几只啃岩鼠，挡在唯一的下行通道上。",
+          "min_depth": 1,
+          "max_depth": 6,
+          "weight": 3.0,
+          "max_occurrences": 3,
+          "choices": [
+            {
+              "id": "fight",
+              "label": "正面清理",
+              "description": "打散它们，顺手扒下能用的矿屑。",
+              "route_stamina": 2,
+              "action_stamina": 2,
+              "battle": {
+                "enemy_ids": [
+                  "stone_gnawer",
+                  "stone_gnawer"
+                ],
+                "can_flee": true,
+                "flee_dc": 11
+              },
+              "success": {
+                "text": "洞鼠四散逃开，队伍在窝里翻出一批矿屑。",
+                "rewards": [
+                  {
+                    "item_id": "red_copper_ore",
+                    "quantity_min": 6,
+                    "quantity_max": 10
+                  }
+                ]
+              }
+            },
+            {
+              "id": "squeeze_past",
+              "label": "从侧缝挤过去",
+              "description": "不打，赌一手身法，失败会多耗体力。",
+              "route_stamina": 3,
+              "action_stamina": 2,
+              "check": {
+                "attribute": "agility",
+                "mode": "best",
+                "dice": "normal",
+                "dc": 12
+              },
+              "success": {
+                "text": "队伍贴着岩缝绕过了鼠群。"
+              },
+              "failure": {
+                "text": "半路踩塌了碎石，队伍退回来重找路线。",
+                "stamina_surcharge": 3
+              }
+            }
+          ]
+        },
+        {
+          "id": "moth_hollow",
+          "name": "磷光蛾群",
+          "description": "一片发着冷光的蛾子贴着顶壁盘旋，鳞粉呛得人睁不开眼。",
+          "min_depth": 2,
+          "max_depth": 6,
+          "weight": 2.0,
+          "max_occurrences": 2,
+          "choices": [
+            {
+              "id": "burn_them",
+              "label": "驱散蛾群",
+              "description": "把它们打下来，鳞粉本身也是药材。",
+              "route_stamina": 2,
+              "action_stamina": 2,
+              "battle": {
+                "enemy_ids": [
+                  "glow_moth",
+                  "glow_moth",
+                  "glow_moth"
+                ],
+                "can_flee": true,
+                "flee_dc": 13
+              },
+              "success": {
+                "text": "最后一只蛾子落地，队伍收起了满地的磷粉与苔屑。",
+                "rewards": [
+                  {
+                    "item_id": "silver_star_moss",
+                    "quantity_min": 3,
+                    "quantity_max": 6
+                  },
+                  {
+                    "item_id": "autumn_herb",
+                    "quantity_min": 2,
+                    "quantity_max": 4
+                  }
+                ]
+              }
+            },
+            {
+              "id": "wait_out",
+              "label": "熄灯等它们散",
+              "description": "多花时间，但绝对安全。",
+              "route_stamina": 5,
+              "action_stamina": 1,
+              "success": {
+                "text": "队伍灭掉灯，靠在岩壁上等蛾群自己散去。"
+              }
+            }
+          ]
+        },
+        {
+          "id": "crystal_vein",
+          "name": "晶簇矿脉",
+          "description": "岩壁上凝着一层月银晶簇，敲得准才不会碎在里面。",
+          "min_depth": 1,
+          "max_depth": 7,
+          "weight": 2.5,
+          "max_occurrences": 3,
+          "choices": [
+            {
+              "id": "read_the_grain",
+              "label": "读纹路下凿",
+              "description": "看准晶簇走向，成功能取到完整的原石。",
+              "route_stamina": 2,
+              "action_stamina": 3,
+              "check": {
+                "attribute": "intelligence",
+                "mode": "best",
+                "dice": "normal",
+                "dc": 13
+              },
+              "success": {
+                "text": "顺着纹路一凿到底，整块月银原石落进了背篓。",
+                "rewards": [
+                  {
+                    "item_id": "moon_silver_ore",
+                    "quantity_min": 5,
+                    "quantity_max": 9
+                  }
+                ],
+                "quality_ability_bonus": 12
+              },
+              "critical_success": {
+                "text": "凿口正落在晶簇的解理面上，几乎没有损耗。",
+                "rewards": [
+                  {
+                    "item_id": "moon_silver_ore",
+                    "quantity_min": 9,
+                    "quantity_max": 13
+                  },
+                  {
+                    "item_id": "silver_star_moss",
+                    "quantity_min": 1,
+                    "quantity_max": 3
+                  }
+                ],
+                "quality_ability_bonus": 30
+              },
+              "failure": {
+                "text": "晶簇从中间碎开，只剩些边角料。",
+                "rewards": [
+                  {
+                    "item_id": "moon_silver_ore",
+                    "quantity_min": 2,
+                    "quantity_max": 4
+                  }
+                ]
+              },
+              "critical_failure": {
+                "text": "整片晶簇塌进岩缝，队伍只抢出一小把碎渣。",
+                "rewards": [
+                  {
+                    "item_id": "moon_silver_ore",
+                    "quantity_min": 1,
+                    "quantity_max": 2
+                  }
+                ],
+                "stamina_surcharge": 2
+              }
+            },
+            {
+              "id": "hack_it_out",
+              "label": "直接砸下来",
+              "description": "不做判断，稳拿一批赤铜矿。",
+              "route_stamina": 2,
+              "action_stamina": 3,
+              "success": {
+                "text": "队伍把整片岩面砸下来，晶簇碎了，底下的赤铜倒是不少。",
+                "rewards": [
+                  {
+                    "item_id": "red_copper_ore",
+                    "quantity_min": 8,
+                    "quantity_max": 12
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "lurker_narrows",
+          "name": "潜伏者窄道",
+          "description": "窄道两侧的岩缝里伸出细长的足肢，已经等了很久。",
+          "min_depth": 3,
+          "max_depth": 7,
+          "weight": 2.0,
+          "max_occurrences": 2,
+          "choices": [
+            {
+              "id": "clear_narrows",
+              "label": "拔掉它",
+              "description": "窄道里没法绕，只能打。",
+              "route_stamina": 2,
+              "action_stamina": 3,
+              "battle": {
+                "enemy_ids": [
+                  "cave_lurker"
+                ],
+                "can_flee": false,
+                "flee_dc": 15
+              },
+              "success": {
+                "text": "潜伏者缩回岩缝再没出来，窄道后面是一段干燥的矿道。",
+                "rewards": [
+                  {
+                    "item_id": "moon_silver_ore",
+                    "quantity_min": 4,
+                    "quantity_max": 7
+                  },
+                  {
+                    "item_id": "silver_star_moss",
+                    "quantity_min": 1,
+                    "quantity_max": 3
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "abandoned_camp",
+          "name": "废弃营地",
+          "description": "前人留下的宿营点，火塘早就凉了，行囊还堆在角落。",
+          "min_depth": 3,
+          "max_depth": 7,
+          "weight": 1.5,
+          "max_occurrences": 1,
+          "choices": [
+            {
+              "id": "search_packs",
+              "label": "翻检行囊",
+              "description": "运气好的话，里面还有能用的家伙。",
+              "route_stamina": 2,
+              "action_stamina": 2,
+              "check": {
+                "attribute": "luck",
+                "mode": "best",
+                "dice": "normal",
+                "dc": 12
+              },
+              "success": {
+                "text": "行囊底下压着一副还能戴的护腕。",
+                "rewards": [
+                  {
+                    "item_id": "autumn_herb",
+                    "quantity_min": 2,
+                    "quantity_max": 4
+                  }
+                ],
+                "fixed_rewards": [
+                  {
+                    "item_id": "ironwood_bracer",
+                    "quantity": 1
+                  }
+                ]
+              },
+              "critical_success": {
+                "text": "行囊最里层裹着一枚还含着月光的坠子。",
+                "rewards": [
+                  {
+                    "item_id": "autumn_herb",
+                    "quantity_min": 3,
+                    "quantity_max": 5
+                  }
+                ],
+                "fixed_rewards": [
+                  {
+                    "item_id": "moonlit_pendant",
+                    "quantity": 1
+                  }
+                ]
+              },
+              "failure": {
+                "text": "布料一碰就碎，只翻出几株还没干透的草药。",
+                "rewards": [
+                  {
+                    "item_id": "autumn_herb",
+                    "quantity_min": 1,
+                    "quantity_max": 3
+                  }
+                ]
+              },
+              "critical_failure": {
+                "text": "行囊塌下去带起一片尘，什么都没剩下。",
+                "stamina_surcharge": 2
+              }
+            }
+          ]
+        },
+        {
+          "id": "sentinel_gate",
+          "name": "石偶回廊",
+          "description": "回廊两侧立着几尊石偶，队伍走到一半，其中一尊转过了头。",
+          "min_depth": 4,
+          "max_depth": 7,
+          "weight": 2.0,
+          "max_occurrences": 2,
+          "choices": [
+            {
+              "id": "break_it",
+              "label": "打碎它",
+              "description": "石偶很硬，但碎块里嵌着不少月银。",
+              "route_stamina": 2,
+              "action_stamina": 3,
+              "battle": {
+                "enemy_ids": [
+                  "stone_sentinel"
+                ],
+                "can_flee": true,
+                "flee_dc": 14
+              },
+              "success": {
+                "text": "石偶碎成一地，胸腔的位置嵌着一块成色极好的月银。",
+                "rewards": [
+                  {
+                    "item_id": "moon_silver_ore",
+                    "quantity_min": 8,
+                    "quantity_max": 12
+                  }
+                ],
+                "quality_ability_bonus": 20
+              }
+            },
+            {
+              "id": "slip_by",
+              "label": "贴墙溜过去",
+              "description": "石偶转身很慢，走位准就能过。",
+              "route_stamina": 3,
+              "action_stamina": 2,
+              "check": {
+                "attribute": "agility",
+                "mode": "best",
+                "dice": "normal",
+                "dc": 14
+              },
+              "success": {
+                "text": "队伍贴着立柱走完回廊，石偶始终没有转过来。"
+              },
+              "failure": {
+                "text": "石偶抬手扫了过来，队伍连滚带爬冲出回廊。",
+                "stamina_surcharge": 4
+              }
+            }
+          ]
+        },
+        {
+          "id": "warden_chamber",
+          "name": "月纹守卫",
+          "description": "矿脉尽头是一间圆形石室，月银原核悬在中央，守卫已经站了起来。",
+          "min_depth": 8,
+          "max_depth": 8,
+          "weight": 1.0,
+          "max_occurrences": 1,
+          "choices": [
+            {
+              "id": "challenge_warden",
+              "label": "挑战守卫",
+              "description": "打赢它，原核就是队伍的。",
+              "route_stamina": 2,
+              "action_stamina": 4,
+              "battle": {
+                "enemy_ids": [
+                  "moonlit_warden"
+                ],
+                "can_flee": false,
+                "flee_dc": 20
+              },
+              "success": {
+                "text": "守卫的月纹一寸寸熄灭，原核落进了队伍手里。",
+                "rewards": [
+                  {
+                    "item_id": "moon_silver_ore",
+                    "quantity_min": 18,
+                    "quantity_max": 26
+                  },
+                  {
+                    "item_id": "silver_star_moss",
+                    "quantity_min": 4,
+                    "quantity_max": 8
+                  }
+                ],
+                "fixed_rewards": [
+                  {
+                    "item_id": "hunters_charm",
+                    "quantity": 1
+                  }
+                ],
+                "quality_ability_bonus": 40
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "delve_enemies": [
+    {
+      "id": "stone_gnawer",
+      "name": "啃岩鼠",
+      "icon": "rat",
+      "description": "成群结队啃食矿脉的洞鼠，单只不算威胁。",
+      "max_hp": 22,
+      "armor_class": 11,
+      "initiative_bonus": 2,
+      "attacks": [
+        {
+          "name": "啃咬",
+          "to_hit": 3,
+          "damage_dice": "1d6"
+        }
+      ]
+    },
+    {
+      "id": "glow_moth",
+      "name": "磷光蛾",
+      "icon": "bug",
+      "description": "翅上带着磷粉，扑面时让人睁不开眼。",
+      "max_hp": 15,
+      "armor_class": 13,
+      "initiative_bonus": 4,
+      "attacks": [
+        {
+          "name": "磷粉",
+          "to_hit": 4,
+          "damage_dice": "1d4",
+          "damage_bonus": 1
+        }
+      ]
+    },
+    {
+      "id": "cave_lurker",
+      "name": "岩隙潜伏者",
+      "icon": "spider",
+      "description": "贴着岩壁等猎物走近的长足生物。",
+      "max_hp": 34,
+      "armor_class": 12,
+      "initiative_bonus": 1,
+      "attacks": [
+        {
+          "name": "突刺",
+          "to_hit": 4,
+          "damage_dice": "1d8",
+          "damage_bonus": 1
+        }
+      ]
+    },
+    {
+      "id": "stone_sentinel",
+      "name": "岩石哨兵",
+      "icon": "shield-alert",
+      "description": "矿脉深处自行立起的石偶，动作迟缓但沉重。",
+      "max_hp": 50,
+      "armor_class": 15,
+      "initiative_bonus": -1,
+      "attacks": [
+        {
+          "name": "碾压",
+          "to_hit": 5,
+          "damage_dice": "1d10"
+        }
+      ]
+    },
+    {
+      "id": "moonlit_warden",
+      "name": "月纹守卫",
+      "icon": "crown",
+      "description": "刻满月纹的高大石像，守着矿脉尽头的月银原核。",
+      "max_hp": 88,
+      "armor_class": 15,
+      "initiative_bonus": 2,
+      "boss": true,
+      "attacks": [
+        {
+          "name": "月刃横扫",
+          "to_hit": 6,
+          "damage_dice": "1d10",
+          "damage_bonus": 2
+        },
+        {
+          "name": "震地",
+          "to_hit": 5,
+          "damage_dice": "2d6"
         }
       ]
     }

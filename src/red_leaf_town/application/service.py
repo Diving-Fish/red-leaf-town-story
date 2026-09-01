@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import random
 import secrets
 import time
@@ -87,6 +88,15 @@ from red_leaf_town.domain.commissions import (
     is_lucky_day,
     lucky_weekday,
 )
+from red_leaf_town.domain import (
+    CarriedItemSnapshot,
+    DelveBattleState,
+    DelveEnemyState,
+    DelveLoadoutSnapshot,
+    DelveMemberState,
+)
+from red_leaf_town.domain import delve_battle
+from red_leaf_town.domain.delve_battle import BattleError, PartyMember
 from red_leaf_town.domain.economy import EconomyError, add_item, grant_coins, remove_item, spend_coins
 from red_leaf_town.domain.monthly_card import extend_expiry, remaining_days
 from red_leaf_town.domain.redemption import generate_code, normalize_code
@@ -312,6 +322,8 @@ class GameService:
         expedition_id: str,
         partner_ids: list[str],
         leader_partner_id: str,
+        loadout: dict[str, dict] | None = None,
+        carried_items: list[dict] | None = None,
     ) -> dict:
         expedition = self.content.exploration_expedition_map.get(str(expedition_id or "").strip())
         if expedition is None:
@@ -320,15 +332,28 @@ class GameService:
         leader_partner_id = str(leader_partner_id or "").strip()
         if not 1 <= len(party) <= 3 or len(party) != len(set(party)):
             raise GameError("exploration_party_invalid", "探索队伍需要一至三名不同伙伴")
+        if expedition.kind == "delve" and len(party) != delve_battle.PARTY_SIZE:
+            raise GameError(
+                "exploration_party_invalid",
+                f"探秘副本需要正好 {delve_battle.PARTY_SIZE} 名伙伴",
+            )
         now = self._now()
 
         def mutation(player: PlayerState):
             self._settle(player, now)
             if player.exploration_run is not None:
                 raise GameError("exploration_active", "当前已有一支队伍在探索中", 409)
+            if expedition.beta and not self._is_beta_player(player):
+                raise GameError("content_locked", "这条路线还在内测中")
             if player.level < expedition.min_level:
                 raise GameError("content_locked", f"达到 {expedition.min_level} 级后解锁")
             ability = self._exploration_party_ability(player, party, leader_partner_id)
+            if expedition.kind == "delve":
+                party_loadout = self._build_delve_loadout(player, party, loadout)
+                combat_party = self._build_delve_party(player, party, party_loadout)
+                frozen_items = self._freeze_carried_items(player, carried_items)
+            else:
+                party_loadout, combat_party, frozen_items = {}, {}, []
             try:
                 spend_coins(player, expedition.entry_fee)
             except EconomyError as exc:
@@ -344,6 +369,9 @@ class GameService:
                 started_at=now,
                 current_event_id=self._pick_exploration_event(expedition, None, 1),
                 current_rolls=[self.rng.randint(1, 20), self.rng.randint(1, 20)],
+                loadout=party_loadout,
+                combat_party=combat_party,
+                carried_items=frozen_items,
             )
             player.exploration_run = run
             return {
@@ -435,32 +463,32 @@ class GameService:
             for usage_key in context["trait_usage_consumptions"]:
                 run.trait_usage[usage_key] = run.trait_usage.get(usage_key, 0) + 1
 
-            probability = quality_probabilities(
-                run.exploration_ability
-                + (run.depth + 1) * 8
-                + outcome.quality_ability_bonus
-                + int(context["quality_ability_bonus"]),
-                expedition.quality.thresholds,
-                expedition.quality.width,
-                expedition.quality.miracle_probability_cap,
-                expedition.quality.miracle_eligible,
-            )
-            quantity_multiplier = max(0.0, float(context["reward_quantity_multiplier"]))
-            batches = [
-                (
-                    reward.item_id,
-                    max(1, round(self.rng.randint(reward.quantity_min, reward.quantity_max) * quantity_multiplier)),
-                )
-                for reward in outcome.rewards
-            ]
-            rewards = build_results(
-                self.rng,
-                batches,
-                probability,
+            if choice.battle is not None:
+                # 战斗节点不在这里推进深度：奖励和下一层都留到打赢之后再结算。
+                run.route_stamina_raw = route_raw
+                run.action_stamina_spent = action_total
+                run.stamina_spent += cost
+                self._begin_delve_battle(run, event, choice)
+                return {
+                    "event_id": event.id,
+                    "choice_id": choice.id,
+                    "success": True,
+                    "text": event.description,
+                    "stamina_cost": cost,
+                    "drops": [],
+                    "battle_started": True,
+                    "completed": False,
+                }
+
+            rewards = self._settle_exploration_outcome(
+                run,
+                expedition,
+                outcome,
                 now,
-                context["applied_effects"],
+                quality_bonus=int(context["quality_ability_bonus"]),
+                quantity_multiplier=float(context["reward_quantity_multiplier"]),
+                applied_effects=context["applied_effects"],
             )
-            self._merge_exploration_rewards(run.pending_rewards, rewards)
             run.route_stamina_raw = route_raw
             run.action_stamina_spent = action_total
             run.stamina_spent += cost
@@ -505,6 +533,217 @@ class GameService:
         player, result = self._update_by_sub(oauth_sub, mutation)
         return {"result": result, "state": self._snapshot(player, now)}
 
+    def resolve_delve_battle_action(
+        self,
+        oauth_sub: str,
+        action: str,
+        target: str = "",
+        item_id: str = "",
+        item_quality: int = 0,
+    ) -> dict:
+        """走一个我方单位的行动，然后把后面的敌方回合一口气跑到下一个我方回合。"""
+
+        action = str(action or "").strip()
+        target = str(target or "").strip()
+        item_id = str(item_id or "").strip()
+        now = self._now()
+
+        def mutation(player: PlayerState):
+            self._settle(player, now)
+            run = player.exploration_run
+            if run is None:
+                raise GameError("exploration_inactive", "当前没有进行中的探索", 409)
+            battle = run.battle
+            if battle is None:
+                raise GameError("delve_battle_inactive", "当前没有进行中的战斗", 409)
+            expedition = self.content.exploration_expedition_map.get(run.expedition_id)
+            if expedition is None:
+                raise GameError("exploration_content_missing", "探索内容已经失效", 409)
+            event = expedition.event_map.get(battle.event_id)
+            choice = event.choice_map.get(battle.choice_id) if event else None
+            if event is None or choice is None:
+                raise GameError("exploration_event_missing", "当前事件已经失效", 409)
+
+            members = self._delve_members(run)
+            # 只把这次行动新产生的日志回给前端，逐条播放才不会重播上一回合。
+            log_cursor = len(battle.logs)
+            actor_id = delve_battle.current_actor(battle, members)
+            if actor_id not in members:
+                raise GameError("delve_battle_not_your_turn", "现在不是我方的回合", 409)
+            actor = members[actor_id]
+
+            fled = False
+            try:
+                if action == "attack":
+                    delve_battle.member_attack(self.rng, battle, actor, target)
+                elif action == "advantage":
+                    delve_battle.member_prepare_advantage(battle, actor)
+                elif action == "item":
+                    carried = next(
+                        (
+                            entry
+                            for entry in run.carried_items
+                            if entry.item_id == item_id and entry.quality == int(item_quality) and entry.quantity > 0
+                        ),
+                        None,
+                    )
+                    definition = self.content.item_map.get(item_id)
+                    if carried is None or definition is None or definition.delve_use is None:
+                        raise GameError("delve_item_invalid", "队伍没有带这件道具", 404)
+                    receiver = members.get(target or actor_id)
+                    if receiver is None:
+                        raise GameError("delve_target_invalid", "这个伙伴不在队伍里", 404)
+                    delve_battle.member_heal(
+                        self.rng,
+                        battle,
+                        actor,
+                        receiver,
+                        definition.name,
+                        definition.delve_use.dice,
+                        definition.delve_use.flat
+                        + max(0, carried.quality - 1) * definition.delve_use.quality_bonus,
+                    )
+                    carried.quantity -= 1
+                    if carried.quantity <= 0:
+                        run.carried_items.remove(carried)
+                elif action == "flee":
+                    fled = delve_battle.attempt_flee(self.rng, battle, actor, members)
+                else:
+                    raise GameError("delve_action_invalid", "没有这个战斗行动", 400)
+            except BattleError as exc:
+                raise GameError("delve_action_invalid", str(exc)) from exc
+
+            if fled:
+                run.battle = None
+                self._advance_exploration_node(
+                    run,
+                    expedition,
+                    event,
+                    choice,
+                    text="队伍放弃了这次遭遇，绕开继续前进。",
+                    rewards=[],
+                )
+                return {
+                    "action": action,
+                    "outcome": "fled",
+                    "logs": [entry.model_dump() for entry in battle.logs[log_cursor:]],
+                    "drops": [],
+                    "completed": run.status == "completed",
+                }
+
+            delve_battle.advance_turn(battle)
+            outcome = self._run_delve_enemy_turns(battle, members)
+            drops: list = []
+            if outcome == "victory":
+                run.battle = None
+                drops = self._settle_exploration_outcome(run, expedition, choice.success, now)
+                self._advance_exploration_node(
+                    run,
+                    expedition,
+                    event,
+                    choice,
+                    text=choice.success.text,
+                    rewards=drops,
+                )
+            elif outcome == "wiped":
+                # 全灭只丢冻结的战利品，装备和伙伴都不损失。
+                player.exploration_run = None
+            return {
+                "action": action,
+                "outcome": outcome,
+                "logs": [entry.model_dump() for entry in battle.logs[log_cursor:]],
+                "drops": [self._result_snapshot(reward) for reward in drops],
+                "completed": outcome == "victory" and run.status == "completed",
+            }
+
+        player, result = self._update_by_sub(oauth_sub, mutation)
+        return {"result": result, "state": self._snapshot(player, now)}
+
+    def _begin_delve_battle(self, run, event, choice) -> None:
+        definitions = self.content.delve_enemy_map
+        enemies: list[DelveEnemyState] = []
+        initiative: dict[str, int] = {}
+        for index, enemy_id in enumerate(choice.battle.enemy_ids):
+            definition = definitions.get(enemy_id)
+            if definition is None:
+                raise GameError("exploration_content_missing", "遭遇的敌人配置已经失效", 409)
+            key = f"{enemy_id}#{index + 1}"
+            suffix = f"·{index + 1}" if choice.battle.enemy_ids.count(enemy_id) > 1 else ""
+            enemies.append(DelveEnemyState(
+                key=key,
+                enemy_id=definition.id,
+                name=f"{definition.name}{suffix}",
+                icon=definition.icon,
+                max_hp=definition.max_hp,
+                hp=definition.max_hp,
+                armor_class=definition.armor_class,
+                boss=definition.boss,
+            ))
+            initiative[key] = definition.initiative_bonus
+
+        members = self._delve_members(run)
+        battle = DelveBattleState(
+            battle_id=str(uuid4()),
+            event_id=event.id,
+            choice_id=choice.id,
+            depth=run.depth + 1,
+            can_flee=choice.battle.can_flee,
+            flee_dc=choice.battle.flee_dc,
+            enemies=enemies,
+            order=delve_battle.build_initiative(self.rng, members, enemies, initiative),
+            advantage_uses_left={
+                partner_id: member.loadout.advantage_uses for partner_id, member in members.items()
+            },
+        )
+        run.battle = battle
+        self._run_delve_enemy_turns(battle, members)
+
+    def _run_delve_enemy_turns(self, battle, members: dict) -> str:
+        """一路跑到下一个我方回合，或者战斗结束。"""
+
+        definitions = self.content.delve_enemy_map
+        for _ in range(len(battle.order) * 12):
+            outcome = delve_battle.battle_outcome(battle, members)
+            if outcome != "ongoing":
+                return outcome
+            actor_id = delve_battle.current_actor(battle, members)
+            if not actor_id or actor_id in members:
+                return "ongoing"
+            enemy = next((entry for entry in battle.enemies if entry.key == actor_id), None)
+            definition = definitions.get(enemy.enemy_id) if enemy else None
+            if enemy is None or definition is None:
+                raise GameError("exploration_content_missing", "遭遇的敌人配置已经失效", 409)
+            delve_battle.enemy_turn(
+                self.rng,
+                battle,
+                enemy,
+                [attack.model_dump() for attack in definition.attacks],
+                members,
+            )
+            delve_battle.advance_turn(battle)
+        return delve_battle.battle_outcome(battle, members)
+
+    def _advance_exploration_node(self, run, expedition, event, choice, *, text: str, rewards: list) -> None:
+        """战斗解决之后补上这一节点的记录并抽下一层，和普通事件走完的收尾保持一致。"""
+
+        run.depth += 1
+        run.event_counts[event.id] = run.event_counts.get(event.id, 0) + 1
+        run.logs.append(ExplorationEventLog(
+            depth=run.depth,
+            event_id=event.id,
+            choice_id=choice.id,
+            success=True,
+            degree="automatic_success",
+            text=text,
+            stamina_cost=0,
+            rewards=rewards,
+        ))
+        if run.depth >= expedition.max_depth:
+            run.status = "completed"
+        else:
+            run.current_event_id = self._pick_exploration_event(expedition, run, run.depth + 1)
+            run.current_rolls = [self.rng.randint(1, 20), self.rng.randint(1, 20)]
+
     def withdraw_exploration(self, oauth_sub: str) -> dict:
         now = self._now()
 
@@ -513,9 +752,17 @@ class GameService:
             run = player.exploration_run
             if run is None:
                 raise GameError("exploration_inactive", "当前没有进行中的探索", 409)
+            if run.battle is not None:
+                raise GameError("delve_battle_active", "战斗结束之前没法撤离", 409)
             rewards = list(run.pending_rewards)
             for reward in rewards:
                 add_item(player, reward.item_id, reward.quantity, reward.quality)
+            for fixed in run.pending_fixed_rewards:
+                add_item(player, fixed.item_id, fixed.quantity, fixed.quality)
+            # 没用完的道具原样退回仓库。
+            for carried in run.carried_items:
+                if carried.quantity > 0:
+                    add_item(player, carried.item_id, carried.quantity, carried.quality)
             result = {
                 "expedition_id": run.expedition_id,
                 "completed": run.status == "completed",
@@ -523,6 +770,22 @@ class GameService:
                 "stamina_spent": run.stamina_spent,
                 "entry_fee": run.entry_fee,
                 "drops": [self._result_snapshot(reward) for reward in rewards],
+                "equipment_drops": [
+                    {
+                        **fixed.model_dump(),
+                        "item": self.content.item_map[fixed.item_id].model_dump(),
+                    }
+                    for fixed in run.pending_fixed_rewards
+                    if fixed.item_id in self.content.item_map
+                ],
+                "returned_items": [
+                    {
+                        **carried.model_dump(),
+                        "item": self.content.item_map[carried.item_id].model_dump(),
+                    }
+                    for carried in run.carried_items
+                    if carried.quantity > 0 and carried.item_id in self.content.item_map
+                ],
             }
             player.exploration_run = None
             return result
@@ -5317,6 +5580,220 @@ class GameService:
     def _task_releases_partner(task: ProductionTaskSnapshot | None) -> bool:
         return bool(task and any(effect.get("effect") == "release_partner" for effect in task.applied_effects))
 
+    @staticmethod
+    def _beta_player_ids() -> set[str]:
+        """内测白名单：逗号分隔的 player_id。环境变量优先，其次读宿主 .env 里的同名配置。"""
+
+        raw = os.environ.get("RED_LEAF_TOWN_BETA_PLAYERS", "")
+        if not raw:
+            try:
+                from nonebot import get_driver
+
+                raw = str(getattr(get_driver().config, "red_leaf_town_beta_players", "") or "")
+            except Exception:
+                raw = ""
+        return {entry.strip() for entry in raw.split(",") if entry.strip()}
+
+    def _is_beta_player(self, player: PlayerState) -> bool:
+        return player.player_id in self._beta_player_ids()
+
+    def _visible_expeditions(self, player: PlayerState) -> list:
+        if self._is_beta_player(player):
+            return list(self.content.exploration_expeditions)
+        return [entry for entry in self.content.exploration_expeditions if not entry.beta]
+
+    def _settle_exploration_outcome(
+        self,
+        run,
+        expedition,
+        outcome,
+        now: int,
+        *,
+        quality_bonus: int = 0,
+        quantity_multiplier: float = 1.0,
+        applied_effects=(),
+    ) -> list[ProductionResultSnapshot]:
+        """把一个结局的产出滚成冻结战利品。品质产物走五档品质，装备类走固定发放。"""
+
+        luck_bonus = self._delve_luck_bonus(run) if expedition.kind == "delve" else 0
+        probability = quality_probabilities(
+            run.exploration_ability
+            + (run.depth + 1) * 8
+            + outcome.quality_ability_bonus
+            + quality_bonus
+            + luck_bonus,
+            expedition.quality.thresholds,
+            expedition.quality.width,
+            expedition.quality.miracle_probability_cap,
+            expedition.quality.miracle_eligible,
+        )
+        multiplier = max(0.0, quantity_multiplier)
+        batches = [
+            (
+                reward.item_id,
+                max(1, round(self.rng.randint(reward.quantity_min, reward.quantity_max) * multiplier)),
+            )
+            for reward in outcome.rewards
+        ]
+        rewards = build_results(self.rng, batches, probability, now, applied_effects)
+        self._merge_exploration_rewards(run.pending_rewards, rewards)
+        for fixed in outcome.fixed_rewards:
+            existing = next(
+                (
+                    entry
+                    for entry in run.pending_fixed_rewards
+                    if entry.item_id == fixed.item_id and entry.quality == fixed.quality
+                ),
+                None,
+            )
+            if existing is not None:
+                existing.quantity += fixed.quantity
+            else:
+                run.pending_fixed_rewards.append(CarriedItemSnapshot(
+                    item_id=fixed.item_id,
+                    quality=fixed.quality,
+                    quantity=fixed.quantity,
+                ))
+        return rewards
+
+    # ----------------------------------------------------------- 探秘副本（delve）
+
+    def _build_delve_loadout(
+        self,
+        player: PlayerState,
+        partner_ids: list[str],
+        loadout_input: dict[str, dict] | None,
+    ) -> dict[str, DelveLoadoutSnapshot]:
+        """把玩家选的装备冻结成数值快照。装备不消耗，只在出发这一刻校验持有。"""
+
+        selections = loadout_input or {}
+        unknown = set(selections) - set(partner_ids)
+        if unknown:
+            raise GameError("delve_loadout_invalid", "装备配置里有不在队伍中的伙伴")
+        usage: dict[str, int] = {}
+        snapshots: dict[str, DelveLoadoutSnapshot] = {}
+        for partner_id in partner_ids:
+            entry = selections.get(partner_id) or {}
+            snapshot = DelveLoadoutSnapshot()
+            for slot, key in (("weapon", "weapon_item_id"), ("accessory", "accessory_item_id")):
+                item_id = str(entry.get(key) or "").strip()
+                if not item_id:
+                    continue
+                definition = self.content.item_map.get(item_id)
+                if definition is None or definition.equipment is None:
+                    raise GameError("delve_equipment_invalid", "选择了不存在的装备", 404)
+                if definition.equipment.slot != slot:
+                    raise GameError("delve_equipment_invalid", f"{definition.name}不能装备在这个槽位")
+                usage[item_id] = usage.get(item_id, 0) + 1
+                if usage[item_id] > sum(player.inventory.get(item_id, {}).values()):
+                    raise GameError("resource_insufficient", f"{definition.name}的数量不够全队装备")
+                equipment = definition.equipment
+                if slot == "weapon":
+                    snapshot.weapon_item_id = item_id
+                    snapshot.weapon_name = definition.name
+                    snapshot.attack_attribute = equipment.attribute or "strength"
+                    snapshot.damage_dice = equipment.damage_dice
+                else:
+                    snapshot.accessory_item_id = item_id
+                    snapshot.accessory_name = definition.name
+                snapshot.attack_bonus += equipment.attack_bonus
+                snapshot.proficiency_bonus += equipment.proficiency_bonus
+                snapshot.armor_bonus += equipment.armor_bonus
+                snapshot.initiative_bonus += equipment.initiative_bonus
+                snapshot.max_hp_bonus += equipment.max_hp_bonus
+                snapshot.advantage_uses += equipment.advantage_uses
+            snapshots[partner_id] = snapshot
+        return snapshots
+
+    def _freeze_carried_items(
+        self,
+        player: PlayerState,
+        carried_input: list[dict] | None,
+    ) -> list[CarriedItemSnapshot]:
+        """出发时把道具从仓库扣出来冻结在队伍身上，撤离时把没用完的退回去。"""
+
+        frozen: list[CarriedItemSnapshot] = []
+        total = 0
+        for entry in carried_input or []:
+            item_id = str(entry.get("item_id") or "").strip()
+            quality = int(entry.get("quality") or 0)
+            quantity = int(entry.get("quantity") or 0)
+            if not item_id or quantity <= 0:
+                continue
+            definition = self.content.item_map.get(item_id)
+            if definition is None or definition.delve_use is None:
+                raise GameError("delve_item_invalid", "这件物品不能带进副本")
+            total += quantity
+            if total > delve_battle.CARRY_SLOTS:
+                raise GameError("delve_item_invalid", f"最多只能携带 {delve_battle.CARRY_SLOTS} 份道具")
+            try:
+                remove_item(player, item_id, quantity, quality)
+            except EconomyError as exc:
+                raise GameError("resource_insufficient", str(exc)) from exc
+            existing = next(
+                (item for item in frozen if item.item_id == item_id and item.quality == quality),
+                None,
+            )
+            if existing is not None:
+                existing.quantity += quantity
+            else:
+                frozen.append(CarriedItemSnapshot(item_id=item_id, quality=quality, quantity=quantity))
+        return frozen
+
+    def _build_delve_party(
+        self,
+        player: PlayerState,
+        partner_ids: list[str],
+        loadout: dict[str, DelveLoadoutSnapshot],
+    ) -> dict[str, DelveMemberState]:
+        owned_map = {entry.partner_id: entry for entry in player.owned_partners}
+        catalog = self.partner_catalog_loader().partner_map
+        party: dict[str, DelveMemberState] = {}
+        for partner_id in partner_ids:
+            owned = owned_map[partner_id]
+            stats = catalog[partner_id].exploration_stats
+            snapshot = loadout.get(partner_id) or DelveLoadoutSnapshot()
+            max_hp = delve_battle.member_max_hp(owned.level, stats.strength, snapshot)
+            party[partner_id] = DelveMemberState(
+                max_hp=max_hp,
+                hp=max_hp,
+                armor_class=delve_battle.armor_class(stats.agility, snapshot),
+                initiative_bonus=snapshot.initiative_bonus,
+            )
+        return party
+
+    def _delve_members(self, run) -> dict[str, PartyMember]:
+        catalog = self.partner_catalog_loader().partner_map
+        members: dict[str, PartyMember] = {}
+        for partner_id in run.partner_ids:
+            definition = catalog.get(partner_id)
+            state = run.combat_party.get(partner_id)
+            if definition is None or state is None:
+                raise GameError("exploration_party_missing", "探索队伍已经失效", 409)
+            stats = definition.exploration_stats
+            members[partner_id] = PartyMember(
+                partner_id=partner_id,
+                name=definition.name,
+                strength=stats.strength,
+                agility=stats.agility,
+                intelligence=stats.intelligence,
+                luck=stats.luck,
+                state=state,
+                loadout=run.loadout.get(partner_id) or DelveLoadoutSnapshot(),
+            )
+        return members
+
+    def _delve_luck_bonus(self, run) -> int:
+        """战利品品质按队伍里最高的幸运调整值加成。"""
+
+        catalog = self.partner_catalog_loader().partner_map
+        modifiers = [
+            catalog[partner_id].exploration_stats.modifier("luck")
+            for partner_id in run.partner_ids
+            if partner_id in catalog
+        ]
+        return max(modifiers, default=0) * delve_battle.LUCK_QUALITY_BONUS
+
     def _exploration_party_ability(
         self,
         player: PlayerState,
@@ -5549,6 +6026,36 @@ class GameService:
         )
         return max(0, projected - run.stamina_spent), route_raw, action_total
 
+    def _delve_battle_snapshot(self, run, partner_map: dict[str, dict]) -> dict | None:
+        battle = run.battle
+        if battle is None:
+            return None
+        members = self._delve_members(run)
+        actor_id = delve_battle.current_actor(battle, members)
+        return {
+            **battle.model_dump(exclude={"logs"}),
+            "current_actor": actor_id,
+            "current_actor_is_party": actor_id in members,
+            "current_actor_name": (
+                partner_map.get(actor_id, {}).get("name")
+                if actor_id in members
+                else next((entry.name for entry in battle.enemies if entry.key == actor_id), "")
+            ),
+            "order": [
+                {
+                    "key": key,
+                    "is_party": key in members,
+                    "name": (
+                        partner_map.get(key, {}).get("name", key)
+                        if key in members
+                        else next((entry.name for entry in battle.enemies if entry.key == key), key)
+                    ),
+                }
+                for key in battle.order
+            ],
+            "logs": [entry.model_dump() for entry in battle.logs[-12:]],
+        }
+
     def _exploration_actor_options(
         self,
         run: ExplorationRunState,
@@ -5625,18 +6132,19 @@ class GameService:
 
     def _exploration_snapshot(self, player: PlayerState, now: int, partner_map: dict[str, dict]) -> dict:
         expedition_map = self.content.exploration_expedition_map
+        visible = self._visible_expeditions(player)
         expeditions = [
             {
                 **expedition.model_dump(exclude={"events"}),
                 "unlocked": player.level >= expedition.min_level,
                 "affordable": player.coins >= expedition.entry_fee,
             }
-            for expedition in self.content.exploration_expeditions
+            for expedition in visible
         ]
         run = player.exploration_run
         if run is None:
             return {
-                "unlocked": any(player.level >= entry.min_level for entry in self.content.exploration_expeditions),
+                "unlocked": any(player.level >= entry.min_level for entry in visible),
                 "expeditions": expeditions,
                 "active_run": None,
             }
@@ -5729,7 +6237,32 @@ class GameService:
             "active_run": {
                 **run.model_dump(exclude={"pending_rewards", "logs", "current_rolls", "trait_usage"}),
                 "expedition": expedition.model_dump(exclude={"events"}),
-                "party": [partner_map[partner_id] for partner_id in run.partner_ids if partner_id in partner_map],
+                "party": [
+                    {
+                        **partner_map[partner_id],
+                        "loadout": run.loadout[partner_id].model_dump() if partner_id in run.loadout else None,
+                        "combat": run.combat_party[partner_id].model_dump() if partner_id in run.combat_party else None,
+                    }
+                    for partner_id in run.partner_ids
+                    if partner_id in partner_map
+                ],
+                "carried_items": [
+                    {
+                        **carried.model_dump(),
+                        "item": self.content.item_map[carried.item_id].model_dump(),
+                    }
+                    for carried in run.carried_items
+                    if carried.item_id in self.content.item_map
+                ],
+                "pending_fixed_rewards": [
+                    {
+                        **fixed.model_dump(),
+                        "item": self.content.item_map[fixed.item_id].model_dump(),
+                    }
+                    for fixed in run.pending_fixed_rewards
+                    if fixed.item_id in self.content.item_map
+                ],
+                "battle": self._delve_battle_snapshot(run, partner_map),
                 "leader": partner_map.get(run.leader_partner_id),
                 "stamina_discount_rate": self._exploration_discount_rate(run.exploration_ability),
                 "pending_rewards": [self._result_snapshot(reward) for reward in run.pending_rewards],
@@ -5776,6 +6309,9 @@ class GameService:
                     "quality_sale_multiplier": grade.sale_multiplier if grade else 1,
                     "base_sell_price": base_sell_price,
                     "sell_price": self._quality_unit_price(base_sell_price, quality),
+                    # 探秘副本的编队面板要按槽位筛装备、按可用性筛道具。
+                    "equipment": item.equipment.model_dump() if item and item.equipment else None,
+                    "delve_use": item.delve_use.model_dump() if item and item.delve_use else None,
                 })
         partner_records = self._partner_snapshots(player, now)
         partner_map = {entry["partner_id"]: entry for entry in partner_records}
