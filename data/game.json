@@ -973,7 +973,7 @@
       "name": "赤铜大剑",
       "icon": "sword",
       "kind": "equipment",
-      "sell_price": 900,
+      "sell_price": 200,
       "has_quality": false,
       "tags": [
         "exploration_equipment"
@@ -990,7 +990,7 @@
       "name": "月银短剑",
       "icon": "swords",
       "kind": "equipment",
-      "sell_price": 1100,
+      "sell_price": 200,
       "has_quality": false,
       "tags": [
         "exploration_equipment"
@@ -1009,7 +1009,7 @@
       "name": "枫火之书",
       "icon": "book-open",
       "kind": "equipment",
-      "sell_price": 1200,
+      "sell_price": 200,
       "has_quality": false,
       "tags": [
         "exploration_equipment"
@@ -1604,16 +1604,15 @@
       ]
     },
     {
-      "id": "moonfall_hollow",
+      "id": "spiritfruit_meadow",
       "kind": "delve",
-      "beta": true,
-      "name": "月落矿脉",
-      "description": "月石深洞往下还有一条没人走完的矿脉。带齐装备和药，三个人一起下去。",
-      "accent": "#6f7fb0",
+      "name": "灵果草甸",
+      "description": "秋露草场再往西是一片没人管的草甸，深处长着魔力树。想采果子，得先过草里那些东西这一关。",
+      "accent": "#7fae6a",
       "min_level": 10,
       "entry_fee": 2500,
       "max_depth": 8,
-      "final_event_id": "warden_chamber",
+      "final_event_id": "warden_grove",
       "quality": {
         "thresholds": [
           50.0,
@@ -1627,9 +1626,9 @@
       },
       "events": [
         {
-          "id": "gnawer_ambush",
-          "name": "岩隙伏击",
-          "description": "碎石堆里窜出几只啃岩鼠，挡在唯一的下行通道上。",
+          "id": "nibbler_ambush",
+          "name": "田鼠伏击",
+          "description": "落果堆里窜出几只田鼠，挡在唯一一条踩平的草道上。",
           "min_depth": 1,
           "max_depth": 6,
           "weight": 3.0,
@@ -1638,22 +1637,22 @@
             {
               "id": "fight",
               "label": "正面清理",
-              "description": "打散它们，顺手扒下能用的矿屑。",
+              "description": "打散它们，顺手把窝里的草料捆走。",
               "route_stamina": 2,
               "action_stamina": 2,
               "battle": {
                 "enemy_ids": [
-                  "stone_gnawer",
-                  "stone_gnawer"
+                  "meadow_nibbler",
+                  "meadow_nibbler"
                 ],
                 "can_flee": true,
                 "flee_dc": 11
               },
               "success": {
-                "text": "洞鼠四散逃开，队伍在窝里翻出一批矿屑。",
+                "text": "田鼠四散钻回草里，队伍从窝里拖出一大捆牧草。",
                 "rewards": [
                   {
-                    "item_id": "red_copper_ore",
+                    "item_id": "tough_fodder",
                     "quantity_min": 6,
                     "quantity_max": 10
                   }
@@ -1661,8 +1660,8 @@
               }
             },
             {
-              "id": "squeeze_past",
-              "label": "从侧缝挤过去",
+              "id": "skirt_the_grass",
+              "label": "从草丛绕过去",
               "description": "不打，赌一手身法，失败会多耗体力。",
               "route_stamina": 3,
               "action_stamina": 2,
@@ -1673,80 +1672,80 @@
                 "dc": 12
               },
               "success": {
-                "text": "队伍贴着岩缝绕过了鼠群。"
+                "text": "队伍压着草棵绕开了鼠群。"
               },
               "failure": {
-                "text": "半路踩塌了碎石，队伍退回来重找路线。",
+                "text": "半路踩空了鼠洞，队伍退回来重找路线。",
                 "stamina_surcharge": 3
               }
             }
           ]
         },
         {
-          "id": "moth_hollow",
-          "name": "磷光蛾群",
-          "description": "一片发着冷光的蛾子贴着顶壁盘旋，鳞粉呛得人睁不开眼。",
+          "id": "wasp_swarm",
+          "name": "蜜刺蜂群",
+          "description": "一片草花上悬着蜂群，鼓着翅膀不肯让路。",
           "min_depth": 2,
           "max_depth": 6,
           "weight": 2.0,
           "max_occurrences": 2,
           "choices": [
             {
-              "id": "burn_them",
-              "label": "驱散蛾群",
-              "description": "把它们打下来，鳞粉本身也是药材。",
+              "id": "drive_them_off",
+              "label": "驱散蜂群",
+              "description": "打下来，蜂群守着的花草本身也是药材。",
               "route_stamina": 2,
               "action_stamina": 2,
               "battle": {
                 "enemy_ids": [
-                  "glow_moth",
-                  "glow_moth",
-                  "glow_moth"
+                  "pollen_wasp",
+                  "pollen_wasp",
+                  "pollen_wasp"
                 ],
                 "can_flee": true,
                 "flee_dc": 13
               },
               "success": {
-                "text": "最后一只蛾子落地，队伍收起了满地的磷粉与苔屑。",
+                "text": "最后一只蜂落进草里，队伍连着花茎一起收了。",
                 "rewards": [
                   {
-                    "item_id": "silver_star_moss",
+                    "item_id": "autumn_herb",
                     "quantity_min": 3,
                     "quantity_max": 6
                   },
                   {
-                    "item_id": "autumn_herb",
-                    "quantity_min": 2,
-                    "quantity_max": 4
+                    "item_id": "silver_star_moss",
+                    "quantity_min": 1,
+                    "quantity_max": 3
                   }
                 ]
               }
             },
             {
               "id": "wait_out",
-              "label": "熄灯等它们散",
+              "label": "等它们回巢",
               "description": "多花时间，但绝对安全。",
               "route_stamina": 5,
               "action_stamina": 1,
               "success": {
-                "text": "队伍灭掉灯，靠在岩壁上等蛾群自己散去。"
+                "text": "队伍蹲在下风口，等蜂群自己散回巢。"
               }
             }
           ]
         },
         {
-          "id": "crystal_vein",
-          "name": "晶簇矿脉",
-          "description": "岩壁上凝着一层月银晶簇，敲得准才不会碎在里面。",
+          "id": "fruit_thicket",
+          "name": "垂果灌丛",
+          "description": "一丛压得很低的魔力树枝，果子熟没熟只能靠看。",
           "min_depth": 1,
           "max_depth": 7,
           "weight": 2.5,
           "max_occurrences": 3,
           "choices": [
             {
-              "id": "read_the_grain",
-              "label": "读纹路下凿",
-              "description": "看准晶簇走向，成功能取到完整的原石。",
+              "id": "read_the_ripeness",
+              "label": "看准熟果下手",
+              "description": "挑熟的那几串摘，运气好能摘到带籽的整果。",
               "route_stamina": 2,
               "action_stamina": 3,
               "check": {
@@ -1756,10 +1755,10 @@
                 "dc": 13
               },
               "success": {
-                "text": "顺着纹路一凿到底，整块月银原石落进了背篓。",
+                "text": "熟的那几串都摘了下来，枝底下的草也一并割走。",
                 "rewards": [
                   {
-                    "item_id": "moon_silver_ore",
+                    "item_id": "tough_fodder",
                     "quantity_min": 5,
                     "quantity_max": 9
                   }
@@ -1767,10 +1766,10 @@
                 "quality_ability_bonus": 12
               },
               "critical_success": {
-                "text": "凿口正落在晶簇的解理面上，几乎没有损耗。",
+                "text": "有一颗熟透的桃桃果自己落进手里，籽还是完整的。",
                 "rewards": [
                   {
-                    "item_id": "moon_silver_ore",
+                    "item_id": "tough_fodder",
                     "quantity_min": 9,
                     "quantity_max": 13
                   },
@@ -1780,23 +1779,29 @@
                     "quantity_max": 3
                   }
                 ],
+                "fixed_rewards": [
+                  {
+                    "item_id": "peach_berry_seed",
+                    "quantity": 1
+                  }
+                ],
                 "quality_ability_bonus": 30
               },
               "failure": {
-                "text": "晶簇从中间碎开，只剩些边角料。",
+                "text": "手劲没收住，半数果子摔在了地上。",
                 "rewards": [
                   {
-                    "item_id": "moon_silver_ore",
+                    "item_id": "tough_fodder",
                     "quantity_min": 2,
                     "quantity_max": 4
                   }
                 ]
               },
               "critical_failure": {
-                "text": "整片晶簇塌进岩缝，队伍只抢出一小把碎渣。",
+                "text": "整根枝条被拽断，果子滚进草缝里再没找回来。",
                 "rewards": [
                   {
-                    "item_id": "moon_silver_ore",
+                    "item_id": "tough_fodder",
                     "quantity_min": 1,
                     "quantity_max": 2
                   }
@@ -1805,16 +1810,16 @@
               }
             },
             {
-              "id": "hack_it_out",
-              "label": "直接砸下来",
-              "description": "不做判断，稳拿一批赤铜矿。",
+              "id": "shake_the_branch",
+              "label": "直接摇枝",
+              "description": "不做判断，稳拿一批牧草。",
               "route_stamina": 2,
               "action_stamina": 3,
               "success": {
-                "text": "队伍把整片岩面砸下来，晶簇碎了，底下的赤铜倒是不少。",
+                "text": "队伍把枝条摇了个遍，果子没落几个，牧草倒是割了一大捆。",
                 "rewards": [
                   {
-                    "item_id": "red_copper_ore",
+                    "item_id": "tough_fodder",
                     "quantity_min": 8,
                     "quantity_max": 12
                   }
@@ -1824,32 +1829,32 @@
           ]
         },
         {
-          "id": "lurker_narrows",
-          "name": "潜伏者窄道",
-          "description": "窄道两侧的岩缝里伸出细长的足肢，已经等了很久。",
+          "id": "bramble_hollow",
+          "name": "伏草凹地",
+          "description": "凹地里的草长得比人高，草茎之间挂着新结的网。",
           "min_depth": 3,
           "max_depth": 7,
           "weight": 2.0,
           "max_occurrences": 2,
           "choices": [
             {
-              "id": "clear_narrows",
-              "label": "拔掉它",
-              "description": "窄道里没法绕，只能打。",
+              "id": "clear_the_web",
+              "label": "拆掉它",
+              "description": "凹地里没法绕，只能打。",
               "route_stamina": 2,
               "action_stamina": 3,
               "battle": {
                 "enemy_ids": [
-                  "cave_lurker"
+                  "grass_lurker"
                 ],
                 "can_flee": false,
                 "flee_dc": 15
               },
               "success": {
-                "text": "潜伏者缩回岩缝再没出来，窄道后面是一段干燥的矿道。",
+                "text": "蜘蛛缩回草底再没出来，凹地那头是一片干爽的草坡。",
                 "rewards": [
                   {
-                    "item_id": "moon_silver_ore",
+                    "item_id": "tough_fodder",
                     "quantity_min": 4,
                     "quantity_max": 7
                   },
@@ -1864,9 +1869,9 @@
           ]
         },
         {
-          "id": "abandoned_camp",
-          "name": "废弃营地",
-          "description": "前人留下的宿营点，火塘早就凉了，行囊还堆在角落。",
+          "id": "herder_shelter",
+          "name": "牧人旧棚",
+          "description": "早年放牧留下的草棚，火塘早就凉了，行囊还堆在角落。",
           "min_depth": 3,
           "max_depth": 7,
           "weight": 1.5,
@@ -1927,16 +1932,16 @@
                 ]
               },
               "critical_failure": {
-                "text": "行囊塌下去带起一片尘，什么都没剩下。",
+                "text": "草棚塌下去带起一片尘，什么都没剩下。",
                 "stamina_surcharge": 2
               }
             }
           ]
         },
         {
-          "id": "sentinel_gate",
-          "name": "石偶回廊",
-          "description": "回廊两侧立着几尊石偶，队伍走到一半，其中一尊转过了头。",
+          "id": "briar_row",
+          "name": "荆藤木桩",
+          "description": "草甸上立着一排缠满荆藤的旧木桩，队伍走到一半，其中一根动了。",
           "min_depth": 4,
           "max_depth": 7,
           "weight": 2.0,
@@ -1945,21 +1950,21 @@
             {
               "id": "break_it",
               "label": "打碎它",
-              "description": "石偶很硬，但碎块里嵌着不少月银。",
+              "description": "木桩很硬，但缠在里面的牧草成色极好。",
               "route_stamina": 2,
               "action_stamina": 3,
               "battle": {
                 "enemy_ids": [
-                  "stone_sentinel"
+                  "briar_sentinel"
                 ],
                 "can_flee": true,
                 "flee_dc": 14
               },
               "success": {
-                "text": "石偶碎成一地，胸腔的位置嵌着一块成色极好的月银。",
+                "text": "木桩散成一地荆条，缠在中间的那捆牧草一点没蔫。",
                 "rewards": [
                   {
-                    "item_id": "moon_silver_ore",
+                    "item_id": "tough_fodder",
                     "quantity_min": 8,
                     "quantity_max": 12
                   }
@@ -1969,8 +1974,8 @@
             },
             {
               "id": "slip_by",
-              "label": "贴墙溜过去",
-              "description": "石偶转身很慢，走位准就能过。",
+              "label": "贴着草沟溜过去",
+              "description": "木桩转身很慢，走位准就能过。",
               "route_stamina": 3,
               "action_stamina": 2,
               "check": {
@@ -1980,19 +1985,182 @@
                 "dc": 14
               },
               "success": {
-                "text": "队伍贴着立柱走完回廊，石偶始终没有转过来。"
+                "text": "队伍沿着草沟走完这一段，木桩始终没有转过来。"
               },
               "failure": {
-                "text": "石偶抬手扫了过来，队伍连滚带爬冲出回廊。",
+                "text": "荆藤横扫过来，队伍连滚带爬冲出了木桩阵。",
                 "stamina_surcharge": 4
               }
             }
           ]
         },
         {
-          "id": "warden_chamber",
-          "name": "月纹守卫",
-          "description": "矿脉尽头是一间圆形石室，月银原核悬在中央，守卫已经站了起来。",
+          "id": "mana_sapling",
+          "name": "魔力幼树",
+          "description": "草里立着一株半人高的幼树，枝头挂着两种颜色的果。",
+          "min_depth": 4,
+          "max_depth": 7,
+          "weight": 2.0,
+          "max_occurrences": 1,
+          "choices": [
+            {
+              "id": "pick_the_seed",
+              "label": "摘一颗桃桃果留种",
+              "description": "带籽的果子才留得住，全看摘的时候准不准。",
+              "route_stamina": 2,
+              "action_stamina": 3,
+              "check": {
+                "attribute": "luck",
+                "mode": "best",
+                "dice": "normal",
+                "dc": 13
+              },
+              "success": {
+                "text": "摘下来的桃桃果压手，籽饱满得能直接下地。",
+                "rewards": [
+                  {
+                    "item_id": "tough_fodder",
+                    "quantity_min": 3,
+                    "quantity_max": 6
+                  }
+                ],
+                "fixed_rewards": [
+                  {
+                    "item_id": "peach_berry_seed",
+                    "quantity": 1
+                  }
+                ]
+              },
+              "critical_success": {
+                "text": "枝头最里侧那颗莓莓果居然也熟了，连旁边的桃桃果一起收进了布袋。",
+                "rewards": [
+                  {
+                    "item_id": "tough_fodder",
+                    "quantity_min": 4,
+                    "quantity_max": 8
+                  },
+                  {
+                    "item_id": "silver_star_moss",
+                    "quantity_min": 2,
+                    "quantity_max": 4
+                  }
+                ],
+                "fixed_rewards": [
+                  {
+                    "item_id": "berry_berry_seed",
+                    "quantity": 1
+                  },
+                  {
+                    "item_id": "peach_berry_seed",
+                    "quantity": 1
+                  }
+                ],
+                "quality_ability_bonus": 20
+              },
+              "failure": {
+                "text": "果子摘早了，籽还是软的，只好当草药收着。",
+                "rewards": [
+                  {
+                    "item_id": "autumn_herb",
+                    "quantity_min": 2,
+                    "quantity_max": 4
+                  },
+                  {
+                    "item_id": "silver_star_moss",
+                    "quantity_min": 1,
+                    "quantity_max": 2
+                  }
+                ]
+              },
+              "critical_failure": {
+                "text": "手一抖压折了整根枝条，幼树只剩下叶子。",
+                "rewards": [
+                  {
+                    "item_id": "tough_fodder",
+                    "quantity_min": 1,
+                    "quantity_max": 2
+                  }
+                ],
+                "stamina_surcharge": 2
+              }
+            },
+            {
+              "id": "dig_the_berry",
+              "label": "连根起那株莓莓",
+              "description": "莓莓果的籽留不住，只能连根挖。判断不准整株就废了。",
+              "route_stamina": 2,
+              "action_stamina": 4,
+              "check": {
+                "attribute": "intelligence",
+                "mode": "best",
+                "dice": "normal",
+                "dc": 16
+              },
+              "success": {
+                "text": "根团一整块起了出来，最上面那颗莓莓果的籽还连在枝上。",
+                "rewards": [
+                  {
+                    "item_id": "silver_star_moss",
+                    "quantity_min": 2,
+                    "quantity_max": 4
+                  }
+                ],
+                "fixed_rewards": [
+                  {
+                    "item_id": "berry_berry_seed",
+                    "quantity": 1
+                  }
+                ],
+                "quality_ability_bonus": 12
+              },
+              "critical_success": {
+                "text": "整株幼树被完好地起了出来，两种果子的籽都留住了。",
+                "rewards": [
+                  {
+                    "item_id": "silver_star_moss",
+                    "quantity_min": 3,
+                    "quantity_max": 6
+                  },
+                  {
+                    "item_id": "tough_fodder",
+                    "quantity_min": 4,
+                    "quantity_max": 8
+                  }
+                ],
+                "fixed_rewards": [
+                  {
+                    "item_id": "berry_berry_seed",
+                    "quantity": 1
+                  },
+                  {
+                    "item_id": "peach_berry_seed",
+                    "quantity": 1
+                  }
+                ],
+                "quality_ability_bonus": 30
+              },
+              "failure": {
+                "text": "根断在了土里，只抢下几株缠在根上的草药。",
+                "rewards": [
+                  {
+                    "item_id": "autumn_herb",
+                    "quantity_min": 2,
+                    "quantity_max": 4
+                  }
+                ],
+                "stamina_surcharge": 2
+              },
+              "critical_failure": {
+                "text": "整株幼树从中间折断，队伍在土里翻了半天什么也没剩下。",
+                "stamina_surcharge": 3
+              }
+            }
+          ]
+        },
+        {
+          "id": "warden_grove",
+          "name": "守望者树心",
+          "description": "草甸尽头是一圈老魔力树，果心悬在正中，守望者已经从根里站了起来。",
           "min_depth": 8,
           "max_depth": 8,
           "weight": 1.0,
@@ -2000,22 +2168,22 @@
           "choices": [
             {
               "id": "challenge_warden",
-              "label": "挑战守卫",
-              "description": "打赢它，原核就是队伍的。",
+              "label": "挑战守望者",
+              "description": "打赢它，果心就是队伍的。",
               "route_stamina": 2,
               "action_stamina": 4,
               "battle": {
                 "enemy_ids": [
-                  "moonlit_warden"
+                  "fruitheart_warden"
                 ],
                 "can_flee": false,
                 "flee_dc": 20
               },
               "success": {
-                "text": "守卫的月纹一寸寸熄灭，原核落进了队伍手里。",
+                "text": "守望者身上的藤一寸寸松开，果心落进了队伍手里，里面裹着一枚桃桃果的籽。",
                 "rewards": [
                   {
-                    "item_id": "moon_silver_ore",
+                    "item_id": "tough_fodder",
                     "quantity_min": 18,
                     "quantity_max": 26
                   },
@@ -2029,6 +2197,10 @@
                   {
                     "item_id": "hunters_charm",
                     "quantity": 1
+                  },
+                  {
+                    "item_id": "peach_berry_seed",
+                    "quantity": 1
                   }
                 ],
                 "quality_ability_bonus": 40
@@ -2041,10 +2213,10 @@
   ],
   "delve_enemies": [
     {
-      "id": "stone_gnawer",
-      "name": "啃岩鼠",
+      "id": "meadow_nibbler",
+      "name": "啃果田鼠",
       "icon": "rat",
-      "description": "成群结队啃食矿脉的洞鼠，单只不算威胁。",
+      "description": "成群跑来啃落果的田鼠，单只不算威胁。",
       "max_hp": 22,
       "armor_class": 11,
       "initiative_bonus": 2,
@@ -2057,16 +2229,16 @@
       ]
     },
     {
-      "id": "glow_moth",
-      "name": "磷光蛾",
+      "id": "pollen_wasp",
+      "name": "蜜刺蜂",
       "icon": "bug",
-      "description": "翅上带着磷粉，扑面时让人睁不开眼。",
+      "description": "护着蜜囊的草原蜂，被惊动就整群扑上来。",
       "max_hp": 15,
       "armor_class": 13,
       "initiative_bonus": 4,
       "attacks": [
         {
-          "name": "磷粉",
+          "name": "蜇刺",
           "to_hit": 4,
           "damage_dice": "1d4",
           "damage_bonus": 1
@@ -2074,16 +2246,16 @@
       ]
     },
     {
-      "id": "cave_lurker",
-      "name": "岩隙潜伏者",
+      "id": "grass_lurker",
+      "name": "伏草蛛",
       "icon": "spider",
-      "description": "贴着岩壁等猎物走近的长足生物。",
+      "description": "把网结在草茎之间的长足蜘蛛，等的就是有人踩进去。",
       "max_hp": 34,
       "armor_class": 12,
       "initiative_bonus": 1,
       "attacks": [
         {
-          "name": "突刺",
+          "name": "突袭",
           "to_hit": 4,
           "damage_dice": "1d8",
           "damage_bonus": 1
@@ -2091,39 +2263,39 @@
       ]
     },
     {
-      "id": "stone_sentinel",
-      "name": "岩石哨兵",
+      "id": "briar_sentinel",
+      "name": "藤桩守卫",
       "icon": "shield-alert",
-      "description": "矿脉深处自行立起的石偶，动作迟缓但沉重。",
+      "description": "缠满荆藤的旧木桩，有人靠近魔力树时会自己立起来。",
       "max_hp": 50,
       "armor_class": 15,
       "initiative_bonus": -1,
       "attacks": [
         {
-          "name": "碾压",
+          "name": "藤鞭抽击",
           "to_hit": 5,
           "damage_dice": "1d10"
         }
       ]
     },
     {
-      "id": "moonlit_warden",
-      "name": "月纹守卫",
+      "id": "fruitheart_warden",
+      "name": "果心守望者",
       "icon": "crown",
-      "description": "刻满月纹的高大石像，守着矿脉尽头的月银原核。",
+      "description": "从老魔力树根里长出来的守望者，胸腔的位置嵌着一枚还在发亮的果心。",
       "max_hp": 88,
       "armor_class": 15,
       "initiative_bonus": 2,
       "boss": true,
       "attacks": [
         {
-          "name": "月刃横扫",
+          "name": "藤鞭横扫",
           "to_hit": 6,
           "damage_dice": "1d10",
           "damage_bonus": 2
         },
         {
-          "name": "震地",
+          "name": "落果震地",
           "to_hit": 5,
           "damage_dice": "2d6"
         }
@@ -2688,6 +2860,125 @@
           "level": 8
         }
       }
+    },
+    {
+      "id": "forge_red_copper_greatsword",
+      "station_id": "town_workbench",
+      "name": "锻造赤铜大剑",
+      "inputs": [
+        {
+          "item_id": "red_copper_ore",
+          "quantity": 20
+        }
+      ],
+      "produce_item_id": "red_copper_greatsword",
+      "produce_quantity": 1,
+      "duration_seconds": 600,
+      "time_difficulty": 200,
+      "stamina_cost": 5,
+      "collect_xp": 30,
+      "tags": [
+        "exploration_equipment"
+      ],
+      "quality": {
+        "thresholds": [
+          65.0,
+          120.0,
+          190.0,
+          280.0
+        ],
+        "width": 20.0,
+        "miracle_probability_cap": 0.003,
+        "miracle_eligible": false
+      },
+      "unlock_condition": {
+        "hook": "player_level",
+        "params": {
+          "level": 10
+        }
+      }
+    },
+    {
+      "id": "forge_moon_silver_dagger",
+      "station_id": "town_workbench",
+      "name": "锻造月银短剑",
+      "inputs": [
+        {
+          "item_id": "moon_silver_ore",
+          "quantity": 10
+        }
+      ],
+      "produce_item_id": "moon_silver_dagger",
+      "produce_quantity": 1,
+      "duration_seconds": 600,
+      "time_difficulty": 200,
+      "stamina_cost": 5,
+      "collect_xp": 30,
+      "tags": [
+        "exploration_equipment"
+      ],
+      "quality": {
+        "thresholds": [
+          65.0,
+          120.0,
+          190.0,
+          280.0
+        ],
+        "width": 20.0,
+        "miracle_probability_cap": 0.003,
+        "miracle_eligible": false
+      },
+      "unlock_condition": {
+        "hook": "player_level",
+        "params": {
+          "level": 10
+        }
+      }
+    },
+    {
+      "id": "bind_maple_flame_tome",
+      "station_id": "town_workbench",
+      "name": "装订枫火之书",
+      "inputs": [
+        {
+          "item_id": "maple_wood",
+          "quantity": 10
+        },
+        {
+          "item_id": "maple_resin",
+          "quantity": 3
+        },
+        {
+          "item_id": "amber_beeswax",
+          "quantity": 1
+        }
+      ],
+      "produce_item_id": "maple_flame_tome",
+      "produce_quantity": 1,
+      "duration_seconds": 600,
+      "time_difficulty": 200,
+      "stamina_cost": 5,
+      "collect_xp": 30,
+      "tags": [
+        "exploration_equipment"
+      ],
+      "quality": {
+        "thresholds": [
+          65.0,
+          120.0,
+          190.0,
+          280.0
+        ],
+        "width": 20.0,
+        "miracle_probability_cap": 0.003,
+        "miracle_eligible": false
+      },
+      "unlock_condition": {
+        "hook": "player_level",
+        "params": {
+          "level": 10
+        }
+      }
     }
   ],
   "mining_sites": [
@@ -2978,6 +3269,177 @@
           "id": "first_gate_amber_beeswax",
           "item_id": "amber_beeswax",
           "quantity": 3,
+          "min_quality": 0,
+          "reward": {
+            "coins": 0,
+            "experience": 0,
+            "talent_points": 0,
+            "maple_flame": 150,
+            "guide_leaves": 0,
+            "items": [],
+            "partner_ids": []
+          }
+        }
+      ],
+      "completion_reward": {
+        "coins": 0,
+        "experience": 0,
+        "talent_points": 0,
+        "maple_flame": 0,
+        "guide_leaves": 10,
+        "items": [],
+        "partner_ids": []
+      }
+    },
+    {
+      "id": "second_gate",
+      "name": "第二传送门",
+      "description": "草甸边上又立起一座门，锈得比第一座还厉害。开口第一句还是要贡品。",
+      "accent": "#a683d8",
+      "min_level": 12,
+      "prerequisites": [
+        "first_gate"
+      ],
+      "tributes": [
+        {
+          "id": "second_gate_egg",
+          "item_id": "egg",
+          "quantity": 5,
+          "min_quality": 2,
+          "reward": {
+            "coins": 0,
+            "experience": 0,
+            "talent_points": 0,
+            "maple_flame": 150,
+            "guide_leaves": 0,
+            "items": [],
+            "partner_ids": []
+          }
+        },
+        {
+          "id": "second_gate_pumpkin",
+          "item_id": "pumpkin",
+          "quantity": 5,
+          "min_quality": 3,
+          "reward": {
+            "coins": 0,
+            "experience": 0,
+            "talent_points": 0,
+            "maple_flame": 150,
+            "guide_leaves": 0,
+            "items": [],
+            "partner_ids": []
+          }
+        },
+        {
+          "id": "second_gate_milk",
+          "item_id": "milk",
+          "quantity": 5,
+          "min_quality": 0,
+          "reward": {
+            "coins": 0,
+            "experience": 0,
+            "talent_points": 0,
+            "maple_flame": 150,
+            "guide_leaves": 0,
+            "items": [],
+            "partner_ids": []
+          }
+        },
+        {
+          "id": "second_gate_pond_crucian",
+          "item_id": "pond_crucian",
+          "quantity": 5,
+          "min_quality": 3,
+          "reward": {
+            "coins": 0,
+            "experience": 0,
+            "talent_points": 0,
+            "maple_flame": 150,
+            "guide_leaves": 0,
+            "items": [],
+            "partner_ids": []
+          }
+        },
+        {
+          "id": "second_gate_silver_star_moss",
+          "item_id": "silver_star_moss",
+          "quantity": 3,
+          "min_quality": 0,
+          "reward": {
+            "coins": 0,
+            "experience": 0,
+            "talent_points": 0,
+            "maple_flame": 150,
+            "guide_leaves": 0,
+            "items": [],
+            "partner_ids": []
+          }
+        },
+        {
+          "id": "second_gate_giant_stream_carp",
+          "item_id": "giant_stream_carp",
+          "quantity": 1,
+          "min_quality": 0,
+          "reward": {
+            "coins": 0,
+            "experience": 0,
+            "talent_points": 0,
+            "maple_flame": 150,
+            "guide_leaves": 0,
+            "items": [],
+            "partner_ids": []
+          }
+        },
+        {
+          "id": "second_gate_refined_fodder",
+          "item_id": "refined_fodder",
+          "quantity": 10,
+          "min_quality": 0,
+          "reward": {
+            "coins": 0,
+            "experience": 0,
+            "talent_points": 0,
+            "maple_flame": 150,
+            "guide_leaves": 0,
+            "items": [],
+            "partner_ids": []
+          }
+        },
+        {
+          "id": "second_gate_peach_berry",
+          "item_id": "peach_berry",
+          "quantity": 1,
+          "min_quality": 0,
+          "reward": {
+            "coins": 0,
+            "experience": 0,
+            "talent_points": 0,
+            "maple_flame": 150,
+            "guide_leaves": 0,
+            "items": [],
+            "partner_ids": []
+          }
+        },
+        {
+          "id": "second_gate_partner_notes_large",
+          "item_id": "partner_notes_large",
+          "quantity": 1,
+          "min_quality": 0,
+          "reward": {
+            "coins": 0,
+            "experience": 0,
+            "talent_points": 0,
+            "maple_flame": 150,
+            "guide_leaves": 0,
+            "items": [],
+            "partner_ids": []
+          }
+        },
+        {
+          "id": "second_gate_hunters_charm",
+          "item_id": "hunters_charm",
+          "quantity": 1,
           "min_quality": 0,
           "reward": {
             "coins": 0,

@@ -53,7 +53,7 @@ class SteadyRandom(random.Random):
 
 
 @pytest.fixture
-def delve_game(monkeypatch):
+def delve_game():
     content = load_content()
     repository = InMemoryPlayerRepository(content)
     catalog = PartnerCatalog(partners=[
@@ -71,7 +71,6 @@ def delve_game(monkeypatch):
     player = service.ensure_player("delve-sub", "探秘测试员")
     for partner_id in PARTY:
         service.admin_grant_partner(player.player_id, partner_id)
-    monkeypatch.setenv("RED_LEAF_TOWN_BETA_PLAYERS", player.player_id)
 
     def prepare(state):
         state.experience = next(entry.total_xp for entry in content.levels if entry.level == 16)
@@ -96,7 +95,7 @@ def start(service, **overrides):
         "carried_items": [{"item_id": "herbal_salve", "quality": 2, "quantity": 2}],
     }
     payload.update(overrides)
-    return service.start_exploration("delve-sub", "moonfall_hollow", list(PARTY), "leader", **payload)
+    return service.start_exploration("delve-sub", "spiritfruit_meadow", list(PARTY), "leader", **payload)
 
 
 def battle_choice(run) -> str:
@@ -127,7 +126,7 @@ def test_delve_requires_a_full_party_and_freezes_gear_and_items(delve_game):
     service, repository, player = delve_game
 
     with pytest.raises(GameError, match="正好 3 名伙伴"):
-        service.start_exploration("delve-sub", "moonfall_hollow", ["leader", "scout"], "leader")
+        service.start_exploration("delve-sub", "spiritfruit_meadow", ["leader", "scout"], "leader")
 
     started = start(service)
     run = started["state"]["exploration"]["active_run"]
@@ -205,7 +204,7 @@ def test_a_wipe_loses_every_frozen_reward_and_ends_the_run(delve_game):
 
     assert state["exploration"]["active_run"] is None
     saved = repository.get(player.player_id)
-    assert not saved.inventory.get("moon_silver_ore")
+    assert not saved.inventory.get("tough_fodder")
     # 装备没有被消耗，带进去的药膏则跟着战利品一起没了。
     assert saved.inventory["red_copper_greatsword"][0] == 2
     assert saved.inventory["herbal_salve"][2] == 1
@@ -279,3 +278,60 @@ def test_schema_thirty_gives_older_runs_empty_delve_state():
     assert migrated.exploration_run.combat_party == {}
     assert migrated.exploration_run.carried_items == []
     assert migrated.exploration_run.pending_fixed_rewards == []
+
+
+def outcomes_of(expedition):
+    for event in expedition.events:
+        for choice in event.choices:
+            for outcome in (choice.success, choice.failure, choice.critical_success, choice.critical_failure):
+                if outcome is not None:
+                    yield event, choice, outcome
+
+
+def test_the_meadow_only_drops_grass_moss_herb_and_tree_seeds():
+    expedition = load_content().exploration_expedition_map["spiritfruit_meadow"]
+
+    assert expedition.kind == "delve"
+    assert expedition.beta is False
+    assert (expedition.min_level, expedition.entry_fee, expedition.max_depth) == (10, 2500, 8)
+
+    materials = {reward.item_id for _, _, outcome in outcomes_of(expedition) for reward in outcome.rewards}
+    fixed = {reward.item_id for _, _, outcome in outcomes_of(expedition) for reward in outcome.fixed_rewards}
+
+    assert materials == {"tough_fodder", "silver_star_moss", "autumn_herb"}
+    assert fixed == {"peach_berry_seed", "berry_berry_seed", "ironwood_bracer", "moonlit_pendant", "hunters_charm"}
+
+
+def test_tree_fruit_seeds_only_drop_off_rare_branches_and_the_boss():
+    expedition = load_content().exploration_expedition_map["spiritfruit_meadow"]
+    sources: dict[str, set[str]] = {"peach_berry_seed": set(), "berry_berry_seed": set()}
+    for event, choice, outcome in outcomes_of(expedition):
+        for reward in outcome.fixed_rewards:
+            if reward.item_id in sources:
+                degree = "critical_success" if outcome is choice.critical_success else "success"
+                sources[reward.item_id].add(f"{event.id}:{choice.id}:{degree}" if event.id == "mana_sapling" else f"{event.id}:{degree}")
+
+    # 桃桃果种子：灌丛大成功、幼树摘果、打完 BOSS 保底一颗。
+    assert sources["peach_berry_seed"] == {
+        "fruit_thicket:critical_success",
+        "mana_sapling:pick_the_seed:success",
+        "mana_sapling:pick_the_seed:critical_success",
+        "mana_sapling:dig_the_berry:critical_success",
+        "warden_grove:success",
+    }
+    # 莓莓果种子只有幼树这一处：起根成功，或者摘果时撞上大成功。
+    assert sources["berry_berry_seed"] == {
+        "mana_sapling:pick_the_seed:critical_success",
+        "mana_sapling:dig_the_berry:success",
+        "mana_sapling:dig_the_berry:critical_success",
+    }
+
+
+def test_the_boss_hands_over_the_hunters_charm_the_second_gate_asks_for():
+    content = load_content()
+    boss_fight = content.exploration_expedition_map["spiritfruit_meadow"].event_map["warden_grove"].choices[0]
+
+    assert [enemy for enemy in boss_fight.battle.enemy_ids] == ["fruitheart_warden"]
+    assert boss_fight.battle.can_flee is False
+    assert content.delve_enemy_map["fruitheart_warden"].boss is True
+    assert [reward.item_id for reward in boss_fight.success.fixed_rewards] == ["hunters_charm", "peach_berry_seed"]

@@ -193,7 +193,8 @@ class ProductionTaskSnapshot(BaseModel):
 class ProductionResultSnapshot(BaseModel):
     item_id: str = Field(min_length=1)
     quantity: int = Field(ge=1)
-    quality: int = Field(ge=1, le=5)
+    # 0 表示这件产物不进品质系统（加工出来的装备），1~5 是正常的五档。
+    quality: int = Field(ge=0, le=5)
     resolved_at: int = Field(ge=0)
 
 
@@ -493,7 +494,7 @@ class PortalTributeProgress(BaseModel):
 
 class PortalProgressState(BaseModel):
     portal_id: str = Field(min_length=1)
-    tributes: list[PortalTributeProgress] = Field(default_factory=list, max_length=8)
+    tributes: list[PortalTributeProgress] = Field(default_factory=list, max_length=12)
     completed_at: int = Field(default=0, ge=0)
 
     @model_validator(mode="after")

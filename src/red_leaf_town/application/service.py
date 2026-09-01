@@ -7092,13 +7092,25 @@ class GameService:
         else:
             return
         quantity = self.rng.randint(yield_min, yield_max)
-        production_slot.task_results = build_results(
+        results = build_results(
             self.rng,
             [(item_id, quantity)],
             probabilities,
             now,
             task.applied_effects if task else (),
         )
+        item = self.content.item_map.get(item_id)
+        if item is not None and not item.has_quality:
+            # 无品质产物（加工出来的装备）掷出来的品质不作数，统一收敛到 0 号格。
+            results = [
+                ProductionResultSnapshot(
+                    item_id=item_id,
+                    quantity=sum(result.quantity for result in results),
+                    quality=0,
+                    resolved_at=now,
+                )
+            ]
+        production_slot.task_results = results
 
     def _resolve_gathering_outputs(self, site: GatheringSiteState, now: int) -> None:
         task = site.task_snapshot
@@ -7136,7 +7148,7 @@ class GameService:
         item = self.content.item_map.get(result.item_id)
         return {
             **result.model_dump(),
-            "quality_name": QUALITY_NAMES[result.quality],
+            "quality_name": QUALITY_NAMES.get(result.quality),
             "item": item.model_dump() if item else None,
         }
 

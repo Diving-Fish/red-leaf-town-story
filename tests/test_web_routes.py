@@ -239,6 +239,8 @@ async def test_hidden_transport_exploration_api_starts_resolves_and_withdraws(cl
 async def test_delve_api_gates_on_the_beta_list_and_runs_a_battle_turn(client, service, monkeypatch):
     from red_leaf_town.domain.economy import add_item
 
+    # 灵果草甸已经外放，这里临时把它标回内测，测的是接口上的灰度门。
+    service.content.exploration_expedition_map["spiritfruit_meadow"].beta = True
     player = service.repository.get_by_sub("route-sub")
     for partner_id in ("aishen", "gujian_miao", "leilei"):
         service.admin_grant_partner(player.player_id, partner_id)
@@ -261,12 +263,12 @@ async def test_delve_api_gates_on_the_beta_list_and_runs_a_battle_turn(client, s
     }
 
     monkeypatch.delenv("RED_LEAF_TOWN_BETA_PLAYERS", raising=False)
-    blocked = await client.post("/api/red-leaf-town/exploration/moonfall_hollow/start", json=payload)
+    blocked = await client.post("/api/red-leaf-town/exploration/spiritfruit_meadow/start", json=payload)
     assert blocked.status_code == 400
     assert "内测" in (await blocked.get_json())["message"]
 
     monkeypatch.setenv("RED_LEAF_TOWN_BETA_PLAYERS", player.player_id)
-    started = await client.post("/api/red-leaf-town/exploration/moonfall_hollow/start", json=payload)
+    started = await client.post("/api/red-leaf-town/exploration/spiritfruit_meadow/start", json=payload)
     started_body = (await started.get_json())["data"]
     assert started.status_code == 200
     run = started_body["state"]["exploration"]["active_run"]

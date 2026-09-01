@@ -315,15 +315,17 @@ def test_exploration_rewards_actually_grow_with_the_multiplier(exploration_game)
 
 def test_beta_expeditions_stay_hidden_until_the_player_is_whitelisted(exploration_game, monkeypatch):
     service, _, player = exploration_game
+    # 出厂内容已经没有内测路线了，这里临时把灵果草甸标回内测，测的是灰度机制本身。
+    service.content.exploration_expedition_map["spiritfruit_meadow"].beta = True
 
     monkeypatch.delenv("RED_LEAF_TOWN_BETA_PLAYERS", raising=False)
     hidden = service.snapshot_by_sub("exploration-sub")["exploration"]
 
-    assert "moonfall_hollow" not in [entry["id"] for entry in hidden["expeditions"]]
+    assert "spiritfruit_meadow" not in [entry["id"] for entry in hidden["expeditions"]]
     with pytest.raises(GameError, match="内测"):
         service.start_exploration(
             "exploration-sub",
-            "moonfall_hollow",
+            "spiritfruit_meadow",
             ["leader", "scout", "helper"],
             "leader",
         )
@@ -331,4 +333,4 @@ def test_beta_expeditions_stay_hidden_until_the_player_is_whitelisted(exploratio
     monkeypatch.setenv("RED_LEAF_TOWN_BETA_PLAYERS", f"someone-else,{player.player_id}")
     visible = service.snapshot_by_sub("exploration-sub")["exploration"]
 
-    assert "moonfall_hollow" in [entry["id"] for entry in visible["expeditions"]]
+    assert "spiritfruit_meadow" in [entry["id"] for entry in visible["expeditions"]]

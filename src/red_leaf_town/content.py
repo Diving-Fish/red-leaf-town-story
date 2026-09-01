@@ -978,7 +978,7 @@ class PortalDefinition(BaseModel):
     accent: str
     min_level: int = Field(default=1, ge=1)
     prerequisites: list[str] = Field(default_factory=list, max_length=4)
-    tributes: list[PortalTributeDefinition] = Field(min_length=1, max_length=8)
+    tributes: list[PortalTributeDefinition] = Field(min_length=1, max_length=12)
     completion_reward: RewardDefinition = Field(default_factory=RewardDefinition)
 
     @model_validator(mode="after")
@@ -1326,7 +1326,9 @@ class GameContent(BaseModel):
                 raise ValueError(f"recipe {recipe.id} references an unknown crafting station")
             if recipe.produce_item_id not in items:
                 raise ValueError(f"recipe {recipe.id} references an unknown output item")
-            if not self.item_map[recipe.produce_item_id].has_quality:
+            # 加工是唯一允许产出无品质物品的产业：装备一件就是一组固定数值，不进五档品质。
+            output = self.item_map[recipe.produce_item_id]
+            if not output.has_quality and output.kind != "equipment":
                 raise ValueError(f"recipe {recipe.id} output must support quality")
             if any(requirement.item_id not in items for requirement in recipe.inputs):
                 raise ValueError(f"recipe {recipe.id} references an unknown input item")

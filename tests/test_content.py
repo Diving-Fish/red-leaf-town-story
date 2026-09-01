@@ -153,10 +153,47 @@ def test_crafting_prices_reflect_inputs_and_mining_stamina_value():
         )
         output_value = content.item_map[recipe.produce_item_id].sell_price * recipe.produce_quantity
         added_value_per_stamina = (output_value - input_value) / recipe.stamina_cost
+        if _is_equipment_recipe(content, recipe):
+            # 装备配方不按售价考核，见 test_equipment_recipes_are_a_gear_line_not_a_money_line。
+            assert recipe.stamina_cost == 5
+            continue
         assert recipe.stamina_cost == 2
         if _is_refining_recipe(content, recipe):
             continue
         assert minimum_value <= added_value_per_stamina <= maximum_value
+
+
+def _is_equipment_recipe(content, recipe) -> bool:
+    return content.item_map[recipe.produce_item_id].kind == "equipment"
+
+
+def test_equipment_recipes_are_a_gear_line_not_a_money_line():
+    """装备配方的回报在副本里，不在售价上：三把武器全部卖 200，锻造出来一定亏钱。"""
+    content = load_content()
+    equipment = [recipe for recipe in content.recipes if _is_equipment_recipe(content, recipe)]
+
+    assert {recipe.id for recipe in equipment} == {
+        "forge_red_copper_greatsword",
+        "forge_moon_silver_dagger",
+        "bind_maple_flame_tome",
+    }
+    assert {
+        recipe.id: [(entry.item_id, entry.quantity) for entry in recipe.inputs]
+        for recipe in equipment
+    } == {
+        "forge_red_copper_greatsword": [("red_copper_ore", 20)],
+        "forge_moon_silver_dagger": [("moon_silver_ore", 10)],
+        "bind_maple_flame_tome": [("maple_wood", 10), ("maple_resin", 3), ("amber_beeswax", 1)],
+    }
+    for recipe in equipment:
+        produce = content.item_map[recipe.produce_item_id]
+        assert recipe.station_id == "town_workbench"
+        assert (recipe.stamina_cost, recipe.produce_quantity) == (5, 1)
+        assert recipe.unlock_condition.params["level"] == 10
+        # 装备不进品质系统，加工是唯一允许产出无品质物品的产业。
+        assert produce.has_quality is False
+        assert produce.sell_price == 200
+        assert produce.equipment.slot == "weapon"
 
 
 def _is_refining_recipe(content, recipe) -> bool:
@@ -236,14 +273,16 @@ def test_mining_task_requires_known_site_and_quality_item():
 
 def test_delve_content_is_wired_up():
     content = load_content()
-    expedition = content.exploration_expedition_map["moonfall_hollow"]
-    battle_choice = expedition.event_map["warden_chamber"].choices[0]
+    expedition = content.exploration_expedition_map["spiritfruit_meadow"]
+    battle_choice = expedition.event_map["warden_grove"].choices[0]
 
     assert expedition.kind == "delve"
-    assert expedition.beta is True
-    assert battle_choice.battle.enemy_ids == ["moonlit_warden"]
+    # 灵果草甸已经外放，出厂内容里不该再留内测路线。
+    assert expedition.beta is False
+    assert not [entry for entry in content.exploration_expeditions if entry.beta]
+    assert battle_choice.battle.enemy_ids == ["fruitheart_warden"]
     assert battle_choice.battle.can_flee is False
-    assert content.delve_enemy_map["moonlit_warden"].boss is True
+    assert content.delve_enemy_map["fruitheart_warden"].boss is True
     assert content.item_map["red_copper_greatsword"].equipment.attribute == "strength"
     assert content.item_map["moon_silver_dagger"].equipment.attribute == "agility"
     assert content.item_map["maple_flame_tome"].equipment.attribute == "intelligence"
@@ -274,13 +313,13 @@ def test_battles_are_rejected_outside_delve_expeditions_and_with_unknown_enemies
     transport = next(
         entry for entry in payload["exploration_expeditions"] if entry["id"] == "red_maple_hinterland"
     )
-    transport["events"][0]["choices"][0]["battle"] = {"enemy_ids": ["stone_gnawer"]}
+    transport["events"][0]["choices"][0]["battle"] = {"enemy_ids": ["meadow_nibbler"]}
 
     with pytest.raises(ValidationError, match="delve expedition"):
         GameContent.model_validate(payload)
 
     payload = load_content().model_dump()
-    delve = next(entry for entry in payload["exploration_expeditions"] if entry["id"] == "moonfall_hollow")
+    delve = next(entry for entry in payload["exploration_expeditions"] if entry["id"] == "spiritfruit_meadow")
     delve["events"][0]["choices"][0]["battle"]["enemy_ids"] = ["nobody"]
 
     with pytest.raises(ValidationError, match="unknown enemies"):
@@ -289,7 +328,7 @@ def test_battles_are_rejected_outside_delve_expeditions_and_with_unknown_enemies
 
 def test_a_checked_choice_cannot_also_start_a_battle():
     payload = load_content().model_dump()
-    delve = next(entry for entry in payload["exploration_expeditions"] if entry["id"] == "moonfall_hollow")
+    delve = next(entry for entry in payload["exploration_expeditions"] if entry["id"] == "spiritfruit_meadow")
     choice = delve["events"][0]["choices"][0]
     choice["check"] = {"attribute": "strength", "mode": "best", "dice": "normal", "dc": 12}
     choice["failure"] = {"text": "失手了。"}
@@ -300,9 +339,9 @@ def test_a_checked_choice_cannot_also_start_a_battle():
 
 def test_fixed_rewards_must_be_quality_free_items():
     payload = load_content().model_dump()
-    delve = next(entry for entry in payload["exploration_expeditions"] if entry["id"] == "moonfall_hollow")
-    camp = next(entry for entry in delve["events"] if entry["id"] == "abandoned_camp")
-    camp["choices"][0]["success"]["fixed_rewards"] = [{"item_id": "moon_silver_ore", "quantity": 1}]
+    delve = next(entry for entry in payload["exploration_expeditions"] if entry["id"] == "spiritfruit_meadow")
+    camp = next(entry for entry in delve["events"] if entry["id"] == "herder_shelter")
+    camp["choices"][0]["success"]["fixed_rewards"] = [{"item_id": "tough_fodder", "quantity": 1}]
 
     with pytest.raises(ValidationError, match="quality-free"):
         GameContent.model_validate(payload)

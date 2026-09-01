@@ -4,7 +4,7 @@ import pytest
 
 from red_leaf_town.application import GameError, GameService
 from red_leaf_town.content import GameContent, load_content
-from red_leaf_town.domain import PlayerState
+from red_leaf_town.domain import PlayerState, PortalProgressState
 from red_leaf_town.domain.economy import add_item
 from red_leaf_town.infrastructure import InMemoryPlayerRepository
 from red_leaf_town.partner_content import PartnerCatalog, PartnerDefinition
@@ -302,16 +302,85 @@ def test_quality_floor_needs_an_item_that_can_have_quality():
         )])
 
 
-def test_shipped_portals_only_have_the_first_gate():
+def test_shipped_portals_are_the_first_and_second_gate():
     content = load_content()
 
-    assert [portal.id for portal in content.portals] == ["first_gate"]
+    assert [portal.id for portal in content.portals] == ["first_gate", "second_gate"]
     first_gate = content.portal_map["first_gate"]
     assert first_gate.prerequisites == []
     assert len(first_gate.tributes) == 7
     assert all(tribute.min_quality == 0 for tribute in first_gate.tributes)
     assert all(tribute.reward.maple_flame == 150 for tribute in first_gate.tributes)
     assert first_gate.completion_reward.guide_leaves == 10
+
+
+def test_second_gate_asks_for_ten_tributes_across_every_industry():
+    content = load_content()
+    second_gate = content.portal_map["second_gate"]
+
+    assert second_gate.min_level == 12
+    assert second_gate.prerequisites == ["first_gate"]
+    assert [(tribute.item_id, tribute.quantity, tribute.min_quality) for tribute in second_gate.tributes] == [
+        ("egg", 5, 2),
+        ("pumpkin", 5, 3),
+        ("milk", 5, 0),
+        ("pond_crucian", 5, 3),
+        ("silver_star_moss", 3, 0),
+        ("giant_stream_carp", 1, 0),
+        ("refined_fodder", 10, 0),
+        ("peach_berry", 1, 0),
+        ("partner_notes_large", 1, 0),
+        ("hunters_charm", 1, 0),
+    ]
+    # 每一项 150 枫火，收齐再给 10 张同行叶，正好一次十连。
+    assert all(tribute.reward.maple_flame == 150 for tribute in second_gate.tributes)
+    assert second_gate.completion_reward.guide_leaves == 10
+    assert second_gate.completion_reward.maple_flame == 0
+
+
+def test_second_gate_takes_quality_free_gear_and_notes(game):
+    service, player = game
+    set_level(service, player.player_id, 12)
+    service.repository.update(
+        player.player_id,
+        lambda state: state.portals.append(PortalProgressState(portal_id="first_gate", completed_at=NOW)),
+    )
+    stock(service, player.player_id, "hunters_charm", 1)
+    stock(service, player.player_id, "partner_notes_large", 1)
+
+    charm = service.deliver_tribute("portal-sub", "second_gate", "second_gate_hunters_charm", 1)["result"]
+    notes = service.deliver_tribute("portal-sub", "second_gate", "second_gate_partner_notes_large", 1)["result"]
+
+    assert charm["tribute_completed"] is True
+    assert charm["rewards"][0]["maple_flame"] == 150
+    assert notes["tribute_completed"] is True
+    saved = service.repository.get(player.player_id)
+    assert not saved.inventory.get("hunters_charm")
+    assert not saved.inventory.get("partner_notes_large")
+
+
+def test_second_gate_stays_locked_until_the_first_one_is_done(game):
+    service, player = game
+    set_level(service, player.player_id, 12)
+    second = portal_of(service.snapshot_by_sub("portal-sub"), "second_gate")
+
+    assert second["unlocked"] is False
+    assert second["locked_reason"] == "先完成第一传送门"
+    assert second["tribute_count"] == 10
+
+    stock(service, player.player_id, "silver_star_moss", 3)
+    with pytest.raises(GameError) as error:
+        service.deliver_tribute("portal-sub", "second_gate", "second_gate_silver_star_moss", 3)
+    assert error.value.code == "portal_locked"
+
+    service.repository.update(
+        player.player_id,
+        lambda state: state.portals.append(PortalProgressState(portal_id="first_gate", completed_at=NOW)),
+    )
+    unlocked = portal_of(service.snapshot_by_sub("portal-sub"), "second_gate")
+
+    assert unlocked["unlocked"] is True
+    assert unlocked["locked_reason"] is None
 
 
 def test_shipped_portal_rewards_only_reference_known_partners():

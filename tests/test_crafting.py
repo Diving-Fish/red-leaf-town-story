@@ -250,3 +250,82 @@ def test_input_refund_returns_only_one_of_several_materials(crafting_game):
         for item_id in ("maple_wood", "autumn_herb")
     }
     assert sorted(returned.values()) == [0, 2]
+
+
+def test_forging_a_weapon_lands_in_the_quality_free_slot(crafting_game):
+    """装备不进五档品质：加工出来的武器必须落在 0 号格，能直接带进副本。"""
+    service, repository, clock, player = crafting_game
+    level_ten = next(entry.total_xp for entry in service.content.levels if entry.level == 10)
+    reach_level(repository, player.player_id, level_ten)
+    service.snapshot_by_sub("craft-sub")
+    repository.update(player.player_id, lambda state: state.inventory.update({"red_copper_ore": {1: 12, 3: 10}}))
+
+    started = service.start_crafting("craft-sub", "town_workbench", "forge_red_copper_greatsword")
+    task = started["state"]["crafting_stations"][0]["task_snapshot"]
+
+    # 20 个矿从最低品质开始扣，臻品留在仓库里。
+    assert task["consumed_inputs"] == [
+        {"item_id": "red_copper_ore", "quality": 1, "quantity": 12},
+        {"item_id": "red_copper_ore", "quality": 3, "quantity": 8},
+    ]
+    assert repository.get(player.player_id).inventory["red_copper_ore"] == {3: 2}
+    assert started["state"]["player"]["stamina"] == service.snapshot_by_sub("craft-sub")["player"]["stamina"]
+
+    clock.advance(task["final_duration"])
+    results = service.snapshot_by_sub("craft-sub")["crafting_stations"][0]["task_results"]
+
+    assert [(entry["item_id"], entry["quantity"], entry["quality"]) for entry in results] == [
+        ("red_copper_greatsword", 1, 0),
+    ]
+    assert results[0]["quality_name"] is None
+
+    collected = service.collect_crafting("craft-sub", "town_workbench")
+
+    assert collected["result"]["item_id"] == "red_copper_greatsword"
+    assert repository.get(player.player_id).inventory["red_copper_greatsword"] == {0: 1}
+
+
+def test_weapon_recipes_unlock_at_the_level_the_meadow_opens(crafting_game):
+    service, repository, _, player = crafting_game
+    reach_level(repository, player.player_id, 60)
+    station = service.snapshot_by_sub("craft-sub")["crafting_stations"][0]
+    recipes = {recipe["id"]: recipe for recipe in station["recipes"]}
+
+    assert recipes["forge_moon_silver_dagger"]["unlocked"] is False
+    assert recipes["forge_moon_silver_dagger"]["unlock_description"] == "居民等级达到 10 级"
+    with pytest.raises(GameError, match="配方尚未解锁"):
+        service.start_crafting("craft-sub", "town_workbench", "bind_maple_flame_tome")
+
+    level_ten = next(entry.total_xp for entry in service.content.levels if entry.level == 10)
+    reach_level(repository, player.player_id, level_ten)
+    unlocked = service.snapshot_by_sub("craft-sub")["crafting_stations"][0]["recipes"]
+
+    assert all(
+        recipe["unlocked"] is True
+        for recipe in unlocked
+        if recipe["id"].startswith(("forge_", "bind_"))
+    )
+
+
+def test_forging_costs_five_stamina_and_refuses_when_short(crafting_game):
+    service, repository, _, player = crafting_game
+    level_ten = next(entry.total_xp for entry in service.content.levels if entry.level == 10)
+    reach_level(repository, player.player_id, level_ten)
+    service.snapshot_by_sub("craft-sub")
+
+    def prepare(state):
+        add_item(state, "moon_silver_ore", 10, 1)
+        state.stamina = 4
+
+    repository.update(player.player_id, prepare)
+    with pytest.raises(GameError, match="体力"):
+        service.start_crafting("craft-sub", "town_workbench", "forge_moon_silver_dagger")
+    # 开工失败不能吃掉原料。
+    assert repository.get(player.player_id).inventory["moon_silver_ore"] == {1: 10}
+
+    repository.update(player.player_id, lambda state: setattr(state, "stamina", 5))
+    before = service.snapshot_by_sub("craft-sub")["player"]["stamina"]
+    started = service.start_crafting("craft-sub", "town_workbench", "forge_moon_silver_dagger")
+
+    assert started["state"]["player"]["stamina"] == before - 5
+    assert not repository.get(player.player_id).inventory.get("moon_silver_ore")
