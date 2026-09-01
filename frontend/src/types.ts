@@ -23,6 +23,7 @@ export interface CropDefinition {
   seed_item_id: string
   produce_item_id: string
   growth_seconds: number
+  minimum_duration_seconds: number
   time_difficulty: number
   stamina_cost: number
   min_level: number

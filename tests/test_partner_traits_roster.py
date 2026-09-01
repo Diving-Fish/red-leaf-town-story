@@ -57,6 +57,7 @@ PARTNER_TRAITS = {
     "shuiling": "ripple_play",
     "nuanyu_2": "azure_smelt",
     "yuan_huiqin": "pinpoint_shot",
+    "bai_li": "orchard_tending",
 }
 
 PENDING_PARTNERS: set[str] = set()
@@ -145,6 +146,7 @@ TRAIT_CASES = [
     ("azure_smelt", "task_prepare", {"industry": "crafting"}, "quality_ability_multiplier", "increase"),
     ("azure_flame_undying", "exploration_event", {"industry": "exploration", "depth": 3}, "reward_quantity_multiplier", "increase"),
     ("pinpoint_shot", "exploration_event", {"industry": "exploration", "check_attribute": "intelligence", "check_actor_partner_ids": ["yuan_huiqin"], "source_partner_id": "yuan_huiqin", "trait_usage": {}}, None, "effect"),
+    ("orchard_tending", "task_prepare", {"industry": "farming", "content_tags": ["crop", "food", "tree_fruit"]}, "duration_multiplier", "decrease"),
 ]
 
 SECONDARY_TRAIT_CASES = [
@@ -155,6 +157,7 @@ SECONDARY_TRAIT_CASES = [
     ("attendant_at_hand", "task_prepare", {"industry": "crafting"}, "yield_multiplier", "increase"),
     ("frost_grooming", "instant_action", {"industry": "livestock", "action": "livestock_care"}, "affection_per_care_bonus", "increase"),
     ("azure_smelt", "result_finalize", {"industry": "crafting"}, None, "effect"),
+    ("orchard_tending", "task_prepare", {"industry": "farming", "content_tags": ["crop", "food", "tree_fruit"]}, "yield_bonus", "increase"),
 ]
 
 

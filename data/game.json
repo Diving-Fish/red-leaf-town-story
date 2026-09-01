@@ -399,6 +399,54 @@
       }
     },
     {
+      "id": "peach_berry_seed",
+      "name": "桃桃果种子",
+      "icon": "sprout",
+      "kind": "seed",
+      "sell_price": 0,
+      "has_quality": false,
+      "tags": [
+        "crop_seed"
+      ]
+    },
+    {
+      "id": "peach_berry",
+      "name": "桃桃果",
+      "icon": "cherry",
+      "kind": "produce",
+      "sell_price": 800,
+      "has_quality": true,
+      "tags": [
+        "crop",
+        "food",
+        "tree_fruit"
+      ]
+    },
+    {
+      "id": "berry_berry_seed",
+      "name": "莓莓果种子",
+      "icon": "sprout",
+      "kind": "seed",
+      "sell_price": 0,
+      "has_quality": false,
+      "tags": [
+        "crop_seed"
+      ]
+    },
+    {
+      "id": "berry_berry",
+      "name": "莓莓果",
+      "icon": "grape",
+      "kind": "produce",
+      "sell_price": 1200,
+      "has_quality": true,
+      "tags": [
+        "crop",
+        "food",
+        "tree_fruit"
+      ]
+    },
+    {
       "id": "maple_wood",
       "name": "枫木",
       "icon": "trees",
@@ -1052,6 +1100,62 @@
           320.0
         ],
         "width": 30.0,
+        "miracle_probability_cap": 0.003,
+        "miracle_eligible": true
+      }
+    },
+    {
+      "id": "peach_berry",
+      "name": "桃桃果",
+      "icon": "cherry",
+      "seed_item_id": "peach_berry_seed",
+      "produce_item_id": "peach_berry",
+      "growth_seconds": 86400,
+      "minimum_duration_seconds": 43200,
+      "time_difficulty": 300,
+      "yield_min": 2,
+      "yield_max": 2,
+      "stamina_cost": 8,
+      "plant_xp": 6,
+      "harvest_xp": 40,
+      "min_level": 1,
+      "accent": "#f2909a",
+      "quality": {
+        "thresholds": [
+          70.0,
+          130.0,
+          220.0,
+          320.0
+        ],
+        "width": 50.0,
+        "miracle_probability_cap": 0.003,
+        "miracle_eligible": true
+      }
+    },
+    {
+      "id": "berry_berry",
+      "name": "莓莓果",
+      "icon": "grape",
+      "seed_item_id": "berry_berry_seed",
+      "produce_item_id": "berry_berry",
+      "growth_seconds": 86400,
+      "minimum_duration_seconds": 43200,
+      "time_difficulty": 300,
+      "yield_min": 2,
+      "yield_max": 2,
+      "stamina_cost": 12,
+      "plant_xp": 9,
+      "harvest_xp": 60,
+      "min_level": 1,
+      "accent": "#c2456b",
+      "quality": {
+        "thresholds": [
+          70.0,
+          130.0,
+          220.0,
+          320.0
+        ],
+        "width": 50.0,
         "miracle_probability_cap": 0.003,
         "miracle_eligible": true
       }
@@ -2268,7 +2372,9 @@
       "rich_milk",
       "giant_stream_carp",
       "giant_maple_perch",
-      "giant_moon_sturgeon"
+      "giant_moon_sturgeon",
+      "peach_berry",
+      "berry_berry"
     ],
     "tiers": [
       {

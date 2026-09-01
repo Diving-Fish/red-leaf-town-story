@@ -5,6 +5,7 @@
       "id": "ai_liqi",
       "name": "爱莉栖",
       "rarity": 5,
+      "standard_recruitable": true,
       "description": "",
       "growth_curve": "linear",
       "exploration_stats": {
@@ -71,6 +72,7 @@
       "id": "ai_xinyu",
       "name": "艾欣愉",
       "rarity": 4,
+      "standard_recruitable": true,
       "description": "",
       "growth_curve": "linear",
       "exploration_stats": {
@@ -137,6 +139,7 @@
       "id": "aishen",
       "name": "爱神",
       "rarity": 5,
+      "standard_recruitable": true,
       "description": "",
       "growth_curve": "linear",
       "exploration_stats": {
@@ -203,6 +206,7 @@
       "id": "aiweier",
       "name": "艾薇尔",
       "rarity": 4,
+      "standard_recruitable": true,
       "description": "",
       "growth_curve": "linear",
       "exploration_stats": {
@@ -269,6 +273,7 @@
       "id": "aorui_jin",
       "name": "奥瑞·金",
       "rarity": 3,
+      "standard_recruitable": true,
       "description": "",
       "growth_curve": "linear",
       "exploration_stats": {
@@ -325,6 +330,7 @@
       "id": "babi",
       "name": "吧比",
       "rarity": 3,
+      "standard_recruitable": true,
       "description": "",
       "growth_curve": "linear",
       "exploration_stats": {
@@ -383,9 +389,72 @@
       "ascensions": []
     },
     {
+      "id": "bai_li",
+      "name": "白璃",
+      "rarity": 5,
+      "standard_recruitable": false,
+      "description": "",
+      "growth_curve": "linear",
+      "exploration_stats": {
+        "strength": 10,
+        "agility": 13,
+        "intelligence": 14,
+        "luck": 11
+      },
+      "tendencies": [
+        {
+          "industry": "farming",
+          "level_1": 34,
+          "level_60": 223
+        },
+        {
+          "industry": "exploration",
+          "level_1": 27,
+          "level_60": 168
+        }
+      ],
+      "trait_codes": [
+        "orchard_tending"
+      ],
+      "artworks": [
+        {
+          "breakthrough": 0,
+          "asset_key": "red-leaf-town/partners/bai_li/breakthrough-0-64692a537b8bdb3c.webp",
+          "width": 1053,
+          "height": 1872,
+          "content_type": "image/webp"
+        }
+      ],
+      "avatar_crops": [
+        {
+          "breakthrough": 0,
+          "x": 268,
+          "y": 172,
+          "w": 502,
+          "h": 502
+        },
+        {
+          "breakthrough": 1,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        },
+        {
+          "breakthrough": 2,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        }
+      ],
+      "ascensions": []
+    },
+    {
       "id": "bai_lingxue",
       "name": "白岭雪",
       "rarity": 4,
+      "standard_recruitable": true,
       "description": "",
       "growth_curve": "linear",
       "exploration_stats": {
@@ -447,6 +516,7 @@
       "id": "bai_tiantian",
       "name": "白天天",
       "rarity": 5,
+      "standard_recruitable": true,
       "description": "",
       "growth_curve": "linear",
       "exploration_stats": {
@@ -503,6 +573,7 @@
       "id": "banniang",
       "name": "睡着的板娘",
       "rarity": 4,
+      "standard_recruitable": true,
       "description": "",
       "growth_curve": "linear",
       "exploration_stats": {
@@ -569,6 +640,7 @@
       "id": "bufeng_zhuoying",
       "name": "捕风捉影",
       "rarity": 4,
+      "standard_recruitable": true,
       "description": "",
       "growth_curve": "linear",
       "exploration_stats": {
@@ -635,6 +707,7 @@
       "id": "daian_zeer",
       "name": "黛安泽尔",
       "rarity": 3,
+      "standard_recruitable": true,
       "description": "",
       "growth_curve": "linear",
       "exploration_stats": {
@@ -696,6 +769,7 @@
       "id": "fein",
       "name": "绯恩",
       "rarity": 4,
+      "standard_recruitable": true,
       "description": "",
       "growth_curve": "linear",
       "exploration_stats": {
@@ -757,6 +831,7 @@
       "id": "fumeng",
       "name": "浮梦",
       "rarity": 3,
+      "standard_recruitable": true,
       "description": "",
       "growth_curve": "linear",
       "exploration_stats": {
@@ -818,6 +893,7 @@
       "id": "guidengdeng",
       "name": "鬼灯灯",
       "rarity": 5,
+      "standard_recruitable": true,
       "description": "",
       "growth_curve": "linear",
       "exploration_stats": {
@@ -879,6 +955,7 @@
       "id": "gujian_bu",
       "name": "古剑布",
       "rarity": 3,
+      "standard_recruitable": true,
       "description": "",
       "growth_curve": "linear",
       "exploration_stats": {
@@ -945,6 +1022,7 @@
       "id": "gujian_miao",
       "name": "古剑喵",
       "rarity": 5,
+      "standard_recruitable": true,
       "description": "",
       "growth_curve": "linear",
       "exploration_stats": {
@@ -1011,6 +1089,7 @@
       "id": "guqi",
       "name": "顾祇",
       "rarity": 5,
+      "standard_recruitable": true,
       "description": "",
       "growth_curve": "linear",
       "exploration_stats": {
@@ -1072,6 +1151,7 @@
       "id": "guyu_yu",
       "name": "古语俞",
       "rarity": 4,
+      "standard_recruitable": true,
       "description": "",
       "growth_curve": "linear",
       "exploration_stats": {
@@ -1133,6 +1213,7 @@
       "id": "hei_yuchuan",
       "name": "黑羽川",
       "rarity": 4,
+      "standard_recruitable": true,
       "description": "",
       "growth_curve": "linear",
       "exploration_stats": {
@@ -1199,6 +1280,7 @@
       "id": "hongkai",
       "name": "红凯",
       "rarity": 4,
+      "standard_recruitable": true,
       "description": "",
       "growth_curve": "linear",
       "exploration_stats": {
@@ -1265,6 +1347,7 @@
       "id": "hongzhijian",
       "name": "虹之间",
       "rarity": 3,
+      "standard_recruitable": true,
       "description": "",
       "growth_curve": "linear",
       "exploration_stats": {
@@ -1326,6 +1409,7 @@
       "id": "jia_gula",
       "name": "嘉沽菈",
       "rarity": 4,
+      "standard_recruitable": true,
       "description": "",
       "growth_curve": "linear",
       "exploration_stats": {
@@ -1387,6 +1471,7 @@
       "id": "leilei",
       "name": "蕾蕾",
       "rarity": 5,
+      "standard_recruitable": true,
       "description": "",
       "growth_curve": "linear",
       "exploration_stats": {
@@ -1448,6 +1533,7 @@
       "id": "lengyue",
       "name": "冷悦",
       "rarity": 3,
+      "standard_recruitable": true,
       "description": "",
       "growth_curve": "linear",
       "exploration_stats": {
@@ -1509,6 +1595,7 @@
       "id": "luo_nali",
       "name": "洛纳莉",
       "rarity": 5,
+      "standard_recruitable": true,
       "description": "",
       "growth_curve": "linear",
       "exploration_stats": {
@@ -1575,6 +1662,7 @@
       "id": "mami",
       "name": "麻咪",
       "rarity": 5,
+      "standard_recruitable": true,
       "description": "",
       "growth_curve": "linear",
       "exploration_stats": {
@@ -1636,6 +1724,7 @@
       "id": "manlong",
       "name": "慢龙",
       "rarity": 3,
+      "standard_recruitable": true,
       "description": "",
       "growth_curve": "linear",
       "exploration_stats": {
@@ -1692,6 +1781,7 @@
       "id": "manlong_2",
       "name": "慢龙",
       "rarity": 5,
+      "standard_recruitable": true,
       "description": "",
       "growth_curve": "linear",
       "exploration_stats": {
@@ -1753,6 +1843,7 @@
       "id": "nuanyu",
       "name": "暖玉",
       "rarity": 4,
+      "standard_recruitable": true,
       "description": "",
       "growth_curve": "linear",
       "exploration_stats": {
@@ -1819,6 +1910,7 @@
       "id": "nuanyu_2",
       "name": "暖玉",
       "rarity": 5,
+      "standard_recruitable": true,
       "description": "",
       "growth_curve": "linear",
       "exploration_stats": {
@@ -1845,19 +1937,19 @@
       "artworks": [
         {
           "breakthrough": 0,
-          "asset_key": "red-leaf-town/partners/nuanyu_2/breakthrough-0-8be43589564c336e.webp",
-          "width": 936,
-          "height": 1664,
+          "asset_key": "red-leaf-town/partners/nuanyu_2/breakthrough-0-3b0427721b846067.webp",
+          "width": 1053,
+          "height": 1872,
           "content_type": "image/webp"
         }
       ],
       "avatar_crops": [
         {
           "breakthrough": 0,
-          "x": 226,
-          "y": 189,
-          "w": 447,
-          "h": 447
+          "x": 273,
+          "y": 246,
+          "w": 468,
+          "h": 468
         },
         {
           "breakthrough": 1,
@@ -1880,6 +1972,7 @@
       "id": "shuiling",
       "name": "水灵",
       "rarity": 3,
+      "standard_recruitable": true,
       "description": "",
       "growth_curve": "linear",
       "exploration_stats": {
@@ -1941,6 +2034,7 @@
       "id": "sunfeng_liya",
       "name": "隼风莉亚",
       "rarity": 5,
+      "standard_recruitable": true,
       "description": "",
       "growth_curve": "linear",
       "exploration_stats": {
@@ -2007,6 +2101,7 @@
       "id": "wei_jiang",
       "name": "威酱",
       "rarity": 4,
+      "standard_recruitable": true,
       "description": "",
       "growth_curve": "linear",
       "exploration_stats": {
@@ -2068,6 +2163,7 @@
       "id": "wujian",
       "name": "雾剑",
       "rarity": 3,
+      "standard_recruitable": true,
       "description": "",
       "growth_curve": "linear",
       "exploration_stats": {
@@ -2124,6 +2220,7 @@
       "id": "xiang_hanyang",
       "name": "向含鸯",
       "rarity": 3,
+      "standard_recruitable": true,
       "description": "",
       "growth_curve": "linear",
       "exploration_stats": {
@@ -2180,6 +2277,7 @@
       "id": "xiang_hanyuan",
       "name": "向含鸳",
       "rarity": 5,
+      "standard_recruitable": true,
       "description": "",
       "growth_curve": "linear",
       "exploration_stats": {
@@ -2236,6 +2334,7 @@
       "id": "xiao_xingyun",
       "name": "小星陨",
       "rarity": 4,
+      "standard_recruitable": true,
       "description": "",
       "growth_curve": "linear",
       "exploration_stats": {
@@ -2294,6 +2393,7 @@
       "id": "xiaoha",
       "name": "小哈",
       "rarity": 3,
+      "standard_recruitable": true,
       "description": "",
       "growth_curve": "linear",
       "exploration_stats": {
@@ -2350,6 +2450,7 @@
       "id": "xixi",
       "name": "夕夕",
       "rarity": 4,
+      "standard_recruitable": true,
       "description": "",
       "growth_curve": "linear",
       "exploration_stats": {
@@ -2411,6 +2512,7 @@
       "id": "xiyue_kanna",
       "name": "夕月神奈",
       "rarity": 5,
+      "standard_recruitable": true,
       "description": "",
       "growth_curve": "linear",
       "exploration_stats": {
@@ -2477,6 +2579,7 @@
       "id": "xuanyuan",
       "name": "轩辕",
       "rarity": 5,
+      "standard_recruitable": true,
       "description": "",
       "growth_curve": "linear",
       "exploration_stats": {
@@ -2543,6 +2646,7 @@
       "id": "ya_ziweier",
       "name": "雅兹薇尔",
       "rarity": 5,
+      "standard_recruitable": true,
       "description": "",
       "growth_curve": "linear",
       "exploration_stats": {
@@ -2599,6 +2703,7 @@
       "id": "ye_huanan",
       "name": "叶唤安",
       "rarity": 4,
+      "standard_recruitable": true,
       "description": "",
       "growth_curve": "linear",
       "exploration_stats": {
@@ -2665,6 +2770,7 @@
       "id": "ye_lvsu",
       "name": "叶律素",
       "rarity": 3,
+      "standard_recruitable": true,
       "description": "",
       "growth_curve": "linear",
       "exploration_stats": {
@@ -2731,6 +2837,7 @@
       "id": "yuan_huiqin",
       "name": "原慧琴",
       "rarity": 4,
+      "standard_recruitable": true,
       "description": "",
       "growth_curve": "linear",
       "exploration_stats": {
@@ -2797,6 +2904,7 @@
       "id": "ze_feiyang",
       "name": "泽非羊",
       "rarity": 4,
+      "standard_recruitable": true,
       "description": "",
       "growth_curve": "linear",
       "exploration_stats": {
@@ -2855,6 +2963,7 @@
       "id": "zhake",
       "name": "扎克",
       "rarity": 4,
+      "standard_recruitable": true,
       "description": "",
       "growth_curve": "linear",
       "exploration_stats": {
@@ -2921,6 +3030,7 @@
       "id": "zhuoyan",
       "name": "灼焱",
       "rarity": 5,
+      "standard_recruitable": true,
       "description": "",
       "growth_curve": "linear",
       "exploration_stats": {

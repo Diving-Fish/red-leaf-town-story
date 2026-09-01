@@ -15,7 +15,7 @@ import GachaResultCard from '@/components/gacha/GachaResultCard.vue'
 import type { GachaResultMeta } from '@/components/gacha/GachaResultCard.vue'
 import { useGameStore } from '@/stores/game'
 import { useUiStore } from '@/stores/ui'
-import type { CrossoverCampaign, GachaDrop } from '@/types'
+import type { CrossoverCampaign, GachaDrop, GachaPoolState } from '@/types'
 
 const game = useGameStore()
 const ui = useUiStore()
@@ -34,13 +34,26 @@ const activePool = computed(() => {
 })
 const activePoolId = computed(() => activePool.value?.pool_id || '')
 
+function poolFeaturedName(pool: GachaPoolState) {
+  if (!pool.featured_partner_id) return null
+  return pool.catalog.find((entry) => entry.partner_id === pool.featured_partner_id)?.name
+    || pool.featured_partner_id
+}
+
+function poolSubtitle(pool: GachaPoolState) {
+  if (pool.max_pulls_per_player != null) {
+    return `限定 ${pool.max_pulls_per_player} 抽 · 剩余 ${pool.remaining_pulls}`
+  }
+  // UP 池的名单里可能有限定伙伴，不能一律说成常驻。
+  const featured = poolFeaturedName(pool)
+  return featured ? `UP ${featured} · 名单 ${pool.catalog.length} 位` : `${pool.catalog.length} 位常驻伙伴`
+}
+
 const poolSummaries = computed<GachaPoolSummary[]>(() =>
   pools.value.map((pool) => ({
     id: pool.pool_id,
     title: pool.title,
-    subtitle: pool.max_pulls_per_player != null
-      ? `限定 ${pool.max_pulls_per_player} 抽 · 剩余 ${pool.remaining_pulls}`
-      : `${pool.catalog.length} 位常驻伙伴`,
+    subtitle: poolSubtitle(pool),
     unlocked: pool.unlocked,
     fiveStarRate: `5★ ${((pool.rarity_probabilities[5] || 0) * 100).toFixed(1)}%`,
   })),
@@ -58,11 +71,7 @@ const posterBackground = computed(() => {
   return featured?.artwork?.url || null
 })
 
-const featuredPartnerName = computed(() => {
-  const pool = activePool.value
-  if (!pool?.featured_partner_id) return null
-  return pool.catalog.find((entry) => entry.partner_id === pool.featured_partner_id)?.name || pool.featured_partner_id
-})
+const featuredPartnerName = computed(() => (activePool.value ? poolFeaturedName(activePool.value) : null))
 
 const pityTags = computed(() => {
   const pool = activePool.value
@@ -146,7 +155,7 @@ async function pull(count: 1 | 10) {
 <template>
   <section v-if="game.state && activePool" class="view-section gacha-view">
     <ViewHeader eyebrow="GUIDING LEAVES" title="异界招募">
-      <template #chip><Sparkles :size="18" /> 常驻同行 {{ activePool.catalog.length }} 位</template>
+      <template #chip><Sparkles :size="18" /> 招募名单 {{ activePool.catalog.length }} 位</template>
     </ViewHeader>
 
     <CrossoverBanner
@@ -179,7 +188,7 @@ async function pull(count: 1 | 10) {
       <div class="gacha-layout">
         <GachaPoolSidebar :pools="poolSummaries" :active-id="activePoolId" @select="selectPool">
           <template #footer>
-            <p class="pool-sidebar-note">常驻招募池不会下架，可放心攒引路枫叶；新手招募池次数有限，抽完即止。</p>
+            <p class="pool-sidebar-note">不限次数的招募池不会下架，可放心攒引路枫叶；新手招募池次数有限，抽完即止。</p>
           </template>
         </GachaPoolSidebar>
 

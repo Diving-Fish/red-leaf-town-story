@@ -2,6 +2,26 @@
   "schema_version": 1,
   "assets": [
     {
+      "id": "baili_gacha",
+      "kind": "background",
+      "name": "baili_gacha",
+      "asset_key": "red-leaf-town/story/background/baili_gacha-b7813eee259b518c.webp",
+      "width": 1672,
+      "height": 941,
+      "content_type": "image/webp",
+      "inline_layout": {
+        "scale": 1.0,
+        "offset_x": 0.0,
+        "offset_y": 0.0
+      },
+      "stage_layout": {
+        "scale": 1.0,
+        "offset_x": 0.0,
+        "offset_y": 0.0
+      },
+      "created_at": 0
+    },
+    {
       "id": "farm_house_night",
       "kind": "background",
       "name": "TODO 空屋与农田 · 入夜",

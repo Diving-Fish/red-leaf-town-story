@@ -5072,6 +5072,7 @@ class GameService:
             production_slot_id=f"farm:plot:{plot.slot}",
             now=now,
             base_duration=crop.growth_seconds,
+            minimum_duration=crop.minimum_duration_seconds,
             time_difficulty=crop.time_difficulty,
             produce_item_id=crop.produce_item_id,
             yield_min=crop.yield_min,

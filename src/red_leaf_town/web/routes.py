@@ -343,6 +343,7 @@ def create_blueprint(
         shop_by_seed = {entry.item_id: entry for entry in content.shop}
         crop_fields = {
             "growth_seconds",
+            "minimum_duration_seconds",
             "time_difficulty",
             "yield_min",
             "yield_max",

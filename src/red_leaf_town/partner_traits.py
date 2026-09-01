@@ -869,3 +869,15 @@ def _pinpoint_shot(context: MutableMapping[str, Any]) -> None:
     if _exploration_once_available(context, key):
         context["failure_rescue_usage_key"] = key
         record_partner_trait_effect(context, "allow_failure_rescue")
+
+
+@register_partner_trait(
+    "orchard_tending",
+    "果树栽培",
+    "种植树果作物时，最终耗时减少20%，且固定额外收成1件。",
+    phases=("task_prepare",),
+)
+def _orchard_tending(context: MutableMapping[str, Any]) -> None:
+    if _industry_is(context, "farming") and _has_content_tag(context, "tree_fruit"):
+        _multiply(context, "duration_multiplier", 0.80, stacking_group="duration")
+        _add(context, "yield_bonus", 1, stacking_group="flat_yield")

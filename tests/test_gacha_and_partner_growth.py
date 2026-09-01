@@ -398,3 +398,34 @@ def test_every_limited_pool_lists_known_partners_and_can_fill_all_three_rarities
         assert unknown == [], f"{pool.pool_id} 名单里有不存在的伙伴：{unknown}"
         rarities = {catalog[partner_id].rarity for partner_id in pool.partner_ids}
         assert rarities == {3, 4, 5}, f"{pool.pool_id} 缺少 {sorted({3, 4, 5} - rarities)} 星，保底会抽空"
+
+
+def test_baili_up_pool_features_the_limited_partner_and_keeps_the_standard_roster(growth_game):
+    service, repository, _, player = growth_game
+    catalog = load_partner_catalog()
+    pool = load_gacha_pools()["baili-up-1"]
+
+    assert pool.featured_partner_id == "bai_li"
+    assert pool.featured_rate == pytest.approx(0.8)
+    assert pool.background_asset_id == "baili_gacha"
+    assert not catalog.partner_map["bai_li"].standard_recruitable
+
+    candidates = service._pool_partner_candidates(pool, catalog)
+    standard = service._pool_partner_candidates(load_gacha_pools()["standard-1"], catalog)
+    assert "bai_li" in {entry.id for entry in candidates[5]}
+    assert {entry.id for entry in standard[5]} < {entry.id for entry in candidates[5]}
+    for rarity in (3, 4):
+        assert {entry.id for entry in candidates[rarity]} == {entry.id for entry in standard[rarity]}
+
+    listed = next(
+        entry
+        for entry in service.snapshot_by_sub("growth-sub")["gacha_pools"]
+        if entry["pool_id"] == "baili-up-1"
+    )
+    assert listed["featured_partner_id"] == "bai_li"
+    assert listed["background"]["asset_key"]
+    assert "bai_li" in {entry["partner_id"] for entry in listed["catalog"]}
+
+    service.rng = random.Random(11)
+    picks = [service._pick_gacha_partner(pool, candidates[5], 5).id for _ in range(4000)]
+    assert 0.76 < picks.count("bai_li") / len(picks) < 0.84

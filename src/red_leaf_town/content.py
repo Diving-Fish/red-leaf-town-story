@@ -22,6 +22,7 @@ CONTENT_TAGS = frozenset({
     "medicine",
     "mineral",
     "poultry_product",
+    "tree_fruit",
     "usable",
     "wood",
     "wood_product",
@@ -192,6 +193,7 @@ class CropDefinition(BaseModel):
     seed_item_id: str
     produce_item_id: str
     growth_seconds: int = Field(gt=0)
+    minimum_duration_seconds: int = Field(default=1, gt=0)
     time_difficulty: int = Field(gt=0)
     yield_min: int = Field(ge=1)
     yield_max: int = Field(ge=1)
@@ -206,6 +208,8 @@ class CropDefinition(BaseModel):
     def validate_yield(self):
         if self.yield_max < self.yield_min:
             raise ValueError(f"crop {self.id}: yield_max must be >= yield_min")
+        if self.minimum_duration_seconds > self.growth_seconds:
+            raise ValueError(f"crop {self.id}: minimum_duration_seconds must be <= growth_seconds")
         return self
 
 

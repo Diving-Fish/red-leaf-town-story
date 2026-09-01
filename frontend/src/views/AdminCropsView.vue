@@ -82,6 +82,7 @@ function cropSnapshot(crop: CropAdminDefinition | undefined) {
     seed_price: crop.seed_price,
     produce_sell_price: crop.produce_sell_price,
     growth_seconds: crop.growth_seconds,
+    minimum_duration_seconds: crop.minimum_duration_seconds,
     time_difficulty: crop.time_difficulty,
     yield_min: crop.yield_min,
     yield_max: crop.yield_max,
@@ -153,7 +154,11 @@ function hourlyProfit(crop: CropAdminDefinition, ability: number) {
   const expectedQuantity = (Number(crop.yield_min) + Number(crop.yield_max)) / 2
   const difficulty = Math.max(0.0001, Number(crop.time_difficulty))
   const efficiency = 1 + (2 * ability) / (ability + difficulty)
-  const durationHours = Math.max(1, Math.ceil(Number(crop.growth_seconds) / efficiency)) / 3600
+  const durationSeconds = Math.max(
+    Number(crop.minimum_duration_seconds) || 1,
+    Math.ceil(Number(crop.growth_seconds) / efficiency),
+  )
+  const durationHours = Math.max(1, durationSeconds) / 3600
   return (expectedQuantity * expectedUnitPrice - Number(crop.seed_price)) / durationHours
 }
 
@@ -163,6 +168,14 @@ function growthHours(crop: CropAdminDefinition) {
 
 function setGrowthHours(crop: CropAdminDefinition, value: string) {
   crop.growth_seconds = Math.max(1, Math.round(Number(value || 0) * 3600))
+}
+
+function minimumHours(crop: CropAdminDefinition) {
+  return crop.minimum_duration_seconds / 3600
+}
+
+function setMinimumHours(crop: CropAdminDefinition, value: string) {
+  crop.minimum_duration_seconds = Math.max(1, Math.round(Number(value || 0) * 3600))
 }
 
 function miraclePercent(crop: CropAdminDefinition) {
@@ -179,6 +192,7 @@ function savePayload() {
     seed_price: crop.seed_price,
     produce_sell_price: Number(crop.produce_sell_price),
     growth_seconds: Number(crop.growth_seconds),
+    minimum_duration_seconds: Number(crop.minimum_duration_seconds),
     time_difficulty: Number(crop.time_difficulty),
     yield_min: Number(crop.yield_min),
     yield_max: Number(crop.yield_max),
@@ -294,6 +308,7 @@ onMounted(() => {
                 <label><span>种子价格</span><input v-model.number="crop.seed_price" type="number" min="0" :disabled="crop.seed_price === null" /></label>
                 <label><span>产物基础售价</span><input v-model.number="crop.produce_sell_price" type="number" min="0" /></label>
                 <label><span>基础时间（小时）</span><input :value="growthHours(crop)" type="number" min="0.01" step="0.25" @input="setGrowthHours(crop, ($event.target as HTMLInputElement).value)" /></label>
+                <label><span>时间下限（小时）</span><input :value="minimumHours(crop)" type="number" min="0.01" step="0.25" @input="setMinimumHours(crop, ($event.target as HTMLInputElement).value)" /></label>
                 <label><span>时间难度</span><input v-model.number="crop.time_difficulty" type="number" min="1" /></label>
                 <label><span>最小产量</span><input v-model.number="crop.yield_min" type="number" min="1" /></label>
                 <label><span>最大产量</span><input v-model.number="crop.yield_max" type="number" min="1" /></label>
