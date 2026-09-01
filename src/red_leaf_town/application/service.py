@@ -468,15 +468,24 @@ class GameService:
                 run.route_stamina_raw = route_raw
                 run.action_stamina_spent = action_total
                 run.stamina_spent += cost
-                self._begin_delve_battle(run, event, choice)
+                outcome = self._begin_delve_battle(run, event, choice)
+                if outcome == "wiped":
+                    # 敌人抢到先攻并在我方出手前就打光了队伍。不结算这一步的话，
+                    # 战斗会挂在那里，之后每个行动都被判成"不是我方的回合"。
+                    player.exploration_run = None
                 return {
                     "event_id": event.id,
                     "choice_id": choice.id,
                     "success": True,
-                    "text": event.description,
+                    "text": (
+                        "队伍还没来得及还手就被打散了。"
+                        if outcome == "wiped"
+                        else event.description
+                    ),
                     "stamina_cost": cost,
                     "drops": [],
-                    "battle_started": True,
+                    "battle_started": outcome == "ongoing",
+                    "outcome": outcome,
                     "completed": False,
                 }
 
@@ -659,7 +668,9 @@ class GameService:
         player, result = self._update_by_sub(oauth_sub, mutation)
         return {"result": result, "state": self._snapshot(player, now)}
 
-    def _begin_delve_battle(self, run, event, choice) -> None:
+    def _begin_delve_battle(self, run, event, choice) -> str:
+        """建立战斗并把开场的敌方回合跑完，返回这时候的战斗结果。"""
+
         definitions = self.content.delve_enemy_map
         enemies: list[DelveEnemyState] = []
         initiative: dict[str, int] = {}
@@ -677,6 +688,7 @@ class GameService:
                 max_hp=definition.max_hp,
                 hp=definition.max_hp,
                 armor_class=definition.armor_class,
+                attacks_per_turn=definition.attacks_per_turn,
                 boss=definition.boss,
             ))
             initiative[key] = definition.initiative_bonus
@@ -696,7 +708,10 @@ class GameService:
             },
         )
         run.battle = battle
-        self._run_delve_enemy_turns(battle, members)
+        outcome = self._run_delve_enemy_turns(battle, members)
+        if outcome != "ongoing":
+            run.battle = None
+        return outcome
 
     def _run_delve_enemy_turns(self, battle, members: dict) -> str:
         """一路跑到下一个我方回合，或者战斗结束。"""
@@ -719,6 +734,7 @@ class GameService:
                 enemy,
                 [attack.model_dump() for attack in definition.attacks],
                 members,
+                definition.attacks_per_turn,
             )
             delve_battle.advance_turn(battle)
         return delve_battle.battle_outcome(battle, members)

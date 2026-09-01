@@ -689,6 +689,8 @@ class DelveEnemyState(BaseModel):
     max_hp: int = Field(gt=0)
     hp: int = Field(ge=0)
     armor_class: int = Field(ge=1)
+    # 一回合出手几次。写进战斗快照是为了让前端在开打前就能标出来。
+    attacks_per_turn: int = Field(default=1, ge=1, le=4)
     boss: bool = False
 
 

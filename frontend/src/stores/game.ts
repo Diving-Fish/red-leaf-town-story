@@ -292,6 +292,8 @@ export const useGameStore = defineStore('game', () => {
     const result = await action('exploration:resolve', `${API_ROOT}/exploration/current/resolve`, {
       payload: { choice_id: choiceId, actor_partner_id: actorPartnerId },
     }) as ExplorationResolutionResult | undefined
+    // 敌人抢到先攻并在我方出手前就打光了队伍，这一趟当场结束。
+    if (result?.outcome === 'wiped') showNotice('队伍失去了战斗力，冻结的战利品全部损失')
     return result
   }
 

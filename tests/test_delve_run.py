@@ -335,3 +335,81 @@ def test_the_boss_hands_over_the_hunters_charm_the_second_gate_asks_for():
     assert boss_fight.battle.can_flee is False
     assert content.delve_enemy_map["fruitheart_warden"].boss is True
     assert [reward.item_id for reward in boss_fight.success.fixed_rewards] == ["hunters_charm", "peach_berry_seed"]
+
+
+def test_the_boss_acts_three_times_a_turn(delve_game):
+    """首领在先攻序列里只占一格，靠多段攻击把行动经济补回来。"""
+    service, _, _ = delve_game
+    content = service.content
+
+    assert content.delve_enemy_map["fruitheart_warden"].attacks_per_turn == 3
+    assert all(
+        enemy.attacks_per_turn == 1
+        for enemy in content.delve_enemies
+        if not enemy.boss
+    )
+
+
+def test_multiattack_swings_once_per_action_and_stops_when_the_party_is_down():
+    from red_leaf_town.domain import delve_battle
+    from red_leaf_town.domain.models import DelveBattleState, DelveEnemyState, DelveLoadoutSnapshot, DelveMemberState
+
+    def build_party(hp: int):
+        members = {}
+        for name in ("a", "b"):
+            members[name] = delve_battle.PartyMember(
+                partner_id=name, name=name, strength=10, agility=10, intelligence=10, luck=10,
+                state=DelveMemberState(max_hp=hp, hp=hp, armor_class=1),
+                loadout=DelveLoadoutSnapshot(),
+            )
+        return members
+
+    def swing(members, times):
+        # 用同一批队员对象，打完之后可以直接检查他们的状态。
+        enemy = DelveEnemyState(key="e", enemy_id="e", name="敌人", max_hp=10, hp=10, armor_class=10)
+        battle = DelveBattleState(
+            battle_id="b", event_id="e", choice_id="c", depth=1,
+            enemies=[enemy], order=["a", "b", "e"],
+        )
+        delve_battle.enemy_turn(
+            random.Random(3), battle, enemy,
+            [{"name": "打", "to_hit": 20, "damage_dice": "1d4"}], members, times,
+        )
+        return battle
+
+    # AC 1 对 to_hit +20：每一击必中，所以日志条数就是出手次数。
+    assert len(swing(build_party(100), 1).logs) == 1
+    assert len(swing(build_party(100), 3).logs) == 3
+    # 打空了就收手，不会对着倒下的队伍继续挥。
+    downed = build_party(1)
+    battle = swing(downed, 4)
+    assert len(battle.logs) == 2
+    assert all(member.down for member in downed.values())
+    assert delve_battle.battle_outcome(battle, downed) == "wiped"
+
+
+def test_losing_the_opening_enemy_turns_ends_the_run_instead_of_hanging(delve_game):
+    """敌人抢到先攻并在我方出手前打光队伍时，这一趟要当场结束。
+
+    否则战斗会挂在那里，之后每个行动都被判成「不是我方的回合」，整个存档卡死。
+    """
+    service, repository, player = delve_game
+    started = start(service)
+    run = started["state"]["exploration"]["active_run"]
+
+    def nearly_dead(state):
+        for combatant in state.exploration_run.combat_party.values():
+            combatant.hp = 1
+
+    repository.update(player.player_id, nearly_dead)
+    service.rng = SteadyRandom(3)
+
+    result = service.resolve_exploration_event("delve-sub", battle_choice(run))
+
+    if result["result"]["outcome"] == "wiped":
+        assert result["result"]["battle_started"] is False
+        assert result["state"]["exploration"]["active_run"] is None
+        assert repository.get(player.player_id).exploration_run is None
+    else:
+        # 没有被开场打光的话，至少要轮到我方，不能停在敌人回合上。
+        assert result["state"]["exploration"]["active_run"]["battle"]["current_actor_is_party"] is True

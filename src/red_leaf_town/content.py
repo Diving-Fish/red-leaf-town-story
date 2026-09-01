@@ -401,6 +401,9 @@ class DelveEnemyDefinition(BaseModel):
     armor_class: int = Field(ge=5, le=25)
     initiative_bonus: int = Field(default=0, ge=-5, le=10)
     attacks: list[DelveAttackDefinition] = Field(min_length=1, max_length=4)
+    # 一回合出手几次。敌人在先攻序列里只占一格，而我方三人各占一格，所以单动的首领在
+    # 行动经济上是 1:3，怎么调数值都构不成威胁；首领靠这个字段把出手次数补回来。
+    attacks_per_turn: int = Field(default=1, ge=1, le=4)
     boss: bool = False
 
 

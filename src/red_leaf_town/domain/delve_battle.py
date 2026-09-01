@@ -302,6 +302,22 @@ def enemy_turn(
     enemy: DelveEnemyState,
     attacks: list[dict],
     members: dict[str, PartyMember],
+    attacks_per_turn: int = 1,
+) -> None:
+    """敌人的一个回合。多段攻击的每一击都单独选目标、单独掷骰，打空了就提前收手。"""
+
+    for _ in range(max(1, attacks_per_turn)):
+        if not living_members(members):
+            return
+        _enemy_attack(rng, battle, enemy, attacks, members)
+
+
+def _enemy_attack(
+    rng: Random | SystemRandom,
+    battle: DelveBattleState,
+    enemy: DelveEnemyState,
+    attacks: list[dict],
+    members: dict[str, PartyMember],
 ) -> None:
     alive = living_members(members)
     if not alive:

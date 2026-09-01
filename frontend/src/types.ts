@@ -1092,6 +1092,7 @@ export interface DelveEnemy {
   max_hp: number
   hp: number
   armor_class: number
+  attacks_per_turn: number
   boss: boolean
 }
 
@@ -1229,6 +1230,7 @@ export type ExplorationCheckDegree = 'automatic_success' | 'critical_failure' | 
 
 export interface ExplorationResolutionResult {
   battle_started?: boolean
+  outcome?: 'ongoing' | 'victory' | 'wiped'
   event_id: string
   choice_id: string
   success: boolean

@@ -458,8 +458,11 @@ async function start() {
 
 async function resolveChoice(choiceId: string) {
   const result = await game.resolveExploration(choiceId, selectedActors.value[choiceId] || '')
+  if (!result) return
+  // 开场就被打光的话这一趟已经结束了，提示已经弹过，不再显示事件结算卡。
+  if (result.outcome === 'wiped') return
   // 战斗节点直接进战斗面板，不再弹一次事件结算卡。
-  if (result && !result.battle_started) resolution.value = result
+  if (!result.battle_started) resolution.value = result
 }
 
 function actorFor(choice: ExplorationChoice) {
@@ -826,7 +829,10 @@ function dieLabel(result: ExplorationResolutionResult, index: number) {
             <span class="enemy-icon"><GameIcon :name="enemy.icon" :size="21" /></span>
             <span class="enemy-copy">
               <strong>{{ enemy.name }}</strong>
-              <small>{{ enemy.hp }} / {{ enemy.max_hp }} · AC {{ enemy.armor_class }}</small>
+              <small>
+                {{ enemy.hp }} / {{ enemy.max_hp }} · AC {{ enemy.armor_class }}
+                <b v-if="enemy.attacks_per_turn > 1" class="enemy-multi">一回合 {{ enemy.attacks_per_turn }} 动</b>
+              </small>
               <i class="hp-bar enemy"><b :style="{ width: unitHpRatio(enemy.hp, enemy.max_hp) }" /></i>
             </span>
             <span v-if="targeting && enemy.hp > 0" class="enemy-aim">瞄准</span>
@@ -1258,6 +1264,7 @@ function dieLabel(result: ExplorationResolutionResult, index: number) {
 .enemy-copy small { color: #8b978c; font-size: var(--font-caption); font-variant-numeric: tabular-nums; }
 .enemy-card.boss { border-color: #d79a6860; }
 .enemy-card.boss .enemy-icon { color: var(--gold); background: #d7ad5818; }
+.enemy-multi { margin-left: 6px; padding: 1px 6px; color: var(--danger); font-size: 11px; font-weight: 600; border: 1px solid currentColor; border-radius: 999px; }
 .enemy-card.acting { border-color: #d79a68; box-shadow: 0 0 0 1px #d79a6840; }
 .enemy-card.defeated { opacity: .42; }
 .enemy-card:disabled { opacity: .42; }
