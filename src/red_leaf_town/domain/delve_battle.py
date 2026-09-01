@@ -9,9 +9,10 @@
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from random import Random, SystemRandom
 
+from ..partner_traits import execute_partner_traits
 from .models import DelveBattleLog, DelveBattleState, DelveEnemyState, DelveLoadoutSnapshot, DelveMemberState
 
 
@@ -76,6 +77,7 @@ class PartyMember:
     luck: int
     state: DelveMemberState
     loadout: DelveLoadoutSnapshot
+    trait_codes: list[str] = field(default_factory=list)
 
     def attribute(self, name: str) -> int:
         return getattr(self, name)
@@ -179,16 +181,36 @@ def member_attack(
     if target is None or target.hp <= 0:
         raise BattleError("这个目标已经不在场上了")
 
-    mode = "advantage" if battle.advantage_ready.get(member.partner_id) else "normal"
+    trait_context = {
+        "phase": "delve_attack",
+        "source_partner_id": member.partner_id,
+        "current_hp": member.state.hp,
+        "max_hp": member.state.max_hp,
+        "weapon_item_id": member.loadout.weapon_item_id,
+        "attack_attribute": member.loadout.attack_attribute,
+        "dice_adjustment": 0,
+        "attack_bonus": 0,
+        "damage_bonus": 0,
+        "applied_effects": [],
+    }
+    execute_partner_traits(member.trait_codes, trait_context)
+    accessory_advantage = bool(battle.advantage_ready.get(member.partner_id))
+    mode = "advantage" if accessory_advantage or trait_context["dice_adjustment"] > 0 else "normal"
     rolls, kept = _roll_d20(rng, mode)
-    if mode == "advantage":
+    if accessory_advantage:
         battle.advantage_ready[member.partner_id] = False
-    total = kept + member.attack_modifier
+    attack_modifier = member.attack_modifier + int(trait_context["attack_bonus"])
+    total = kept + attack_modifier
     critical = kept >= critical_minimum(member.luck)
     hit = kept != 1 and (critical or total >= target.armor_class)
     damage = 0
     if hit:
-        damage = max(1, roll_dice(rng, member.damage_dice, 2 if critical else 1) + member.damage_modifier)
+        damage = max(
+            1,
+            roll_dice(rng, member.damage_dice, 2 if critical else 1)
+            + member.damage_modifier
+            + int(trait_context["damage_bonus"]),
+        )
         target.hp = max(0, target.hp - damage)
 
     if not hit:
@@ -209,7 +231,7 @@ def member_attack(
         target_name=target.name,
         roll=kept,
         rolls=rolls,
-        modifier=member.attack_modifier,
+        modifier=attack_modifier,
         total=total,
         hit=hit,
         critical=critical and hit,

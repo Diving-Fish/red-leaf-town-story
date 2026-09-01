@@ -8,7 +8,7 @@ from red_leaf_town.partner_content import load_partner_catalog
 from red_leaf_town.partner_traits import execute_partner_traits, partner_trait_catalog
 
 
-PARTNER_TRAITS = {
+PARTNER_TRAITS: dict[str, str | tuple[str, ...]] = {
     "ai_xinyu": "flow_treasure",
     "aiweier": "fodder_fields",
     "aorui_jin": "golden_line",
@@ -58,6 +58,7 @@ PARTNER_TRAITS = {
     "nuanyu_2": "azure_smelt",
     "yuan_huiqin": "pinpoint_shot",
     "bai_li": "orchard_tending",
+    "bai_lin": ("full_health_advantage", "strength_weapon_tradeoff"),
 }
 
 PENDING_PARTNERS: set[str] = set()
@@ -91,6 +92,13 @@ def trait_context(phase: str, **overrides):
         "affection_per_care_bonus": 0,
         "gene_rerolls": 0,
         "reward_quantity_multiplier": 1.0,
+        "current_hp": 100,
+        "max_hp": 100,
+        "weapon_item_id": "test_strength_weapon",
+        "attack_attribute": "strength",
+        "dice_adjustment": 0,
+        "attack_bonus": 0,
+        "damage_bonus": 0,
         "applied_effects": [],
     }
     context.update(overrides)
@@ -147,6 +155,8 @@ TRAIT_CASES = [
     ("azure_flame_undying", "exploration_event", {"industry": "exploration", "depth": 3}, "reward_quantity_multiplier", "increase"),
     ("pinpoint_shot", "exploration_event", {"industry": "exploration", "check_attribute": "intelligence", "check_actor_partner_ids": ["yuan_huiqin"], "source_partner_id": "yuan_huiqin", "trait_usage": {}}, None, "effect"),
     ("orchard_tending", "task_prepare", {"industry": "farming", "content_tags": ["crop", "food", "tree_fruit"]}, "duration_multiplier", "decrease"),
+    ("full_health_advantage", "delve_attack", {}, "dice_adjustment", "increase"),
+    ("strength_weapon_tradeoff", "delve_attack", {}, "attack_bonus", "decrease"),
 ]
 
 SECONDARY_TRAIT_CASES = [
@@ -158,6 +168,7 @@ SECONDARY_TRAIT_CASES = [
     ("frost_grooming", "instant_action", {"industry": "livestock", "action": "livestock_care"}, "affection_per_care_bonus", "increase"),
     ("azure_smelt", "result_finalize", {"industry": "crafting"}, None, "effect"),
     ("orchard_tending", "task_prepare", {"industry": "farming", "content_tags": ["crop", "food", "tree_fruit"]}, "yield_bonus", "increase"),
+    ("strength_weapon_tradeoff", "delve_attack", {}, "damage_bonus", "increase"),
 ]
 
 
@@ -165,16 +176,22 @@ def test_only_partners_with_an_implemented_primary_industry_have_traits():
     catalog = load_partner_catalog()
     definitions = {entry.code: entry for entry in partner_trait_catalog()}
 
-    for partner_id, trait_code in PARTNER_TRAITS.items():
-        assert catalog.partner_map[partner_id].trait_codes == [trait_code]
-        assert definitions[trait_code].implemented is True
+    for partner_id, trait_codes in PARTNER_TRAITS.items():
+        expected_codes = [trait_codes] if isinstance(trait_codes, str) else list(trait_codes)
+        assert catalog.partner_map[partner_id].trait_codes == expected_codes
+        assert all(definitions[code].implemented is True for code in expected_codes)
     assert {partner_id for partner_id, partner in catalog.partner_map.items() if not partner.trait_codes} == PENDING_PARTNERS
 
 
 def test_no_two_bound_traits_have_identical_behavior():
     scenarios = [(phase, overrides) for _, phase, overrides, _, _ in [*TRAIT_CASES, *SECONDARY_TRAIT_CASES]]
     signatures: dict[tuple[str, ...], list[str]] = {}
-    for code in PARTNER_TRAITS.values():
+    bound_codes = {
+        code
+        for trait_codes in PARTNER_TRAITS.values()
+        for code in ([trait_codes] if isinstance(trait_codes, str) else trait_codes)
+    }
+    for code in bound_codes:
         observations = []
         for phase, overrides in scenarios:
             context = trait_context(phase, **overrides)

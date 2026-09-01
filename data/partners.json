@@ -451,6 +451,64 @@
       "ascensions": []
     },
     {
+      "id": "bai_lin",
+      "name": "白凛",
+      "rarity": 4,
+      "standard_recruitable": false,
+      "description": "",
+      "growth_curve": "linear",
+      "exploration_stats": {
+        "strength": 18,
+        "agility": 16,
+        "intelligence": 13,
+        "luck": 10
+      },
+      "tendencies": [
+        {
+          "industry": "exploration",
+          "level_1": 37,
+          "level_60": 235
+        }
+      ],
+      "trait_codes": [
+        "full_health_advantage",
+        "strength_weapon_tradeoff"
+      ],
+      "artworks": [
+        {
+          "breakthrough": 0,
+          "asset_key": "red-leaf-town/partners/bai_lin/breakthrough-0-c00120789411c4b2.webp",
+          "width": 1008,
+          "height": 1792,
+          "content_type": "image/webp"
+        }
+      ],
+      "avatar_crops": [
+        {
+          "breakthrough": 0,
+          "x": 366,
+          "y": 241,
+          "w": 307,
+          "h": 307
+        },
+        {
+          "breakthrough": 1,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        },
+        {
+          "breakthrough": 2,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        }
+      ],
+      "ascensions": []
+    },
+    {
       "id": "bai_lingxue",
       "name": "白岭雪",
       "rarity": 4,

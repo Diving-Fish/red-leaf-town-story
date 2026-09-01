@@ -5796,6 +5796,7 @@ class GameService:
                 luck=stats.luck,
                 state=state,
                 loadout=run.loadout.get(partner_id) or DelveLoadoutSnapshot(),
+                trait_codes=list(definition.trait_codes),
             )
         return members
 

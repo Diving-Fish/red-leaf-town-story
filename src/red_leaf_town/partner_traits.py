@@ -15,6 +15,7 @@ TRAIT_PHASES = frozenset({
     "quality_roll",
     "result_finalize",
     "exploration_event",
+    "delve_attack",
     "livestock_segment",
 })
 
@@ -881,3 +882,29 @@ def _orchard_tending(context: MutableMapping[str, Any]) -> None:
     if _industry_is(context, "farming") and _has_content_tag(context, "tree_fruit"):
         _multiply(context, "duration_multiplier", 0.80, stacking_group="duration")
         _add(context, "yield_bonus", 1, stacking_group="flat_yield")
+
+
+@register_partner_trait(
+    "full_health_advantage",
+    "全盛之势",
+    "战斗中进行攻击检定时，若自身生命值高于90%，则获得优势骰。",
+    phases=("delve_attack",),
+)
+def _full_health_advantage(context: MutableMapping[str, Any]) -> None:
+    current_hp = int(context.get("current_hp", 0))
+    max_hp = int(context.get("max_hp", 0))
+    if max_hp > 0 and current_hp * 10 > max_hp * 9:
+        _add(context, "dice_adjustment", 1, effect="grant_advantage", stacking_group="delve_attack_dice")
+
+
+@register_partner_trait(
+    "strength_weapon_tradeoff",
+    "力破千钧",
+    "自身使用力量型武器时，攻击检定加值-5，但造成的伤害+10。",
+    phases=("delve_attack",),
+)
+def _strength_weapon_tradeoff(context: MutableMapping[str, Any]) -> None:
+    if not context.get("weapon_item_id") or context.get("attack_attribute") != "strength":
+        return
+    _add(context, "attack_bonus", -5, stacking_group="delve_attack_bonus")
+    _add(context, "damage_bonus", 10, stacking_group="delve_damage_bonus")

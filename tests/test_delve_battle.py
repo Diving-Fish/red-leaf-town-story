@@ -111,6 +111,49 @@ def test_an_accessory_advantage_keeps_the_better_of_two_dice_once():
         delve_battle.member_prepare_advantage(state, hero)
 
 
+def test_full_health_trait_grants_advantage_only_above_ninety_percent_hp():
+    hero = member("bai_lin", hp=100)
+    hero.trait_codes = ["full_health_advantage"]
+    state = battle()
+
+    delve_battle.member_attack(FixedRandom([3, 17, 5]), state, hero, "beast#1")
+    assert state.logs[-1].rolls == [3, 17]
+
+    hero.state.hp = 90
+    delve_battle.member_attack(FixedRandom([17, 5]), state, hero, "beast#1")
+    assert state.logs[-1].rolls == [17]
+
+
+def test_strength_weapon_trait_trades_five_attack_for_ten_damage():
+    hero = member("bai_lin", strength=18, hp=100, dice="1d10")
+    hero.loadout.weapon_item_id = "copper_greatsword"
+    hero.trait_codes = ["strength_weapon_tradeoff"]
+    state = battle(enemy_hp=40)
+
+    delve_battle.member_attack(FixedRandom([13, 6]), state, hero, "beast#1")
+
+    log = state.logs[-1]
+    assert log.modifier == -1  # 力量调整值 +4，再承受特性的 -5。
+    assert log.damage == 20  # 1d10 掷出 6，力量 +4，特性 +10。
+    assert state.enemies[0].hp == 20
+
+
+def test_strength_weapon_trait_does_not_apply_to_unarmed_or_agility_weapons():
+    hero = member("bai_lin", strength=18, agility=16, hp=100, dice="1d6")
+    hero.trait_codes = ["strength_weapon_tradeoff"]
+    state = battle(enemy_hp=50)
+
+    delve_battle.member_attack(FixedRandom([13, 6]), state, hero, "beast#1")
+    assert state.logs[-1].modifier == 4
+    assert state.logs[-1].damage == 10
+
+    hero.loadout.weapon_item_id = "silver_dagger"
+    hero.loadout.attack_attribute = "agility"
+    delve_battle.member_attack(FixedRandom([13, 6]), state, hero, "beast#1")
+    assert state.logs[-1].modifier == 3
+    assert state.logs[-1].damage == 9
+
+
 def test_downed_members_stop_acting_and_a_full_party_wipe_ends_the_battle():
     hero = member("hero", hp=6)
     members = {"hero": hero}
