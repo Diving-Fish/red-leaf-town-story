@@ -337,12 +337,12 @@ def test_the_boss_hands_over_the_hunters_charm_the_second_gate_asks_for():
     assert [reward.item_id for reward in boss_fight.success.fixed_rewards] == ["hunters_charm", "peach_berry_seed"]
 
 
-def test_the_boss_acts_three_times_a_turn(delve_game):
+def test_the_boss_acts_twice_a_turn(delve_game):
     """首领在先攻序列里只占一格，靠多段攻击把行动经济补回来。"""
     service, _, _ = delve_game
     content = service.content
 
-    assert content.delve_enemy_map["fruitheart_warden"].attacks_per_turn == 3
+    assert content.delve_enemy_map["fruitheart_warden"].attacks_per_turn == 2
     assert all(
         enemy.attacks_per_turn == 1
         for enemy in content.delve_enemies

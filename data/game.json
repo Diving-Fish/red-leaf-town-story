@@ -2286,7 +2286,7 @@
       "max_hp": 88,
       "armor_class": 15,
       "initiative_bonus": 2,
-      "attacks_per_turn": 3,
+      "attacks_per_turn": 2,
       "boss": true,
       "attacks": [
         {
