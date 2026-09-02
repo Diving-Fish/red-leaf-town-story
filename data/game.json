@@ -414,7 +414,7 @@
       "name": "桃桃果",
       "icon": "cherry",
       "kind": "produce",
-      "sell_price": 800,
+      "sell_price": 1600,
       "has_quality": true,
       "tags": [
         "crop",
@@ -438,7 +438,7 @@
       "name": "莓莓果",
       "icon": "grape",
       "kind": "produce",
-      "sell_price": 1200,
+      "sell_price": 2400,
       "has_quality": true,
       "tags": [
         "crop",

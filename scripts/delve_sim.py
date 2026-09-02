@@ -89,6 +89,17 @@ def loadout_for(content, weapon_id: str, accessory_id: str) -> DelveLoadoutSnaps
     return DelveLoadoutSnapshot(**data)
 
 
+def _tally(drops: dict, outcome) -> None:
+    """把一个结局的产出累加进这一趟的掉落表。品质产物按数量区间取均值。"""
+    if outcome is None:
+        return
+    for reward in outcome.rewards:
+        drops[reward.item_id] = drops.get(reward.item_id, 0.0) + (
+            reward.quantity_min + reward.quantity_max) / 2
+    for reward in outcome.fixed_rewards:
+        drops[reward.item_id] = drops.get(reward.item_id, 0.0) + reward.quantity
+
+
 @dataclass
 class Result:
     outcome: str          # cleared / wiped / stalled
@@ -97,6 +108,9 @@ class Result:
     reached_boss: bool = False
     battles: int = 0
     salves_used: int = 0
+    stamina_spent: int = 0
+    # item_id -> 件数（品质产物按 quantity_min/max 的均值算，固定掉落按件算）
+    drops: dict = field(default_factory=dict)
 
 
 @dataclass
@@ -218,6 +232,8 @@ class Sim:
         counts: dict[str, int] = {}
         pack = [self.salves]
         stamina = self.stamina
+        spent = 0
+        drops: dict[str, float] = {}
         depth = 0
         battles = 0
         hp_at_boss = 0.0
@@ -231,14 +247,15 @@ class Sim:
             event = self._pick_event(rng, counts, depth + 1)
             if event is None:
                 return Result("stalled", ratio(), hp_at_boss, reached_boss, battles,
-                              self.salves - pack[0])
+                              self.salves - pack[0], spent, drops)
             # 有战斗就打战斗分支，没有就走第一个选择，和基线模拟的口径一致。
             choice = next((c for c in event.choices if c.battle is not None), event.choices[0])
             cost = choice.route_stamina + choice.action_stamina
             if stamina < cost:
                 return Result("stalled", ratio(), hp_at_boss, reached_boss, battles,
-                              self.salves - pack[0])
+                              self.salves - pack[0], spent, drops)
             stamina -= cost
+            spent += cost
             if choice.battle is not None:
                 is_boss = event.id == self.expedition.final_event_id
                 if is_boss:
@@ -248,20 +265,30 @@ class Sim:
                 outcome = self._fight(rng, members, choice.battle, is_boss, pack)
                 if outcome != "victory":
                     return Result("wiped", 0.0, hp_at_boss, reached_boss, battles,
-                                  self.salves - pack[0])
+                                  self.salves - pack[0], spent, {})
+                _tally(drops, choice.success)
             elif choice.check is not None:
                 # 检定不影响 HP，只可能多扣体力；失败按 stamina_surcharge 记。
                 face = rng.randint(1, 20)
                 best = max(delve_battle.modifier(m.attribute(choice.check.attribute))
                            for m in members.values())
-                if face != 1 and (face >= 20 or face + best >= choice.check.dc):
-                    pass
-                elif choice.failure is not None:
-                    stamina -= choice.failure.stamina_surcharge
+                if face >= 20:
+                    _tally(drops, choice.critical_success or choice.success)
+                elif face == 1:
+                    outcome = choice.critical_failure or choice.failure
+                    _tally(drops, outcome)
+                    stamina -= outcome.stamina_surcharge if outcome else 0
+                elif face + best >= choice.check.dc:
+                    _tally(drops, choice.success)
+                else:
+                    _tally(drops, choice.failure)
+                    stamina -= choice.failure.stamina_surcharge if choice.failure else 0
+            else:
+                _tally(drops, choice.success)
             counts[event.id] = counts.get(event.id, 0) + 1
             depth += 1
         return Result("cleared", ratio(), hp_at_boss, reached_boss, battles,
-                      self.salves - pack[0])
+                      self.salves - pack[0], spent, drops)
 
     def run_many(self, runs: int = 2000, seed0: int = 0) -> dict:
         results = [self.run_once(seed0 + i) for i in range(runs)]
@@ -277,6 +304,13 @@ class Sim:
             "boss_reach_rate": len(boss) / runs,
             "boss_win_rate": len(cleared) / len(boss) if boss else 0.0,
             "salves": sum(r.salves_used for r in results) / runs,
+            "stamina": sum(r.stamina_spent for r in results) / runs,
+            "stamina_cleared": (sum(r.stamina_spent for r in cleared) / len(cleared)
+                                if cleared else 0.0),
+            "drops": {
+                item_id: sum(r.drops.get(item_id, 0.0) for r in cleared) / len(cleared)
+                for item_id in {k for r in cleared for k in r.drops}
+            } if cleared else {},
         }
 
 

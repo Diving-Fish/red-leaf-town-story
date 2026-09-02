@@ -39,8 +39,8 @@ def grant_seed(repository, player, seed_item_id: str, count: int = 1):
 @pytest.mark.parametrize(
     ("crop_id", "seed_item_id", "stamina_cost", "sell_price", "plant_xp", "harvest_xp"),
     [
-        ("peach_berry", "peach_berry_seed", 8, 800, 6, 40),
-        ("berry_berry", "berry_berry_seed", 12, 1200, 9, 60),
+        ("peach_berry", "peach_berry_seed", 8, 1600, 6, 40),
+        ("berry_berry", "berry_berry_seed", 12, 2400, 9, 60),
     ],
 )
 def test_premium_crop_balance_numbers(game, crop_id, seed_item_id, stamina_cost, sell_price, plant_xp, harvest_xp):
@@ -236,3 +236,49 @@ def test_orchard_tending_can_push_the_duration_below_the_twelve_hour_floor(game)
     assert planted["result"]["total_ability"] == 134
     assert planted["result"]["final_duration"] == 42_733
     assert planted["result"]["final_duration"] < service.content.crop_map["berry_berry"].minimum_duration_seconds
+
+
+def expected_sale_multiplier(content, quality, ability: int = 0) -> float:
+    """按品质曲线算出的期望售价倍率。无伙伴加成时能力为 0。"""
+    from red_leaf_town.domain.quality import quality_probabilities
+
+    grades = {grade.level: grade.sale_multiplier for grade in content.quality.grades}
+    probabilities = quality_probabilities(
+        ability, quality.thresholds, quality.width,
+        quality.miracle_probability_cap, quality.miracle_eligible,
+    )
+    return sum(probabilities[index] * grades[index + 1] for index in range(5))
+
+
+def test_tree_fruit_pays_for_the_stamina_it_costs(game):
+    """树果是唯一收体力的作物，所以它每点体力的回报必须明显高于零风险的采矿。
+
+    这条不是抄数据文件里的价格，而是守住「体力的去处之间不能倒挂」：树果的种子只能从
+    探秘副本掉，那趟本身还要 2500 入场费和三十多点体力，如果种植环节的回报还不如挖矿，
+    整条链就没有人会走。
+    """
+    service, _, _, _ = game
+    content = service.content
+
+    mining_rates = []
+    for task in content.mining_tasks:
+        item = content.item_map[task.produce_item_id]
+        average_yield = (task.yield_min + task.yield_max) / 2
+        gross = average_yield * item.sell_price * expected_sale_multiplier(content, task.quality)
+        mining_rates.append(gross / task.stamina_cost)
+    best_mining = max(mining_rates)
+
+    for crop_id in ("peach_berry", "berry_berry"):
+        crop = content.crop_map[crop_id]
+        item = content.item_map[crop.produce_item_id]
+        average_yield = (crop.yield_min + crop.yield_max) / 2
+        gross = average_yield * item.sell_price * expected_sale_multiplier(content, crop.quality)
+
+        assert crop.stamina_cost > 0, "树果是唯一收体力的作物"
+        assert gross / crop.stamina_cost > best_mining * 2
+
+
+def test_only_tree_fruit_charges_stamina_to_plant(game):
+    service, _, _, _ = game
+    charging = {crop.id for crop in service.content.crops if crop.stamina_cost > 0}
+    assert charging == {"peach_berry", "berry_berry"}
