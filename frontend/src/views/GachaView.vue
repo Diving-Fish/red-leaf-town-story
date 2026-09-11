@@ -203,12 +203,14 @@ async function pull(count: 1 | 10) {
               <Percent :size="13" />查看概率详情
             </button>
             <ActionButton
+              class="gacha-pull-button"
               action-key="gacha:single"
               :disabled="singlePullDisabled"
               reason="这个招募池的次数已经用完了"
               @click="pull(1)"
             >单次招募 · 1 片</ActionButton>
             <ActionButton
+              class="gacha-pull-button"
               action-key="gacha:ten"
               :disabled="tenPullDisabled"
               reason="剩余次数不足以十连"
@@ -272,5 +274,10 @@ async function pull(count: 1 | 10) {
 }
 @media (max-width: 760px) {
   .gacha-wallet { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 720px) {
+  .poster-balance { min-width: 0; flex-wrap: wrap; overflow-wrap: anywhere; }
+  .gacha-details-trigger { justify-self: end; min-height: 36px; padding: 4px 0; font-size: 12px; }
+  .gacha-pull-button { width: 100%; min-width: 0; min-height: 44px; padding: 10px 6px; font-size: 13px; }
 }
 </style>

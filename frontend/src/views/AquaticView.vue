@@ -10,13 +10,12 @@ import PondCard from '@/components/aquatic/PondCard.vue'
 import StateBlock from '@/components/StateBlock.vue'
 import ViewHeader from '@/components/ViewHeader.vue'
 import { useGameStore } from '@/stores/game'
-import { IS_BETA_BUILD } from '@/lib/environment'
 
 const game = useGameStore()
 const route = useRoute()
 const router = useRouter()
 const tabBar = ref<HTMLElement | null>(null)
-const SailingPanel = IS_BETA_BUILD ? defineAsyncComponent(() => import('@/components/aquatic/SailingPanel.vue')) : null
+const SailingPanel = defineAsyncComponent(() => import('@/components/aquatic/SailingPanel.vue'))
 const tabs = computed(() => [
   { id: 'fishing', name: '钓鱼', icon: Fish, hint: '即刻下竿' },
   { id: 'ponds', name: '鱼塘', icon: Waves, hint: '长久经营' },
@@ -47,8 +46,8 @@ const aquatic = computed(() => game.state?.aquatic || null)
 </script>
 
 <template>
-  <section v-if="game.state && aquatic" class="view-section aquatic-view" :class="{ 'aquatic-view--beta': IS_BETA_BUILD }">
-    <ViewHeader :eyebrow="IS_BETA_BUILD ? 'RIVERS, PONDS & OPEN SEA' : 'WATERS AND PONDS'" title="水产">
+  <section v-if="game.state && aquatic" class="view-section aquatic-view">
+    <ViewHeader eyebrow="RIVERS, PONDS & OPEN SEA" title="水产">
       <template #chip>
         <UsersRound :size="18" /> 水产编制 {{ game.state.industry_rules.aquatic?.partner_capacity || 0 }}
       </template>
@@ -62,7 +61,7 @@ const aquatic = computed(() => game.state?.aquatic || null)
     />
 
     <template v-else>
-      <nav v-if="IS_BETA_BUILD" ref="tabBar" class="aquatic-tabs" role="tablist" aria-label="水产玩法" @keydown="moveTab">
+      <nav ref="tabBar" class="aquatic-tabs" role="tablist" aria-label="水产玩法" @keydown="moveTab">
         <button
           v-for="tab in tabs" :id="`aquatic-tab-${tab.id}`" :key="tab.id" type="button" role="tab"
           :aria-selected="activeTab === tab.id" :aria-controls="`aquatic-panel-${tab.id}`"
@@ -72,15 +71,14 @@ const aquatic = computed(() => game.state?.aquatic || null)
           <component :is="tab.icon" :size="22" />
           <span><strong>{{ tab.name }}</strong><small>{{ tab.hint }}</small></span>
           <i v-if="tab.id === 'sailing' && sailingReady" class="tab-ready">已回港</i>
-          <i v-else-if="tab.id === 'sailing'" class="tab-beta">内测</i>
         </button>
       </nav>
 
-      <div v-show="!IS_BETA_BUILD || activeTab === 'fishing'" id="aquatic-panel-fishing" :role="IS_BETA_BUILD ? 'tabpanel' : undefined" :aria-labelledby="IS_BETA_BUILD ? 'aquatic-tab-fishing' : undefined">
+      <div v-show="activeTab === 'fishing'" id="aquatic-panel-fishing" role="tabpanel" aria-labelledby="aquatic-tab-fishing">
         <FishingPanel :aquatic="aquatic" />
       </div>
 
-      <div v-show="!IS_BETA_BUILD || activeTab === 'ponds'" id="aquatic-panel-ponds" class="aquatic-pond-content" :role="IS_BETA_BUILD ? 'tabpanel' : undefined" :aria-labelledby="IS_BETA_BUILD ? 'aquatic-tab-ponds' : undefined">
+      <div v-show="activeTab === 'ponds'" id="aquatic-panel-ponds" class="aquatic-pond-content" role="tabpanel" aria-labelledby="aquatic-tab-ponds">
 
       <section class="ponds">
         <header class="ponds-heading">
@@ -138,7 +136,7 @@ const aquatic = computed(() => game.state?.aquatic || null)
       />
       </div>
 
-      <div v-if="IS_BETA_BUILD && game.state.sailing" v-show="activeTab === 'sailing'" id="aquatic-panel-sailing" role="tabpanel" aria-labelledby="aquatic-tab-sailing">
+      <div v-if="game.state.sailing" v-show="activeTab === 'sailing'" id="aquatic-panel-sailing" role="tabpanel" aria-labelledby="aquatic-tab-sailing">
         <SailingPanel />
       </div>
     </template>
@@ -167,16 +165,15 @@ const aquatic = computed(() => game.state?.aquatic || null)
 .aquatic-tabs button:focus-visible { outline: 2px solid #a8d9d1; outline-offset: 2px; }
 .aquatic-tabs strong { display: block; font-size: 16px; font-weight: 650; }
 .aquatic-tabs small { display: block; margin-top: 4px; color: #8baba5; font-size: 12px; }
-.tab-beta, .tab-ready { margin-left: auto; padding: 3px 7px; border-radius: 6px; font-size: 12px; font-style: normal; white-space: nowrap; }
-.tab-beta { color: #cdbd8b; background: #cdbd8b10; }
+.tab-ready { margin-left: auto; padding: 3px 7px; border-radius: 6px; font-size: 12px; font-style: normal; white-space: nowrap; }
 .tab-ready { color: #d4efb6; background: #78975424; }
 @media (max-width: 760px) {
-  .aquatic-view--beta { gap: 22px; }
+  .aquatic-view { gap: 22px; }
   .aquatic-tabs { gap: 4px; padding: 5px; border-radius: 14px; }
   .aquatic-tabs button { flex-direction: column; justify-content: center; gap: 7px; padding: 13px 5px; text-align: center; }
   .aquatic-tabs strong { font-size: 14px; }
   .aquatic-tabs small { display: none; }
-  .tab-beta, .tab-ready { margin: 0; padding: 0; background: transparent; }
-  .aquatic-view--beta .pond-grid { grid-template-columns: minmax(0, 1fr); }
+  .tab-ready { margin: 0; padding: 0; background: transparent; }
+  .aquatic-view .pond-grid { grid-template-columns: minmax(0, 1fr); }
 }
 </style>

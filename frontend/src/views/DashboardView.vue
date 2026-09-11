@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import {
   CloudRain,
   CloudSun,
@@ -15,6 +15,7 @@ import {
 } from 'lucide-vue-next'
 
 import ActionButton from '@/components/ActionButton.vue'
+import ModalSheet from '@/components/ModalSheet.vue'
 import ItemTile from '@/components/ItemTile.vue'
 import ProgressBar from '@/components/ProgressBar.vue'
 import StateBlock from '@/components/StateBlock.vue'
@@ -26,6 +27,14 @@ import type { IndustryId, TalentNode } from '@/types'
 
 const game = useGameStore()
 const ui = useUiStore()
+const selectedIndustry = ref<IndustryId | null>(null)
+const selectedDirection = computed(() => INDUSTRIES.find((entry) => entry.id === selectedIndustry.value))
+function talentSummary(industry: IndustryId) {
+  const nodes = talentNodes(industry)
+  if (!nodes.length) return '节点筹备中'
+  const ready = nodes.filter((node) => node.can_unlock).length
+  return `已点亮 ${nodes.filter((node) => node.unlocked).length} / ${nodes.length}${ready ? ` · ${ready} 项可点亮` : ''}`
+}
 
 const commissions = computed(() => game.state?.commissions || null)
 const commissionHint = computed(() => {
@@ -133,14 +142,20 @@ async function unlock(node: TalentNode) {
       </header>
 
       <div class="talent-directions">
-        <article v-for="direction in INDUSTRIES" :key="direction.id" class="surface-card talent-direction">
-          <header>
-            <ItemTile :size="39" :accent="direction.accent"><component :is="direction.icon" :size="21" /></ItemTile>
-            <div><h3>{{ direction.name }}</h3></div>
-          </header>
-          <div v-if="talentNodes(direction.id).length" class="talent-node-list">
+        <button v-for="direction in INDUSTRIES" :key="direction.id" type="button"
+          class="surface-card talent-direction" aria-haspopup="dialog" @click="selectedIndustry = direction.id">
+          <ItemTile :size="34" :accent="direction.accent"><component :is="direction.icon" :size="19" /></ItemTile>
+          <span><strong>{{ direction.name }}</strong><small>{{ talentSummary(direction.id) }}</small></span>
+          <span class="direction-arrow" aria-hidden="true">›</span>
+        </button>
+      </div>
+    </section>
+    <ModalSheet :open="Boolean(selectedDirection)" :title="`${selectedDirection?.name || ''}天赋`"
+      :subtitle="`${game.state.talents.available_points} 点可用 · 点亮后无法重置`" @close="selectedIndustry = null">
+      <template v-if="selectedDirection">
+          <div v-if="talentNodes(selectedDirection.id).length" class="talent-node-list">
             <ActionButton
-              v-for="node in talentNodes(direction.id)"
+              v-for="node in talentNodes(selectedDirection.id)"
               :key="node.id"
               variant="bare"
               class="talent-node"
@@ -159,9 +174,8 @@ async function unlock(node: TalentNode) {
             </ActionButton>
           </div>
           <StateBlock v-else variant="inline" title="该方向节点正在筹备" />
-        </article>
-      </div>
-    </section>
+      </template>
+    </ModalSheet>
   </section>
 </template>
 
@@ -191,7 +205,11 @@ async function unlock(node: TalentNode) {
 .talent-points { display: flex; align-items: center; gap: 7px; padding: 10px 14px; color: #d8c17e !important; border: 1px solid #d7ad5833; border-radius: 99px; background: #d7ad580b; white-space: nowrap; }
 .talent-points strong { font-size: 20px; }
 .talent-directions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px; }
-.talent-direction { padding: 16px; }
+.talent-direction { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; padding: 12px; text-align: left; color: inherit; cursor: pointer; }
+.talent-direction:hover, .talent-direction:focus-visible { border-color: var(--gold); }
+.talent-direction strong, .talent-direction small { display: block; }
+.talent-direction small { margin-top: 4px; color: #929d94; font-size: 12px; }
+.direction-arrow { color: var(--gold); font-size: 22px; }
 .talent-direction > header { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 10px; padding-bottom: 12px; border-bottom: 1px solid #ffffff0d; }
 .talent-direction h3 { margin: 0; }
 .talent-node-list { display: grid; gap: 8px; margin-top: 12px; }

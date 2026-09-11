@@ -23,7 +23,7 @@ def sailing_game(monkeypatch):
     clock = [1_700_000_000]
     game = GameService(content, repo, clock=lambda: clock[0], rng=random.Random(7), partner_catalog_loader=lambda: catalog)
     player = game.ensure_player('sailing-sub', '航海测试员')
-    monkeypatch.setenv('RED_LEAF_TOWN_BETA_PLAYERS', player.player_id)
+    monkeypatch.setenv('RED_LEAF_TOWN_BETA_PLAYERS', 'someone-else')
     for entry in catalog.partners:
         game.admin_grant_partner(player.player_id, entry.id)
 
@@ -71,19 +71,17 @@ def test_schema_30_migrates_without_changing_existing_assets(sailing_game):
     assert migrated.inventory == old['inventory']
 
 
-def test_beta_and_level_gates_apply_to_all_mutations(sailing_game, monkeypatch):
+def test_public_sailing_retains_level_gates(sailing_game, monkeypatch):
     game, repo, player, _ = sailing_game
     monkeypatch.setenv('RED_LEAF_TOWN_BETA_PLAYERS', 'someone-else')
-    assert game.snapshot_by_sub('sailing-sub')['sailing'] is None
-    for action in (lambda: game.build_sailing_ship('sailing-sub'), lambda: start(game), lambda: game.collect_sailing('sailing-sub', 'missing'),
-                   lambda: game.upgrade_sailing('sailing-sub', 'cargo', 0)):
-        with pytest.raises(GameError, match='内测'):
-            action()
-    monkeypatch.setenv('RED_LEAF_TOWN_BETA_PLAYERS', player.player_id)
+    assert game.snapshot_by_sub('sailing-sub')['sailing']['unlocked']
     repo.update(player.player_id, lambda p: setattr(p, 'experience', 0))
     assert not game.snapshot_by_sub('sailing-sub')['sailing']['unlocked']
-    with pytest.raises(GameError, match='16'):
-        start(game)
+    for action in (lambda: game.build_sailing_ship('sailing-sub'), lambda: start(game),
+                   lambda: game.collect_sailing('sailing-sub', 'missing'),
+                   lambda: game.upgrade_sailing('sailing-sub', 'cargo', 0)):
+        with pytest.raises(GameError, match='16'):
+            action()
 
 
 @pytest.mark.parametrize('party', [[], ['sailor', 'sailor'], ['sailor'] * 4, ['missing'], [None], 'sailor', [{}]])

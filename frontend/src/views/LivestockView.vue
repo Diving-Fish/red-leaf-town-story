@@ -36,9 +36,12 @@ function shortfall(coins: number) {
     />
 
     <template v-else>
-      <p class="livestock-intro">
+      <details class="livestock-help">
+        <summary>饲养指南 · 每 8 小时结算，记得补充饲料</summary>
+        <p class="livestock-intro">
         畜牧持续运转，不需要守候，离线期间同样计算，收取也不消耗体力。畜牧周期恒为 8 小时，不受能力与伙伴影响。幼崽养满对应周期数后成年，此后每个周期产出一次；待收产出攒到溢出上限即停产，也不再消耗饲料。产出的品质在每个周期结算时定下，收取时不再变化。照料每次消耗 1 点体力，提高亲密度，亲密度进产出品质，满值后有概率额外产出。饲料槽见底时整栏停摆，牲畜也停止成长。
-      </p>
+        </p>
+      </details>
 
       <div class="facility-grid">
         <FacilityCard
@@ -103,10 +106,12 @@ function shortfall(coins: number) {
 </template>
 
 <style scoped>
-.livestock-view { display: flex; flex-direction: column; gap: 26px; }
+.livestock-view { display: flex; flex-direction: column; gap: 16px; }
+.livestock-help summary { color: #929d94; font-size: 12px; cursor: pointer; }
+.livestock-help[open] summary { margin-bottom: 8px; }
 .livestock-intro { margin: 0; color: #849087; font-size: 13px; line-height: 1.8; }
 
-.facility-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; align-items: start; }
+.facility-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 16px; align-items: start; }
 
 .facility-site { --facility-accent: #b3a271; display: flex; flex-direction: column; gap: 12px; padding: 18px; border-style: dashed; border-color: color-mix(in srgb, var(--facility-accent) 26%, transparent); }
 .facility-site h3 { margin: 0; font: 600 17px Georgia, 'Noto Serif SC', serif; }

@@ -25,6 +25,7 @@ const request = computed(() => ui.confirmRequest)
 </template>
 
 <style scoped>
+.modal-backdrop { z-index: 90; }
 .confirm-card { width: min(400px, 100%); padding: 26px; text-align: center; border: 1px solid var(--line); border-radius: 24px 8px 24px 8px; background: #1a251e; box-shadow: 0 35px 100px #0008; }
 .confirm-mark { width: 46px; height: 46px; display: grid; place-items: center; margin: 0 auto 14px; color: var(--gold); border-radius: 15px 5px; background: #d7ad5814; }
 .confirm-card.danger .confirm-mark { color: var(--danger); background: #e38b7b14; }

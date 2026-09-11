@@ -20,16 +20,13 @@ class ZeroRandom(random.Random):
 
 
 @pytest.mark.parametrize('industry', ['crafting', 'exploration'])
-def test_new_talent_paths_require_beta_and_prerequisites(ranch, monkeypatch, industry):
+def test_public_talent_paths_require_prerequisites(ranch, monkeypatch, industry):
     service, repo, _, player = ranch
     nodes = [n for n in service.content.talents if n.industry == industry]
     assert len(nodes) == 5
     assert all(n.cost == 1 for n in nodes)
     monkeypatch.setenv('RED_LEAF_TOWN_BETA_PLAYERS','someone-else')
-    assert not any(n['industry'] == industry for n in service.snapshot_by_sub('stock-sub')['talents']['nodes'])
-    with pytest.raises(GameError, match='内测'):
-        service.unlock_talent('stock-sub',nodes[0].id)
-    monkeypatch.setenv('RED_LEAF_TOWN_BETA_PLAYERS',player.player_id)
+    assert sum(n['industry'] == industry for n in service.snapshot_by_sub('stock-sub')['talents']['nodes']) == 5
     set_level(repo,player.player_id,20)
     with pytest.raises(GameError, match='前置'):
         service.unlock_talent('stock-sub',nodes[-1].id)
@@ -129,9 +126,9 @@ class SeaDice(random.Random):
 def test_vanessa_sailing_bonus_first_failure_rescue_and_frozen_logs(sailing_game,rescued):
     service,repo,player,clock=sailing_game
     vanessa=load_partner_catalog().partner_map['vanessa']
-    assert not vanessa.standard_recruitable and not vanessa.recruitable and not vanessa.artworks
+    assert not vanessa.standard_recruitable and vanessa.recruitable and vanessa.artworks
     assert vanessa.rarity==5
-    assert [(t.level_1,t.level_60) for t in vanessa.tendencies]==[(37,235),(30,190)]
+    assert [(t.level_1,t.level_60) for t in vanessa.tendencies]==[(34,223),(27,168)]
     catalog=PartnerCatalog(partners=[*service.partner_catalog_loader().partners,vanessa])
     service.partner_catalog_loader=lambda:catalog
     service.admin_grant_partner(player.player_id,'vanessa')
@@ -140,8 +137,8 @@ def test_vanessa_sailing_bonus_first_failure_rescue_and_frozen_logs(sailing_game
     service.rng=SeaDice([1,1,20 if rescued else 1,1,1])
     start_sailing(service,route='white_sail',party=['vanessa','sailor'])
     run=repo.get(player.player_id).sailing.active_run
-    # 37*1.2 rounds to 44, sailor support 40*.25, global aquatic +10.
-    assert run.ability==64
+    # 34*1.2 rounds to 41, sailor support 40*.25, global aquatic +10.
+    assert run.ability==61
     logs=run.logs
     assert len(logs)==3
     assert logs[0].rescue_partner_id=='vanessa'

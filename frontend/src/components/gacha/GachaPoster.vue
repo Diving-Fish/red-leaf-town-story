@@ -94,9 +94,14 @@ withDefaults(
 }
 
 @media (max-width: 720px) {
-  .gacha-poster { border-radius: 26px 8px 26px 8px; }
-  .gacha-poster-copy { max-width: 100%; padding: 14px; }
-  .gacha-poster-pity { margin-top: 8px; }
-  .gacha-poster-glass { right: 10px; bottom: 10px; min-width: 0; padding: 10px; gap: 6px; }
+  .gacha-poster { display: grid; grid-template-columns: minmax(0, 1fr); aspect-ratio: auto; border-radius: 22px 8px; }
+  .gacha-poster-media { position: relative; inset: auto; grid-area: 1 / 1; width: 100%; aspect-ratio: 16 / 9; background-position: center; }
+  .gacha-poster-scrim { position: relative; inset: auto; grid-area: 1 / 1; background: linear-gradient(to top, #09100ee6, #09100e00 65%); pointer-events: none; }
+  .gacha-poster-frame { display: none; }
+  .gacha-poster-copy { display: contents; }
+  .gacha-poster-copy h2 { grid-area: 1 / 1; align-self: end; z-index: 1; min-width: 0; margin: 14px; font-size: clamp(24px, 6vw, 34px); overflow-wrap: anywhere; }
+  .gacha-poster-pity { grid-area: 2 / 1; margin: 0; padding: 12px 14px; gap: 6px; background: #17221c; }
+  .gacha-poster-pity span { max-width: 100%; line-height: 1.6; overflow-wrap: anywhere; }
+  .gacha-poster-glass { position: static; grid-area: 3 / 1; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: center; min-width: 0; padding: 12px 14px 14px; gap: 10px 8px; border: 0; border-top: 1px solid var(--line); border-radius: 0; background: #1b2921; backdrop-filter: none; box-shadow: none; }
 }
 </style>

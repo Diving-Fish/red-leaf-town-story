@@ -2171,13 +2171,13 @@
       "tendencies": [
         {
           "industry": "aquatic",
-          "level_1": 37,
-          "level_60": 235
+          "level_1": 34,
+          "level_60": 223
         },
         {
           "industry": "exploration",
-          "level_1": 30,
-          "level_60": 190
+          "level_1": 27,
+          "level_60": 168
         }
       ],
       "trait_codes": [

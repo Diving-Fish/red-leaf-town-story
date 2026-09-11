@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { AlertTriangle, Coins, Egg, HeartHandshake, PackageOpen, Sparkles, Sprout } from 'lucide-vue-next'
+import { AlertTriangle, Coins, Egg, HeartHandshake, PackageOpen, Sparkles, Plus } from 'lucide-vue-next'
 
 import ActionButton from '@/components/ActionButton.vue'
 import AnimalRow from '@/components/livestock/AnimalRow.vue'
 import GameIcon from '@/components/GameIcon.vue'
 import ItemGridTile from '@/components/ItemGridTile.vue'
+import ModalSheet from '@/components/ModalSheet.vue'
 import NameAnimalDialog from '@/components/livestock/NameAnimalDialog.vue'
 import PartnerPicker from '@/components/PartnerPicker.vue'
 import PartnerSwapNote from '@/components/PartnerSwapNote.vue'
@@ -27,6 +28,11 @@ const game = useGameStore()
 const ui = useUiStore()
 
 const selected = ref<string[]>([])
+const panel = ref<'manage' | 'upgrade' | 'add' | null>(null)
+const animalId = ref<string | null>(null)
+const activeAnimal = computed(() => props.facility.animals.find((animal) => animal.animal_id === animalId.value))
+const stageLabels = { incubating: '孵化中', juvenile: '幼年', adult: '成年' }
+
 
 const accent = computed(() => props.facility.accent)
 const breedingSpeciesId = ref('')
@@ -84,7 +90,7 @@ const adults = computed(() =>
 
 // 栏里的动物换了之后，选中的亲本可能已经卖掉或还在冷却里。
 watch(
-  () => props.facility.animals.map((animal) => animal.animal_id).join(','),
+  () => adults.value.map((animal) => animal.animal_id).join(','),
   () => {
     const alive = new Set(adults.value.map((animal) => animal.animal_id))
     selected.value = selected.value.filter((entry) => alive.has(entry))
@@ -188,7 +194,7 @@ async function confirmNaming(nickname: string) {
       : request.kind === 'incubate'
         ? await game.incubateEgg(facilityId, request.quality, nickname, species.value?.id)
         : await game.breedAnimals(facilityId, selected.value, nickname)
-  if (result) naming.value = null
+  if (result) { naming.value = null; selected.value = [] }
 }
 
 function toggle(animalId: string) {
@@ -224,58 +230,10 @@ async function sell(animalId: string) {
       <span class="facility-count">{{ facility.used }}<i>/{{ facility.capacity }}</i></span>
     </header>
 
-    <section v-if="facility.upgrade" class="buy">
-      <strong>扩建至 {{ facility.upgrade.level }} 级 · {{ facility.upgrade.capacity }} 个位置</strong>
-      <small>基因上限 {{ facility.upgrade.gene_cap }} · 可存 {{ facility.upgrade.overflow_cycles }} 个周期产物 · 本设施饲料槽容量贡献 {{ facility.upgrade.feed_slot_capacity_bonus }} 份</small>
-      <span>{{ facility.upgrade.build_coins }} 红叶币</span>
-      <span v-for="material in facility.upgrade.build_materials" :key="material.item_id">
-        {{ material.item.name }} ×{{ material.quantity }}（持有 {{ material.owned }}）
-      </span>
-      <ActionButton :action-key="`livestock:${facility.facility_id}:upgrade`"
-        :disabled="!facility.upgrade.unlocked || !facility.upgrade.affordable"
-        :reason="!facility.upgrade.unlocked ? `居民 ${facility.upgrade.min_level} 级解锁` : (!facility.upgrade.affordable ? '红叶币或材料不足' : undefined)"
-        @click="game.upgradeLivestockFacility(facility.facility_id, facility.upgrade.level)">扩建</ActionButton>
-    </section>
-
-    <p v-if="facility.stalled" class="facility-alert">
-      <AlertTriangle :size="15" /> 饲料槽已空，本栏暂停运转：不产出、不成长，也不能孵蛋配种，待收产出不会减少。
-    </p>
-
-    <div class="cycle">
-      <div class="cycle-line">
-        <span>下一周期</span>
-        <strong>{{ cycleLabel }}</strong>
-        <em>周期恒为 {{ formatDuration(livestock.cycle_seconds) }}</em>
-      </div>
-      <ProgressBar :value="cycleProgress" color="var(--facility-accent)" :height="8" />
+    <div class="facility-toolbar">
+      <button type="button" class="manage-button" aria-haspopup="dialog" @click="panel = 'manage'">设施详情</button>
+      <button v-if="facility.upgrade" type="button" class="manage-button" aria-haspopup="dialog" @click="panel = 'upgrade'">扩建</button>
     </div>
-
-    <dl class="facility-stats">
-      <div>
-        <dt>品质系数</dt>
-        <dd>×{{ facility.quality_multiplier }}</dd>
-      </div>
-      <div>
-        <dt>溢出上限</dt>
-        <dd>{{ facility.overflow_cycles }} 个周期</dd>
-      </div>
-      <div>
-        <dt>品种上限</dt>
-        <dd>{{ facility.gene_cap }}</dd>
-      </div>
-      <div>
-        <dt>畜牧能力</dt>
-        <dd>
-          {{ livestockAbility }}
-          <em v-if="facility.quality_bonus"><Sparkles :size="10" />+{{ facility.quality_bonus }}</em>
-        </dd>
-      </div>
-      <div v-for="stat in traitBonuses" :key="stat.label" class="from-trait">
-        <dt><Sparkles :size="10" />{{ stat.label }}</dt>
-        <dd>{{ stat.value }}</dd>
-      </div>
-    </dl>
-
     <PartnerPicker
       industry="livestock"
       :action-key="`livestock:${facility.facility_id}:partner`"
@@ -296,108 +254,178 @@ async function sell(animalId: string) {
       :window-seconds="facility.swap_window_seconds"
     />
 
-    <ul v-if="facility.animals.length" class="facility-animals">
-      <AnimalRow
-        v-for="animal in facility.animals"
-        :key="animal.animal_id"
-        :animal="animal"
-        :cycle-seconds="livestock.cycle_seconds"
-        :selectable="pairing && animal.species_id === species?.id && animal.stage === 'adult' && animal.breeding_cooldown <= 0"
-        :selected="selected.includes(animal.animal_id)"
-        @toggle="toggle(animal.animal_id)"
-        @sell="sell(animal.animal_id)"
-      />
-    </ul>
-    <p v-else class="facility-empty">
-      <Sprout :size="18" />
-      这里还空着。买入的幼崽养满 {{ species?.growth_cycles || 3 }} 个周期后成年，此后每个周期产出一次。
-    </p>
-
-    <ActionButton
-      v-if="facility.pending_total || facility.pending_special"
-      :action-key="`livestock:${facility.facility_id}:collect`"
-      @click="game.collectLivestock(facility.facility_id)"
-    >
+    <p v-if="facility.stalled" class="facility-alert"><AlertTriangle :size="15" /> 饲料不足，暂停产出与成长</p>
+    <div v-else class="cycle">
+      <div class="cycle-line"><span>下一周期</span><strong>{{ cycleLabel }}</strong></div>
+      <ProgressBar :value="cycleProgress" color="var(--facility-accent)" :height="5" />
+    </div>
+    <div class="animal-grid">
+      <ItemGridTile v-for="animal in facility.animals" :key="animal.animal_id"
+        :icon="animal.stage === 'incubating' ? 'egg' : animal.icon" :name="animal.name"
+        :badge="animal.saturated ? '已满' : animal.stage !== 'adult' ? stageLabels[animal.stage] : animal.pending_total + animal.pending_special || ''"
+        aria-haspopup="dialog" @click="animalId = animal.animal_id">
+        <template #tooltip>
+          <strong>{{ animal.name }} · {{ stageLabels[animal.stage] }}</strong>
+          <span v-if="animal.stage !== 'adult'">还需 {{ animal.remaining_stage_cycles }} 个周期</span>
+          <span v-else>待收 {{ animal.pending_total + animal.pending_special }} · 亲密 {{ animal.affection }}/{{ animal.affection_cap }}</span>
+          <span>品质基因 {{ animal.quality_gene }} · 产量基因 {{ animal.yield_gene }}</span>
+          <span class="tip-muted">点击查看与照料</span>
+        </template>
+      </ItemGridTile>
+      <button type="button" class="add-animal" aria-haspopup="dialog" :aria-label="`为${facility.name}添新动物`" @click="panel = 'add'">
+        <Plus :size="27" /><span>{{ room > 0 ? '添新成员' : '栏位已满' }}</span>
+      </button>
+    </div>
+    <ActionButton v-if="facility.pending_total || facility.pending_special"
+      :action-key="`livestock:${facility.facility_id}:collect`" @click="game.collectLivestock(facility.facility_id)">
       <PackageOpen :size="15" /> 全部收取（{{ facility.pending_total + facility.pending_special }}）
     </ActionButton>
 
-    <section v-for="entry in facility.species" :key="entry.id" class="buy">
-      <div class="buy-line">
-        <GameIcon :name="entry.icon" :size="18" />
-        <div>
-          <strong>买一只小{{ entry.name }}</strong>
-          <small>
-            {{ entry.growth_cycles }} 个周期成年 · 每周期吃 {{ entry.feed_per_cycle }} 份 ·
-            产出{{ entry.produce_item.name }}
-          </small>
+    <ModalSheet :open="panel === 'manage'" :title="`${facility.name} · 设施详情`" @close="panel = null">
+      <div class="dialog-content" :style="{ '--facility-accent': accent }">
+        <p class="dialog-note">每周期 {{ formatDuration(livestock.cycle_seconds) }} · {{ facility.used }} / {{ facility.capacity }} 个位置</p>
+        <dl class="facility-stats">
+          <div>
+            <dt>品质系数</dt>
+            <dd>×{{ facility.quality_multiplier }}</dd>
+          </div>
+          <div>
+            <dt>溢出上限</dt>
+            <dd>{{ facility.overflow_cycles }} 个周期</dd>
+          </div>
+          <div>
+            <dt>品种上限</dt>
+            <dd>{{ facility.gene_cap }}</dd>
+          </div>
+          <div>
+            <dt>畜牧能力</dt>
+            <dd>
+              {{ livestockAbility }}
+              <em v-if="facility.quality_bonus"><Sparkles :size="10" />+{{ facility.quality_bonus }}</em>
+            </dd>
+          </div>
+          <div v-for="stat in traitBonuses" :key="stat.label" class="from-trait">
+            <dt><Sparkles :size="10" />{{ stat.label }}</dt>
+            <dd>{{ stat.value }}</dd>
+          </div>
+        </dl>
+
+
+
+      </div>
+    </ModalSheet>
+    <ModalSheet :open="panel === 'upgrade'" :title="`${facility.name} · 扩建`" @close="panel = null">
+        <section v-if="facility.upgrade" class="buy">
+          <strong>扩建至 {{ facility.upgrade.level }} 级 · {{ facility.upgrade.capacity }} 个位置</strong>
+          <small>基因上限 {{ facility.upgrade.gene_cap }} · 可存 {{ facility.upgrade.overflow_cycles }} 个周期产物 · 本设施饲料槽容量贡献 {{ facility.upgrade.feed_slot_capacity_bonus }} 份</small>
+          <span>{{ facility.upgrade.build_coins }} 红叶币</span>
+          <span v-for="material in facility.upgrade.build_materials" :key="material.item_id">
+            {{ material.item.name }} ×{{ material.quantity }}（持有 {{ material.owned }}）
+          </span>
+          <ActionButton :action-key="`livestock:${facility.facility_id}:upgrade`"
+            :disabled="!facility.upgrade.unlocked || !facility.upgrade.affordable"
+            :reason="!facility.upgrade.unlocked ? `居民 ${facility.upgrade.min_level} 级解锁` : (!facility.upgrade.affordable ? '红叶币或材料不足' : undefined)"
+            @click="game.upgradeLivestockFacility(facility.facility_id, facility.upgrade.level)">扩建</ActionButton>
+        </section>
+        <p v-if="!facility.upgrade" class="dialog-note">已完成扩建，暂无可用升级。</p>
+    </ModalSheet>
+    <ModalSheet :open="Boolean(activeAnimal)" :title="activeAnimal?.name || '动物详情'" @close="animalId = null">
+      <ul v-if="activeAnimal" class="facility-animals">
+        <AnimalRow :animal="activeAnimal" :cycle-seconds="livestock.cycle_seconds" :selectable="false" :selected="false" @sell="sell(activeAnimal.animal_id)" />
+      </ul>
+    </ModalSheet>
+    <ModalSheet :open="panel === 'add'" :title="`${facility.name} · 添新成员`" :subtitle="`剩余 ${Math.max(0, room)} 个位置`" @close="panel = null">
+      <div class="dialog-content">
+        <section v-for="entry in facility.species" :key="entry.id" class="buy">
+          <div class="buy-line">
+            <GameIcon :name="entry.icon" :size="18" />
+            <div>
+              <strong>买一只小{{ entry.name }}</strong>
+              <small>
+                {{ entry.growth_cycles }} 个周期成年 · 每周期吃 {{ entry.feed_per_cycle }} 份 ·
+                产出{{ entry.produce_item.name }}
+              </small>
+            </div>
+            <span class="buy-price" :class="{ short: !entry.affordable }"><Coins :size="14" />{{ entry.purchase_price }}</span>
+          </div>
+          <ActionButton
+            :action-key="`livestock:${facility.facility_id}:buy:${entry.id}`"
+            variant="secondary"
+            :disabled="!entry.unlocked || !entry.affordable || room <= 0"
+            :reason="!entry.unlocked ? entry.unlock_description : (room <= 0 ? '栏里没有空位' : (!entry.affordable ? '红叶币不足' : undefined))"
+            @click="naming = { kind: 'buy', speciesId: entry.id }"
+          >
+            买入幼崽
+          </ActionButton>
+        </section>
+
+        <div v-if="facility.species.length > 1" class="breeding-picker" role="group" aria-label="选择繁殖物种">
+          <button v-for="entry in facility.species" :key="entry.id" type="button"
+            :class="{ active: species?.id === entry.id }" :disabled="!entry.unlocked"
+            @click="breedingSpeciesId = entry.id">{{ entry.name }}{{ entry.breeding.mode === 'incubate' ? '孵化' : '配种' }}</button>
         </div>
-        <span class="buy-price" :class="{ short: !entry.affordable }"><Coins :size="14" />{{ entry.purchase_price }}</span>
+
+        <section v-if="breeding?.mode === 'incubate'" class="hatch">
+          <h4><Egg :size="15" /> 孵蛋</h4>
+          <p>
+            放一枚蛋入窝，占用一个位置并扣 {{ breeding.feed_units }} 份饲料，{{ breeding.incubate_cycles }} 个周期后破壳。
+            蛋的品质决定幼崽的基因起点，基因不超过本设施的品种上限。
+          </p>
+          <div v-if="eggs.length" class="hatch-grid">
+            <ItemGridTile
+              v-for="egg in eggs"
+              elevated
+              :key="egg.quality"
+              :icon="egg.icon"
+              :name="egg.name"
+              :quality="egg.quality"
+              :badge="egg.quantity"
+              :dimmed="Boolean(incubateReason(egg.quality))"
+              @click="!incubateReason(egg.quality) && (naming = { kind: 'incubate', quality: egg.quality })"
+            >
+              <template #tooltip>
+                <strong>{{ qualityName(egg.quality) }}{{ egg.name }}</strong>
+                <span>基因起点 {{ egg.base }} · 品种上限 {{ facility.gene_cap }}</span>
+                <span>{{ incubateReason(egg.quality) || `仓库 ${egg.quantity} 枚` }}</span>
+              </template>
+            </ItemGridTile>
+          </div>
+          <p v-else class="hatch-empty">仓库里还没有可以孵的蛋。</p>
+        </section>
+
+        <section v-if="breeding?.mode === 'pair'" class="breed">
+          <h4><HeartHandshake :size="15" /> 配种</h4>
+          <p>
+            选两只同种成年牲畜，占用一个位置并扣 {{ breeding.feed_units }} 份饲料，要求饲料槽品质分不低于
+            {{ breeding.min_feed_score }}，双亲各进入 {{ breeding.cooldown_cycles }} 个周期冷却。
+            子代基因取双亲均值并随机浮动，不超过本设施的品种上限。
+          </p>
+          <div class="animal-grid">
+            <button v-for="animal in adults" :key="animal.animal_id" type="button" class="parent-choice"
+              :class="{ selected: selected.includes(animal.animal_id) }" :aria-pressed="selected.includes(animal.animal_id)"
+              @click="toggle(animal.animal_id)">
+              <GameIcon :name="animal.icon" :size="24" />
+              <strong>{{ animal.name }}</strong>
+              <small>品质 {{ animal.quality_gene }} · 产量 {{ animal.yield_gene }}</small>
+            </button>
+          </div>
+          <p class="breed-picked">
+            已选 {{ selected.length }} / 2
+            <span v-if="adults.length < 2">（可选的成年牲畜不足）</span>
+          </p>
+          <ActionButton
+            :action-key="`livestock:${facility.facility_id}:breed`"
+            variant="secondary"
+            :disabled="Boolean(breedReason)"
+            :reason="breedReason"
+            @click="naming = { kind: 'breed' }"
+          >
+            配种
+          </ActionButton>
+        </section>
+
       </div>
-      <ActionButton
-        :action-key="`livestock:${facility.facility_id}:buy:${entry.id}`"
-        variant="secondary"
-        :disabled="!entry.unlocked || !entry.affordable || room <= 0"
-        :reason="!entry.unlocked ? entry.unlock_description : (room <= 0 ? '栏里没有空位' : (!entry.affordable ? '红叶币不足' : undefined))"
-        @click="naming = { kind: 'buy', speciesId: entry.id }"
-      >
-        买入幼崽
-      </ActionButton>
-    </section>
-
-    <div v-if="facility.species.length > 1" class="breeding-picker" role="group" aria-label="选择繁殖物种">
-      <button v-for="entry in facility.species" :key="entry.id" type="button"
-        :class="{ active: species?.id === entry.id }" :disabled="!entry.unlocked"
-        @click="breedingSpeciesId = entry.id">{{ entry.name }}{{ entry.breeding.mode === 'incubate' ? '孵化' : '配种' }}</button>
-    </div>
-
-    <section v-if="breeding?.mode === 'incubate'" class="hatch">
-      <h4><Egg :size="15" /> 孵蛋</h4>
-      <p>
-        放一枚蛋入窝，占用一个位置并扣 {{ breeding.feed_units }} 份饲料，{{ breeding.incubate_cycles }} 个周期后破壳。
-        蛋的品质决定幼崽的基因起点，基因不超过本设施的品种上限。
-      </p>
-      <div v-if="eggs.length" class="hatch-grid">
-        <ItemGridTile
-          v-for="egg in eggs"
-          :key="egg.quality"
-          :icon="egg.icon"
-          :name="egg.name"
-          :quality="egg.quality"
-          :badge="egg.quantity"
-          :dimmed="Boolean(incubateReason(egg.quality))"
-          @click="!incubateReason(egg.quality) && (naming = { kind: 'incubate', quality: egg.quality })"
-        >
-          <template #tooltip>
-            <strong>{{ qualityName(egg.quality) }}{{ egg.name }}</strong>
-            <span>基因起点 {{ egg.base }} · 品种上限 {{ facility.gene_cap }}</span>
-            <span>{{ incubateReason(egg.quality) || `仓库 ${egg.quantity} 枚` }}</span>
-          </template>
-        </ItemGridTile>
-      </div>
-      <p v-else class="hatch-empty">仓库里还没有可以孵的蛋。</p>
-    </section>
-
-    <section v-if="breeding?.mode === 'pair'" class="breed">
-      <h4><HeartHandshake :size="15" /> 配种</h4>
-      <p>
-        选两只同种成年牲畜，占用一个位置并扣 {{ breeding.feed_units }} 份饲料，要求饲料槽品质分不低于
-        {{ breeding.min_feed_score }}，双亲各进入 {{ breeding.cooldown_cycles }} 个周期冷却。
-        子代基因取双亲均值并随机浮动，不超过本设施的品种上限。
-      </p>
-      <p class="breed-picked">
-        已选 {{ selected.length }} / 2
-        <span v-if="adults.length < 2">（可选的成年牲畜不足）</span>
-      </p>
-      <ActionButton
-        :action-key="`livestock:${facility.facility_id}:breed`"
-        variant="secondary"
-        :disabled="Boolean(breedReason)"
-        :reason="breedReason"
-        @click="naming = { kind: 'breed' }"
-      >
-        配种
-      </ActionButton>
-    </section>
+    </ModalSheet>
 
     <NameAnimalDialog
       v-if="namingDialog"
@@ -417,6 +445,17 @@ async function sell(animalId: string) {
 </template>
 
 <style scoped>
+.facility > :deep(.partner-picker) { margin: 0; }
+.facility-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12px; color: #929d94; }
+.manage-button { padding: 6px 10px; color: var(--gold); border: 1px solid var(--line); border-radius: 8px; background: transparent; cursor: pointer; }
+.animal-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 8px; }
+.add-animal, .parent-choice { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; min-height: 94px; padding: 8px; border: 1px dashed var(--line); border-radius: 15px 5px; background: transparent; color: #a8b49f; cursor: pointer; font-size: 12px; }
+.add-animal:hover, .add-animal:focus-visible, .parent-choice.selected { border-color: var(--gold); color: var(--gold); background: #d7ad5809; }
+.parent-choice strong { overflow-wrap: anywhere; }
+.parent-choice small { color: #929d94; font-size: 11px; }
+.dialog-content { display: grid; gap: 14px; }
+.dialog-note { margin: 0; color: #929d94; font-size: 12px; }
+
 .breeding-picker { display: flex; flex-wrap: wrap; gap: 8px; }
 .breeding-picker button { padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: inherit; cursor: pointer; }
 .breeding-picker button.active { border-color: var(--facility-accent); color: var(--facility-accent); }

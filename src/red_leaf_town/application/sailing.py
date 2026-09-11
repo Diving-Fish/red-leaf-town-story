@@ -55,8 +55,6 @@ class SailingServiceMixin:
     def _require_sailing(self, player):
         content = load_sailing_content()
         content.validate_items(self.content.item_map)
-        if not self._is_beta_player(player):
-            raise sailing_error('content_locked', '出海目前仅对内测玩家开放', 403)
         if player.level < content.min_level:
             raise sailing_error('content_locked', f'居民达到 {content.min_level} 级后可以出海', 403)
         return content
@@ -260,8 +258,6 @@ class SailingServiceMixin:
                 for d in drops]
 
     def _sailing_snapshot(self, player, now):
-        if not self._is_beta_player(player):
-            return None
         content = load_sailing_content()
         state = player.sailing
 

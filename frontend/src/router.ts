@@ -1,5 +1,4 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { IS_BETA_BUILD } from '@/lib/environment'
 
 import FarmView from '@/views/FarmView.vue'
 import MarketView from '@/views/MarketView.vue'
@@ -15,9 +14,9 @@ import GachaView from '@/views/GachaView.vue'
 export default createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
-    ...(IS_BETA_BUILD ? [{
+    {
       path: '/sailing', redirect: { name: 'aquatic', query: { tab: 'sailing' } },
-    }] : []),
+    },
     {
       path: '/admin/crops',
       name: 'admin-crops',

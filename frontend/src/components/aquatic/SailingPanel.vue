@@ -67,7 +67,7 @@ async function start() {
 
 <template>
   <section class="sailing-view" aria-label="旧港出海">
-    <StateBlock v-if="!sailing" title="旧港尚未开放" description="出海目前仅对内测玩家开放。" />
+    <StateBlock v-if="!sailing" title="旧港尚未开放" description="暂时无法获取出海状态，请稍后重试。" />
     <StateBlock v-else-if="!sailing.unlocked" :title="`居民 ${sailing.min_level} 级开放出海`" description="码头已备好第一艘船，达到等级后即可试航。" />
     <template v-else>
       <header class="sailing-heading">

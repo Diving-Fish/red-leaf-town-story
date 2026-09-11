@@ -1,4 +1,4 @@
-"""内测成长内容的可达性、扣费事务及多物种养殖回归。"""
+"""成长内容外放、通用灰度隔离、扣费事务及多物种养殖回归。"""
 import pytest
 
 from red_leaf_town.application import GameError
@@ -9,7 +9,7 @@ from test_livestock import ranch, set_level, give, facility_of, CYCLE
 
 def enable(ranch, monkeypatch, level=20):
     service, repo, clock, player = ranch
-    monkeypatch.setenv('RED_LEAF_TOWN_BETA_PLAYERS', player.player_id)
+    monkeypatch.setenv('RED_LEAF_TOWN_BETA_PLAYERS', 'someone-else')
     set_level(repo, player.player_id, level)
     service.snapshot_by_sub('stock-sub')
     return service, repo, clock, player
@@ -22,8 +22,23 @@ def materials(ranch, facility_id):
         give(repo, player.player_id, m.item_id, m.quantity, 1)
 
 
-def test_public_player_cannot_discover_or_start_beta_content(ranch, monkeypatch):
+def test_future_beta_content_still_requires_allowlist(ranch, monkeypatch):
     service, repo, _, player = ranch
+    # 本批已外放；用显式测试标记保留下一批内容的灰度保护回归。
+    for level in service.content.levels:
+        if level.level >= 17: level.beta = True
+    for collection, ids in [
+        (service.content.crops, {'corn'}),
+        (service.content.items, {'corn_seed'}),
+        (service.content.shop, {'corn_seed'}),
+        (service.content.gathering_sites, {'reed_wetland'}),
+        (service.content.gathering_tasks, {'collect_reed_wetland'}),
+        (service.content.recipes, {'make_flax_thread'}),
+        (service.content.livestock_species, {'duck'}),
+    ]:
+        for entry in collection:
+            if entry.id in ids: entry.beta = True
+    service.content.livestock_facility_map['coop_1'].tier(2).beta = True
     monkeypatch.setenv('RED_LEAF_TOWN_BETA_PLAYERS', 'not-this-player')
     set_level(repo, player.player_id, 20)
     state = service.snapshot_by_sub('stock-sub')
@@ -53,7 +68,7 @@ def test_public_player_cannot_discover_or_start_beta_content(ranch, monkeypatch)
 
 
 @pytest.mark.parametrize('level,cap', [(17,52),(18,54),(19,56),(20,58)])
-def test_beta_levels_and_stamina_caps(ranch, monkeypatch, level, cap):
+def test_public_levels_and_stamina_caps(ranch, monkeypatch, level, cap):
     service, repo, clock, player = enable(ranch, monkeypatch, level)
     state = service.snapshot_by_sub('stock-sub')
     assert state['player']['level'] == level
@@ -150,3 +165,17 @@ def test_nutrition_level_gate_and_cloth_batch_cost(ranch, monkeypatch):
     clock.advance(360)
     service.collect_crafting('stock-sub','town_workbench')
     assert sum(repo.get(player.player_id).inventory['nutrition_fodder'].values()) == 3
+
+
+def test_released_growth_is_visible_without_allowlist(ranch, monkeypatch):
+    service, repo, _, player = enable(ranch, monkeypatch)
+    state = service.snapshot_by_sub('stock-sub')
+    assert state['player']['level'] == 20
+    assert 'corn' in {entry['id'] for entry in state['crops']}
+    assert 'corn_seed' in {entry['id'] for entry in state['shop']}
+    assert 'reed_wetland' in {entry['site_id'] for entry in state['gathering_sites']}
+    assert 'make_flax_thread' in {r['id'] for station in state['crafting_stations'] for r in station['recipes']}
+    assert facility_of(state, 'coop_1')['upgrade']['level'] == 2
+    assert 'duck' in {entry['id'] for entry in facility_of(state, 'coop_1')['species']}
+    service.buy('stock-sub', 'corn_seed', 1)
+    service.plant('stock-sub', 0, 'corn')

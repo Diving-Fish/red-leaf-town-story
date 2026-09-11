@@ -160,7 +160,10 @@ def test_crafting_prices_reflect_inputs_and_mining_stamina_value():
         assert recipe.collect_xp == recipe.stamina_cost * 6
         if _is_refining_recipe(content, recipe):
             continue
-        if recipe.beta:
+        if recipe.id in {
+            'make_flax_thread', 'make_reed_mat', 'make_rope', 'make_woven_cloth',
+            'make_waterproof_canvas', 'make_voyage_sail', 'make_grain_fodder', 'make_nutrition_fodder',
+        }:
             assert 52 <= added_value_per_stamina <= 55
         else:
             assert minimum_value <= added_value_per_stamina <= maximum_value

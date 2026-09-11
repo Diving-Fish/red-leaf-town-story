@@ -4,7 +4,6 @@ import { Menu } from 'lucide-vue-next'
 
 import { unlockedNavItems, type NavItem } from '@/lib/navigation'
 import { useGameStore } from '@/stores/game'
-import { IS_BETA_BUILD } from '@/lib/environment'
 
 const props = defineProps<{ variant: 'rail' | 'bar' }>()
 const emit = defineEmits<{ (event: 'navigate'): void; (event: 'more'): void }>()
@@ -25,7 +24,7 @@ function badge(item: NavItem) {
 </script>
 
 <template>
-  <nav class="app-nav" :class="[`app-nav--${variant}`, { 'app-nav--tiles': IS_BETA_BUILD && variant === 'rail' }]" aria-label="游戏功能">
+  <nav class="app-nav" :class="[`app-nav--${variant}`, { 'app-nav--tiles': variant === 'rail' }]" aria-label="游戏功能">
     <RouterLink v-for="item in items" :key="item.to" :to="item.to" @click="emit('navigate')">
       <span class="nav-icon">
         <component :is="item.icon" :size="20" />
@@ -78,7 +77,7 @@ function badge(item: NavItem) {
   background: linear-gradient(90deg, rgba(119, 153, 91, .2), rgba(119, 153, 91, .07));
   box-shadow: inset 3px 0 var(--leaf);
 }
-/* 内测桌面与移动抽屉共用紧凑的功能按钮，正式构建不会加这个 class。 */
+/* 桌面与移动抽屉共用紧凑的功能按钮。 */
 .app-nav--rail.app-nav--tiles {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   align-content: start;

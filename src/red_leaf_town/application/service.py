@@ -6948,7 +6948,7 @@ class GameService(SailingServiceMixin):
         }
         task_items_payload = [entry.model_dump() for entry in self.content.task_items]
         story_assets = self.story_asset_loader().asset_map
-        pools = sorted(self.gacha_pool_loader().values(), key=lambda entry: (entry.min_level, entry.pool_id))
+        pools = sorted(self.gacha_pool_loader().values(), key=lambda entry: (entry.display_order, entry.min_level, entry.pool_id))
         snapshots = []
         for gacha in pools:
             candidates = self._pool_partner_candidates(gacha, catalog)

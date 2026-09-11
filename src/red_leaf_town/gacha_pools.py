@@ -18,6 +18,7 @@ class GachaDefinition(BaseModel):
 
     pool_id: str = Field(min_length=1)
     title: str = Field(min_length=1)
+    display_order: int = 0
     min_level: int = Field(default=1, ge=1)
     max_pulls_per_player: int | None = Field(default=None, ge=1)
     rarity_probabilities: dict[int, float]

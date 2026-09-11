@@ -404,15 +404,17 @@ async def sailing_summary(bot: Bot, event: Event):
         return
     sailing = state.get("sailing")
     if not sailing:
-        await _reply(event, "旧港出海目前仅对内测玩家开放。").send()
+        await _reply(event, "暂时无法获取出海状态，请稍后重试。").send()
         return
     if not sailing["unlocked"]:
         text = f"居民达到 {sailing['min_level']} 级后可以出海。"
     elif not sailing["ship_built"]:
         construction = sailing['construction']
-        text = (f"初帆号尚未建造，需要 {construction['coins']} 红叶币＋"
-                f"{construction['quantity']} 个{construction['item_name']}（持有 {construction['owned']}）。"
-                "\n镇民工坊：2 枫木板＋2 月银矿 → 1 复合木板。")
+        materials = '＋'.join(
+            f"{material['quantity']} 个{material['item_name']}（持有 {material['owned']}）"
+            for material in construction['materials']
+        )
+        text = f"初帆号尚未建造，需要 {construction['coins']} 红叶币＋{materials}。"
     elif sailing["active_run"]:
         run = sailing["active_run"]
         remaining = max(0, run["ready_at"] - state["server_time"])
@@ -420,4 +422,4 @@ async def sailing_summary(bot: Bot, event: Event):
         text = f"初帆号 · {run['route_name']}\n{status}"
     else:
         text = f"初帆号已就绪，累计完成 {sailing['completed_voyages']} 次航行。"
-    await _reply(event, text + "\n安排出航与领取收获：\nhttps://chiyuki.diving-fish.com/red-leaf-town-beta/sailing").send()
+    await _reply(event, text + "\n安排出航与领取收获：\nhttps://chiyuki.diving-fish.com/red-leaf-town/aquatic?tab=sailing").send()

@@ -266,32 +266,28 @@
       "total_xp": 33500,
       "plot_slots": 8,
       "stamina_cap": 52,
-      "unlocks": [],
-      "beta": true
+      "unlocks": []
     },
     {
       "level": 18,
       "total_xp": 50250,
       "plot_slots": 8,
       "stamina_cap": 54,
-      "unlocks": [],
-      "beta": true
+      "unlocks": []
     },
     {
       "level": 19,
       "total_xp": 75400,
       "plot_slots": 8,
       "stamina_cap": 56,
-      "unlocks": [],
-      "beta": true
+      "unlocks": []
     },
     {
       "level": 20,
       "total_xp": 113100,
       "plot_slots": 8,
       "stamina_cap": 58,
-      "unlocks": [],
-      "beta": true
+      "unlocks": []
     }
   ],
   "items": [
@@ -1671,7 +1667,6 @@
         "fodder"
       ],
       "has_quality": true,
-      "beta": true,
       "feed": {
         "units": 8,
         "score": 28
@@ -1686,8 +1681,7 @@
       "tags": [
         "crop_seed"
       ],
-      "has_quality": false,
-      "beta": true
+      "has_quality": false
     },
     {
       "id": "soybean",
@@ -1701,7 +1695,6 @@
         "fodder"
       ],
       "has_quality": true,
-      "beta": true,
       "feed": {
         "units": 7,
         "score": 38
@@ -1716,8 +1709,7 @@
       "tags": [
         "crop_seed"
       ],
-      "has_quality": false,
-      "beta": true
+      "has_quality": false
     },
     {
       "id": "flax",
@@ -1728,8 +1720,7 @@
       "tags": [
         "crop"
       ],
-      "has_quality": true,
-      "beta": true
+      "has_quality": true
     },
     {
       "id": "flax_seed",
@@ -1740,8 +1731,7 @@
       "tags": [
         "crop_seed"
       ],
-      "has_quality": false,
-      "beta": true
+      "has_quality": false
     },
     {
       "id": "tough_vine",
@@ -1752,8 +1742,7 @@
       "tags": [
         "forage"
       ],
-      "has_quality": true,
-      "beta": true
+      "has_quality": true
     },
     {
       "id": "reed",
@@ -1764,8 +1753,7 @@
       "tags": [
         "forage"
       ],
-      "has_quality": true,
-      "beta": true
+      "has_quality": true
     },
     {
       "id": "wild_lotus_root",
@@ -1779,7 +1767,6 @@
         "fodder"
       ],
       "has_quality": true,
-      "beta": true,
       "feed": {
         "units": 4,
         "score": 30
@@ -1794,8 +1781,7 @@
       "tags": [
         "forage"
       ],
-      "has_quality": true,
-      "beta": true
+      "has_quality": true
     },
     {
       "id": "flax_thread",
@@ -1804,8 +1790,7 @@
       "kind": "product",
       "icon": "package",
       "tags": [],
-      "has_quality": true,
-      "beta": true
+      "has_quality": true
     },
     {
       "id": "reed_mat",
@@ -1814,8 +1799,7 @@
       "kind": "product",
       "icon": "package",
       "tags": [],
-      "has_quality": true,
-      "beta": true
+      "has_quality": true
     },
     {
       "id": "rope",
@@ -1824,8 +1808,7 @@
       "kind": "product",
       "icon": "package",
       "tags": [],
-      "has_quality": true,
-      "beta": true
+      "has_quality": true
     },
     {
       "id": "woven_cloth",
@@ -1834,8 +1817,7 @@
       "kind": "product",
       "icon": "package",
       "tags": [],
-      "has_quality": true,
-      "beta": true
+      "has_quality": true
     },
     {
       "id": "waterproof_canvas",
@@ -1844,8 +1826,7 @@
       "kind": "product",
       "icon": "package",
       "tags": [],
-      "has_quality": true,
-      "beta": true
+      "has_quality": true
     },
     {
       "id": "voyage_sail",
@@ -1854,8 +1835,7 @@
       "kind": "product",
       "icon": "package",
       "tags": [],
-      "has_quality": true,
-      "beta": true
+      "has_quality": true
     },
     {
       "id": "grain_fodder",
@@ -1867,7 +1847,6 @@
         "fodder"
       ],
       "has_quality": true,
-      "beta": true,
       "feed": {
         "units": 9,
         "score": 45
@@ -1883,7 +1862,6 @@
         "fodder"
       ],
       "has_quality": true,
-      "beta": true,
       "feed": {
         "units": 14,
         "score": 96
@@ -1899,8 +1877,7 @@
         "poultry_product",
         "food"
       ],
-      "has_quality": true,
-      "beta": true
+      "has_quality": true
     },
     {
       "id": "jade_duck_egg",
@@ -1911,8 +1888,7 @@
       "tags": [
         "poultry_product"
       ],
-      "has_quality": false,
-      "beta": true
+      "has_quality": false
     },
     {
       "id": "wool",
@@ -1923,8 +1899,7 @@
       "tags": [
         "animal_product"
       ],
-      "has_quality": true,
-      "beta": true
+      "has_quality": true
     },
     {
       "id": "cloud_fleece",
@@ -1935,8 +1910,7 @@
       "tags": [
         "animal_product"
       ],
-      "has_quality": false,
-      "beta": true
+      "has_quality": false
     }
   ],
   "crops": [
@@ -2212,8 +2186,7 @@
         "width": 30,
         "miracle_probability_cap": 0.003,
         "miracle_eligible": true
-      },
-      "beta": true
+      }
     },
     {
       "id": "soybean",
@@ -2240,8 +2213,7 @@
         "width": 30,
         "miracle_probability_cap": 0.003,
         "miracle_eligible": true
-      },
-      "beta": true
+      }
     },
     {
       "id": "flax",
@@ -2268,8 +2240,7 @@
         "width": 32,
         "miracle_probability_cap": 0.003,
         "miracle_eligible": true
-      },
-      "beta": true
+      }
     }
   ],
   "gathering_sites": [
@@ -2292,8 +2263,7 @@
       "name": "苇风湿地",
       "description": "风掠过芦苇与浅水，韧藤缠在岸边，泥下藏着野藕。",
       "accent": "#8caa7a",
-      "min_level": 12,
-      "beta": true
+      "min_level": 12
     }
   ],
   "gathering_tasks": [
@@ -2454,8 +2424,7 @@
         "width": 22,
         "miracle_probability_cap": 0.003,
         "miracle_eligible": true
-      },
-      "beta": true
+      }
     }
   ],
   "exploration_expeditions": [
@@ -3757,7 +3726,6 @@
       "description": "全局加工能力增加 10。",
       "cost": 1,
       "prerequisites": [],
-      "beta": true,
       "global_ability_bonus": 10
     },
     {
@@ -3770,7 +3738,6 @@
       "prerequisites": [
         "crafting_ability_1"
       ],
-      "beta": true,
       "modifiers": {
         "crafting_duration_reduction": 0.1
       }
@@ -3785,7 +3752,6 @@
       "prerequisites": [
         "crafting_speed_1"
       ],
-      "beta": true,
       "global_ability_bonus": 10
     },
     {
@@ -3798,7 +3764,6 @@
       "prerequisites": [
         "crafting_ability_2"
       ],
-      "beta": true,
       "modifiers": {
         "crafting_stamina_refund_chance": 0.1
       }
@@ -3813,7 +3778,6 @@
       "prerequisites": [
         "crafting_refund_1"
       ],
-      "beta": true,
       "modifiers": {
         "crafting_quality_bonus": 15
       }
@@ -3826,7 +3790,6 @@
       "description": "全局探索能力增加 10。",
       "cost": 1,
       "prerequisites": [],
-      "beta": true,
       "global_ability_bonus": 10
     },
     {
@@ -3839,7 +3802,6 @@
       "prerequisites": [
         "exploration_ability_1"
       ],
-      "beta": true,
       "modifiers": {
         "exploration_check_bonus": 1
       }
@@ -3854,7 +3816,6 @@
       "prerequisites": [
         "exploration_check_1"
       ],
-      "beta": true,
       "modifiers": {
         "delve_max_hp_bonus": 4
       }
@@ -3869,7 +3830,6 @@
       "prerequisites": [
         "exploration_hp_1"
       ],
-      "beta": true,
       "global_ability_bonus": 10
     },
     {
@@ -3882,7 +3842,6 @@
       "prerequisites": [
         "exploration_ability_2"
       ],
-      "beta": true,
       "modifiers": {
         "delve_first_miss_reroll": 1
       }
@@ -4362,8 +4321,7 @@
         "params": {
           "level": 13
         }
-      },
-      "beta": true
+      }
     },
     {
       "id": "make_reed_mat",
@@ -4398,8 +4356,7 @@
         "params": {
           "level": 12
         }
-      },
-      "beta": true
+      }
     },
     {
       "id": "make_rope",
@@ -4438,8 +4395,7 @@
         "params": {
           "level": 13
         }
-      },
-      "beta": true
+      }
     },
     {
       "id": "make_woven_cloth",
@@ -4478,8 +4434,7 @@
         "params": {
           "level": 14
         }
-      },
-      "beta": true
+      }
     },
     {
       "id": "make_waterproof_canvas",
@@ -4518,8 +4473,7 @@
         "params": {
           "level": 15
         }
-      },
-      "beta": true
+      }
     },
     {
       "id": "make_voyage_sail",
@@ -4558,8 +4512,7 @@
         "params": {
           "level": 16
         }
-      },
-      "beta": true
+      }
     },
     {
       "id": "make_grain_fodder",
@@ -4600,8 +4553,7 @@
         "params": {
           "level": 12
         }
-      },
-      "beta": true
+      }
     },
     {
       "id": "make_nutrition_fodder",
@@ -4642,8 +4594,7 @@
         "params": {
           "level": 17
         }
-      },
-      "beta": true
+      }
     }
   ],
   "mining_sites": [
@@ -5973,24 +5924,21 @@
       "item_id": "corn_seed",
       "price": 72,
       "currency": "coins",
-      "min_level": 10,
-      "beta": true
+      "min_level": 10
     },
     {
       "id": "soybean_seed",
       "item_id": "soybean_seed",
       "price": 106,
       "currency": "coins",
-      "min_level": 12,
-      "beta": true
+      "min_level": 12
     },
     {
       "id": "flax_seed",
       "item_id": "flax_seed",
       "price": 106,
       "currency": "coins",
-      "min_level": 13,
-      "beta": true
+      "min_level": 13
     }
   ],
   "fishing_combo": {
@@ -6335,7 +6283,6 @@
         {
           "level": 2,
           "min_level": 13,
-          "beta": true,
           "capacity": 8,
           "quality_multiplier": 1.0,
           "overflow_cycles": 4,
@@ -6389,7 +6336,6 @@
         {
           "level": 2,
           "min_level": 14,
-          "beta": true,
           "capacity": 8,
           "quality_multiplier": 1.0,
           "overflow_cycles": 4,
@@ -6535,7 +6481,6 @@
         "miracle_probability_cap": 0.003,
         "miracle_eligible": true
       },
-      "beta": true,
       "required_facility_id": "coop_1",
       "required_facility_tier": 2
     },
@@ -6573,7 +6518,6 @@
         "miracle_probability_cap": 0.003,
         "miracle_eligible": true
       },
-      "beta": true,
       "required_facility_id": "barn_1",
       "required_facility_tier": 2
     }

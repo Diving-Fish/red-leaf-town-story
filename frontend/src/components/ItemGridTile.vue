@@ -13,6 +13,7 @@ const props = withDefaults(
     badge?: string | number
     locked?: boolean
     dimmed?: boolean
+    elevated?: boolean
   }>(),
   { locked: false, dimmed: false },
 )
@@ -83,7 +84,7 @@ onBeforeUnmount(closeTip)
     <span class="grid-tile-name">{{ shortName }}</span>
 
     <Teleport to="body">
-      <div v-if="tipOpen && $slots.tooltip" ref="tip" class="grid-tile-tip" :style="tipStyle">
+      <div v-if="tipOpen && $slots.tooltip" ref="tip" class="grid-tile-tip" :style="[tipStyle, elevated ? { zIndex: 85 } : {}]">
         <slot name="tooltip" />
       </div>
     </Teleport>
