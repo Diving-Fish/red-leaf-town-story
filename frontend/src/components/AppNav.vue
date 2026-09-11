@@ -4,6 +4,7 @@ import { Menu } from 'lucide-vue-next'
 
 import { unlockedNavItems, type NavItem } from '@/lib/navigation'
 import { useGameStore } from '@/stores/game'
+import { IS_BETA_BUILD } from '@/lib/environment'
 
 const props = defineProps<{ variant: 'rail' | 'bar' }>()
 const emit = defineEmits<{ (event: 'navigate'): void; (event: 'more'): void }>()
@@ -24,7 +25,7 @@ function badge(item: NavItem) {
 </script>
 
 <template>
-  <nav class="app-nav" :class="`app-nav--${variant}`">
+  <nav class="app-nav" :class="[`app-nav--${variant}`, { 'app-nav--tiles': IS_BETA_BUILD && variant === 'rail' }]" aria-label="游戏功能">
     <RouterLink v-for="item in items" :key="item.to" :to="item.to" @click="emit('navigate')">
       <span class="nav-icon">
         <component :is="item.icon" :size="20" />
@@ -77,6 +78,41 @@ function badge(item: NavItem) {
   background: linear-gradient(90deg, rgba(119, 153, 91, .2), rgba(119, 153, 91, .07));
   box-shadow: inset 3px 0 var(--leaf);
 }
+/* 内测桌面与移动抽屉共用紧凑的功能按钮，正式构建不会加这个 class。 */
+.app-nav--rail.app-nav--tiles {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-content: start;
+  gap: 8px;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+.app-nav--rail.app-nav--tiles a {
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+  min-height: 76px;
+  padding: 12px 4px;
+  color: #abb9ab;
+  font-size: 12px;
+  line-height: 1.2;
+  text-align: center;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, .025);
+}
+.app-nav--rail.app-nav--tiles a:hover {
+  color: var(--cream);
+  border-color: #b4c59a50;
+  background: #b4c59a0c;
+}
+.app-nav--rail.app-nav--tiles a.router-link-active {
+  color: #e5f1cb;
+  border-color: #9cb67a80;
+  background: linear-gradient(150deg, #647e3c40, #35452b35);
+  box-shadow: inset 0 1px #d0e7a51a;
+}
+.app-nav--tiles .nav-label { width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.app-nav--tiles .nav-badge { font-size: 12px; }
 .app-nav--bar { display: none; }
 @media (max-width: 760px) {
   /* 抽屉里的导航在手机上改成网格瓷砖，12 个入口才放得下。 */

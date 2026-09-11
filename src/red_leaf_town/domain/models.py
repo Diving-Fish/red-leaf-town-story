@@ -5,6 +5,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
 
+from .sailing import SailingState
+
 
 RENAMED_PARTNER_IDS: dict[str, str] = {"sprite_001": "fein"}
 LEGACY_PARTNER_LEVEL_COST_BASE = 20
@@ -778,7 +780,7 @@ class ExplorationRunState(BaseModel):
 
 
 class PlayerState(BaseModel):
-    schema_version: int = 30
+    schema_version: int = 31
     version: int = 1
     player_id: str
     oauth_sub: str
@@ -824,6 +826,7 @@ class PlayerState(BaseModel):
     stamina_purchase_day: str = ""
     stamina_purchase_count: int = Field(default=0, ge=0)
     exploration_run: ExplorationRunState | None = None
+    sailing: SailingState = Field(default_factory=SailingState)
     achievement_stats: AchievementStats = Field(default_factory=AchievementStats)
     achievements: list[AchievementCompletionState] = Field(default_factory=list)
     achievement_auto_rewards_reconciled: bool = True
@@ -997,7 +1000,9 @@ class PlayerState(BaseModel):
                 run.setdefault("carried_items", [])
                 run.setdefault("pending_fixed_rewards", [])
                 run.setdefault("battle", None)
-        migrated["schema_version"] = 30
+        if schema_version < 31:
+            migrated.setdefault("sailing", {})
+        migrated["schema_version"] = 31
         return migrated
 
     @model_validator(mode="after")
@@ -1033,6 +1038,9 @@ class PlayerState(BaseModel):
             raise ValueError("player cannot take the same commission more than once")
         if self.commission and self.commission.commission_id in set(taken_ids):
             raise ValueError("player cannot take their own commission")
+        if self.sailing.active_run:
+            if set(self.sailing.active_run.partner_ids) - set(partner_ids):
+                raise ValueError("sailing party contains unowned partners")
         if self.exploration_run:
             unknown_explorers = set(self.exploration_run.partner_ids) - set(partner_ids)
             if unknown_explorers:

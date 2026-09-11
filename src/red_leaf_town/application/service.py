@@ -10,6 +10,8 @@ from math import ceil, floor
 from typing import NamedTuple
 from uuid import uuid4
 
+from .sailing import SailingServiceMixin
+
 from red_leaf_town.achievements import (
     achievement_snapshot,
     evaluate_achievements,
@@ -212,7 +214,7 @@ class GameError(Exception):
         self.status = status
 
 
-class GameService:
+class GameService(SailingServiceMixin):
     def __init__(
         self,
         content: GameContent,
@@ -347,6 +349,9 @@ class GameService:
                 raise GameError("content_locked", "这条路线还在内测中")
             if player.level < expedition.min_level:
                 raise GameError("content_locked", f"达到 {expedition.min_level} 级后解锁")
+            voyage = player.sailing.active_run
+            if voyage and voyage.ready_at > now and set(party) & set(voyage.partner_ids):
+                raise GameError("partner_locked", "伙伴正在出海，暂时不能参与探索", 409)
             ability = self._exploration_party_ability(player, party, leader_partner_id)
             if expedition.kind == "delve":
                 party_loadout = self._build_delve_loadout(player, party, loadout)
@@ -5582,6 +5587,9 @@ class GameService:
     @staticmethod
     def _partner_lock_deadlines(player: PlayerState, now: int) -> dict[str, int]:
         deadlines: dict[str, int] = {}
+        voyage = player.sailing.active_run
+        if voyage and voyage.ready_at > now:
+            deadlines.update({partner_id: voyage.ready_at for partner_id in voyage.partner_ids})
         for production_slot in [*player.plots, *player.gathering_sites, *player.crafting_stations, *player.mining_sites]:
             task = production_slot.task_snapshot
             if task is None or task.ready_at <= now:
@@ -6529,6 +6537,7 @@ class GameService:
             "aquatic": self._aquatic_snapshot(player, now, partner_map),
             "livestock": self._livestock_snapshot(player, now, partner_map),
             "exploration": self._exploration_snapshot(player, now, partner_map),
+            "sailing": self._sailing_snapshot(player, now),
             "inventory": inventory,
             "task_items": [
                 {

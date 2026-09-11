@@ -1,0 +1,238 @@
+from uuid import uuid4
+
+from red_leaf_town.domain.economy import EconomyError, add_item, remove_item, spend_coins
+from red_leaf_town.domain.progression import consume_stamina, grant_experience
+from red_leaf_town.domain.sailing import SailingDrop, SailingLog, SailingRun
+from red_leaf_town.sailing_content import load_sailing_content
+
+
+def sailing_error(code, message, status=400):
+    from .service import GameError
+    return GameError(code, message, status)
+
+
+class SailingServiceMixin:
+    def _require_sailing(self, player):
+        content = load_sailing_content()
+        content.validate_items(self.content.item_map)
+        if not self._is_beta_player(player):
+            raise sailing_error('content_locked', '出海目前仅对内测玩家开放', 403)
+        if player.level < content.min_level:
+            raise sailing_error('content_locked', f'居民达到 {content.min_level} 级后可以出海', 403)
+        return content
+
+    def start_sailing(self, oauth_sub, route_id, partner_ids, supply_id='none', request_id=''):
+        if not isinstance(request_id, str) or not 1 <= len(request_id) <= 100:
+            raise sailing_error('request_invalid', '缺少有效的出航请求编号')
+        if (not isinstance(partner_ids, list) or not 1 <= len(partner_ids) <= 3
+                or any(not isinstance(p, str) or not p for p in partner_ids)
+                or len(set(partner_ids)) != len(partner_ids)):
+            raise sailing_error('sailing_party_invalid', '请选择一至三名不同伙伴')
+        now = self._now()
+
+        def mutation(player):
+            self._settle(player, now)
+            content = self._require_sailing(player)
+            state = player.sailing
+            if request_id in state.start_requests:
+                return {'duplicate': True}
+            if state.active_run:
+                raise sailing_error('sailing_active', '船还在航行或等待领取，请先领取上次收获', 409)
+            route = next((r for r in content.routes if r.id == route_id), None)
+            supply = next((s for s in content.supplies if s.id == supply_id), None)
+            if route is None or supply is None:
+                raise sailing_error('sailing_invalid', '航线或补给不存在', 404)
+            if state.completed_voyages < route.required_voyages:
+                raise sailing_error('content_locked', f'完成 {route.required_voyages} 次航行后开放这条航线')
+            catalog = self.partner_catalog_loader().partner_map
+            owned = {p.partner_id: p for p in player.owned_partners}
+            locks = self._partner_lock_deadlines(player, now)
+            for partner_id in partner_ids:
+                if partner_id not in owned or partner_id not in catalog:
+                    raise sailing_error('partner_not_owned', '队伍中有尚未持有或无法使用的伙伴', 404)
+                if locks.get(partner_id, 0) > now:
+                    raise sailing_error('partner_locked', '伙伴正在参与任务，暂时不能出海', 409)
+                if player.exploration_run and partner_id in player.exploration_run.partner_ids:
+                    raise sailing_error('partner_locked', '伙伴正在探索，暂时不能出海', 409)
+            for partner_id in partner_ids:
+                self._clear_partner_assignment(player, partner_id, now)
+                if player.fishing.companion_partner_id == partner_id:
+                    player.fishing.companion_partner_id = ""
+            trial = state.completed_voyages == 0
+            duration, coins, stamina = (60, 20, 1) if trial else (route.duration, route.coins, route.stamina)
+            consumed = []
+            try:
+                spend_coins(player, coins)
+                consume_stamina(player, stamina, self.content, now)
+                remaining = supply.quantity
+                for quality, quantity in sorted(player.inventory.get(supply.item_id, {}).items()):
+                    count = min(remaining, quantity)
+                    if count:
+                        remove_item(player, supply.item_id, count, quality)
+                        consumed.append({'item_id': supply.item_id, 'quality': quality, 'quantity': count})
+                        remaining -= count
+                    if not remaining:
+                        break
+                if remaining:
+                    raise EconomyError('额外补给数量不足')
+            except (EconomyError, ValueError) as exc:
+                raise sailing_error('resource_insufficient', str(exc)) from exc
+            industry = 'exploration' if route.required_voyages >= 3 else 'aquatic'
+            abilities = []
+            for partner_id in partner_ids:
+                member = owned[partner_id]
+                definition = catalog[partner_id]
+                level = min(member.level, self.content.industries[industry].partner_level_cap)
+                abilities.append(definition.ability_at(industry, level, member.stars)
+                                 if any(t.industry == industry for t in definition.tendencies) else 0)
+            ability = round(max(abilities) + (sum(abilities) - max(abilities)) * 0.25)
+            base = 1 if trial else route.quantity
+            quantity = max(1, round(base * (1 + 0.4 * ability / (ability + 60)
+                                                + state.cargo_level * 0.1
+                                                + (0.2 if supply.effect == 'quantity' else 0))))
+            bonus = 0
+            logs = []
+            for event in self.rng.sample(content.events, 1 if trial else route.events):
+                actor = max(partner_ids, key=lambda p: catalog[p].exploration_stats.modifier(event.attribute))
+                modifier = catalog[actor].exploration_stats.modifier(event.attribute)
+                roll = self.rng.randint(1, 20)
+                success = roll == 20 or (roll != 1 and roll + modifier >= 12)
+                text = event.success if success else event.failure
+                if success:
+                    bonus += max(1, base // 8)
+                elif event.id == 'squall':
+                    if supply.effect == 'protect':
+                        text = '伙伴用维修物资加固货舱，额外收获也安然无恙。'
+                    else:
+                        bonus = max(0, bonus - max(1, base // 8))
+                logs.append(SailingLog(event_id=event.id, name=event.name, text=text, success=success,
+                                       roll=roll, modifier=modifier, attribute=event.attribute, actor_id=actor))
+            drops = [SailingDrop(item_id=route.common_item, quantity=quantity + bonus)]
+            rare_chance = min(0.8, 0.2 + state.nets_level * 0.08
+                              + (0.15 if supply.effect == 'rare' else 0) + 0.15 * ability / (ability + 60))
+            if self.rng.random() < rare_chance:
+                drops.append(SailingDrop(item_id=route.rare_item, quantity=1 if trial else max(1, base // 10)))
+            state.active_run = SailingRun(
+                run_id=str(uuid4()), route_id=route.id, route_name=route.name, partner_ids=partner_ids,
+                started_at=now, ready_at=now + duration, trial=trial, supply_id=supply.id, coins=coins,
+                stamina=stamina, experience=stamina * 6, partner_experience=max(1, duration // 720 + stamina * 2),
+                ability=ability, cargo_level=state.cargo_level, nets_level=state.nets_level,
+                consumed_inputs=consumed, drops=drops, logs=logs,
+            )
+            state.start_requests = [*state.start_requests[-49:], request_id]
+            return {'run_id': state.active_run.run_id, 'trial': trial}
+
+        player, result = self._update_by_sub(oauth_sub, mutation)
+        return {'result': result, 'state': self._snapshot(player, now)}
+
+    def collect_sailing(self, oauth_sub, run_id):
+        now = self._now()
+
+        def mutation(player):
+            self._settle(player, now)
+            self._require_sailing(player)
+            state = player.sailing
+            if state.last_run and state.last_run.run_id == run_id:
+                return {'duplicate': True}
+            run = state.active_run
+            if not run or run.run_id != run_id:
+                raise sailing_error('sailing_not_found', '没有这次待领取的航行', 404)
+            if now < run.ready_at:
+                raise sailing_error('sailing_not_ready', '船还没有回港', 409)
+            for drop in run.drops:
+                add_item(player, drop.item_id, drop.quantity)
+                state.collected_items[drop.item_id] = state.collected_items.get(drop.item_id, 0) + drop.quantity
+            grant_experience(player, run.experience, self.content)
+            for partner_id in run.partner_ids:
+                self._grant_partner_experience(self._owned_partner(player, partner_id), run.partner_experience)
+            state.discoveries = sorted(set(state.discoveries) | {log.event_id for log in run.logs if log.success})
+            state.completed_voyages += 1
+            state.last_run = run
+            state.active_run = None
+            return {'run_id': run.run_id, 'drops': self._sailing_drops(run.drops), 'experience': run.experience}
+
+        player, result = self._update_by_sub(oauth_sub, mutation)
+        return {'result': result, 'state': self._snapshot(player, now)}
+
+    def upgrade_sailing(self, oauth_sub, kind, expected_level):
+        if kind not in ('cargo', 'nets') or type(expected_level) is not int:
+            raise sailing_error('sailing_upgrade_invalid', '改装请求无效')
+        now = self._now()
+
+        def mutation(player):
+            self._settle(player, now)
+            self._require_sailing(player)
+            state = player.sailing
+            if state.active_run:
+                raise sailing_error('sailing_active', '请回港领取收获后再改装', 409)
+            level = getattr(state, f'{kind}_level')
+            if level != expected_level or level >= 3:
+                raise sailing_error('sailing_upgrade_invalid', '改装等级已变化或已经满级', 409)
+            item_id = 'maple_plank' if kind == 'cargo' else 'red_copper_ore'
+            try:
+                spend_coins(player, (level + 1) * 1000)
+                remaining = (level + 1) * 5
+                for quality, quantity in sorted(player.inventory.get(item_id, {}).items()):
+                    count = min(remaining, quantity)
+                    if count:
+                        remove_item(player, item_id, count, quality)
+                        remaining -= count
+                    if not remaining:
+                        break
+                if remaining:
+                    raise EconomyError('改装材料不足')
+            except (EconomyError, ValueError) as exc:
+                raise sailing_error('resource_insufficient', str(exc)) from exc
+            setattr(state, f'{kind}_level', level + 1)
+            return {'kind': kind, 'level': level + 1}
+
+        player, result = self._update_by_sub(oauth_sub, mutation)
+        return {'result': result, 'state': self._snapshot(player, now)}
+
+    def _sailing_drops(self, drops):
+        items = self.content.item_map
+        return [{**d.model_dump(), 'name': items[d.item_id].name if d.item_id in items else d.item_id}
+                for d in drops]
+
+    def _sailing_snapshot(self, player, now):
+        if not self._is_beta_player(player):
+            return None
+        content = load_sailing_content()
+        state = player.sailing
+
+        def run_snapshot(run):
+            if run is None:
+                return None
+            ready = now >= run.ready_at
+            return {**run.model_dump(exclude={'drops', 'logs', 'consumed_inputs'}), 'ready': ready,
+                    'drops': self._sailing_drops(run.drops) if ready else [],
+                    'logs': [log.model_dump() for log in run.logs] if ready else []}
+
+        trial = state.completed_voyages == 0
+        items = self.content.item_map
+        return {
+            'unlocked': player.level >= content.min_level,
+            'min_level': content.min_level, 'trial_available': trial,
+            'completed_voyages': state.completed_voyages,
+            'routes': [{**r.model_dump(), 'duration': 60 if trial else r.duration,
+                        'coins': 20 if trial else r.coins, 'stamina': 1 if trial else r.stamina,
+                        'unlocked': player.level >= content.min_level and state.completed_voyages >= r.required_voyages,
+                        'common_name': items[r.common_item].name, 'rare_name': items[r.rare_item].name}
+                       for r in content.routes],
+            'supplies': [{**s.model_dump(), 'owned': sum(player.inventory.get(s.item_id, {}).values()),
+                          'item_name': items[s.item_id].name if s.item_id else ''} for s in content.supplies],
+            'upgrades': [{'kind': kind, 'name': name, 'level': getattr(state, f'{kind}_level'),
+                          'coins': (getattr(state, f'{kind}_level') + 1) * 1000,
+                          'quantity': (getattr(state, f'{kind}_level') + 1) * 5,
+                          'item_id': item_id, 'item_name': items[item_id].name,
+                          'owned': sum(player.inventory.get(item_id, {}).values()), 'description': description}
+                         for kind, name, item_id, description in (
+                             ('cargo', '货舱', 'maple_plank', '每级增加 10% 普通收获'),
+                             ('nets', '渔具', 'red_copper_ore', '每级增加 8 个百分点稀有发现概率'))],
+            'active_run': run_snapshot(state.active_run), 'last_run': run_snapshot(state.last_run),
+            'discoveries': [{'id': e.id, 'name': e.name if e.id in state.discoveries else '未知见闻',
+                             'discovered': e.id in state.discoveries} for e in content.events],
+            'collection': [{'item_id': item_id, 'name': items[item_id].name if count else '未知物产', 'quantity': count}
+                           for item_id in sorted({r.common_item for r in content.routes} | {r.rare_item for r in content.routes})
+                           for count in [state.collected_items.get(item_id, 0)]],
+        }

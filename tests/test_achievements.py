@@ -123,7 +123,7 @@ def test_legacy_commission_history_seeds_only_provable_counts():
 
     migrated = type(player).model_validate(payload)
 
-    assert migrated.schema_version == 30
+    assert migrated.schema_version == 31
     assert migrated.achievement_stats.own_commissions_completed == 1
     assert migrated.achievement_stats.commissions_completed == 1
     assert migrated.achievement_stats.production_collections == {}

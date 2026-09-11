@@ -297,3 +297,27 @@ def test_releasing_a_claim_puts_the_code_back(codes):
 
 def test_claiming_a_code_that_does_not_exist(codes):
     assert codes.claim("EEEE-5555", "player-a", 1_700_000_100) is None
+
+
+def test_sailing_snapshot_and_claim_survive_service_reload(repository, monkeypatch):
+    service = GameService(load_content(), repository, clock=lambda: 1_700_000_000)
+    player = service.ensure_player('redis-sailing-sub', '航海持久化测试')
+    monkeypatch.setenv('RED_LEAF_TOWN_BETA_PLAYERS', player.player_id)
+    partner_id = service.partner_catalog_loader().partners[0].id
+    service.admin_grant_partner(player.player_id, partner_id)
+    def prepare(p):
+        p.experience = service.content.level_definition(16).total_xp
+        p.coins = 10_000
+        p.stamina = 50
+    repository.update(player.player_id, prepare)
+    service.start_sailing('redis-sailing-sub', 'reed_bay', [partner_id], 'none', 'redis-voyage')
+    frozen = repository.get(player.player_id).sailing.active_run
+    reloaded = GameService(load_content(), repository, clock=lambda: frozen.ready_at)
+    claim = reloaded.collect_sailing('redis-sailing-sub', frozen.run_id)
+    assert claim['result']['drops']
+    state = repository.get(player.player_id)
+    assert state.sailing.active_run is None
+    assert state.sailing.last_run == frozen
+    assert state.sailing.completed_voyages == 1
+    assert reloaded.collect_sailing('redis-sailing-sub', frozen.run_id)['result']['duplicate']
+    assert repository.get(player.player_id).inventory == state.inventory

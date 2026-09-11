@@ -1292,6 +1292,7 @@ export interface ExplorationState {
 }
 
 export interface GameState {
+  sailing: SailingState | null
   server_time: number
   world: {
     day: string
@@ -1712,4 +1713,34 @@ export interface StoryAdminPayload {
     script_directory: string
     cdn: { provider: string; configured: boolean; base_url: string }
   }
+}
+
+
+export interface SailingRun {
+  run_id: string
+  route_id: string
+  route_name: string
+  partner_ids: string[]
+  started_at: number
+  ready_at: number
+  ready: boolean
+  trial: boolean
+  ability: number
+  experience: number
+  drops: Array<{ item_id: string; name: string; quantity: number }>
+  logs: Array<{ event_id: string; name: string; text: string; success: boolean; roll: number; modifier: number; attribute: string; actor_id: string }>
+}
+
+export interface SailingState {
+  unlocked: boolean
+  min_level: number
+  trial_available: boolean
+  completed_voyages: number
+  routes: Array<{ id: string; name: string; description: string; duration: number; coins: number; stamina: number; required_voyages: number; unlocked: boolean; common_name: string; rare_name: string }>
+  supplies: Array<{ id: string; name: string; description: string; item_id: string; item_name: string; quantity: number; owned: number }>
+  upgrades: Array<{ kind: string; name: string; level: number; coins: number; quantity: number; item_id: string; item_name: string; owned: number; description: string }>
+  active_run: SailingRun | null
+  last_run: SailingRun | null
+  discoveries: Array<{ id: string; name: string; discovered: boolean }>
+  collection: Array<{ item_id: string; name: string; quantity: number }>
 }

@@ -1,0 +1,108 @@
+{
+  "min_level": 16,
+  "routes": [
+    {
+      "id": "reed_bay",
+      "name": "芦苇海湾",
+      "description": "沿着芦苇岸线撒网，熟悉海风与潮汐。适合水产伙伴。",
+      "duration": 7200,
+      "coins": 120,
+      "stamina": 6,
+      "required_voyages": 0,
+      "quantity": 8,
+      "common_item": "sea_fish",
+      "rare_item": "sea_shell",
+      "events": 2
+    },
+    {
+      "id": "white_sail",
+      "name": "白帆渔场",
+      "description": "跟随洄游鱼群，带回大宗海产与偶尔闪光的珍珠。适合水产伙伴。",
+      "duration": 21600,
+      "coins": 300,
+      "stamina": 16,
+      "required_voyages": 1,
+      "quantity": 20,
+      "common_item": "sea_fish",
+      "rare_item": "sea_pearl",
+      "events": 3
+    },
+    {
+      "id": "mist_isles",
+      "name": "雾灯群岛",
+      "description": "穿过海雾寻找旧灯塔，沿岸拾取岛屿特产。适合探索伙伴。",
+      "duration": 36000,
+      "coins": 450,
+      "stamina": 24,
+      "required_voyages": 3,
+      "quantity": 26,
+      "common_item": "sea_shell",
+      "rare_item": "sea_relic",
+      "events": 4
+    }
+  ],
+  "supplies": [
+    {
+      "id": "none",
+      "name": "基础补给",
+      "description": "船上自备基础补给，无需额外物品。",
+      "item_id": "",
+      "quantity": 0,
+      "effect": "none"
+    },
+    {
+      "id": "ration",
+      "name": "便携口粮",
+      "description": "携带腌萝卜，普通收获增加 20%。",
+      "item_id": "pickled_carrot",
+      "quantity": 2,
+      "effect": "quantity"
+    },
+    {
+      "id": "bait",
+      "name": "特制鱼饵",
+      "description": "携带精饲料，稀有发现概率增加 15 个百分点。",
+      "item_id": "refined_fodder",
+      "quantity": 2,
+      "effect": "rare"
+    },
+    {
+      "id": "repair",
+      "name": "维修物资",
+      "description": "携带枫木板，风浪检定失败时仍保留额外收获。",
+      "item_id": "maple_plank",
+      "quantity": 2,
+      "effect": "protect"
+    }
+  ],
+  "events": [
+    {
+      "id": "shoal",
+      "name": "洄游鱼群",
+      "attribute": "strength",
+      "success": "伙伴合力拉起沉甸甸的渔网，额外捕到一批海产。",
+      "failure": "鱼群从网边散去，好在日常捕捞已经装进货舱。"
+    },
+    {
+      "id": "fog",
+      "name": "海雾航标",
+      "attribute": "intelligence",
+      "success": "辨清了旧航标，在安静的浅湾找到额外物产。",
+      "failure": "大家放慢航速，安全绕过了看不清的浅滩。"
+    },
+    {
+      "id": "squall",
+      "name": "午后风浪",
+      "attribute": "agility",
+      "success": "掌舵伙伴顺着浪头转向，稳稳保住了额外收获。",
+      "failure": "一阵浪打湿了甲板，部分额外收获滑进了海里。"
+    },
+    {
+      "id": "drift",
+      "name": "漂流木箱",
+      "attribute": "luck",
+      "success": "海面漂来一只旧木箱，里面的物产还完好无损。",
+      "failure": "捞到的是一只空木箱，大家把它带走清理了海面。"
+    }
+  ]
+}

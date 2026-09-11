@@ -174,7 +174,7 @@ def test_player_schema_29_adds_an_empty_exploration_run():
         "updated_at": 1,
     })
 
-    assert migrated.schema_version == 30
+    assert migrated.schema_version == 31
     assert migrated.exploration_run is None
 
 

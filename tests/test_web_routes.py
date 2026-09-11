@@ -1145,3 +1145,61 @@ async def test_stamina_supply_endpoints(client, service):
     service.repository.update(player.player_id, lambda entry: add_item(entry, "feien_tonic", 1))
     used = await client.post("/api/red-leaf-town/stamina/potion")
     assert (await used.get_json())["data"]["state"]["player"]["stamina"] == cap + 80
+
+
+@runs
+async def test_sailing_api_requires_login(client):
+    for endpoint in ('start', 'collect', 'upgrade'):
+        response = await client.post(f'/api/red-leaf-town/sailing/{endpoint}', json={})
+        assert response.status_code == 401
+
+
+@runs
+async def test_sailing_api_beta_gate_and_bad_payloads(client, service, monkeypatch):
+    authenticate(client)
+    monkeypatch.setenv('RED_LEAF_TOWN_BETA_PLAYERS', 'nobody')
+    response = await client.post('/api/red-leaf-town/sailing/start', json={
+        'route_id': 'reed_bay', 'partner_ids': ['missing'], 'request_id': 'beta-test',
+    })
+    assert response.status_code == 403
+    assert (await response.get_json())['code'] == 'content_locked'
+    for endpoint in ('start', 'collect', 'upgrade'):
+        response = await client.post(f'/api/red-leaf-town/sailing/{endpoint}', json=['invalid'])
+        assert response.status_code == 400
+    response = await client.post('/api/red-leaf-town/sailing/start', json={'partner_ids': 'wrong'})
+    assert response.status_code == 400
+
+
+@runs
+async def test_sailing_api_full_trial_and_upgrade(client, service, monkeypatch):
+    authenticate(client)
+    player = service.repository.get_by_sub('route-sub')
+    monkeypatch.setenv('RED_LEAF_TOWN_BETA_PLAYERS', player.player_id)
+    partner = service.partner_catalog_loader().partners[0]
+    service.admin_grant_partner(player.player_id, partner.id)
+    def prepare(p):
+        p.experience = service.content.level_definition(16).total_xp
+        p.coins = 10_000
+        p.stamina = 50
+        add_item(p, 'maple_plank', 10, 1)
+    service.repository.update(player.player_id, prepare)
+    response = await client.post('/api/red-leaf-town/sailing/upgrade', json={'kind': 'cargo', 'expected_level': 0})
+    assert response.status_code == 200
+    assert (await response.get_json())['data']['result']['level'] == 1
+    response = await client.post('/api/red-leaf-town/sailing/start', json={
+        'route_id': 'reed_bay', 'partner_ids': [partner.id], 'request_id': 'web-trial',
+    })
+    assert response.status_code == 200
+    run = (await response.get_json())['data']['state']['sailing']['active_run']
+    assert run['trial'] and not run['drops']
+    response = await client.post('/api/red-leaf-town/sailing/collect', json={'run_id': run['run_id']})
+    assert response.status_code == 409
+    service.clock = lambda: run['ready_at']
+    response = await client.post('/api/red-leaf-town/sailing/collect', json={'run_id': run['run_id']})
+    assert response.status_code == 200
+    data = (await response.get_json())['data']
+    assert data['result']['drops']
+    assert data['state']['sailing']['completed_voyages'] == 1
+    assert data['state']['sailing']['active_run'] is None
+    response = await client.post('/api/red-leaf-town/sailing/collect', json={'run_id': run['run_id']})
+    assert (await response.get_json())['data']['result']['duplicate']

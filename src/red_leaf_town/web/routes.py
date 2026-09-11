@@ -895,6 +895,36 @@ def create_blueprint(
         result = get_service().collect_gathering(subject, site_id)
         return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
 
+    @blueprint.post("/api/red-leaf-town/sailing/start")
+    @login_required
+    async def start_sailing(subject: str):
+        payload = await request.get_json(silent=True)
+        if not isinstance(payload, dict):
+            raise GameError("invalid_payload", "请求必须为 JSON 对象")
+        result = get_service().start_sailing(
+            subject, payload.get("route_id"), payload.get("partner_ids"),
+            payload.get("supply_id", "none"), payload.get("request_id"),
+        )
+        return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
+
+    @blueprint.post("/api/red-leaf-town/sailing/collect")
+    @login_required
+    async def collect_sailing(subject: str):
+        payload = await request.get_json(silent=True)
+        if not isinstance(payload, dict) or not isinstance(payload.get("run_id"), str):
+            raise GameError("invalid_payload", "请提供航行编号")
+        result = get_service().collect_sailing(subject, payload["run_id"])
+        return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
+
+    @blueprint.post("/api/red-leaf-town/sailing/upgrade")
+    @login_required
+    async def upgrade_sailing(subject: str):
+        payload = await request.get_json(silent=True)
+        if not isinstance(payload, dict):
+            raise GameError("invalid_payload", "请求必须为 JSON 对象")
+        result = get_service().upgrade_sailing(subject, payload.get("kind"), payload.get("expected_level"))
+        return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
+
     @blueprint.post("/api/red-leaf-town/exploration/<string:expedition_id>/start")
     @login_required
     async def start_exploration(subject: str, expedition_id: str):

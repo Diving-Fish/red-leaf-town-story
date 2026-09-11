@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { Coins, Lock, Shovel, UsersRound } from 'lucide-vue-next'
+import { computed, defineAsyncComponent, nextTick, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { Coins, Fish, Lock, Sailboat, Shovel, UsersRound, Waves } from 'lucide-vue-next'
 
 import ActionButton from '@/components/ActionButton.vue'
 import SlotPanel from '@/components/SlotPanel.vue'
@@ -9,15 +10,45 @@ import PondCard from '@/components/aquatic/PondCard.vue'
 import StateBlock from '@/components/StateBlock.vue'
 import ViewHeader from '@/components/ViewHeader.vue'
 import { useGameStore } from '@/stores/game'
+import { IS_BETA_BUILD } from '@/lib/environment'
 
 const game = useGameStore()
+const route = useRoute()
+const router = useRouter()
+const tabBar = ref<HTMLElement | null>(null)
+const SailingPanel = IS_BETA_BUILD ? defineAsyncComponent(() => import('@/components/aquatic/SailingPanel.vue')) : null
+const tabs = computed(() => [
+  { id: 'fishing', name: '钓鱼', icon: Fish, hint: '即刻下竿' },
+  { id: 'ponds', name: '鱼塘', icon: Waves, hint: '长久经营' },
+  ...(game.state?.sailing ? [{ id: 'sailing', name: '出海', icon: Sailboat, hint: '远航与发现' }] : []),
+])
+const activeTab = computed(() => tabs.value.some(tab => tab.id === route.query.tab) ? String(route.query.tab) : 'fishing')
+const sailingReady = computed(() => Boolean(game.state?.sailing?.active_run && game.state.sailing.active_run.ready_at <= game.serverNow))
+
+function selectTab(id: string) {
+  void router.replace({ query: { ...route.query, tab: id } })
+}
+
+async function moveTab(event: KeyboardEvent) {
+  const index = tabs.value.findIndex(tab => tab.id === activeTab.value)
+  let next = index
+  if (event.key === 'ArrowRight') next = (index + 1) % tabs.value.length
+  else if (event.key === 'ArrowLeft') next = (index + tabs.value.length - 1) % tabs.value.length
+  else if (event.key === 'Home') next = 0
+  else if (event.key === 'End') next = tabs.value.length - 1
+  else return
+  event.preventDefault()
+  await router.replace({ query: { ...route.query, tab: tabs.value[next].id } })
+  await nextTick()
+  tabBar.value?.querySelectorAll<HTMLButtonElement>('[role="tab"]')[next]?.focus()
+}
 
 const aquatic = computed(() => game.state?.aquatic || null)
 </script>
 
 <template>
-  <section v-if="game.state && aquatic" class="view-section aquatic-view">
-    <ViewHeader eyebrow="WATERS AND PONDS" title="水产">
+  <section v-if="game.state && aquatic" class="view-section aquatic-view" :class="{ 'aquatic-view--beta': IS_BETA_BUILD }">
+    <ViewHeader :eyebrow="IS_BETA_BUILD ? 'RIVERS, PONDS & OPEN SEA' : 'WATERS AND PONDS'" title="水产">
       <template #chip>
         <UsersRound :size="18" /> 水产编制 {{ game.state.industry_rules.aquatic?.partner_capacity || 0 }}
       </template>
@@ -31,7 +62,25 @@ const aquatic = computed(() => game.state?.aquatic || null)
     />
 
     <template v-else>
-      <FishingPanel :aquatic="aquatic" />
+      <nav v-if="IS_BETA_BUILD" ref="tabBar" class="aquatic-tabs" role="tablist" aria-label="水产玩法" @keydown="moveTab">
+        <button
+          v-for="tab in tabs" :id="`aquatic-tab-${tab.id}`" :key="tab.id" type="button" role="tab"
+          :aria-selected="activeTab === tab.id" :aria-controls="`aquatic-panel-${tab.id}`"
+          :tabindex="activeTab === tab.id ? 0 : -1" :class="{ selected: activeTab === tab.id }"
+          @click="selectTab(tab.id)"
+        >
+          <component :is="tab.icon" :size="22" />
+          <span><strong>{{ tab.name }}</strong><small>{{ tab.hint }}</small></span>
+          <i v-if="tab.id === 'sailing' && sailingReady" class="tab-ready">已回港</i>
+          <i v-else-if="tab.id === 'sailing'" class="tab-beta">内测</i>
+        </button>
+      </nav>
+
+      <div v-show="!IS_BETA_BUILD || activeTab === 'fishing'" id="aquatic-panel-fishing" :role="IS_BETA_BUILD ? 'tabpanel' : undefined" :aria-labelledby="IS_BETA_BUILD ? 'aquatic-tab-fishing' : undefined">
+        <FishingPanel :aquatic="aquatic" />
+      </div>
+
+      <div v-show="!IS_BETA_BUILD || activeTab === 'ponds'" id="aquatic-panel-ponds" class="aquatic-pond-content" :role="IS_BETA_BUILD ? 'tabpanel' : undefined" :aria-labelledby="IS_BETA_BUILD ? 'aquatic-tab-ponds' : undefined">
 
       <section class="ponds">
         <header class="ponds-heading">
@@ -87,11 +136,17 @@ const aquatic = computed(() => game.state?.aquatic || null)
         :slot="aquatic.feed_slot"
         description="鱼塘每走完一个繁殖周期从这里扣一次饲料，与周期长短无关；槽内耗尽则停摆，买不起的周期不会推进。饲料的品质分越高，鱼塘产出的品质越好。"
       />
+      </div>
+
+      <div v-if="IS_BETA_BUILD && game.state.sailing" v-show="activeTab === 'sailing'" id="aquatic-panel-sailing" role="tabpanel" aria-labelledby="aquatic-tab-sailing">
+        <SailingPanel />
+      </div>
     </template>
   </section>
 </template>
 
 <style scoped>
+.aquatic-pond-content { display: flex; flex-direction: column; gap: 30px; }
 .aquatic-view { display: flex; flex-direction: column; gap: 30px; }
 .ponds-heading h2 { margin: 0; font: 600 18px Georgia, 'Noto Serif SC', serif; }
 .ponds-heading p { margin: 6px 0 16px; color: #849087; font-size: 13px; line-height: 1.6; }
@@ -105,4 +160,23 @@ const aquatic = computed(() => game.state?.aquatic || null)
 .pond-site-cost strong.is-short { color: #b4635a; }
 .pond-site-locked { display: flex; align-items: center; gap: 6px; margin: -4px 0 0; color: #a4736a; font-size: 12px; line-height: 1.5; }
 .pond-site-cost span { color: #7d887f; font-size: 12px; }
+.aquatic-tabs { display: flex; gap: 8px; padding: 7px; border: 1px solid #8cb7b826; border-radius: 18px; background: #0e1a17; }
+.aquatic-tabs button { position: relative; display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; padding: 16px 20px; color: #98aca7; text-align: left; border: 1px solid transparent; border-radius: 12px; background: transparent; cursor: pointer; transition: background .18s, border-color .18s; }
+.aquatic-tabs button:hover { color: #e4f0e6; background: #ffffff06; }
+.aquatic-tabs button.selected { color: #d7eeea; border-color: #81c4c346; background: linear-gradient(120deg, #29504b85, #253b3645); box-shadow: 0 3px 14px #0002; }
+.aquatic-tabs button:focus-visible { outline: 2px solid #a8d9d1; outline-offset: 2px; }
+.aquatic-tabs strong { display: block; font-size: 16px; font-weight: 650; }
+.aquatic-tabs small { display: block; margin-top: 4px; color: #8baba5; font-size: 12px; }
+.tab-beta, .tab-ready { margin-left: auto; padding: 3px 7px; border-radius: 6px; font-size: 12px; font-style: normal; white-space: nowrap; }
+.tab-beta { color: #cdbd8b; background: #cdbd8b10; }
+.tab-ready { color: #d4efb6; background: #78975424; }
+@media (max-width: 760px) {
+  .aquatic-view--beta { gap: 22px; }
+  .aquatic-tabs { gap: 4px; padding: 5px; border-radius: 14px; }
+  .aquatic-tabs button { flex-direction: column; justify-content: center; gap: 7px; padding: 13px 5px; text-align: center; }
+  .aquatic-tabs strong { font-size: 14px; }
+  .aquatic-tabs small { display: none; }
+  .tab-beta, .tab-ready { margin: 0; padding: 0; background: transparent; }
+  .aquatic-view--beta .pond-grid { grid-template-columns: minmax(0, 1fr); }
+}
 </style>

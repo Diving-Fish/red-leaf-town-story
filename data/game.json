@@ -1087,6 +1087,44 @@
         "armor_bonus": 1,
         "description": "轻得几乎没有分量，戴上它总能比别人先动一步。"
       }
+    },
+    {
+      "id": "sea_fish",
+      "name": "近海鲜鱼",
+      "icon": "fish",
+      "kind": "produce",
+      "sell_price": 45,
+      "has_quality": false,
+      "tags": [
+        "fish"
+      ]
+    },
+    {
+      "id": "sea_shell",
+      "name": "潮纹贝",
+      "icon": "shell",
+      "kind": "produce",
+      "sell_price": 55,
+      "has_quality": false,
+      "tags": []
+    },
+    {
+      "id": "sea_pearl",
+      "name": "白帆珍珠",
+      "icon": "shell",
+      "kind": "material",
+      "sell_price": 160,
+      "has_quality": false,
+      "tags": []
+    },
+    {
+      "id": "sea_relic",
+      "name": "雾灯遗物",
+      "icon": "shell",
+      "kind": "material",
+      "sell_price": 200,
+      "has_quality": false,
+      "tags": []
     }
   ],
   "crops": [
@@ -3484,7 +3522,11 @@
       "giant_maple_perch",
       "giant_moon_sturgeon",
       "peach_berry",
-      "berry_berry"
+      "berry_berry",
+      "sea_fish",
+      "sea_shell",
+      "sea_pearl",
+      "sea_relic"
     ],
     "tiers": [
       {

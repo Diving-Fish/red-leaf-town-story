@@ -834,6 +834,17 @@ export const useGameStore = defineStore('game', () => {
     initialize,
     refresh,
     buy,
+    startSailing: (routeId: string, partnerIds: string[], supplyId: string, requestId: string) =>
+      action('sailing:start', `${API_ROOT}/sailing/start`, {
+        payload: { route_id: routeId, partner_ids: partnerIds, supply_id: supplyId, request_id: requestId },
+        successMessage: '船已离港，伙伴将按时带回收获',
+      }),
+    collectSailing: (runId: string) => action('sailing:collect', `${API_ROOT}/sailing/collect`, {
+      payload: { run_id: runId }, successMessage: '航海收获已放入仓库',
+    }),
+    upgradeSailing: (kind: string, expectedLevel: number) => action(`sailing:upgrade:${kind}`, `${API_ROOT}/sailing/upgrade`, {
+      payload: { kind, expected_level: expectedLevel }, successMessage: '船舶改装完成',
+    }),
     startExploration,
     resolveExploration,
     resolveDelveBattleAction,

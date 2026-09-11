@@ -386,3 +386,33 @@ async def commission_submit(bot: Bot, event: Event):
         event,
         f"委托交付完成，{result['npc_name']}收下了东西，你获得 {result['maple_flame']} 枫火。",
     ).send()
+
+
+sailing_command = on_command("红叶镇出海", force_whitespace=True)
+
+
+@sailing_command.handle()
+async def sailing_summary(bot: Bot, event: Event):
+    identity = resolve_identity(bot, event)
+    if not identity:
+        await _reply(event, "无法识别当前 QQ 身份。").send()
+        return
+    try:
+        state = get_service().snapshot_by_identity(identity)
+    except GameError as exc:
+        await _reply(event, exc.message).send()
+        return
+    sailing = state.get("sailing")
+    if not sailing:
+        await _reply(event, "旧港出海目前仅对内测玩家开放。").send()
+        return
+    if not sailing["unlocked"]:
+        text = f"居民达到 {sailing['min_level']} 级后可以出海。"
+    elif sailing["active_run"]:
+        run = sailing["active_run"]
+        remaining = max(0, run["ready_at"] - state["server_time"])
+        status = "已回港，等待领取" if not remaining else f"预计 {(remaining + 59) // 60} 分钟后回港"
+        text = f"初帆号 · {run['route_name']}\n{status}"
+    else:
+        text = f"初帆号已就绪，累计完成 {sailing['completed_voyages']} 次航行。"
+    await _reply(event, text + "\n安排出航与领取收获：\nhttps://chiyuki.diving-fish.com/red-leaf-town-beta/sailing").send()
