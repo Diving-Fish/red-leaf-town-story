@@ -31,6 +31,7 @@ def sailing_game(monkeypatch):
         p.experience = content.level_definition(16).total_xp
         p.coins = 100_000
         p.stamina = 100
+        p.sailing.ship_built = True
         for item in ('pickled_carrot', 'refined_fodder', 'maple_plank', 'red_copper_ore'):
             add_item(p, item, 50, 1)
     repo.update(player.player_id, prepare)
@@ -74,7 +75,7 @@ def test_beta_and_level_gates_apply_to_all_mutations(sailing_game, monkeypatch):
     game, repo, player, _ = sailing_game
     monkeypatch.setenv('RED_LEAF_TOWN_BETA_PLAYERS', 'someone-else')
     assert game.snapshot_by_sub('sailing-sub')['sailing'] is None
-    for action in (lambda: start(game), lambda: game.collect_sailing('sailing-sub', 'missing'),
+    for action in (lambda: game.build_sailing_ship('sailing-sub'), lambda: start(game), lambda: game.collect_sailing('sailing-sub', 'missing'),
                    lambda: game.upgrade_sailing('sailing-sub', 'cargo', 0)):
         with pytest.raises(GameError, match='内测'):
             action()
@@ -239,3 +240,152 @@ def test_busy_production_partner_cannot_depart_and_assignment_is_preserved(saili
     assert after.coins == before.coins and after.stamina == before.stamina
     assert after.plots == before.plots
     assert after.sailing.active_run is None
+
+
+def test_route_pools_are_varied_and_rare_items_never_common():
+    content = load_sailing_content()
+    items = load_content().item_map
+    common = {o.item_id for r in content.routes for o in r.outputs if o.rarity == 'common'}
+    for route in content.routes:
+        assert len(route.outputs) == 18
+        assert sum(o.rarity == 'common' for o in route.outputs) == 12
+        for output in route.outputs:
+            if output.rarity == 'rare':
+                assert output.item_id not in common
+            assert (items[output.item_id].kind == 'equipment') == (output.rarity == 'equipment')
+    payload = content.model_dump()
+    payload['routes'][0]['outputs'][12]['item_id'] = 'sea_shell'
+    with pytest.raises(ValueError, match='cannot be common'):
+        SailingContent.model_validate(payload)
+
+
+@pytest.mark.parametrize('count', [1, 6, 14, 18, 30, 60])
+@pytest.mark.parametrize('nets,rare_supply', [(0, False), (3, False), (3, True)])
+def test_equipment_first_drop_cost_is_250_stamina_even_with_bonuses(count, nets, rare_supply):
+    from red_leaf_town.application.sailing import sailing_output_pool
+    for route in load_sailing_content().routes:
+        for stamina in (1, route.stamina):
+            pool = sailing_output_pool(route, count, stamina, nets, rare_supply)
+            equipment_id = next(o.item_id for o in route.outputs if o.rarity == 'equipment')
+            chance = next(o.weight for o in pool if o.item_id == equipment_id) / sum(o.weight for o in pool)
+            voyage_chance = 1 - (1 - chance) ** count
+            assert stamina / voyage_chance == pytest.approx(250)
+
+
+@pytest.mark.parametrize('crop_id,reference', [('passho_berry', 'peach_berry'), ('pamtre_berry', 'berry_berry')])
+def test_sailing_berries_plant_harvest_and_follow_existing_economy(sailing_game, crop_id, reference):
+    game, repo, player, clock = sailing_game
+    crop = game.content.crop_map[crop_id]
+    previous = game.content.crop_map[reference]
+    assert crop.stamina_cost == previous.stamina_cost > 0
+    assert crop.quality == previous.quality
+    assert game.content.item_map[crop_id].sell_price == game.content.item_map[reference].sell_price
+    assert crop.seed_item_id not in {s.item_id for s in game.content.shop}
+    repo.update(player.player_id, lambda p: add_item(p, crop.seed_item_id, 1))
+    before = repo.get(player.player_id).stamina
+    planted = game.plant('sailing-sub', 0, crop_id)
+    assert repo.get(player.player_id).stamina == before - crop.stamina_cost
+    clock[0] += planted['result']['final_duration']
+    harvested = game.harvest('sailing-sub', 0)
+    assert harvested['result']['item_id'] == crop_id
+    assert harvested['result']['quantity'] == 2
+
+
+def test_weighted_sailing_can_award_and_collect_exploration_equipment(sailing_game, monkeypatch):
+    game, repo, player, clock = sailing_game
+    monkeypatch.setattr(game.rng, 'random', lambda: 0.999999999)
+    started = start(game)
+    run = repo.get(player.player_id).sailing.active_run
+    assert run.rule_version == 2
+    assert {d.item_id for d in run.drops} == {'bay_tide_blade'}
+    finish(game, clock, started)
+    assert repo.get(player.player_id).inventory['bay_tide_blade'][0] >= 1
+
+
+def test_sailing_economy_stays_near_existing_fishing_curve():
+    import importlib.util
+    from pathlib import Path
+    script = Path(__file__).resolve().parents[1] / 'scripts' / 'sailing_yield.py'
+    spec = importlib.util.spec_from_file_location('sailing_yield', script)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    fishing_spec = importlib.util.spec_from_file_location('fishing_yield', script.with_name('fishing_yield.py'))
+    fishing = importlib.util.module_from_spec(fishing_spec)
+    fishing_spec.loader.exec_module(fishing)
+    service = GameService.__new__(GameService)
+    service.content = load_content()
+    lake = service.content.fishing_spots[1]
+    for ability in (0, 40, 80, 120):
+        baseline = fishing.cast_yield(service, lake, ability, 0)['per_stamina']
+        upgraded = fishing.cast_yield(service, lake, ability, service.content.fishing_combo.max_layers)['per_stamina']
+        for route in load_sailing_content().routes:
+            direct, chain = module.sailing_yield(service, route, ability, ability)
+            assert 0.55 * baseline <= direct <= 1.3 * baseline
+            assert 0.65 * baseline <= chain <= 1.3 * baseline
+            for supply in load_sailing_content().supplies:
+                best = module.sailing_yield(service, route, ability, ability, 3, 3, supply.id, 4)[1]
+                assert best <= 1.7 * upgraded
+
+
+def test_build_ship_charges_once_and_spends_low_quality_first(sailing_game):
+    game, repo, player, _ = sailing_game
+    def prepare(p):
+        p.sailing.ship_built = False
+        p.inventory['composite_plank'] = {1: 7, 2: 16}
+    repo.update(player.player_id, prepare)
+    before = repo.get(player.player_id)
+    result = game.build_sailing_ship('sailing-sub')
+    after = repo.get(player.player_id)
+    assert after.sailing.ship_built
+    assert after.coins == before.coins - 10_000
+    assert after.stamina == before.stamina
+    assert after.inventory['composite_plank'] == {2: 3}
+    assert result['state']['sailing']['trial_available']
+    assert game.build_sailing_ship('sailing-sub')['result']['duplicate']
+    assert repo.get(player.player_id).inventory == after.inventory
+    assert repo.get(player.player_id).coins == after.coins
+    assert start(game)['result']['trial']
+
+
+@pytest.mark.parametrize('coins,boards', [(9999, 20), (10000, 19)])
+def test_build_ship_insufficient_resources_roll_back(sailing_game, coins, boards):
+    game, repo, player, _ = sailing_game
+    def prepare(p):
+        p.sailing.ship_built = False
+        p.coins = coins
+        p.inventory['composite_plank'] = {1: boards}
+    repo.update(player.player_id, prepare)
+    before = repo.get(player.player_id)
+    with pytest.raises(GameError, match='不足'):
+        game.build_sailing_ship('sailing-sub')
+    after = repo.get(player.player_id)
+    assert after.coins == before.coins and after.inventory == before.inventory
+    assert not after.sailing.ship_built
+    with pytest.raises(GameError, match='先建造'):
+        start(game)
+    with pytest.raises(GameError, match='先建造'):
+        game.upgrade_sailing('sailing-sub', 'cargo', 0)
+
+
+def test_old_saves_preserve_existing_ships_only():
+    from red_leaf_town.domain.sailing import SailingState
+    assert not SailingState.model_validate({}).ship_built
+    assert SailingState.model_validate({'completed_voyages': 1}).ship_built
+    assert SailingState.model_validate({'cargo_level': 1}).ship_built
+    assert not SailingState.model_validate({'ship_built': False, 'completed_voyages': 1}).ship_built
+
+
+def test_composite_plank_recipe_consumes_both_materials(sailing_game):
+    game, repo, player, clock = sailing_game
+    recipe = game.content.recipe_map['make_composite_plank']
+    assert {i.item_id: i.quantity for i in recipe.inputs} == {'maple_plank': 2, 'moon_silver_ore': 2}
+    assert recipe.produce_quantity == 1
+    repo.update(player.player_id, lambda p: add_item(p, 'moon_silver_ore', 2, 1))
+    before = repo.get(player.player_id)
+    crafted = game.start_crafting('sailing-sub', 'town_workbench', recipe.id)
+    after = repo.get(player.player_id)
+    assert sum(after.inventory['maple_plank'].values()) == sum(before.inventory['maple_plank'].values()) - 2
+    assert not after.inventory.get('moon_silver_ore')
+    clock[0] = crafted['result']['ready_at']
+    game.collect_crafting('sailing-sub', 'town_workbench')
+    assert sum(repo.get(player.player_id).inventory['composite_plank'].values()) == 1

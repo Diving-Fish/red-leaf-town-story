@@ -895,6 +895,12 @@ def create_blueprint(
         result = get_service().collect_gathering(subject, site_id)
         return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
 
+    @blueprint.post("/api/red-leaf-town/sailing/build")
+    @login_required
+    async def build_sailing_ship(subject: str):
+        result = get_service().build_sailing_ship(subject)
+        return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
+
     @blueprint.post("/api/red-leaf-town/sailing/start")
     @login_required
     async def start_sailing(subject: str):

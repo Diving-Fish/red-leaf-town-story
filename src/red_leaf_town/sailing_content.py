@@ -3,6 +3,11 @@ from pathlib import Path
 from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
+from red_leaf_town.content import GatheringDrawDefinition, GatheringOutputDefinition
+
+
+class SailingOutput(GatheringOutputDefinition):
+    rarity: Literal['common', 'rare', 'seed', 'equipment']
 
 
 class SailingRoute(BaseModel):
@@ -13,10 +18,21 @@ class SailingRoute(BaseModel):
     coins: int = Field(gt=0)
     stamina: int = Field(gt=0)
     required_voyages: int = Field(ge=0)
-    quantity: int = Field(gt=0)
-    common_item: str
-    rare_item: str
+    draws: GatheringDrawDefinition
+    outputs: list[SailingOutput] = Field(min_length=15, max_length=20)
+    equipment_expected_stamina: int = Field(ge=200, le=300)
     events: int = Field(ge=1, le=4)
+
+    @model_validator(mode='after')
+    def validate_outputs(self):
+        if len({o.item_id for o in self.outputs}) != len(self.outputs):
+            raise ValueError('duplicate sailing output')
+        equipment = [o for o in self.outputs if o.rarity == 'equipment']
+        if len(equipment) != 1 or equipment[0].quantity_min != 1 or equipment[0].quantity_max != 1:
+            raise ValueError('each sailing route needs one single-unit equipment output')
+        if self.stamina >= self.equipment_expected_stamina:
+            raise ValueError('sailing stamina must be below equipment expectation')
+        return self
 
 
 class SailingSupply(BaseModel):
@@ -44,6 +60,9 @@ class SailingEvent(BaseModel):
 
 class SailingContent(BaseModel):
     min_level: int = Field(ge=1)
+    construction_coins: int = Field(gt=0)
+    construction_item_id: str
+    construction_quantity: int = Field(gt=0)
     routes: list[SailingRoute] = Field(min_length=1)
     supplies: list[SailingSupply] = Field(min_length=1)
     events: list[SailingEvent] = Field(min_length=4)
@@ -53,10 +72,18 @@ class SailingContent(BaseModel):
         for entries in (self.routes, self.supplies, self.events):
             if len({entry.id for entry in entries}) != len(entries):
                 raise ValueError('duplicate sailing content ID')
+        common = {o.item_id for r in self.routes for o in r.outputs if o.rarity == 'common'}
+        rare = {o.item_id for r in self.routes for o in r.outputs if o.rarity == 'rare'}
+        if common & rare:
+            raise ValueError('rare sailing items cannot be common on another route')
+        equipment = [o.item_id for r in self.routes for o in r.outputs if o.rarity == 'equipment']
+        if len(set(equipment)) != len(equipment):
+            raise ValueError('sailing equipment must be route-exclusive')
         return self
 
     def validate_items(self, items):
-        references = {r.common_item for r in self.routes} | {r.rare_item for r in self.routes}
+        references = {o.item_id for r in self.routes for o in r.outputs}
+        references.add(self.construction_item_id)
         references |= {s.item_id for s in self.supplies if s.item_id}
         if references - set(items):
             raise ValueError(f'unknown sailing items: {references - set(items)}')

@@ -1125,6 +1125,502 @@
       "sell_price": 200,
       "has_quality": false,
       "tags": []
+    },
+    {
+      "id": "bay_sardine",
+      "name": "海湾沙丁鱼",
+      "icon": "fish",
+      "kind": "produce",
+      "sell_price": 46,
+      "has_quality": false,
+      "tags": []
+    },
+    {
+      "id": "bay_anchovy",
+      "name": "银背鳀鱼",
+      "icon": "fish",
+      "kind": "produce",
+      "sell_price": 47,
+      "has_quality": false,
+      "tags": []
+    },
+    {
+      "id": "bay_mullet",
+      "name": "芦湾鲻鱼",
+      "icon": "fish",
+      "kind": "produce",
+      "sell_price": 48,
+      "has_quality": false,
+      "tags": []
+    },
+    {
+      "id": "bay_shrimp",
+      "name": "浅滩白虾",
+      "icon": "fish",
+      "kind": "produce",
+      "sell_price": 49,
+      "has_quality": false,
+      "tags": []
+    },
+    {
+      "id": "bay_crab",
+      "name": "芦苇青蟹",
+      "icon": "fish",
+      "kind": "produce",
+      "sell_price": 50,
+      "has_quality": false,
+      "tags": []
+    },
+    {
+      "id": "bay_clam",
+      "name": "沙滩蛤蜊",
+      "icon": "fish",
+      "kind": "produce",
+      "sell_price": 51,
+      "has_quality": false,
+      "tags": []
+    },
+    {
+      "id": "bay_oyster",
+      "name": "潮间牡蛎",
+      "icon": "fish",
+      "kind": "produce",
+      "sell_price": 52,
+      "has_quality": false,
+      "tags": []
+    },
+    {
+      "id": "bay_kelp",
+      "name": "嫩海带",
+      "icon": "fish",
+      "kind": "produce",
+      "sell_price": 53,
+      "has_quality": false,
+      "tags": []
+    },
+    {
+      "id": "bay_laver",
+      "name": "礁岸紫菜",
+      "icon": "fish",
+      "kind": "produce",
+      "sell_price": 54,
+      "has_quality": false,
+      "tags": []
+    },
+    {
+      "id": "bay_squid",
+      "name": "小管鱿鱼",
+      "icon": "fish",
+      "kind": "produce",
+      "sell_price": 55,
+      "has_quality": false,
+      "tags": []
+    },
+    {
+      "id": "bay_scallop",
+      "name": "海湾扇贝",
+      "icon": "fish",
+      "kind": "produce",
+      "sell_price": 56,
+      "has_quality": false,
+      "tags": []
+    },
+    {
+      "id": "bay_moon_scallop",
+      "name": "月纹扇贝",
+      "icon": "fish",
+      "kind": "produce",
+      "sell_price": 160,
+      "has_quality": false,
+      "tags": []
+    },
+    {
+      "id": "bay_crystal_shrimp",
+      "name": "水晶虾",
+      "icon": "fish",
+      "kind": "produce",
+      "sell_price": 170,
+      "has_quality": false,
+      "tags": []
+    },
+    {
+      "id": "bay_golden_crab",
+      "name": "金钳青蟹",
+      "icon": "fish",
+      "kind": "produce",
+      "sell_price": 180,
+      "has_quality": false,
+      "tags": []
+    },
+    {
+      "id": "bay_rainbow_conch",
+      "name": "虹光海螺",
+      "icon": "fish",
+      "kind": "produce",
+      "sell_price": 190,
+      "has_quality": false,
+      "tags": []
+    },
+    {
+      "id": "bay_tide_blade",
+      "name": "潮汐短剑",
+      "icon": "sword",
+      "kind": "equipment",
+      "sell_price": 500,
+      "has_quality": false,
+      "tags": [
+        "exploration_equipment"
+      ],
+      "equipment": {
+        "slot": "weapon",
+        "attribute": "agility",
+        "damage_dice": "1d8",
+        "attack_bonus": 1
+      }
+    },
+    {
+      "id": "sail_mackerel",
+      "name": "白帆鲭鱼",
+      "icon": "fish",
+      "kind": "produce",
+      "sell_price": 55,
+      "has_quality": false,
+      "tags": []
+    },
+    {
+      "id": "sail_saury",
+      "name": "秋刀鱼",
+      "icon": "fish",
+      "kind": "produce",
+      "sell_price": 56,
+      "has_quality": false,
+      "tags": []
+    },
+    {
+      "id": "sail_bonito",
+      "name": "洄游鲣鱼",
+      "icon": "fish",
+      "kind": "produce",
+      "sell_price": 57,
+      "has_quality": false,
+      "tags": []
+    },
+    {
+      "id": "sail_cod",
+      "name": "白帆鳕鱼",
+      "icon": "fish",
+      "kind": "produce",
+      "sell_price": 58,
+      "has_quality": false,
+      "tags": []
+    },
+    {
+      "id": "sail_pomfret",
+      "name": "银鲳鱼",
+      "icon": "fish",
+      "kind": "produce",
+      "sell_price": 59,
+      "has_quality": false,
+      "tags": []
+    },
+    {
+      "id": "sail_hairtail",
+      "name": "深水带鱼",
+      "icon": "fish",
+      "kind": "produce",
+      "sell_price": 60,
+      "has_quality": false,
+      "tags": []
+    },
+    {
+      "id": "sail_prawn",
+      "name": "斑节对虾",
+      "icon": "fish",
+      "kind": "produce",
+      "sell_price": 61,
+      "has_quality": false,
+      "tags": []
+    },
+    {
+      "id": "sail_cuttlefish",
+      "name": "斑纹乌贼",
+      "icon": "fish",
+      "kind": "produce",
+      "sell_price": 62,
+      "has_quality": false,
+      "tags": []
+    },
+    {
+      "id": "sail_octopus",
+      "name": "礁洞章鱼",
+      "icon": "fish",
+      "kind": "produce",
+      "sell_price": 63,
+      "has_quality": false,
+      "tags": []
+    },
+    {
+      "id": "sail_mussel",
+      "name": "蓝壳贻贝",
+      "icon": "fish",
+      "kind": "produce",
+      "sell_price": 64,
+      "has_quality": false,
+      "tags": []
+    },
+    {
+      "id": "sail_whelk",
+      "name": "长角海螺",
+      "icon": "fish",
+      "kind": "produce",
+      "sell_price": 65,
+      "has_quality": false,
+      "tags": []
+    },
+    {
+      "id": "sail_urchin",
+      "name": "浅海海胆",
+      "icon": "fish",
+      "kind": "produce",
+      "sell_price": 66,
+      "has_quality": false,
+      "tags": []
+    },
+    {
+      "id": "sail_bluefin",
+      "name": "蓝鳍金枪鱼",
+      "icon": "fish",
+      "kind": "produce",
+      "sell_price": 210,
+      "has_quality": false,
+      "tags": []
+    },
+    {
+      "id": "sail_silver_lobster",
+      "name": "银甲龙虾",
+      "icon": "fish",
+      "kind": "produce",
+      "sell_price": 220,
+      "has_quality": false,
+      "tags": []
+    },
+    {
+      "id": "sail_rose_coral",
+      "name": "玫瑰珊瑚",
+      "icon": "fish",
+      "kind": "produce",
+      "sell_price": 230,
+      "has_quality": false,
+      "tags": []
+    },
+    {
+      "id": "sail_anchor_charm",
+      "name": "白帆锚饰",
+      "icon": "sword",
+      "kind": "equipment",
+      "sell_price": 500,
+      "has_quality": false,
+      "tags": [
+        "exploration_equipment"
+      ],
+      "equipment": {
+        "slot": "accessory",
+        "armor_bonus": 1,
+        "max_hp_bonus": 8
+      }
+    },
+    {
+      "id": "mist_flounder",
+      "name": "雾岛比目鱼",
+      "icon": "fish",
+      "kind": "produce",
+      "sell_price": 66,
+      "has_quality": false,
+      "tags": []
+    },
+    {
+      "id": "mist_rockfish",
+      "name": "灯礁石斑",
+      "icon": "fish",
+      "kind": "produce",
+      "sell_price": 67,
+      "has_quality": false,
+      "tags": []
+    },
+    {
+      "id": "mist_eel",
+      "name": "礁隙海鳗",
+      "icon": "fish",
+      "kind": "produce",
+      "sell_price": 68,
+      "has_quality": false,
+      "tags": []
+    },
+    {
+      "id": "mist_herring",
+      "name": "雾海鲱鱼",
+      "icon": "fish",
+      "kind": "produce",
+      "sell_price": 69,
+      "has_quality": false,
+      "tags": []
+    },
+    {
+      "id": "mist_lobster",
+      "name": "岩礁龙虾",
+      "icon": "fish",
+      "kind": "produce",
+      "sell_price": 70,
+      "has_quality": false,
+      "tags": []
+    },
+    {
+      "id": "mist_razor_clam",
+      "name": "细沙蛏子",
+      "icon": "fish",
+      "kind": "produce",
+      "sell_price": 71,
+      "has_quality": false,
+      "tags": []
+    },
+    {
+      "id": "mist_cockle",
+      "name": "赤纹蚶",
+      "icon": "fish",
+      "kind": "produce",
+      "sell_price": 72,
+      "has_quality": false,
+      "tags": []
+    },
+    {
+      "id": "mist_abalone",
+      "name": "青壳鲍",
+      "icon": "fish",
+      "kind": "produce",
+      "sell_price": 73,
+      "has_quality": false,
+      "tags": []
+    },
+    {
+      "id": "mist_cucumber",
+      "name": "礁海参",
+      "icon": "fish",
+      "kind": "produce",
+      "sell_price": 74,
+      "has_quality": false,
+      "tags": []
+    },
+    {
+      "id": "mist_grape",
+      "name": "海葡萄",
+      "icon": "fish",
+      "kind": "produce",
+      "sell_price": 75,
+      "has_quality": false,
+      "tags": []
+    },
+    {
+      "id": "mist_wakame",
+      "name": "裙带菜",
+      "icon": "fish",
+      "kind": "produce",
+      "sell_price": 76,
+      "has_quality": false,
+      "tags": []
+    },
+    {
+      "id": "mist_luminous_squid",
+      "name": "夜光鱿鱼",
+      "icon": "fish",
+      "kind": "produce",
+      "sell_price": 250,
+      "has_quality": false,
+      "tags": []
+    },
+    {
+      "id": "mist_black_pearl",
+      "name": "雾海黑珍珠",
+      "icon": "fish",
+      "kind": "produce",
+      "sell_price": 260,
+      "has_quality": false,
+      "tags": []
+    },
+    {
+      "id": "mist_lantern_tome",
+      "name": "雾灯法书",
+      "icon": "sword",
+      "kind": "equipment",
+      "sell_price": 500,
+      "has_quality": false,
+      "tags": [
+        "exploration_equipment"
+      ],
+      "equipment": {
+        "slot": "weapon",
+        "attribute": "intelligence",
+        "damage_dice": "1d10",
+        "initiative_bonus": 1
+      }
+    },
+    {
+      "id": "passho_berry",
+      "name": "千香果",
+      "icon": "cherry",
+      "kind": "produce",
+      "sell_price": 1600,
+      "has_quality": true,
+      "tags": [
+        "crop",
+        "food",
+        "tree_fruit"
+      ]
+    },
+    {
+      "id": "passho_berry_seed",
+      "name": "千香果种子",
+      "icon": "sprout",
+      "kind": "seed",
+      "sell_price": 0,
+      "has_quality": false,
+      "tags": [
+        "crop_seed"
+      ]
+    },
+    {
+      "id": "pamtre_berry",
+      "name": "椰木果",
+      "icon": "grape",
+      "kind": "produce",
+      "sell_price": 2400,
+      "has_quality": true,
+      "tags": [
+        "crop",
+        "food",
+        "tree_fruit"
+      ]
+    },
+    {
+      "id": "pamtre_berry_seed",
+      "name": "椰木果种子",
+      "icon": "sprout",
+      "kind": "seed",
+      "sell_price": 0,
+      "has_quality": false,
+      "tags": [
+        "crop_seed"
+      ]
+    },
+    {
+      "id": "composite_plank",
+      "name": "复合木板",
+      "icon": "panels-top-left",
+      "kind": "product",
+      "sell_price": 360,
+      "has_quality": true,
+      "tags": [
+        "wood_product"
+      ]
     }
   ],
   "crops": [
@@ -1307,6 +1803,62 @@
       "harvest_xp": 60,
       "min_level": 1,
       "accent": "#c2456b",
+      "quality": {
+        "thresholds": [
+          70.0,
+          130.0,
+          220.0,
+          320.0
+        ],
+        "width": 50.0,
+        "miracle_probability_cap": 0.003,
+        "miracle_eligible": true
+      }
+    },
+    {
+      "id": "passho_berry",
+      "name": "千香果",
+      "icon": "cherry",
+      "seed_item_id": "passho_berry_seed",
+      "produce_item_id": "passho_berry",
+      "growth_seconds": 86400,
+      "minimum_duration_seconds": 43200,
+      "time_difficulty": 300,
+      "yield_min": 2,
+      "yield_max": 2,
+      "stamina_cost": 8,
+      "plant_xp": 6,
+      "harvest_xp": 40,
+      "min_level": 16,
+      "accent": "#419fb5",
+      "quality": {
+        "thresholds": [
+          70.0,
+          130.0,
+          220.0,
+          320.0
+        ],
+        "width": 50.0,
+        "miracle_probability_cap": 0.003,
+        "miracle_eligible": true
+      }
+    },
+    {
+      "id": "pamtre_berry",
+      "name": "椰木果",
+      "icon": "grape",
+      "seed_item_id": "pamtre_berry_seed",
+      "produce_item_id": "pamtre_berry",
+      "growth_seconds": 86400,
+      "minimum_duration_seconds": 43200,
+      "time_difficulty": 300,
+      "yield_min": 2,
+      "yield_max": 2,
+      "stamina_cost": 12,
+      "plant_xp": 9,
+      "harvest_xp": 60,
+      "min_level": 16,
+      "accent": "#419fb5",
       "quality": {
         "thresholds": [
           70.0,
@@ -3018,6 +3570,47 @@
           "level": 10
         }
       }
+    },
+    {
+      "id": "make_composite_plank",
+      "station_id": "town_workbench",
+      "name": "压制复合木板",
+      "inputs": [
+        {
+          "item_id": "maple_plank",
+          "quantity": 2
+        },
+        {
+          "item_id": "moon_silver_ore",
+          "quantity": 2
+        }
+      ],
+      "produce_item_id": "composite_plank",
+      "produce_quantity": 1,
+      "duration_seconds": 60,
+      "time_difficulty": 100,
+      "stamina_cost": 2,
+      "collect_xp": 12,
+      "tags": [
+        "wood_product"
+      ],
+      "quality": {
+        "thresholds": [
+          45.0,
+          90.0,
+          150.0,
+          230.0
+        ],
+        "width": 16.0,
+        "miracle_probability_cap": 0.003,
+        "miracle_eligible": false
+      },
+      "unlock_condition": {
+        "hook": "player_level",
+        "params": {
+          "level": 16
+        }
+      }
     }
   ],
   "mining_sites": [
@@ -3513,6 +4106,7 @@
     "daily_take_limit": 1,
     "board_limit": 30,
     "excluded_item_ids": [
+      "composite_plank",
       "orange_berry",
       "fish_fry",
       "meadow_hay",
@@ -3526,7 +4120,57 @@
       "sea_fish",
       "sea_shell",
       "sea_pearl",
-      "sea_relic"
+      "sea_relic",
+      "bay_anchovy",
+      "bay_clam",
+      "bay_crab",
+      "bay_crystal_shrimp",
+      "bay_golden_crab",
+      "bay_kelp",
+      "bay_laver",
+      "bay_moon_scallop",
+      "bay_mullet",
+      "bay_oyster",
+      "bay_rainbow_conch",
+      "bay_sardine",
+      "bay_scallop",
+      "bay_shrimp",
+      "bay_squid",
+      "bay_tide_blade",
+      "mist_abalone",
+      "mist_black_pearl",
+      "mist_cockle",
+      "mist_cucumber",
+      "mist_eel",
+      "mist_flounder",
+      "mist_grape",
+      "mist_herring",
+      "mist_lantern_tome",
+      "mist_lobster",
+      "mist_luminous_squid",
+      "mist_razor_clam",
+      "mist_rockfish",
+      "mist_wakame",
+      "pamtre_berry",
+      "pamtre_berry_seed",
+      "passho_berry",
+      "passho_berry_seed",
+      "sail_anchor_charm",
+      "sail_bluefin",
+      "sail_bonito",
+      "sail_cod",
+      "sail_cuttlefish",
+      "sail_hairtail",
+      "sail_mackerel",
+      "sail_mussel",
+      "sail_octopus",
+      "sail_pomfret",
+      "sail_prawn",
+      "sail_rose_coral",
+      "sail_saury",
+      "sail_silver_lobster",
+      "sail_urchin",
+      "sail_whelk"
     ],
     "tiers": [
       {

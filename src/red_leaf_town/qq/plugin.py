@@ -408,6 +408,11 @@ async def sailing_summary(bot: Bot, event: Event):
         return
     if not sailing["unlocked"]:
         text = f"居民达到 {sailing['min_level']} 级后可以出海。"
+    elif not sailing["ship_built"]:
+        construction = sailing['construction']
+        text = (f"初帆号尚未建造，需要 {construction['coins']} 红叶币＋"
+                f"{construction['quantity']} 个{construction['item_name']}（持有 {construction['owned']}）。"
+                "\n镇民工坊：2 枫木板＋2 月银矿 → 1 复合木板。")
     elif sailing["active_run"]:
         run = sailing["active_run"]
         remaining = max(0, run["ready_at"] - state["server_time"])

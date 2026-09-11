@@ -1149,7 +1149,7 @@ async def test_stamina_supply_endpoints(client, service):
 
 @runs
 async def test_sailing_api_requires_login(client):
-    for endpoint in ('start', 'collect', 'upgrade'):
+    for endpoint in ('build', 'start', 'collect', 'upgrade'):
         response = await client.post(f'/api/red-leaf-town/sailing/{endpoint}', json={})
         assert response.status_code == 401
 
@@ -1179,10 +1179,17 @@ async def test_sailing_api_full_trial_and_upgrade(client, service, monkeypatch):
     service.admin_grant_partner(player.player_id, partner.id)
     def prepare(p):
         p.experience = service.content.level_definition(16).total_xp
-        p.coins = 10_000
+        p.coins = 20_000
         p.stamina = 50
         add_item(p, 'maple_plank', 10, 1)
+        add_item(p, 'composite_plank', 20, 1)
     service.repository.update(player.player_id, prepare)
+    response = await client.post('/api/red-leaf-town/sailing/build', json={})
+    assert response.status_code == 200
+    assert (await response.get_json())['data']['state']['sailing']['ship_built']
+    response = await client.post('/api/red-leaf-town/sailing/build', json={})
+    assert (await response.get_json())['data']['result']['duplicate']
+    assert service.repository.get(player.player_id).coins == 10_000
     response = await client.post('/api/red-leaf-town/sailing/upgrade', json={'kind': 'cargo', 'expected_level': 0})
     assert response.status_code == 200
     assert (await response.get_json())['data']['result']['level'] == 1

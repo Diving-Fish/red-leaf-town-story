@@ -1,8 +1,12 @@
 from uuid import uuid4
+from collections import Counter
+from math import expm1, log1p
 
 from red_leaf_town.domain.economy import EconomyError, add_item, remove_item, spend_coins
 from red_leaf_town.domain.progression import consume_stamina, grant_experience
 from red_leaf_town.domain.sailing import SailingDrop, SailingLog, SailingRun
+from red_leaf_town.domain.models import TaskOutputSnapshot
+from red_leaf_town.domain.production import draw_count, draw_weighted_batches
 from red_leaf_town.sailing_content import load_sailing_content
 
 
@@ -11,7 +15,51 @@ def sailing_error(code, message, status=400):
     return GameError(code, message, status)
 
 
+def sailing_output_pool(route, draws, stamina, nets_level=0, rare_supply=False):
+    """Use the exploration weighted pool; calibrate equipment to first-acquisition stamina."""
+    pool = [TaskOutputSnapshot(
+        item_id=o.item_id, quantity_min=o.quantity_min, quantity_max=o.quantity_max,
+        weight=o.weight * (1 + nets_level * 0.4 + (0.75 if rare_supply else 0)
+                           if o.rarity == 'rare' else 1),
+    ) for o in route.outputs]
+    equipment_id = next(o.item_id for o in route.outputs if o.rarity == 'equipment')
+    other_weight = sum(o.weight for o in pool if o.item_id != equipment_id)
+    probability = -expm1(log1p(-stamina / route.equipment_expected_stamina) / draws)
+    for output in pool:
+        if output.item_id == equipment_id:
+            output.weight = other_weight * probability / (1 - probability)
+    return pool
+
+
 class SailingServiceMixin:
+    def build_sailing_ship(self, oauth_sub):
+        now = self._now()
+
+        def mutation(player):
+            self._settle(player, now)
+            content = self._require_sailing(player)
+            if player.sailing.ship_built:
+                return {'duplicate': True}
+            try:
+                spend_coins(player, content.construction_coins)
+                remaining = content.construction_quantity
+                for quality, quantity in sorted(player.inventory.get(content.construction_item_id, {}).items()):
+                    count = min(remaining, quantity)
+                    if count:
+                        remove_item(player, content.construction_item_id, count, quality)
+                        remaining -= count
+                    if not remaining:
+                        break
+                if remaining:
+                    raise EconomyError('复合木板数量不足')
+            except EconomyError as exc:
+                raise sailing_error('resource_insufficient', str(exc)) from exc
+            player.sailing.ship_built = True
+            return {'ship_built': True}
+
+        player, result = self._update_by_sub(oauth_sub, mutation)
+        return {'result': result, 'state': self._snapshot(player, now)}
+
     def _require_sailing(self, player):
         content = load_sailing_content()
         content.validate_items(self.content.item_map)
@@ -36,6 +84,8 @@ class SailingServiceMixin:
             state = player.sailing
             if request_id in state.start_requests:
                 return {'duplicate': True}
+            if not state.ship_built:
+                raise sailing_error('sailing_ship_required', '请先建造初帆号')
             if state.active_run:
                 raise sailing_error('sailing_active', '船还在航行或等待领取，请先领取上次收获', 409)
             route = next((r for r in content.routes if r.id == route_id), None)
@@ -86,10 +136,9 @@ class SailingServiceMixin:
                 abilities.append(definition.ability_at(industry, level, member.stars)
                                  if any(t.industry == industry for t in definition.tendencies) else 0)
             ability = round(max(abilities) + (sum(abilities) - max(abilities)) * 0.25)
-            base = 1 if trial else route.quantity
-            quantity = max(1, round(base * (1 + 0.4 * ability / (ability + 60)
-                                                + state.cargo_level * 0.1
-                                                + (0.2 if supply.effect == 'quantity' else 0))))
+            base = 1 if trial else route.draws.base_draws
+            quantity = draw_count(ability, base, route.draws.ability_bonus, route.draws.difficulty)
+            quantity += round(base * (state.cargo_level * 0.1 + (0.2 if supply.effect == 'quantity' else 0)))
             bonus = 0
             logs = []
             for event in self.rng.sample(content.events, 1 if trial else route.events):
@@ -107,12 +156,14 @@ class SailingServiceMixin:
                         bonus = max(0, bonus - max(1, base // 8))
                 logs.append(SailingLog(event_id=event.id, name=event.name, text=text, success=success,
                                        roll=roll, modifier=modifier, attribute=event.attribute, actor_id=actor))
-            drops = [SailingDrop(item_id=route.common_item, quantity=quantity + bonus)]
-            rare_chance = min(0.8, 0.2 + state.nets_level * 0.08
-                              + (0.15 if supply.effect == 'rare' else 0) + 0.15 * ability / (ability + 60))
-            if self.rng.random() < rare_chance:
-                drops.append(SailingDrop(item_id=route.rare_item, quantity=1 if trial else max(1, base // 10)))
+            count = quantity + bonus
+            pool = sailing_output_pool(route, count, stamina, state.nets_level, supply.effect == 'rare')
+            totals = Counter()
+            for item_id, amount in draw_weighted_batches(self.rng, pool, count):
+                totals[item_id] += amount
+            drops = [SailingDrop(item_id=item_id, quantity=amount) for item_id, amount in totals.items()]
             state.active_run = SailingRun(
+                rule_version=2,
                 run_id=str(uuid4()), route_id=route.id, route_name=route.name, partner_ids=partner_ids,
                 started_at=now, ready_at=now + duration, trial=trial, supply_id=supply.id, coins=coins,
                 stamina=stamina, experience=stamina * 6, partner_experience=max(1, duration // 720 + stamina * 2),
@@ -163,6 +214,8 @@ class SailingServiceMixin:
             self._settle(player, now)
             self._require_sailing(player)
             state = player.sailing
+            if not state.ship_built:
+                raise sailing_error('sailing_ship_required', '请先建造初帆号')
             if state.active_run:
                 raise sailing_error('sailing_active', '请回港领取收获后再改装', 409)
             level = getattr(state, f'{kind}_level')
@@ -213,11 +266,19 @@ class SailingServiceMixin:
         return {
             'unlocked': player.level >= content.min_level,
             'min_level': content.min_level, 'trial_available': trial,
+            'ship_built': state.ship_built,
+            'construction': {
+                'coins': content.construction_coins, 'item_id': content.construction_item_id,
+                'item_name': items[content.construction_item_id].name,
+                'quantity': content.construction_quantity,
+                'owned': sum(player.inventory.get(content.construction_item_id, {}).values()),
+            },
             'completed_voyages': state.completed_voyages,
             'routes': [{**r.model_dump(), 'duration': 60 if trial else r.duration,
                         'coins': 20 if trial else r.coins, 'stamina': 1 if trial else r.stamina,
                         'unlocked': player.level >= content.min_level and state.completed_voyages >= r.required_voyages,
-                        'common_name': items[r.common_item].name, 'rare_name': items[r.rare_item].name}
+                        'outputs': [{**o.model_dump(), 'name': items[o.item_id].name}
+                                    for o in r.outputs]}
                        for r in content.routes],
             'supplies': [{**s.model_dump(), 'owned': sum(player.inventory.get(s.item_id, {}).values()),
                           'item_name': items[s.item_id].name if s.item_id else ''} for s in content.supplies],
@@ -227,12 +288,12 @@ class SailingServiceMixin:
                           'item_id': item_id, 'item_name': items[item_id].name,
                           'owned': sum(player.inventory.get(item_id, {}).values()), 'description': description}
                          for kind, name, item_id, description in (
-                             ('cargo', '货舱', 'maple_plank', '每级增加 10% 普通收获'),
-                             ('nets', '渔具', 'red_copper_ore', '每级增加 8 个百分点稀有发现概率'))],
+                             ('cargo', '货舱', 'maple_plank', '每级增加基础抽取次数的 10%'),
+                             ('nets', '渔具', 'red_copper_ore', '每级增加 40% 稀有海产权重'))],
             'active_run': run_snapshot(state.active_run), 'last_run': run_snapshot(state.last_run),
             'discoveries': [{'id': e.id, 'name': e.name if e.id in state.discoveries else '未知见闻',
                              'discovered': e.id in state.discoveries} for e in content.events],
             'collection': [{'item_id': item_id, 'name': items[item_id].name if count else '未知物产', 'quantity': count}
-                           for item_id in sorted({r.common_item for r in content.routes} | {r.rare_item for r in content.routes})
+                           for item_id in sorted({o.item_id for r in content.routes for o in r.outputs})
                            for count in [state.collected_items.get(item_id, 0)]],
         }

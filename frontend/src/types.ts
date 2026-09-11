@@ -1732,11 +1732,13 @@ export interface SailingRun {
 }
 
 export interface SailingState {
+  ship_built: boolean
+  construction: { coins: number; item_id: string; item_name: string; quantity: number; owned: number }
   unlocked: boolean
   min_level: number
   trial_available: boolean
   completed_voyages: number
-  routes: Array<{ id: string; name: string; description: string; duration: number; coins: number; stamina: number; required_voyages: number; unlocked: boolean; common_name: string; rare_name: string }>
+  routes: Array<{ id: string; name: string; description: string; duration: number; coins: number; stamina: number; required_voyages: number; unlocked: boolean; draws: { base_draws: number; ability_bonus: number; difficulty: number }; equipment_expected_stamina: number; outputs: Array<{ item_id: string; name: string; rarity: 'common' | 'rare' | 'seed' | 'equipment'; weight: number; quantity_min: number; quantity_max: number }> }>
   supplies: Array<{ id: string; name: string; description: string; item_id: string; item_name: string; quantity: number; owned: number }>
   upgrades: Array<{ kind: string; name: string; level: number; coins: number; quantity: number; item_id: string; item_name: string; owned: number; description: string }>
   active_run: SailingRun | null

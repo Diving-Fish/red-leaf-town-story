@@ -300,6 +300,7 @@ def test_claiming_a_code_that_does_not_exist(codes):
 
 
 def test_sailing_snapshot_and_claim_survive_service_reload(repository, monkeypatch):
+    from red_leaf_town.domain.economy import add_item
     service = GameService(load_content(), repository, clock=lambda: 1_700_000_000)
     player = service.ensure_player('redis-sailing-sub', '航海持久化测试')
     monkeypatch.setenv('RED_LEAF_TOWN_BETA_PLAYERS', player.player_id)
@@ -307,9 +308,12 @@ def test_sailing_snapshot_and_claim_survive_service_reload(repository, monkeypat
     service.admin_grant_partner(player.player_id, partner_id)
     def prepare(p):
         p.experience = service.content.level_definition(16).total_xp
-        p.coins = 10_000
+        p.coins = 20_000
         p.stamina = 50
+        add_item(p, "composite_plank", 20, 1)
     repository.update(player.player_id, prepare)
+    service.build_sailing_ship('redis-sailing-sub')
+    assert repository.get(player.player_id).sailing.ship_built
     service.start_sailing('redis-sailing-sub', 'reed_bay', [partner_id], 'none', 'redis-voyage')
     frozen = repository.get(player.player_id).sailing.active_run
     reloaded = GameService(load_content(), repository, clock=lambda: frozen.ready_at)

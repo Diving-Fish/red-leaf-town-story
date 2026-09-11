@@ -834,6 +834,9 @@ export const useGameStore = defineStore('game', () => {
     initialize,
     refresh,
     buy,
+    buildSailingShip: () => action('sailing:build', `${API_ROOT}/sailing/build`, {
+      payload: {}, successMessage: '初帆号建造完成，可以准备出航了',
+    }),
     startSailing: (routeId: string, partnerIds: string[], supplyId: string, requestId: string) =>
       action('sailing:start', `${API_ROOT}/sailing/start`, {
         payload: { route_id: routeId, partner_ids: partnerIds, supply_id: supplyId, request_id: requestId },

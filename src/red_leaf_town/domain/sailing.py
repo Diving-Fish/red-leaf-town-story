@@ -48,6 +48,7 @@ class SailingRun(BaseModel):
 
 
 class SailingState(BaseModel):
+    ship_built: bool = False
     active_run: SailingRun | None = None
     last_run: SailingRun | None = None
     completed_voyages: int = Field(default=0, ge=0)
@@ -56,3 +57,13 @@ class SailingState(BaseModel):
     discoveries: list[str] = Field(default_factory=list)
     collected_items: dict[str, int] = Field(default_factory=dict)
     start_requests: list[str] = Field(default_factory=list, max_length=50)
+
+    @model_validator(mode='before')
+    @classmethod
+    def preserve_existing_ship(cls, value):
+        if isinstance(value, dict) and 'ship_built' not in value:
+            value = dict(value)
+            value['ship_built'] = bool(value.get('active_run') or value.get('last_run')
+                                       or value.get('completed_voyages') or value.get('cargo_level')
+                                       or value.get('nets_level'))
+        return value

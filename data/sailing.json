@@ -1,5 +1,8 @@
 {
   "min_level": 16,
+  "construction_coins": 10000,
+  "construction_item_id": "composite_plank",
+  "construction_quantity": 20,
   "routes": [
     {
       "id": "reed_bay",
@@ -9,10 +12,141 @@
       "coins": 120,
       "stamina": 6,
       "required_voyages": 0,
-      "quantity": 8,
-      "common_item": "sea_fish",
-      "rare_item": "sea_shell",
-      "events": 2
+      "events": 2,
+      "draws": {
+        "base_draws": 6,
+        "ability_bonus": 0.4,
+        "difficulty": 60
+      },
+      "outputs": [
+        {
+          "item_id": "sea_fish",
+          "weight": 10,
+          "quantity_min": 1,
+          "quantity_max": 1,
+          "rarity": "common"
+        },
+        {
+          "item_id": "bay_sardine",
+          "weight": 10,
+          "quantity_min": 1,
+          "quantity_max": 1,
+          "rarity": "common"
+        },
+        {
+          "item_id": "bay_anchovy",
+          "weight": 10,
+          "quantity_min": 1,
+          "quantity_max": 1,
+          "rarity": "common"
+        },
+        {
+          "item_id": "bay_mullet",
+          "weight": 10,
+          "quantity_min": 1,
+          "quantity_max": 1,
+          "rarity": "common"
+        },
+        {
+          "item_id": "bay_shrimp",
+          "weight": 10,
+          "quantity_min": 1,
+          "quantity_max": 1,
+          "rarity": "common"
+        },
+        {
+          "item_id": "bay_crab",
+          "weight": 10,
+          "quantity_min": 1,
+          "quantity_max": 1,
+          "rarity": "common"
+        },
+        {
+          "item_id": "bay_clam",
+          "weight": 10,
+          "quantity_min": 1,
+          "quantity_max": 1,
+          "rarity": "common"
+        },
+        {
+          "item_id": "bay_oyster",
+          "weight": 10,
+          "quantity_min": 1,
+          "quantity_max": 1,
+          "rarity": "common"
+        },
+        {
+          "item_id": "bay_kelp",
+          "weight": 10,
+          "quantity_min": 1,
+          "quantity_max": 1,
+          "rarity": "common"
+        },
+        {
+          "item_id": "bay_laver",
+          "weight": 10,
+          "quantity_min": 1,
+          "quantity_max": 1,
+          "rarity": "common"
+        },
+        {
+          "item_id": "bay_squid",
+          "weight": 10,
+          "quantity_min": 1,
+          "quantity_max": 1,
+          "rarity": "common"
+        },
+        {
+          "item_id": "bay_scallop",
+          "weight": 10,
+          "quantity_min": 1,
+          "quantity_max": 1,
+          "rarity": "common"
+        },
+        {
+          "item_id": "bay_moon_scallop",
+          "weight": 1,
+          "quantity_min": 1,
+          "quantity_max": 1,
+          "rarity": "rare"
+        },
+        {
+          "item_id": "bay_crystal_shrimp",
+          "weight": 1,
+          "quantity_min": 1,
+          "quantity_max": 1,
+          "rarity": "rare"
+        },
+        {
+          "item_id": "bay_golden_crab",
+          "weight": 1,
+          "quantity_min": 1,
+          "quantity_max": 1,
+          "rarity": "rare"
+        },
+        {
+          "item_id": "bay_rainbow_conch",
+          "weight": 1,
+          "quantity_min": 1,
+          "quantity_max": 1,
+          "rarity": "rare"
+        },
+        {
+          "item_id": "passho_berry_seed",
+          "weight": 0.3,
+          "quantity_min": 1,
+          "quantity_max": 1,
+          "rarity": "seed"
+        },
+        {
+          "item_id": "bay_tide_blade",
+          "weight": 1,
+          "quantity_min": 1,
+          "quantity_max": 1,
+          "rarity": "equipment"
+        }
+      ],
+      "equipment_expected_stamina": 250
     },
     {
       "id": "white_sail",
@@ -22,10 +156,141 @@
       "coins": 300,
       "stamina": 16,
       "required_voyages": 1,
-      "quantity": 20,
-      "common_item": "sea_fish",
-      "rare_item": "sea_pearl",
-      "events": 3
+      "events": 3,
+      "draws": {
+        "base_draws": 14,
+        "ability_bonus": 0.4,
+        "difficulty": 60
+      },
+      "outputs": [
+        {
+          "item_id": "sail_mackerel",
+          "weight": 10,
+          "quantity_min": 1,
+          "quantity_max": 1,
+          "rarity": "common"
+        },
+        {
+          "item_id": "sail_saury",
+          "weight": 10,
+          "quantity_min": 1,
+          "quantity_max": 1,
+          "rarity": "common"
+        },
+        {
+          "item_id": "sail_bonito",
+          "weight": 10,
+          "quantity_min": 1,
+          "quantity_max": 1,
+          "rarity": "common"
+        },
+        {
+          "item_id": "sail_cod",
+          "weight": 10,
+          "quantity_min": 1,
+          "quantity_max": 1,
+          "rarity": "common"
+        },
+        {
+          "item_id": "sail_pomfret",
+          "weight": 10,
+          "quantity_min": 1,
+          "quantity_max": 1,
+          "rarity": "common"
+        },
+        {
+          "item_id": "sail_hairtail",
+          "weight": 10,
+          "quantity_min": 1,
+          "quantity_max": 1,
+          "rarity": "common"
+        },
+        {
+          "item_id": "sail_prawn",
+          "weight": 10,
+          "quantity_min": 1,
+          "quantity_max": 1,
+          "rarity": "common"
+        },
+        {
+          "item_id": "sail_cuttlefish",
+          "weight": 10,
+          "quantity_min": 1,
+          "quantity_max": 1,
+          "rarity": "common"
+        },
+        {
+          "item_id": "sail_octopus",
+          "weight": 10,
+          "quantity_min": 1,
+          "quantity_max": 1,
+          "rarity": "common"
+        },
+        {
+          "item_id": "sail_mussel",
+          "weight": 10,
+          "quantity_min": 1,
+          "quantity_max": 1,
+          "rarity": "common"
+        },
+        {
+          "item_id": "sail_whelk",
+          "weight": 10,
+          "quantity_min": 1,
+          "quantity_max": 1,
+          "rarity": "common"
+        },
+        {
+          "item_id": "sail_urchin",
+          "weight": 10,
+          "quantity_min": 1,
+          "quantity_max": 1,
+          "rarity": "common"
+        },
+        {
+          "item_id": "sea_pearl",
+          "weight": 1,
+          "quantity_min": 1,
+          "quantity_max": 1,
+          "rarity": "rare"
+        },
+        {
+          "item_id": "sail_bluefin",
+          "weight": 1,
+          "quantity_min": 1,
+          "quantity_max": 1,
+          "rarity": "rare"
+        },
+        {
+          "item_id": "sail_silver_lobster",
+          "weight": 1,
+          "quantity_min": 1,
+          "quantity_max": 1,
+          "rarity": "rare"
+        },
+        {
+          "item_id": "sail_rose_coral",
+          "weight": 1,
+          "quantity_min": 1,
+          "quantity_max": 1,
+          "rarity": "rare"
+        },
+        {
+          "item_id": "pamtre_berry_seed",
+          "weight": 0.3,
+          "quantity_min": 1,
+          "quantity_max": 1,
+          "rarity": "seed"
+        },
+        {
+          "item_id": "sail_anchor_charm",
+          "weight": 1,
+          "quantity_min": 1,
+          "quantity_max": 1,
+          "rarity": "equipment"
+        }
+      ],
+      "equipment_expected_stamina": 250
     },
     {
       "id": "mist_isles",
@@ -35,10 +300,141 @@
       "coins": 450,
       "stamina": 24,
       "required_voyages": 3,
-      "quantity": 26,
-      "common_item": "sea_shell",
-      "rare_item": "sea_relic",
-      "events": 4
+      "events": 4,
+      "draws": {
+        "base_draws": 18,
+        "ability_bonus": 0.4,
+        "difficulty": 60
+      },
+      "outputs": [
+        {
+          "item_id": "sea_shell",
+          "weight": 10,
+          "quantity_min": 1,
+          "quantity_max": 1,
+          "rarity": "common"
+        },
+        {
+          "item_id": "mist_flounder",
+          "weight": 10,
+          "quantity_min": 1,
+          "quantity_max": 1,
+          "rarity": "common"
+        },
+        {
+          "item_id": "mist_rockfish",
+          "weight": 10,
+          "quantity_min": 1,
+          "quantity_max": 1,
+          "rarity": "common"
+        },
+        {
+          "item_id": "mist_eel",
+          "weight": 10,
+          "quantity_min": 1,
+          "quantity_max": 1,
+          "rarity": "common"
+        },
+        {
+          "item_id": "mist_herring",
+          "weight": 10,
+          "quantity_min": 1,
+          "quantity_max": 1,
+          "rarity": "common"
+        },
+        {
+          "item_id": "mist_lobster",
+          "weight": 10,
+          "quantity_min": 1,
+          "quantity_max": 1,
+          "rarity": "common"
+        },
+        {
+          "item_id": "mist_razor_clam",
+          "weight": 10,
+          "quantity_min": 1,
+          "quantity_max": 1,
+          "rarity": "common"
+        },
+        {
+          "item_id": "mist_cockle",
+          "weight": 10,
+          "quantity_min": 1,
+          "quantity_max": 1,
+          "rarity": "common"
+        },
+        {
+          "item_id": "mist_abalone",
+          "weight": 10,
+          "quantity_min": 1,
+          "quantity_max": 1,
+          "rarity": "common"
+        },
+        {
+          "item_id": "mist_cucumber",
+          "weight": 10,
+          "quantity_min": 1,
+          "quantity_max": 1,
+          "rarity": "common"
+        },
+        {
+          "item_id": "mist_grape",
+          "weight": 10,
+          "quantity_min": 1,
+          "quantity_max": 1,
+          "rarity": "common"
+        },
+        {
+          "item_id": "mist_wakame",
+          "weight": 10,
+          "quantity_min": 1,
+          "quantity_max": 1,
+          "rarity": "common"
+        },
+        {
+          "item_id": "sea_relic",
+          "weight": 1,
+          "quantity_min": 1,
+          "quantity_max": 1,
+          "rarity": "rare"
+        },
+        {
+          "item_id": "mist_luminous_squid",
+          "weight": 1,
+          "quantity_min": 1,
+          "quantity_max": 1,
+          "rarity": "rare"
+        },
+        {
+          "item_id": "mist_black_pearl",
+          "weight": 1,
+          "quantity_min": 1,
+          "quantity_max": 1,
+          "rarity": "rare"
+        },
+        {
+          "item_id": "passho_berry_seed",
+          "weight": 0.3,
+          "quantity_min": 1,
+          "quantity_max": 1,
+          "rarity": "seed"
+        },
+        {
+          "item_id": "pamtre_berry_seed",
+          "weight": 0.3,
+          "quantity_min": 1,
+          "quantity_max": 1,
+          "rarity": "seed"
+        },
+        {
+          "item_id": "mist_lantern_tome",
+          "weight": 1,
+          "quantity_min": 1,
+          "quantity_max": 1,
+          "rarity": "equipment"
+        }
+      ],
+      "equipment_expected_stamina": 250
     }
   ],
   "supplies": [
@@ -53,7 +449,7 @@
     {
       "id": "ration",
       "name": "便携口粮",
-      "description": "携带腌萝卜，普通收获增加 20%。",
+      "description": "携带腌萝卜，抽取次数增加 20%。",
       "item_id": "pickled_carrot",
       "quantity": 2,
       "effect": "quantity"
@@ -61,7 +457,7 @@
     {
       "id": "bait",
       "name": "特制鱼饵",
-      "description": "携带精饲料，稀有发现概率增加 15 个百分点。",
+      "description": "携带精饲料，稀有海产权重增加 75%。",
       "item_id": "refined_fodder",
       "quantity": 2,
       "effect": "rare"
