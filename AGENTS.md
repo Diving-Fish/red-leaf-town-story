@@ -23,6 +23,14 @@
 ../../venv/bin/python -m pytest tests
 ```
 
+## 后端
+
+此网站后端受 Nonebot 的 web 服务控制。修改完后重启系统服务：
+
+```bash
+sudo systemctl restart chiyuki
+```
+
 ## 前端开发
 
 ```bash
