@@ -1143,6 +1143,9 @@ class ShopEntry(BaseModel):
 
 AchievementTier = Literal["blue", "purple", "gold"]
 AchievementHook = Literal[
+    "gathering_tasks", "gathering_items", "livestock_items", "animals_bred_species",
+    "facilities_tier", "sailing_ship", "sailing_voyages", "sailing_routes",
+    "sailing_upgrades", "sailing_items", "exploration_completed", "delve_completed", "delve_wins",
     "story_seen",
     "production_collections",
     "partners_owned",
@@ -1522,6 +1525,49 @@ class GameContent(BaseModel):
         for achievement in self.achievements:
             hook = achievement.condition.hook
             params = achievement.condition.params
+            list_references = {
+                "gathering_tasks": ("task_ids", set(self.gathering_task_map)),
+                "gathering_items": ("item_ids", set(self.item_map)),
+                "livestock_items": ("item_ids", set(self.item_map)),
+                "animals_bred_species": ("species_ids", set(self.livestock_species_map)),
+                "facilities_tier": ("facility_ids", set(self.livestock_facility_map)),
+                "sailing_items": ("item_ids", set(self.item_map)),
+            }
+            if hook == "sailing_routes":
+                from .sailing_content import load_sailing_content
+                list_references[hook] = ("route_ids", {r.id for r in load_sailing_content().routes})
+            if hook in list_references:
+                key, allowed = list_references[hook]
+                values = params.get(key)
+                if (not isinstance(values, list) or not values
+                        or any(not isinstance(value, str) for value in values)
+                        or len(set(values)) != len(values) or not set(values) <= allowed):
+                    raise ValueError(f"achievement {achievement.id} has invalid {key}")
+            if hook == "gathering_items":
+                task = self.gathering_task_map.get(str(params.get("task_id")))
+                if task is None or not set(params["item_ids"]) <= {o.item_id for o in task.outputs}:
+                    raise ValueError(f"achievement {achievement.id} has invalid gathering task or outputs")
+            if hook in {"exploration_completed", "delve_completed", "delve_wins"}:
+                expedition = self.exploration_expedition_map.get(str(params.get("expedition_id")))
+                if expedition is None or (hook.startswith("delve_") and expedition.kind != "delve"):
+                    raise ValueError(f"achievement {achievement.id} has invalid expedition")
+            numeric_keys = {
+                "facilities_tier": "tier", "sailing_voyages": "count", "sailing_upgrades": "level",
+                "sailing_items": "count", "delve_wins": "count",
+            }
+            if hook in numeric_keys:
+                value = params.get(numeric_keys[hook])
+                if type(value) is not int or value <= 0:
+                    raise ValueError(f"achievement {achievement.id} requires a positive integer target")
+                if hook == "sailing_items" and value > len(params["item_ids"]):
+                    raise ValueError(f"achievement {achievement.id} item target exceeds its fixed list")
+                if hook == "sailing_upgrades" and value > 3:
+                    raise ValueError(f"achievement {achievement.id} exceeds sailing upgrade limit")
+                if hook == "facilities_tier" and any(
+                    value not in {tier.level for tier in self.livestock_facility_map[fid].tiers}
+                    for fid in params["facility_ids"]
+                ):
+                    raise ValueError(f"achievement {achievement.id} has invalid facility tier")
             if hook == "production_collections" and str(params.get("industry")) not in self.industries:
                 raise ValueError(f"achievement {achievement.id} references an unknown industry")
             if hook == "crops_harvested" and not {str(entry) for entry in params.get("crop_ids", [])} <= crop_ids:

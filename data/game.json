@@ -1126,8 +1126,8 @@
       "name": "近海鲜鱼",
       "icon": "fish",
       "kind": "produce",
-      "sell_price": 45,
-      "has_quality": false,
+      "sell_price": 38,
+      "has_quality": true,
       "tags": [
         "fish"
       ]
@@ -1137,8 +1137,8 @@
       "name": "潮纹贝",
       "icon": "shell",
       "kind": "produce",
-      "sell_price": 55,
-      "has_quality": false,
+      "sell_price": 54,
+      "has_quality": true,
       "tags": []
     },
     {
@@ -1147,7 +1147,7 @@
       "icon": "shell",
       "kind": "material",
       "sell_price": 160,
-      "has_quality": false,
+      "has_quality": true,
       "tags": []
     },
     {
@@ -1155,8 +1155,8 @@
       "name": "雾灯遗物",
       "icon": "shell",
       "kind": "material",
-      "sell_price": 200,
-      "has_quality": false,
+      "sell_price": 190,
+      "has_quality": true,
       "tags": []
     },
     {
@@ -1191,8 +1191,8 @@
       "name": "浅滩白虾",
       "icon": "fish",
       "kind": "produce",
-      "sell_price": 49,
-      "has_quality": false,
+      "sell_price": 40,
+      "has_quality": true,
       "tags": []
     },
     {
@@ -1227,8 +1227,8 @@
       "name": "嫩海带",
       "icon": "fish",
       "kind": "produce",
-      "sell_price": 53,
-      "has_quality": false,
+      "sell_price": 42,
+      "has_quality": true,
       "tags": []
     },
     {
@@ -1263,8 +1263,8 @@
       "name": "月纹扇贝",
       "icon": "fish",
       "kind": "produce",
-      "sell_price": 160,
-      "has_quality": false,
+      "sell_price": 130,
+      "has_quality": true,
       "tags": []
     },
     {
@@ -1281,8 +1281,8 @@
       "name": "金钳青蟹",
       "icon": "fish",
       "kind": "produce",
-      "sell_price": 180,
-      "has_quality": false,
+      "sell_price": 150,
+      "has_quality": true,
       "tags": []
     },
     {
@@ -1316,8 +1316,8 @@
       "name": "白帆鲭鱼",
       "icon": "fish",
       "kind": "produce",
-      "sell_price": 55,
-      "has_quality": false,
+      "sell_price": 46,
+      "has_quality": true,
       "tags": []
     },
     {
@@ -1361,8 +1361,8 @@
       "name": "深水带鱼",
       "icon": "fish",
       "kind": "produce",
-      "sell_price": 60,
-      "has_quality": false,
+      "sell_price": 48,
+      "has_quality": true,
       "tags": []
     },
     {
@@ -1388,8 +1388,8 @@
       "name": "礁洞章鱼",
       "icon": "fish",
       "kind": "produce",
-      "sell_price": 63,
-      "has_quality": false,
+      "sell_price": 50,
+      "has_quality": true,
       "tags": []
     },
     {
@@ -1424,8 +1424,8 @@
       "name": "蓝鳍金枪鱼",
       "icon": "fish",
       "kind": "produce",
-      "sell_price": 210,
-      "has_quality": false,
+      "sell_price": 180,
+      "has_quality": true,
       "tags": []
     },
     {
@@ -1476,8 +1476,8 @@
       "name": "灯礁石斑",
       "icon": "fish",
       "kind": "produce",
-      "sell_price": 67,
-      "has_quality": false,
+      "sell_price": 56,
+      "has_quality": true,
       "tags": []
     },
     {
@@ -1548,8 +1548,8 @@
       "name": "海葡萄",
       "icon": "fish",
       "kind": "produce",
-      "sell_price": 75,
-      "has_quality": false,
+      "sell_price": 58,
+      "has_quality": true,
       "tags": []
     },
     {
@@ -1575,8 +1575,8 @@
       "name": "雾海黑珍珠",
       "icon": "fish",
       "kind": "produce",
-      "sell_price": 260,
-      "has_quality": false,
+      "sell_price": 210,
+      "has_quality": true,
       "tags": []
     },
     {
@@ -5640,7 +5640,7 @@
     {
       "id": "all_recipes",
       "name": "红叶百工",
-      "description": "当前 7 种加工配方都至少完成一次",
+      "description": "指定的 7 种基础加工配方都至少完成一次",
       "tier": "purple",
       "reward_maple_flame": 100,
       "condition": {
@@ -5737,7 +5737,7 @@
     },
     {
       "id": "first_livestock",
-      "name": "第一篮鸡蛋",
+      "name": "牧场的回礼",
       "description": "第一次从畜牧设施收取产出",
       "tier": "blue",
       "reward_maple_flame": 50,
@@ -5791,7 +5791,7 @@
     {
       "id": "livestock_specials_five",
       "name": "金光乍现",
-      "description": "累计收取 5 件金蛋或浓乳",
+      "description": "累计收取 5 件畜牧特殊产物",
       "tier": "purple",
       "reward_maple_flame": 100,
       "condition": {
@@ -5851,6 +5851,394 @@
         "params": {
           "gene": 60,
           "count": 1
+        }
+      }
+    },
+    {
+      "id": "resident_level_20",
+      "name": "此间故乡",
+      "description": "居民等级达到 20 级",
+      "tier": "gold",
+      "reward_maple_flame": 200,
+      "condition": {
+        "hook": "player_level",
+        "params": {
+          "level": 20
+        }
+      }
+    },
+    {
+      "id": "growth_crops",
+      "name": "田野换了颜色",
+      "description": "分别收获过玉米、大豆、亚麻",
+      "tier": "purple",
+      "reward_maple_flame": 100,
+      "condition": {
+        "hook": "crops_harvested",
+        "params": {
+          "crop_ids": [
+            "corn",
+            "soybean",
+            "flax"
+          ]
+        }
+      }
+    },
+    {
+      "id": "first_wetland",
+      "name": "苇风捎来的信",
+      "description": "首次领取苇风湿地的采集收获",
+      "tier": "blue",
+      "reward_maple_flame": 50,
+      "condition": {
+        "hook": "gathering_tasks",
+        "params": {
+          "task_ids": [
+            "collect_reed_wetland"
+          ]
+        }
+      }
+    },
+    {
+      "id": "wetland_collection",
+      "name": "湿地拾遗",
+      "description": "从苇风湿地采集中获得过韧藤、芦苇、野莲藕、琥珀香蒲",
+      "tier": "purple",
+      "reward_maple_flame": 100,
+      "condition": {
+        "hook": "gathering_items",
+        "params": {
+          "task_id": "collect_reed_wetland",
+          "item_ids": [
+            "tough_vine",
+            "reed",
+            "wild_lotus_root",
+            "amber_cattail"
+          ]
+        }
+      }
+    },
+    {
+      "id": "textile_recipes",
+      "name": "经纬之间",
+      "description": "分别完成麻线、苇席、绳索、织布、防水帆布配方",
+      "tier": "purple",
+      "reward_maple_flame": 100,
+      "condition": {
+        "hook": "recipes_crafted",
+        "params": {
+          "recipe_ids": [
+            "make_flax_thread",
+            "make_reed_mat",
+            "make_rope",
+            "make_woven_cloth",
+            "make_waterproof_canvas"
+          ]
+        }
+      }
+    },
+    {
+      "id": "first_voyage_sail",
+      "name": "把风织进去",
+      "description": "首次完成远航风帆配方",
+      "tier": "purple",
+      "reward_maple_flame": 100,
+      "condition": {
+        "hook": "recipes_crafted",
+        "params": {
+          "recipe_ids": [
+            "make_voyage_sail"
+          ]
+        }
+      }
+    },
+    {
+      "id": "growth_fodder",
+      "name": "一槽好饭",
+      "description": "分别完成谷物饲料、营养饲料配方",
+      "tier": "purple",
+      "reward_maple_flame": 100,
+      "condition": {
+        "hook": "recipes_crafted",
+        "params": {
+          "recipe_ids": [
+            "make_grain_fodder",
+            "make_nutrition_fodder"
+          ]
+        }
+      }
+    },
+    {
+      "id": "expanded_ranch",
+      "name": "院子又大了",
+      "description": "鸡舍、畜栏均扩建到二级",
+      "tier": "purple",
+      "reward_maple_flame": 100,
+      "condition": {
+        "hook": "facilities_tier",
+        "params": {
+          "facility_ids": [
+            "coop_1",
+            "barn_1"
+          ],
+          "tier": 2
+        }
+      }
+    },
+    {
+      "id": "duck_sheep_products",
+      "name": "新来的叫声",
+      "description": "分别收取过鸭蛋和羊毛",
+      "tier": "blue",
+      "reward_maple_flame": 50,
+      "condition": {
+        "hook": "livestock_items",
+        "params": {
+          "item_ids": [
+            "duck_egg",
+            "wool"
+          ]
+        }
+      }
+    },
+    {
+      "id": "duck_sheep_bred",
+      "name": "春日添口",
+      "description": "分别通过孵化、配种获得鸭苗和羊羔",
+      "tier": "purple",
+      "reward_maple_flame": 100,
+      "condition": {
+        "hook": "animals_bred_species",
+        "params": {
+          "species_ids": [
+            "duck",
+            "sheep"
+          ]
+        }
+      }
+    },
+    {
+      "id": "duck_sheep_specials",
+      "name": "青玉与云朵",
+      "description": "分别收取过青玉鸭蛋和云绒",
+      "tier": "gold",
+      "reward_maple_flame": 200,
+      "condition": {
+        "hook": "livestock_items",
+        "params": {
+          "item_ids": [
+            "jade_duck_egg",
+            "cloud_fleece"
+          ]
+        }
+      }
+    },
+    {
+      "id": "sailing_ship",
+      "name": "港口有了归处",
+      "description": "拥有初帆号",
+      "tier": "blue",
+      "reward_maple_flame": 50,
+      "condition": {
+        "hook": "sailing_ship",
+        "params": {}
+      }
+    },
+    {
+      "id": "first_sailing",
+      "name": "第一阵海风",
+      "description": "完成并领取首次航行（包括试航）",
+      "tier": "blue",
+      "reward_maple_flame": 50,
+      "condition": {
+        "hook": "sailing_voyages",
+        "params": {
+          "count": 1
+        }
+      }
+    },
+    {
+      "id": "three_sailing_routes",
+      "name": "海图上的三盏灯",
+      "description": "芦苇海湾、白帆渔场、雾灯群岛各完成并领取一次",
+      "tier": "purple",
+      "reward_maple_flame": 100,
+      "condition": {
+        "hook": "sailing_routes",
+        "params": {
+          "route_ids": [
+            "reed_bay",
+            "white_sail",
+            "mist_isles"
+          ]
+        }
+      }
+    },
+    {
+      "id": "twenty_sailing",
+      "name": "潮来潮往",
+      "description": "累计完成并领取 20 次航行（包括试航）",
+      "tier": "purple",
+      "reward_maple_flame": 100,
+      "condition": {
+        "hook": "sailing_voyages",
+        "params": {
+          "count": 20
+        }
+      }
+    },
+    {
+      "id": "sailing_upgraded",
+      "name": "满帆而行",
+      "description": "货舱和渔具均升到三级",
+      "tier": "gold",
+      "reward_maple_flame": 200,
+      "condition": {
+        "hook": "sailing_upgrades",
+        "params": {
+          "level": 3
+        }
+      }
+    },
+    {
+      "id": "ten_sailing_items",
+      "name": "半册海风",
+      "description": "累计带回本批指定 20 种远航物产中的 10 种",
+      "tier": "purple",
+      "reward_maple_flame": 100,
+      "condition": {
+        "hook": "sailing_items",
+        "params": {
+          "item_ids": [
+            "sea_fish",
+            "bay_shrimp",
+            "bay_kelp",
+            "bay_moon_scallop",
+            "bay_golden_crab",
+            "passho_berry_seed",
+            "bay_tide_blade",
+            "sail_mackerel",
+            "sail_hairtail",
+            "sail_octopus",
+            "sea_pearl",
+            "sail_bluefin",
+            "pamtre_berry_seed",
+            "sail_anchor_charm",
+            "sea_shell",
+            "mist_rockfish",
+            "mist_grape",
+            "sea_relic",
+            "mist_black_pearl",
+            "mist_lantern_tome"
+          ],
+          "count": 10
+        }
+      }
+    },
+    {
+      "id": "six_sea_treasures",
+      "name": "海藏六珍",
+      "description": "累计带回月纹扇贝、金钳青蟹、白帆珍珠、蓝鳍金枪鱼、雾灯遗物、雾海黑珍珠",
+      "tier": "gold",
+      "reward_maple_flame": 200,
+      "condition": {
+        "hook": "sailing_items",
+        "params": {
+          "item_ids": [
+            "bay_moon_scallop",
+            "bay_golden_crab",
+            "sea_pearl",
+            "sail_bluefin",
+            "sea_relic",
+            "mist_black_pearl"
+          ],
+          "count": 6
+        }
+      }
+    },
+    {
+      "id": "sea_berries",
+      "name": "海风种进田里",
+      "description": "分别收获过千香果和椰木果",
+      "tier": "purple",
+      "reward_maple_flame": 100,
+      "condition": {
+        "hook": "crops_harvested",
+        "params": {
+          "crop_ids": [
+            "passho_berry",
+            "pamtre_berry"
+          ]
+        }
+      }
+    },
+    {
+      "id": "hinterland_completed",
+      "name": "林深处的归路",
+      "description": "走完红枫林腹地全部七段并结算返程",
+      "tier": "purple",
+      "reward_maple_flame": 100,
+      "condition": {
+        "hook": "exploration_completed",
+        "params": {
+          "expedition_id": "red_maple_hinterland"
+        }
+      }
+    },
+    {
+      "id": "first_meadow_victory",
+      "name": "草甸初锋",
+      "description": "在灵果草甸首次赢得一场战斗",
+      "tier": "blue",
+      "reward_maple_flame": 50,
+      "condition": {
+        "hook": "delve_wins",
+        "params": {
+          "expedition_id": "spiritfruit_meadow",
+          "count": 1
+        }
+      }
+    },
+    {
+      "id": "meadow_completed",
+      "name": "草甸深处的回响",
+      "description": "击败灵果草甸最终 BOSS 并完成全程返程结算",
+      "tier": "gold",
+      "reward_maple_flame": 200,
+      "condition": {
+        "hook": "delve_completed",
+        "params": {
+          "expedition_id": "spiritfruit_meadow"
+        }
+      }
+    },
+    {
+      "id": "three_weapons",
+      "name": "三种解法",
+      "description": "分别锻造赤铜大剑、月银短剑、枫火之书",
+      "tier": "purple",
+      "reward_maple_flame": 100,
+      "condition": {
+        "hook": "recipes_crafted",
+        "params": {
+          "recipe_ids": [
+            "forge_red_copper_greatsword",
+            "forge_moon_silver_dagger",
+            "bind_maple_flame_tome"
+          ]
+        }
+      }
+    },
+    {
+      "id": "second_portal_completed",
+      "name": "门后的远方",
+      "description": "完成第二传送门全部贡品",
+      "tier": "gold",
+      "reward_maple_flame": 200,
+      "condition": {
+        "hook": "portal_completed",
+        "params": {
+          "portal_id": "second_gate"
         }
       }
     }

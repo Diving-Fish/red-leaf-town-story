@@ -358,3 +358,29 @@ def test_crafting_queue_partial_rewards_and_reservations_survive_reload(reposito
     state = repository.get(player.player_id)
     assert state.inventory["maple_wood"] == {1: 4}
     assert state.task_items["harvest_knot"] == 2
+
+
+def test_growth_achievement_history_and_claims_survive_reload(repository):
+    now = 1_700_000_000
+    service = GameService(load_content(), repository, clock=lambda: now)
+    player = service.ensure_player('redis-growth-achievements', '成就持久化测试')
+    def prepare(state):
+        stats = state.achievement_stats
+        stats.gathering_items = {'collect_reed_wetland': ['tough_vine', 'reed', 'wild_lotus_root', 'amber_cattail']}
+        stats.livestock_item_ids = ['duck_egg', 'wool', 'jade_duck_egg', 'cloud_fleece']
+        stats.bred_species_ids = ['duck', 'sheep']
+        stats.sailing_route_ids = ['reed_bay', 'white_sail', 'mist_isles']
+        stats.completed_expedition_ids = ['red_maple_hinterland']
+        stats.completed_delve_ids = ['spiritfruit_meadow']
+        stats.delve_wins = {'spiritfruit_meadow': 1}
+    repository.update(player.player_id, prepare)
+    reloaded = GameService(load_content(), repository, clock=lambda: now)
+    entries = reloaded.snapshot_by_sub('redis-growth-achievements')['achievements']['entries']
+    completed = {a['achievement_id'] for a in entries if a['completed']}
+    assert {'first_wetland', 'wetland_collection', 'duck_sheep_products', 'duck_sheep_bred',
+            'duck_sheep_specials', 'three_sailing_routes', 'hinterland_completed',
+            'first_meadow_victory', 'meadow_completed'} <= completed
+    result = reloaded.claim_all_achievements('redis-growth-achievements')
+    again = GameService(load_content(), repository, clock=lambda: now)
+    assert again.snapshot_by_sub('redis-growth-achievements')['player']['maple_flame'] == result['result']['maple_flame']
+    assert again.claim_all_achievements('redis-growth-achievements')['result']['maple_flame'] == 0

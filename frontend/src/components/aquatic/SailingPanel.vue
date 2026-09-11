@@ -148,7 +148,7 @@ async function start() {
 
       <details v-if="journal" class="journal-panel surface-card" :open="Boolean(run && elapsed)">
         <summary>{{ run ? '本次航海日志' : '上次航海日志' }} · {{ journal.route_name }}</summary>
-        <div class="sailing-loot"><span v-for="drop in journal.drops" :key="drop.item_id"><Package :size="14" /> {{ drop.name }} ×{{ drop.quantity }}</span><span>居民经验 ＋{{ journal.experience }}</span></div>
+        <div class="sailing-loot"><span v-for="drop in journal.drops" :key="`${drop.item_id}:${drop.quality}`" :style="drop.quality ? { color: `var(--quality-${drop.quality})` } : undefined"><Package :size="14" /> {{ drop.quality_name }}{{ drop.name }} ×{{ drop.quantity }}</span><span>居民经验 ＋{{ journal.experience }}</span></div>
         <ol class="journal-list"><li v-for="log in journal.logs" :key="log.event_id"><strong>{{ log.name }}</strong><p>{{ log.text }}</p><small>{{ partnerById(log.actor_id)?.name || log.actor_id }} · {{ attributeNames[log.attribute] }}检定 {{ log.roll }} {{ log.modifier >= 0 ? '+' : '−' }} {{ Math.abs(log.modifier) }} · {{ log.success ? '成功' : '未成功' }}</small></li></ol>
       </details>
 

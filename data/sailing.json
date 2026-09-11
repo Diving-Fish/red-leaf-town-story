@@ -19,115 +19,93 @@
       "outputs": [
         {
           "item_id": "sea_fish",
-          "weight": 10,
+          "weight": 40,
           "quantity_min": 1,
           "quantity_max": 1,
-          "rarity": "common"
-        },
-        {
-          "item_id": "bay_sardine",
-          "weight": 10,
-          "quantity_min": 1,
-          "quantity_max": 1,
-          "rarity": "common"
-        },
-        {
-          "item_id": "bay_anchovy",
-          "weight": 10,
-          "quantity_min": 1,
-          "quantity_max": 1,
-          "rarity": "common"
-        },
-        {
-          "item_id": "bay_mullet",
-          "weight": 10,
-          "quantity_min": 1,
-          "quantity_max": 1,
-          "rarity": "common"
+          "rarity": "common",
+          "quality": {
+            "thresholds": [
+              45,
+              85,
+              150,
+              250
+            ],
+            "width": 20,
+            "miracle_probability_cap": 0.003,
+            "miracle_eligible": true
+          }
         },
         {
           "item_id": "bay_shrimp",
-          "weight": 10,
+          "weight": 40,
           "quantity_min": 1,
           "quantity_max": 1,
-          "rarity": "common"
-        },
-        {
-          "item_id": "bay_crab",
-          "weight": 10,
-          "quantity_min": 1,
-          "quantity_max": 1,
-          "rarity": "common"
-        },
-        {
-          "item_id": "bay_clam",
-          "weight": 10,
-          "quantity_min": 1,
-          "quantity_max": 1,
-          "rarity": "common"
-        },
-        {
-          "item_id": "bay_oyster",
-          "weight": 10,
-          "quantity_min": 1,
-          "quantity_max": 1,
-          "rarity": "common"
+          "rarity": "common",
+          "quality": {
+            "thresholds": [
+              45,
+              85,
+              150,
+              250
+            ],
+            "width": 20,
+            "miracle_probability_cap": 0.003,
+            "miracle_eligible": true
+          }
         },
         {
           "item_id": "bay_kelp",
-          "weight": 10,
+          "weight": 40,
           "quantity_min": 1,
           "quantity_max": 1,
-          "rarity": "common"
-        },
-        {
-          "item_id": "bay_laver",
-          "weight": 10,
-          "quantity_min": 1,
-          "quantity_max": 1,
-          "rarity": "common"
-        },
-        {
-          "item_id": "bay_squid",
-          "weight": 10,
-          "quantity_min": 1,
-          "quantity_max": 1,
-          "rarity": "common"
-        },
-        {
-          "item_id": "bay_scallop",
-          "weight": 10,
-          "quantity_min": 1,
-          "quantity_max": 1,
-          "rarity": "common"
+          "rarity": "common",
+          "quality": {
+            "thresholds": [
+              45,
+              85,
+              150,
+              250
+            ],
+            "width": 20,
+            "miracle_probability_cap": 0.003,
+            "miracle_eligible": true
+          }
         },
         {
           "item_id": "bay_moon_scallop",
-          "weight": 1,
+          "weight": 2,
           "quantity_min": 1,
           "quantity_max": 1,
-          "rarity": "rare"
-        },
-        {
-          "item_id": "bay_crystal_shrimp",
-          "weight": 1,
-          "quantity_min": 1,
-          "quantity_max": 1,
-          "rarity": "rare"
+          "rarity": "rare",
+          "quality": {
+            "thresholds": [
+              65,
+              110,
+              180,
+              280
+            ],
+            "width": 20,
+            "miracle_probability_cap": 0.003,
+            "miracle_eligible": true
+          }
         },
         {
           "item_id": "bay_golden_crab",
-          "weight": 1,
+          "weight": 2,
           "quantity_min": 1,
           "quantity_max": 1,
-          "rarity": "rare"
-        },
-        {
-          "item_id": "bay_rainbow_conch",
-          "weight": 1,
-          "quantity_min": 1,
-          "quantity_max": 1,
-          "rarity": "rare"
+          "rarity": "rare",
+          "quality": {
+            "thresholds": [
+              65,
+              110,
+              180,
+              280
+            ],
+            "width": 20,
+            "miracle_probability_cap": 0.003,
+            "miracle_eligible": true
+          }
         },
         {
           "item_id": "passho_berry_seed",
@@ -163,115 +141,93 @@
       "outputs": [
         {
           "item_id": "sail_mackerel",
-          "weight": 10,
+          "weight": 40,
           "quantity_min": 1,
           "quantity_max": 1,
-          "rarity": "common"
-        },
-        {
-          "item_id": "sail_saury",
-          "weight": 10,
-          "quantity_min": 1,
-          "quantity_max": 1,
-          "rarity": "common"
-        },
-        {
-          "item_id": "sail_bonito",
-          "weight": 10,
-          "quantity_min": 1,
-          "quantity_max": 1,
-          "rarity": "common"
-        },
-        {
-          "item_id": "sail_cod",
-          "weight": 10,
-          "quantity_min": 1,
-          "quantity_max": 1,
-          "rarity": "common"
-        },
-        {
-          "item_id": "sail_pomfret",
-          "weight": 10,
-          "quantity_min": 1,
-          "quantity_max": 1,
-          "rarity": "common"
+          "rarity": "common",
+          "quality": {
+            "thresholds": [
+              45,
+              85,
+              150,
+              250
+            ],
+            "width": 20,
+            "miracle_probability_cap": 0.003,
+            "miracle_eligible": true
+          }
         },
         {
           "item_id": "sail_hairtail",
-          "weight": 10,
+          "weight": 40,
           "quantity_min": 1,
           "quantity_max": 1,
-          "rarity": "common"
-        },
-        {
-          "item_id": "sail_prawn",
-          "weight": 10,
-          "quantity_min": 1,
-          "quantity_max": 1,
-          "rarity": "common"
-        },
-        {
-          "item_id": "sail_cuttlefish",
-          "weight": 10,
-          "quantity_min": 1,
-          "quantity_max": 1,
-          "rarity": "common"
+          "rarity": "common",
+          "quality": {
+            "thresholds": [
+              45,
+              85,
+              150,
+              250
+            ],
+            "width": 20,
+            "miracle_probability_cap": 0.003,
+            "miracle_eligible": true
+          }
         },
         {
           "item_id": "sail_octopus",
-          "weight": 10,
+          "weight": 40,
           "quantity_min": 1,
           "quantity_max": 1,
-          "rarity": "common"
-        },
-        {
-          "item_id": "sail_mussel",
-          "weight": 10,
-          "quantity_min": 1,
-          "quantity_max": 1,
-          "rarity": "common"
-        },
-        {
-          "item_id": "sail_whelk",
-          "weight": 10,
-          "quantity_min": 1,
-          "quantity_max": 1,
-          "rarity": "common"
-        },
-        {
-          "item_id": "sail_urchin",
-          "weight": 10,
-          "quantity_min": 1,
-          "quantity_max": 1,
-          "rarity": "common"
+          "rarity": "common",
+          "quality": {
+            "thresholds": [
+              45,
+              85,
+              150,
+              250
+            ],
+            "width": 20,
+            "miracle_probability_cap": 0.003,
+            "miracle_eligible": true
+          }
         },
         {
           "item_id": "sea_pearl",
-          "weight": 1,
+          "weight": 2,
           "quantity_min": 1,
           "quantity_max": 1,
-          "rarity": "rare"
+          "rarity": "rare",
+          "quality": {
+            "thresholds": [
+              65,
+              110,
+              180,
+              280
+            ],
+            "width": 20,
+            "miracle_probability_cap": 0.003,
+            "miracle_eligible": true
+          }
         },
         {
           "item_id": "sail_bluefin",
-          "weight": 1,
+          "weight": 2,
           "quantity_min": 1,
           "quantity_max": 1,
-          "rarity": "rare"
-        },
-        {
-          "item_id": "sail_silver_lobster",
-          "weight": 1,
-          "quantity_min": 1,
-          "quantity_max": 1,
-          "rarity": "rare"
-        },
-        {
-          "item_id": "sail_rose_coral",
-          "weight": 1,
-          "quantity_min": 1,
-          "quantity_max": 1,
-          "rarity": "rare"
+          "rarity": "rare",
+          "quality": {
+            "thresholds": [
+              65,
+              110,
+              180,
+              280
+            ],
+            "width": 20,
+            "miracle_probability_cap": 0.003,
+            "miracle_eligible": true
+          }
         },
         {
           "item_id": "pamtre_berry_seed",
@@ -307,108 +263,93 @@
       "outputs": [
         {
           "item_id": "sea_shell",
-          "weight": 10,
+          "weight": 40,
           "quantity_min": 1,
           "quantity_max": 1,
-          "rarity": "common"
-        },
-        {
-          "item_id": "mist_flounder",
-          "weight": 10,
-          "quantity_min": 1,
-          "quantity_max": 1,
-          "rarity": "common"
+          "rarity": "common",
+          "quality": {
+            "thresholds": [
+              45,
+              85,
+              150,
+              250
+            ],
+            "width": 20,
+            "miracle_probability_cap": 0.003,
+            "miracle_eligible": true
+          }
         },
         {
           "item_id": "mist_rockfish",
-          "weight": 10,
+          "weight": 40,
           "quantity_min": 1,
           "quantity_max": 1,
-          "rarity": "common"
-        },
-        {
-          "item_id": "mist_eel",
-          "weight": 10,
-          "quantity_min": 1,
-          "quantity_max": 1,
-          "rarity": "common"
-        },
-        {
-          "item_id": "mist_herring",
-          "weight": 10,
-          "quantity_min": 1,
-          "quantity_max": 1,
-          "rarity": "common"
-        },
-        {
-          "item_id": "mist_lobster",
-          "weight": 10,
-          "quantity_min": 1,
-          "quantity_max": 1,
-          "rarity": "common"
-        },
-        {
-          "item_id": "mist_razor_clam",
-          "weight": 10,
-          "quantity_min": 1,
-          "quantity_max": 1,
-          "rarity": "common"
-        },
-        {
-          "item_id": "mist_cockle",
-          "weight": 10,
-          "quantity_min": 1,
-          "quantity_max": 1,
-          "rarity": "common"
-        },
-        {
-          "item_id": "mist_abalone",
-          "weight": 10,
-          "quantity_min": 1,
-          "quantity_max": 1,
-          "rarity": "common"
-        },
-        {
-          "item_id": "mist_cucumber",
-          "weight": 10,
-          "quantity_min": 1,
-          "quantity_max": 1,
-          "rarity": "common"
+          "rarity": "common",
+          "quality": {
+            "thresholds": [
+              45,
+              85,
+              150,
+              250
+            ],
+            "width": 20,
+            "miracle_probability_cap": 0.003,
+            "miracle_eligible": true
+          }
         },
         {
           "item_id": "mist_grape",
-          "weight": 10,
+          "weight": 40,
           "quantity_min": 1,
           "quantity_max": 1,
-          "rarity": "common"
-        },
-        {
-          "item_id": "mist_wakame",
-          "weight": 10,
-          "quantity_min": 1,
-          "quantity_max": 1,
-          "rarity": "common"
+          "rarity": "common",
+          "quality": {
+            "thresholds": [
+              45,
+              85,
+              150,
+              250
+            ],
+            "width": 20,
+            "miracle_probability_cap": 0.003,
+            "miracle_eligible": true
+          }
         },
         {
           "item_id": "sea_relic",
-          "weight": 1,
+          "weight": 1.5,
           "quantity_min": 1,
           "quantity_max": 1,
-          "rarity": "rare"
-        },
-        {
-          "item_id": "mist_luminous_squid",
-          "weight": 1,
-          "quantity_min": 1,
-          "quantity_max": 1,
-          "rarity": "rare"
+          "rarity": "rare",
+          "quality": {
+            "thresholds": [
+              65,
+              110,
+              180,
+              280
+            ],
+            "width": 20,
+            "miracle_probability_cap": 0.003,
+            "miracle_eligible": true
+          }
         },
         {
           "item_id": "mist_black_pearl",
-          "weight": 1,
+          "weight": 1.5,
           "quantity_min": 1,
           "quantity_max": 1,
-          "rarity": "rare"
+          "rarity": "rare",
+          "quality": {
+            "thresholds": [
+              65,
+              110,
+              180,
+              280
+            ],
+            "width": 20,
+            "miracle_probability_cap": 0.003,
+            "miracle_eligible": true
+          }
         },
         {
           "item_id": "passho_berry_seed",

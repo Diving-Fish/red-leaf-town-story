@@ -653,6 +653,9 @@ class GameService(SailingServiceMixin):
             outcome = self._run_delve_enemy_turns(battle, members)
             drops: list = []
             if outcome == "victory":
+                stats = player.achievement_stats
+                stats.delve_wins[run.expedition_id] = stats.delve_wins.get(run.expedition_id, 0) + 1
+                run.boss_defeated = run.boss_defeated or any(enemy.boss for enemy in battle.enemies)
                 run.battle = None
                 drops = self._settle_exploration_outcome(run, expedition, choice.success, now)
                 self._advance_exploration_node(
@@ -780,6 +783,11 @@ class GameService(SailingServiceMixin):
             if run.battle is not None:
                 raise GameError("delve_battle_active", "战斗结束之前没法撤离", 409)
             rewards = list(run.pending_rewards)
+            if run.status == "completed":
+                stats = player.achievement_stats
+                stats.completed_expedition_ids = sorted(set(stats.completed_expedition_ids) | {run.expedition_id})
+                if run.expedition_kind == "delve" and run.boss_defeated:
+                    stats.completed_delve_ids = sorted(set(stats.completed_delve_ids) | {run.expedition_id})
             for reward in rewards:
                 add_item(player, reward.item_id, reward.quantity, reward.quality)
             for fixed in run.pending_fixed_rewards:
@@ -2127,6 +2135,9 @@ class GameService(SailingServiceMixin):
             if not drops:
                 raise GameError("livestock_empty", "这里暂时没有可以收取的东西", 409)
             collected = sum(drops.values())
+            player.achievement_stats.livestock_item_ids = sorted(
+                set(player.achievement_stats.livestock_item_ids) | {item_id for item_id, _ in drops}
+            )
             player.achievement_stats.production_collections["livestock"] = (
                 player.achievement_stats.production_collections.get("livestock", 0) + collected
             )
@@ -2315,6 +2326,9 @@ class GameService(SailingServiceMixin):
                 nickname=nickname,
             )
             player.animals.append(calf)
+            player.achievement_stats.bred_species_ids = sorted(
+                set(player.achievement_stats.bred_species_ids) | {species.id}
+            )
             player.achievement_stats.animals_bred += 1
             for parent in chosen:
                 parent.breeding_cooldown = float(breeding.cooldown_cycles)
@@ -3023,6 +3037,11 @@ class GameService(SailingServiceMixin):
                 ratio=ratio,
             )
             self._grant_livestock_partner_experience(player, stock)
+            hatched = {animal_id for advance in stock.facilities.values() for animal_id in advance.hatched}
+            player.achievement_stats.bred_species_ids = sorted(
+                set(player.achievement_stats.bred_species_ids)
+                | {animal.species_id for animal in player.animals if animal.animal_id in hatched}
+            )
             for facility in player.livestock_facilities:
                 # 推进用旧快照，推进完立刻换成当前参数：换伙伴从下一段开始生效。
                 self._refresh_livestock_trait_snapshot(player, facility, now)

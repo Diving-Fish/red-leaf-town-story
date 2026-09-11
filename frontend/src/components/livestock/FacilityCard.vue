@@ -341,12 +341,15 @@ async function sell(animalId: string) {
             <GameIcon :name="entry.icon" :size="18" />
             <div>
               <strong>买一只小{{ entry.name }}</strong>
-              <small>
+              <small v-if="!entry.unlocked">购买需要：{{ entry.unlock_description }}</small>
+              <small v-else-if="room <= 0">购买需要：至少 1 个空闲栏位</small>
+              <small v-else-if="!entry.affordable">购买需要：{{ entry.purchase_price }} 红叶币（当前金币不足）</small>
+              <small v-else>
                 {{ entry.growth_cycles }} 个周期成年 · 每周期吃 {{ entry.feed_per_cycle }} 份 ·
                 产出{{ entry.produce_item.name }}
               </small>
             </div>
-            <span class="buy-price" :class="{ short: !entry.affordable }"><Coins :size="14" />{{ entry.purchase_price }}</span>
+            <span class="buy-price" :class="{ short: !entry.unlocked || !entry.affordable || room <= 0 }"><Coins :size="14" />{{ entry.purchase_price }}</span>
           </div>
           <ActionButton
             :action-key="`livestock:${facility.facility_id}:buy:${entry.id}`"

@@ -15,6 +15,10 @@ def record_production_collection(
 ) -> None:
     stats = player.achievement_stats
     stats.production_collections[industry] = stats.production_collections.get(industry, 0) + 1
+    if industry == "gathering":
+        stats.gathering_items[content_id] = sorted(
+            set(stats.gathering_items.get(content_id, [])) | {r.item_id for r in results if r.quantity > 0}
+        )
     if industry == "farming" and content_id not in stats.harvested_crop_ids:
         stats.harvested_crop_ids.append(content_id)
     if industry == "crafting" and content_id not in stats.crafted_recipe_ids:
@@ -111,6 +115,40 @@ def achievement_progress(
     params = definition.condition.params
     stats = player.achievement_stats
 
+    if hook == "gathering_tasks":
+        required = set(params["task_ids"])
+        return len(required & set(stats.gathering_items)), len(required)
+    if hook == "gathering_items":
+        required = set(params["item_ids"])
+        return len(required & set(stats.gathering_items.get(str(params["task_id"]), []))), len(required)
+    if hook in {"livestock_items", "animals_bred_species"}:
+        required = set(params["item_ids" if hook == "livestock_items" else "species_ids"])
+        recorded = stats.livestock_item_ids if hook == "livestock_items" else stats.bred_species_ids
+        return len(required & set(recorded)), len(required)
+    if hook == "facilities_tier":
+        required = set(params["facility_ids"])
+        built = {f.facility_id for f in player.livestock_facilities if f.tier >= int(params["tier"])}
+        return len(required & built), len(required)
+    if hook == "sailing_ship":
+        return int(player.sailing.ship_built), 1
+    if hook == "sailing_voyages":
+        return player.sailing.completed_voyages, int(params["count"])
+    if hook == "sailing_routes":
+        required = set(params["route_ids"])
+        recorded = set(stats.sailing_route_ids)
+        if player.sailing.last_run:
+            recorded.add(player.sailing.last_run.route_id)
+        return len(required & recorded), len(required)
+    if hook == "sailing_upgrades":
+        return min(player.sailing.cargo_level, player.sailing.nets_level), int(params["level"])
+    if hook == "sailing_items":
+        recorded = {item_id for item_id, count in player.sailing.collected_items.items() if count > 0}
+        return len(set(params["item_ids"]) & recorded), int(params["count"])
+    if hook in {"exploration_completed", "delve_completed"}:
+        recorded = stats.completed_expedition_ids if hook == "exploration_completed" else stats.completed_delve_ids
+        return int(str(params["expedition_id"]) in recorded), 1
+    if hook == "delve_wins":
+        return stats.delve_wins.get(str(params["expedition_id"]), 0), int(params["count"])
     if hook == "story_seen":
         return int(str(params["story_id"]) in player.seen_story_ids), 1
     if hook == "production_collections":

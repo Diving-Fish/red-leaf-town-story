@@ -615,6 +615,13 @@ class AchievementCompletionState(BaseModel):
 
 
 class AchievementStats(BaseModel):
+    gathering_items: dict[str, list[str]] = Field(default_factory=dict)
+    livestock_item_ids: list[str] = Field(default_factory=list)
+    bred_species_ids: list[str] = Field(default_factory=list)
+    sailing_route_ids: list[str] = Field(default_factory=list)
+    completed_expedition_ids: list[str] = Field(default_factory=list)
+    completed_delve_ids: list[str] = Field(default_factory=list)
+    delve_wins: dict[str, int] = Field(default_factory=dict)
     production_collections: dict[str, int] = Field(default_factory=dict)
     harvested_crop_ids: list[str] = Field(default_factory=list)
     crafted_recipe_ids: list[str] = Field(default_factory=list)
@@ -744,6 +751,7 @@ class DelveBattleState(BaseModel):
 
 
 class ExplorationRunState(BaseModel):
+    boss_defeated: bool = False
     talent_check_bonus: int = Field(default=0, ge=0)
     run_id: str = Field(min_length=1)
     expedition_id: str = Field(min_length=1)

@@ -122,7 +122,7 @@ def test_trial_freezes_results_and_collects_once_after_arrival(sailing_game):
     assert repo.get(player.player_id).sailing.last_run.model_dump() == frozen
     after = repo.get(player.player_id)
     for drop in frozen['drops']:
-        assert after.inventory[drop['item_id']][0] == drop['quantity']
+        assert after.inventory[drop['item_id']][drop['quality']] == drop['quantity']
     assert after.experience == before.experience + frozen['experience']
     assert next(p for p in after.owned_partners if p.partner_id == 'sailor').experience > 0
     assert game.collect_sailing('sailing-sub', run['run_id'])['result']['duplicate']
@@ -244,15 +244,17 @@ def test_route_pools_are_varied_and_rare_items_never_common():
     content = load_sailing_content()
     items = load_content().item_map
     common = {o.item_id for r in content.routes for o in r.outputs if o.rarity == 'common'}
+    assert len({o.item_id for r in content.routes for o in r.outputs}) == 20
     for route in content.routes:
-        assert len(route.outputs) == 18
-        assert sum(o.rarity == 'common' for o in route.outputs) == 12
+        assert len(route.outputs) in (7, 8)
+        assert sum(o.rarity == 'common' for o in route.outputs) == 3
+        assert sum(o.rarity == 'rare' for o in route.outputs) == 2
         for output in route.outputs:
             if output.rarity == 'rare':
                 assert output.item_id not in common
             assert (items[output.item_id].kind == 'equipment') == (output.rarity == 'equipment')
     payload = content.model_dump()
-    payload['routes'][0]['outputs'][12]['item_id'] = 'sea_shell'
+    next(o for o in payload['routes'][0]['outputs'] if o['rarity'] == 'rare')['item_id'] = 'sea_shell'
     with pytest.raises(ValueError, match='cannot be common'):
         SailingContent.model_validate(payload)
 
@@ -294,7 +296,7 @@ def test_weighted_sailing_can_award_and_collect_exploration_equipment(sailing_ga
     monkeypatch.setattr(game.rng, 'random', lambda: 0.999999999)
     started = start(game)
     run = repo.get(player.player_id).sailing.active_run
-    assert run.rule_version == 3
+    assert run.rule_version == 4
     assert {d.item_id for d in run.drops} == {'bay_tide_blade'}
     finish(game, clock, started)
     assert repo.get(player.player_id).inventory['bay_tide_blade'][0] >= 1
@@ -389,3 +391,70 @@ def test_composite_plank_recipe_consumes_both_materials(sailing_game):
     clock[0] = crafted['result']['ready_at']
     game.collect_crafting('sailing-sub', 'town_workbench')
     assert sum(repo.get(player.player_id).inventory['composite_plank'].values()) == 1
+
+
+def test_sailing_quality_is_rolled_per_unit_frozen_and_collected_once(sailing_game, monkeypatch):
+    from red_leaf_town.application import sailing
+    game, repo, player, clock = sailing_game
+    monkeypatch.setattr(sailing, 'draw_weighted_batches', lambda *args: [('sea_fish', 3), ('bay_tide_blade', 1)])
+    rolls = iter([2, 5, 2])
+    monkeypatch.setattr(sailing, 'roll_quality', lambda *args: next(rolls))
+    started = start(game)
+    run = repo.get(player.player_id).sailing.active_run
+    assert {(d.item_id, d.quality): d.quantity for d in run.drops} == {
+        ('sea_fish', 2): 2, ('sea_fish', 5): 1, ('bay_tide_blade', 0): 1,
+    }
+    monkeypatch.setattr(sailing, 'roll_quality', lambda *args: pytest.fail('must not reroll after departure'))
+    result = finish(game, clock, started)
+    assert repo.get(player.player_id).inventory['sea_fish'] == {2: 2, 5: 1}
+    assert repo.get(player.player_id).sailing.collected_items['sea_fish'] == 3
+    assert {d['quality_name'] for d in result['state']['sailing']['last_run']['drops']} == {'良品', '奇迹', ''}
+    assert game.collect_sailing('sailing-sub', run.run_id)['result']['duplicate']
+    assert repo.get(player.player_id).inventory['sea_fish'] == {2: 2, 5: 1}
+
+
+def test_old_sailing_drops_and_inventory_remain_collectible_and_sellable(sailing_game):
+    from red_leaf_town.domain.sailing import SailingDrop
+    game, repo, player, clock = sailing_game
+    started = start(game)
+    def legacy(p):
+        p.sailing.active_run.rule_version = 3
+        p.sailing.active_run.drops = [SailingDrop(item_id='sea_fish', quantity=2),
+                                     SailingDrop(item_id='bay_sardine', quantity=3)]
+        add_item(p, 'sea_fish', 4)
+    repo.update(player.player_id, legacy)
+    finish(game, clock, started)
+    assert repo.get(player.player_id).inventory['sea_fish'] == {1: 6}
+    assert repo.get(player.player_id).inventory['bay_sardine'] == {0: 3}
+    game.sell('sailing-sub', 'sea_fish', 6, 1)
+    game.sell('sailing-sub', 'bay_sardine', 3)
+
+
+def test_sailing_quality_configuration_cannot_silently_fall_back():
+    content = load_sailing_content()
+    items = load_content().item_map
+    payload = content.model_dump()
+    payload['routes'][0]['outputs'][0]['quality'] = None
+    with pytest.raises(ValueError, match='quality curve does not match'):
+        SailingContent.model_validate(payload).validate_items(items)
+    payload = content.model_dump()
+    payload['routes'][0]['outputs'][-1]['quality'] = payload['routes'][0]['outputs'][0]['quality']
+    with pytest.raises(ValueError, match='quality curve does not match'):
+        SailingContent.model_validate(payload).validate_items(items)
+
+
+def test_sailing_achievements_only_count_claims_and_preserve_known_legacy_route(sailing_game):
+    game, repo, player, clock = sailing_game
+    first = start(game)
+    assert not any(a['completed'] for a in first['state']['achievements']['entries'] if a['achievement_id'] == 'first_sailing')
+    finish(game, clock, first)
+    # A legacy save has a last claimed voyage, but no new route history.
+    repo.update(player.player_id, lambda p: p.achievement_stats.sailing_route_ids.clear())
+    second = start(game, 'second', 'white_sail')
+    clock[0] = second['state']['sailing']['active_run']['ready_at']
+    pending = game.snapshot_by_sub('sailing-sub')
+    assert next(a for a in pending['achievements']['entries'] if a['achievement_id'] == 'three_sailing_routes')['current'] == 1
+    finish(game, clock, second)
+    assert repo.get(player.player_id).achievement_stats.sailing_route_ids == ['reed_bay', 'white_sail']
+    game.collect_sailing('sailing-sub', second['result']['run_id'])
+    assert repo.get(player.player_id).sailing.completed_voyages == 2

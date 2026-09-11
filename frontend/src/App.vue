@@ -6,6 +6,7 @@ import { ChevronRight, Copy, Inbox, Leaf, LogOut, Map, Menu, RefreshCw, RotateCw
 import ActionButton from '@/components/ActionButton.vue'
 import AppNav from '@/components/AppNav.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
+import CraftingOutcomeDialog from '@/components/CraftingOutcomeDialog.vue'
 import AchievementPanel from '@/components/achievements/AchievementPanel.vue'
 import MailInbox from '@/components/mail/MailInbox.vue'
 import MonthlyCardDialog from '@/components/MonthlyCardDialog.vue'
@@ -218,5 +219,6 @@ async function copyBindingCommand() {
   <AchievementPanel v-if="!isAdminRoute" />
   <StoryOverlay v-if="!isAdminRoute" />
   <ConfirmDialog />
+  <CraftingOutcomeDialog :outcome="game.craftingOutcome" @close="game.craftingOutcome = null" />
   <Transition name="toast"><div v-if="game.notice" class="toast">{{ game.notice }}</div></Transition>
 </template>

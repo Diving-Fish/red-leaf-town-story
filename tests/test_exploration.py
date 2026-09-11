@@ -334,3 +334,18 @@ def test_beta_expeditions_stay_hidden_until_the_player_is_whitelisted(exploratio
     visible = service.snapshot_by_sub("exploration-sub")["exploration"]
 
     assert "spiritfruit_meadow" in [entry["id"] for entry in visible["expeditions"]]
+
+
+@pytest.mark.parametrize('completed', [False, True])
+def test_hinterland_achievement_requires_full_return(exploration_game, completed):
+    service, repository, player = exploration_game
+    service.start_exploration('exploration-sub', 'red_maple_hinterland', ['leader'], 'leader')
+    def prepare(state):
+        if completed:
+            state.exploration_run.status = 'completed'
+            state.exploration_run.depth = 7
+    repository.update(player.player_id, prepare)
+    before = service.snapshot_by_sub('exploration-sub')
+    assert not next(a for a in before['achievements']['entries'] if a['achievement_id'] == 'hinterland_completed')['completed']
+    after = service.withdraw_exploration('exploration-sub')
+    assert next(a for a in after['state']['achievements']['entries'] if a['achievement_id'] == 'hinterland_completed')['completed'] == completed

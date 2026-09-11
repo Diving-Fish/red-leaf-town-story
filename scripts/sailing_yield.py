@@ -51,6 +51,7 @@ def sailing_yield(service, route, ability=0, farming_ability=0, cargo=0, nets=0,
     draws = draw_count(ability, base, route.draws.ability_bonus, route.draws.difficulty)
     draws += round(base * (cargo * 0.1 + (0.2 if selected.effect == 'quantity' else 0)))
     crops = {c.seed_item_id: c for c in content.crops}
+    curves = {o.item_id: o.quality for o in route.outputs}
     direct, grown, plant_stamina = 0., 0., 0.
     for bonus, chance in event_bonuses(route, modifier, selected.effect == 'protect').items():
         count = draws + bonus
@@ -59,7 +60,7 @@ def sailing_yield(service, route, ability=0, farming_ability=0, cargo=0, nets=0,
         for output in pool:
             amount = chance * count * output.weight / total * (output.quantity_min + output.quantity_max) / 2
             item = content.item_map[output.item_id]
-            direct += amount * item.sell_price
+            direct += amount * quality_price(service, item, curves[output.item_id], ability)
             if output.item_id in crops:
                 crop = crops[output.item_id]
                 produce = content.item_map[crop.produce_item_id]
@@ -75,7 +76,7 @@ def main():
     service.content = load_content()
     print('# 远航体力收益验算\n')
     print('按当前配置精确枚举事件顺序与成功组合，抽取复用生产代码的次数和权重公式。单位均为红叶币/体力。\n')
-    print('远航净收益扣除船费、补给普通品质的出售机会成本；完整链计入树果品质售价与种植体力。装备按出售价值计入。基础事件调整值 0，满改装取 4；航海能力与农业能力按同档比较。不含天赋、特性、任务道具、造船与改装一次性成本和土地/伙伴占用的时间机会成本。\n')
+    print('远航净收益扣除船费、补给普通品质的出售机会成本；直接收益计入远航物产品质售价，完整链计入树果品质售价与种植体力。装备按出售价值计入。基础事件调整值 0，满改装取 4；航海能力与农业能力按同档比较。不含天赋、特性、任务道具、造船与改装一次性成本和土地/伙伴占用的时间机会成本。\n')
     print('| 能力 | 航线 | 基础直接出售 | 基础含种植 | 满改装含种植 | 满改装最优补给含种植 |\n|---:|---|---:|---:|---:|---:|')
     for ability in (0, 40, 80, 120):
         for route in load_sailing_content().routes:

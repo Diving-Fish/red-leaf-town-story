@@ -413,3 +413,30 @@ def test_losing_the_opening_enemy_turns_ends_the_run_instead_of_hanging(delve_ga
     else:
         # 没有被开场打光的话，至少要轮到我方，不能停在敌人回合上。
         assert result["state"]["exploration"]["active_run"]["battle"]["current_actor_is_party"] is True
+
+
+@pytest.mark.parametrize('boss', [False, True])
+def test_delve_achievements_distinguish_battle_victory_and_boss_return(delve_game, monkeypatch, boss):
+    from red_leaf_town.application import service as service_module
+    service, repository, player = delve_game
+    started = start(service)
+    service.resolve_exploration_event('delve-sub', battle_choice(started['state']['exploration']['active_run']))
+    def prepare(state):
+        run = state.exploration_run
+        run.depth = service.content.exploration_expedition_map[run.expedition_id].max_depth - 1
+        run.battle.enemies[0].boss = boss
+    repository.update(player.player_id, prepare)
+    def win(rng, battle, actor, target):
+        for enemy in battle.enemies:
+            enemy.hp = 0
+    monkeypatch.setattr(service_module.delve_battle, 'member_attack', win)
+    target = repository.get(player.player_id).exploration_run.battle.enemies[0].key
+    won = service.resolve_delve_battle_action('delve-sub', 'attack', target)
+    entries = {a['achievement_id']: a for a in won['state']['achievements']['entries']}
+    assert entries['first_meadow_victory']['completed']
+    assert not entries['meadow_completed']['completed']
+    assert repository.get(player.player_id).achievement_stats.delve_wins['spiritfruit_meadow'] == 1
+    returned = service.withdraw_exploration('delve-sub')
+    assert next(a for a in returned['state']['achievements']['entries'] if a['achievement_id'] == 'meadow_completed')['completed'] == boss
+    with pytest.raises(GameError):
+        service.withdraw_exploration('delve-sub')

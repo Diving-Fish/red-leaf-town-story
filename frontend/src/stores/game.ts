@@ -33,6 +33,8 @@ import type {
 } from '@/types'
 
 export interface ProductionOutcome {
+  completed_count?: number
+  experience?: number
   refunded_stamina?: number
   quantity?: number
   quality?: number
@@ -71,6 +73,7 @@ export const useGameStore = defineStore('game', () => {
   const account = ref<AccountState | null>(null)
   const pending = ref(new Set<string>())
   const notice = ref('')
+  const craftingOutcome = ref<ProductionOutcome | null>(null)
   const error = ref('')
   const serverOffsetMs = ref(0)
   let acceptedAt = 0
@@ -459,7 +462,10 @@ export const useGameStore = defineStore('game', () => {
     })) as
       | ProductionOutcome
       | undefined
-    if (result) showNotice(outcomeText(result, copy.collectVerb, copy.collectNoun))
+    if (result) {
+      if (industry === 'crafting') craftingOutcome.value = result
+      else showNotice(outcomeText(result, copy.collectVerb, copy.collectNoun))
+    }
     return result
   }
 
@@ -829,6 +835,7 @@ export const useGameStore = defineStore('game', () => {
     pending,
     busy,
     notice,
+    craftingOutcome,
     error,
     serverNow,
     liveStamina,

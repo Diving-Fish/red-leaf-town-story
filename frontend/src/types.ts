@@ -1748,7 +1748,7 @@ export interface SailingRun {
   trial: boolean
   ability: number
   experience: number
-  drops: Array<{ item_id: string; name: string; quantity: number }>
+  drops: Array<{ item_id: string; name: string; quantity: number; quality: number; quality_name: string }>
   logs: Array<{ event_id: string; name: string; text: string; success: boolean; roll: number; modifier: number; attribute: string; actor_id: string }>
 }
 

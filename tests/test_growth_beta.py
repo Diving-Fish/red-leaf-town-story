@@ -129,6 +129,7 @@ def test_duck_incubation_sheep_breeding_and_shared_capacity(ranch, monkeypatch):
     hatched = service.incubate_egg('stock-sub', 'coop_1', 2, species_id='duck')['result']['animal']
     assert hatched['species_id'] == 'duck'
     assert hatched['stage'] == 'incubating'
+    assert 'duck' not in repo.get(player.player_id).achievement_stats.bred_species_ids
     sheep = [service.buy_animal('stock-sub', 'barn_1', 'sheep')['result']['animal']['animal_id'] for _ in range(2)]
     cow = service.buy_animal('stock-sub', 'barn_1', 'cow')['result']['animal']['animal_id']
     def mature(p):
@@ -141,12 +142,15 @@ def test_duck_incubation_sheep_breeding_and_shared_capacity(ranch, monkeypatch):
     assert repo.get(player.player_id).feed_slot.units == before.feed_slot.units
     born = service.breed_animals('stock-sub', 'barn_1', sheep)['result']['animal']
     assert born['species_id'] == 'sheep'
+    assert repo.get(player.player_id).achievement_stats.bred_species_ids == ['sheep']
     for _ in range(7): service.buy_animal('stock-sub', 'coop_1', 'chicken')
     with pytest.raises(GameError, match='住满'):
         service.buy_animal('stock-sub', 'coop_1', 'duck')
     clock.advance(3*CYCLE)
     service.snapshot_by_sub('stock-sub')
     assert next(a for a in repo.get(player.player_id).animals if a.animal_id == hatched['animal_id']).stage == 'juvenile'
+    assert repo.get(player.player_id).achievement_stats.bred_species_ids == ['duck', 'sheep']
+    assert any(a.achievement_id == 'duck_sheep_bred' for a in repo.get(player.player_id).achievements)
 
 
 def test_nutrition_level_gate_and_cloth_batch_cost(ranch, monkeypatch):
@@ -179,3 +183,25 @@ def test_released_growth_is_visible_without_allowlist(ranch, monkeypatch):
     assert 'duck' in {entry['id'] for entry in facility_of(state, 'coop_1')['species']}
     service.buy('stock-sub', 'corn_seed', 1)
     service.plant('stock-sub', 0, 'corn')
+
+
+def test_duck_and_sheep_collection_achievements_require_actual_collection(ranch, monkeypatch):
+    service, repo, clock, player = enable(ranch, monkeypatch)
+    for facility, species in [('coop_1', 'duck'), ('barn_1', 'sheep')]:
+        materials(ranch, facility)
+        service.upgrade_livestock_facility('stock-sub', facility, 2)
+        service.buy_animal('stock-sub', facility, species)
+    def produce(p):
+        for animal in p.animals:
+            animal.stage = 'adult'
+            animal.pending_output = {2: 1}
+            animal.pending_special = 1
+    repo.update(player.player_id, produce)
+    assert not repo.get(player.player_id).achievement_stats.livestock_item_ids
+    service.collect_livestock('stock-sub', 'coop_1')
+    collected = service.collect_livestock('stock-sub', 'barn_1')
+    done = {a['achievement_id'] for a in collected['state']['achievements']['entries'] if a['completed']}
+    assert {'duck_sheep_products', 'duck_sheep_specials', 'expanded_ranch'} <= done
+    with pytest.raises(GameError):
+        service.collect_livestock('stock-sub', 'barn_1')
+    assert repo.get(player.player_id).achievement_stats.livestock_item_ids == ['cloud_fleece', 'duck_egg', 'jade_duck_egg', 'wool']

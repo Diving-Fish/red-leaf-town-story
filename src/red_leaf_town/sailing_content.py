@@ -3,11 +3,12 @@ from pathlib import Path
 from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
-from red_leaf_town.content import GatheringDrawDefinition, GatheringOutputDefinition, RecipeInputDefinition
+from red_leaf_town.content import GatheringDrawDefinition, GatheringOutputDefinition, RecipeInputDefinition, QualityCurveDefinition
 
 
 class SailingOutput(GatheringOutputDefinition):
     rarity: Literal['common', 'rare', 'seed', 'equipment']
+    quality: QualityCurveDefinition | None = None
 
 
 class SailingRoute(BaseModel):
@@ -19,7 +20,7 @@ class SailingRoute(BaseModel):
     stamina: int = Field(gt=0)
     required_voyages: int = Field(ge=0)
     draws: GatheringDrawDefinition
-    outputs: list[SailingOutput] = Field(min_length=15, max_length=20)
+    outputs: list[SailingOutput] = Field(min_length=1, max_length=20)
     equipment_expected_stamina: int = Field(ge=200, le=300)
     events: int = Field(ge=1, le=4)
 
@@ -88,6 +89,10 @@ class SailingContent(BaseModel):
         references |= {s.item_id for s in self.supplies if s.item_id}
         if references - set(items):
             raise ValueError(f'unknown sailing items: {references - set(items)}')
+        for route in self.routes:
+            for output in route.outputs:
+                if items[output.item_id].has_quality != (output.quality is not None):
+                    raise ValueError(f'sailing quality curve does not match item: {output.item_id}')
 
 
 @lru_cache(maxsize=1)

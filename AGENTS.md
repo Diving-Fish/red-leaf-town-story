@@ -91,3 +91,5 @@ https://chiyuki.diving-fish.com/api/oauth/red-leaf-town/callback
 加工与探索各新增五节点天赋，已外放（见 `docs/growth-beta.md`）。限定五星凡妮莎 `vanessa` 已配置立绘，不进常驻招募；专属 UP 卡池「循星归航」置顶展示（`display_order: -100`），「敲石成金」已下架；「循星归航」使用 `vanessa_gacha` 背景，五星中 80% 为凡妮莎；出海特性「循星引航」全船检定＋2、首败优势重掷一次，成功额外抽取一次物产，日志与结果在出发时冻结。
 
 出海已于 2026-09-11 外放，16 级开放，入口 `/red-leaf-town/aquatic?tab=sailing`，不再要求白名单。水产三标签页、紧凑导航及天赋／畜牧弹窗布局同步部署正式站。
+
+2026-09-11 配套成就新增 24 项（总数 52），覆盖成长内容、远航、探索与探秘、第二传送门；条件、奖励与历史追认见 `docs/growth-achievements.md`。远航物产精简为 20 种，常见／稀有物产使用航海能力抽五档品质，种子和装备不分品质，规则版本 4；完整售价与品质曲线见 `docs/sailing-products.md`。

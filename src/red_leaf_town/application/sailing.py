@@ -7,6 +7,7 @@ from red_leaf_town.domain.progression import consume_stamina, grant_experience
 from red_leaf_town.domain.sailing import SailingDrop, SailingLog, SailingRun
 from red_leaf_town.domain.models import TaskOutputSnapshot
 from red_leaf_town.domain.production import draw_count, draw_weighted_batches
+from red_leaf_town.domain.quality import QUALITY_NAMES, quality_probabilities, roll_quality
 from red_leaf_town.sailing_content import load_sailing_content
 
 
@@ -169,11 +170,19 @@ class SailingServiceMixin:
             count = quantity + bonus + sum(log.rescue_bonus_draws for log in logs)
             pool = sailing_output_pool(route, count, stamina, state.nets_level, supply.effect == 'rare')
             totals = Counter()
+            probabilities = {
+                o.item_id: quality_probabilities(ability, o.quality.thresholds, o.quality.width,
+                                                o.quality.miracle_probability_cap, o.quality.miracle_eligible)
+                for o in route.outputs if o.quality is not None
+            }
             for item_id, amount in draw_weighted_batches(self.rng, pool, count):
-                totals[item_id] += amount
-            drops = [SailingDrop(item_id=item_id, quantity=amount) for item_id, amount in totals.items()]
+                for _ in range(amount):
+                    quality = roll_quality(self.rng, probabilities[item_id]) if item_id in probabilities else 0
+                    totals[item_id, quality] += 1
+            drops = [SailingDrop(item_id=item_id, quality=quality, quantity=amount)
+                     for (item_id, quality), amount in totals.items()]
             state.active_run = SailingRun(
-                rule_version=3,
+                rule_version=4,
                 run_id=str(uuid4()), route_id=route.id, route_name=route.name, partner_ids=partner_ids,
                 started_at=now, ready_at=now + duration, trial=trial, supply_id=supply.id, coins=coins,
                 stamina=stamina, experience=stamina * 6, partner_experience=max(1, duration // 720 + stamina * 2),
@@ -201,13 +210,18 @@ class SailingServiceMixin:
             if now < run.ready_at:
                 raise sailing_error('sailing_not_ready', '船还没有回港', 409)
             for drop in run.drops:
-                add_item(player, drop.item_id, drop.quantity)
+                quality = drop.quality or (1 if self.content.item_map[drop.item_id].has_quality else 0)
+                add_item(player, drop.item_id, drop.quantity, quality)
                 state.collected_items[drop.item_id] = state.collected_items.get(drop.item_id, 0) + drop.quantity
             grant_experience(player, run.experience, self.content, max_level=self._player_level_cap(player))
             for partner_id in run.partner_ids:
                 self._grant_partner_experience(self._owned_partner(player, partner_id), run.partner_experience)
             state.discoveries = sorted(set(state.discoveries) | {log.event_id for log in run.logs if log.success})
             state.completed_voyages += 1
+            player.achievement_stats.sailing_route_ids = sorted(
+                set(player.achievement_stats.sailing_route_ids) | {run.route_id}
+                | ({state.last_run.route_id} if state.last_run else set())
+            )
             state.last_run = run
             state.active_run = None
             return {'run_id': run.run_id, 'drops': self._sailing_drops(run.drops), 'experience': run.experience}
@@ -254,7 +268,8 @@ class SailingServiceMixin:
 
     def _sailing_drops(self, drops):
         items = self.content.item_map
-        return [{**d.model_dump(), 'name': items[d.item_id].name if d.item_id in items else d.item_id}
+        return [{**d.model_dump(), 'quality_name': QUALITY_NAMES.get(d.quality, ''),
+                 'name': items[d.item_id].name if d.item_id in items else d.item_id}
                 for d in drops]
 
     def _sailing_snapshot(self, player, now):

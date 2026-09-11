@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field, model_validator
 class SailingDrop(BaseModel):
     item_id: str
     quantity: int = Field(gt=0)
+    quality: int = Field(default=0, ge=0, le=5)
 
 
 class SailingLog(BaseModel):
