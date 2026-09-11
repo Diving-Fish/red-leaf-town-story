@@ -1608,6 +1608,7 @@ export interface GachaPoolState {
   background: GachaPoolBackground | null
   featured_partner_id: string | null
   featured_rate: number
+  featured_guaranteed: boolean
   catalog: GachaCatalogPartner[]
   task_items: Omit<TaskItemState, 'quantity'>[]
 }

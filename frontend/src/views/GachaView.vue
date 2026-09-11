@@ -77,7 +77,11 @@ const pityTags = computed(() => {
   const pool = activePool.value
   if (!pool) return []
   const tags = [`至多 ${pool.pulls_until_four_star} 抽出现 4★+`, `至多 ${pool.pulls_until_five_star} 抽出现 5★`]
-  if (featuredPartnerName.value) tags.push(`UP！${featuredPartnerName.value} 占五星概率 ${(pool.featured_rate * 100).toFixed(0)}%`)
+  if (featuredPartnerName.value) {
+    tags.push(pool.featured_guaranteed
+      ? `下个五星必出 ${featuredPartnerName.value}`
+      : `UP！${featuredPartnerName.value} 占五星概率 ${(pool.featured_rate * 100).toFixed(0)}%，歪后下个五星必出 UP`)
+  }
   if (pool.max_pulls_per_player != null) tags.push(`本池限抽 ${pool.max_pulls_per_player} 次 · 剩余 ${pool.remaining_pulls}`)
   return tags
 })

@@ -3754,6 +3754,7 @@ class GameService(SailingServiceMixin):
                 raise GameError("gacha_pool_exhausted", f"这个招募池最多能招募 {gacha.max_pulls_per_player} 次，你还剩 {remaining} 次")
 
             player.guide_leaves -= count
+            featured_guaranteed = self._gacha_featured_guaranteed(player, gacha)
             results: list[GachaDropRecord] = []
             for _ in range(count):
                 force_five = progress.five_pity + 1 >= gacha.five_star_pity
@@ -3768,7 +3769,9 @@ class GameService(SailingServiceMixin):
                     candidates = partners_by_rarity[rarity]
                     if not candidates:
                         raise GameError("gacha_pool_invalid", f"招募池没有 {rarity} 星伙伴", 500)
-                    definition = self._pick_gacha_partner(gacha, candidates, rarity)
+                    definition = self._pick_gacha_partner(gacha, candidates, rarity, featured_guaranteed)
+                    if rarity == 5 and gacha.featured_partner_id:
+                        featured_guaranteed = definition.id != gacha.featured_partner_id
                     owned = next(
                         (entry for entry in player.owned_partners if entry.partner_id == definition.id),
                         None,
@@ -5318,12 +5321,26 @@ class GameService(SailingServiceMixin):
         """保底会强制抽出 4★ 和 5★，所以三个星级都得有人，池子才算能开。"""
         return all(candidates[rarity] for rarity in (3, 4, 5))
 
-    def _pick_gacha_partner(self, gacha: GachaDefinition, candidates: list[PartnerDefinition], rarity: int) -> PartnerDefinition:
-        """五星的 up 池：featured_rate 概率抽中 featured_partner_id，否则在同星级里均匀抽其它角色。"""
+    @staticmethod
+    def _gacha_featured_guaranteed(player: PlayerState, gacha: GachaDefinition) -> bool:
+        """按本池最后一个五星判断大保底，兼容修复前的抽卡历史。"""
+        if gacha.featured_partner_id:
+            for record in reversed(player.gacha_history):
+                if record.pool_id == gacha.pool_id:
+                    for drop in reversed(record.results):
+                        if drop.kind == "partner" and drop.rarity == 5:
+                            return drop.content_id != gacha.featured_partner_id
+        return False
+
+    def _pick_gacha_partner(
+        self, gacha: GachaDefinition, candidates: list[PartnerDefinition], rarity: int,
+        featured_guaranteed: bool = False,
+    ) -> PartnerDefinition:
+        """五星歪后下一次五星必出 UP，否则按 featured_rate 判定。"""
         if rarity == 5 and gacha.featured_partner_id:
             featured = next((entry for entry in candidates if entry.id == gacha.featured_partner_id), None)
             if featured is not None:
-                if self.rng.random() < gacha.featured_rate:
+                if featured_guaranteed or self.rng.random() < gacha.featured_rate:
                     return featured
                 others = [entry for entry in candidates if entry.id != gacha.featured_partner_id]
                 if others:
@@ -7005,6 +7022,7 @@ class GameService(SailingServiceMixin):
                 "background": background_asset.model_dump() if background_asset else None,
                 "featured_partner_id": gacha.featured_partner_id,
                 "featured_rate": gacha.featured_rate,
+                "featured_guaranteed": self._gacha_featured_guaranteed(player, gacha),
                 "catalog": [
                     catalog_payload[definition.id]
                     for rarity in (5, 4, 3)

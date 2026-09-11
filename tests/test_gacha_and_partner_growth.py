@@ -475,3 +475,52 @@ def test_vanessa_is_first_and_retired_guqi_pool_cannot_be_pulled(growth_game):
     with pytest.raises(GameError, match="招募池不存在"):
         service.recruit("growth-sub", 1, "retired-pool-pull", "guqi-up-1")
     assert repository.get(player.player_id).model_dump() == before
+
+
+def test_up_guarantee_applies_within_ten_pull_and_resets(growth_game, monkeypatch):
+    service, repository, _, player = growth_game
+    monkeypatch.setattr(service, "_roll_gacha_rarity", lambda *args: 5)
+    monkeypatch.setattr(service.rng, "random", lambda: 0.99)
+    result = service.recruit("growth-sub", 10, "up-ten-guarantee", "vanessa-up-1")
+    ids = [drop["content_id"] for drop in result["result"]["results"]]
+    assert all(partner_id != "vanessa" for partner_id in ids[::2])
+    assert ids[1::2] == ["vanessa"] * 5
+    pools = {pool["pool_id"]: pool for pool in result["state"]["gacha_pools"]}
+    assert pools["vanessa-up-1"]["featured_guaranteed"] is False
+
+
+@pytest.mark.parametrize("hard_pity", [False, True])
+def test_up_guarantee_survives_other_drops_reload_and_replay(growth_game, monkeypatch, hard_pity):
+    from red_leaf_town.domain.models import PlayerState
+
+    service, repository, _, player = growth_game
+    monkeypatch.setattr(service, "_roll_gacha_rarity", lambda *args: 5)
+    monkeypatch.setattr(service.rng, "random", lambda: 0.99)
+    first = service.recruit("growth-sub", 1, "up-first-miss", "vanessa-up-1")
+    assert first["result"]["results"][0]["content_id"] != "vanessa"
+    monkeypatch.setattr(service, "_roll_gacha_rarity", lambda *args: 3)
+    service.recruit("growth-sub", 1, "up-three-star", "vanessa-up-1")
+    monkeypatch.setattr(service, "_roll_gacha_rarity", lambda *args: None)
+    service.recruit("growth-sub", 1, "up-item-drop", "vanessa-up-1")
+    monkeypatch.setattr(service, "_roll_gacha_rarity", lambda *args: 5)
+    service.recruit("growth-sub", 1, "up-other-pool", "standard-1")
+
+    # 历史即依据：旧存档无需新增标记，序列化重载后仍能恢复大保底。
+    restored = PlayerState.model_validate_json(repository.get(player.player_id).model_dump_json())
+    gacha = service.gacha_pool_loader()["vanessa-up-1"]
+    assert service._gacha_featured_guaranteed(restored, gacha) is True
+    pools = {pool["pool_id"]: pool for pool in service.snapshot_by_sub("growth-sub")["gacha_pools"]}
+    assert pools["vanessa-up-1"]["featured_guaranteed"] is True
+    assert pools["standard-1"]["featured_guaranteed"] is False
+    assert pools["baili-up-1"]["featured_guaranteed"] is False
+    if hard_pity:
+        repository.update(player.player_id, lambda state: setattr(
+            state.gacha_progress["vanessa-up-1"], "five_pity", gacha.five_star_pity - 1,
+        ))
+        monkeypatch.setattr(service, "_roll_gacha_rarity", lambda *args: 3)
+    second = service.recruit("growth-sub", 1, "up-next-five", "vanessa-up-1")
+    assert second["result"]["results"][0]["content_id"] == "vanessa"
+    replay = service.recruit("growth-sub", 1, "up-first-miss", "vanessa-up-1")
+    assert replay["result"]["replayed"] is True
+    assert replay["result"]["results"] == first["result"]["results"]
+    assert service._gacha_featured_guaranteed(repository.get(player.player_id), gacha) is False

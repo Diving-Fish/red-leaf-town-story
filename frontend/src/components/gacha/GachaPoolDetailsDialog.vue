@@ -74,8 +74,12 @@ function barWidth(value: number) {
 </script>
 
 <template>
-  <ModalSheet :open="open" :title="pool?.title || '招募池'" subtitle="每位角色的实际获取概率" @close="$emit('close')">
+  <ModalSheet :open="open" :title="pool?.title || '招募池'" subtitle="基础概率（不含保底）" @close="$emit('close')">
     <div v-if="pool" class="gacha-details">
+      <p v-if="pool.featured_partner_id" class="ui-description">
+        抽到非 UP 五星后，本池下一个五星必为 UP 角色（提前出五星也生效），获得 UP 后重置；各池独立计算。
+        <strong v-if="pool.featured_guaranteed">当前下个五星必出 UP。</strong>
+      </p>
       <div class="gacha-details-summary">
         <span v-for="group in groups" :key="`sum:${group.rarity}`" class="gacha-details-summary-chip">
           <i class="rarity-chip" :class="rarityClass(group.rarity)">{{ rarityMeta(group.rarity).short }}★</i>{{ pct(group.probability) }}
