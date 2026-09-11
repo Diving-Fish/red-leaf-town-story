@@ -311,6 +311,7 @@ def test_sailing_snapshot_and_claim_survive_service_reload(repository, monkeypat
         p.coins = 20_000
         p.stamina = 50
         add_item(p, "composite_plank", 20, 1)
+        add_item(p, 'voyage_sail', 1, 1)
     repository.update(player.player_id, prepare)
     service.build_sailing_ship('redis-sailing-sub')
     assert repository.get(player.player_id).sailing.ship_built

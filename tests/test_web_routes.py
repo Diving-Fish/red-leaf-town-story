@@ -1183,6 +1183,7 @@ async def test_sailing_api_full_trial_and_upgrade(client, service, monkeypatch):
         p.stamina = 50
         add_item(p, 'maple_plank', 10, 1)
         add_item(p, 'composite_plank', 20, 1)
+        add_item(p, 'voyage_sail', 1, 1)
     service.repository.update(player.player_id, prepare)
     response = await client.post('/api/red-leaf-town/sailing/build', json={})
     assert response.status_code == 200
@@ -1242,3 +1243,28 @@ async def test_crafting_queue_api_reservation_partial_collection_and_cancel(clie
     assert cancelled["result"]["refunded_stamina"] == 2
     assert cancelled["result"]["refunded_task_items"] == {}
     assert cancelled["state"]["crafting_stations"][0]["empty"]
+
+
+@runs
+async def test_beta_livestock_upgrade_and_duck_incubation_api(client, service, monkeypatch):
+    authenticate(client)
+    player = service.repository.get_by_sub('route-sub')
+    monkeypatch.setenv('RED_LEAF_TOWN_BETA_PLAYERS', player.player_id)
+    def prepare(p):
+        p.experience = service.content.level_definition(14).total_xp
+        p.coins = 30_000
+        p.feed_slot.units = 100
+        for item, quantity in [('maple_wood',30),('maple_plank',30),('red_copper_ore',20),('rope',6),('reed_mat',4),('duck_egg',1)]:
+            add_item(p, item, quantity, 1)
+    service.repository.update(player.player_id, prepare)
+    assert (await client.post('/api/red-leaf-town/livestock/facilities/coop_1/build', json={})).status_code == 200
+    path = '/api/red-leaf-town/livestock/facilities/coop_1/upgrade'
+    assert (await client.post(path, json={'target_tier': '2'})).status_code == 400
+    response = await client.post(path, json={'target_tier': 2})
+    assert response.status_code == 200
+    assert (await response.get_json())['data']['result']['tier'] == 2
+    response = await client.post(path, json={'target_tier': 2})
+    assert (await response.get_json())['data']['result']['duplicate']
+    response = await client.post('/api/red-leaf-town/livestock/facilities/coop_1/incubate', json={'species_id':'duck','quality':1})
+    assert response.status_code == 200
+    assert (await response.get_json())['data']['result']['animal']['species_id'] == 'duck'

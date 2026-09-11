@@ -29,7 +29,9 @@ const ui = useUiStore()
 const selected = ref<string[]>([])
 
 const accent = computed(() => props.facility.accent)
-const species = computed(() => props.facility.species[0] || null)
+const breedingSpeciesId = ref('')
+const species = computed(() => props.facility.species.find((entry) => entry.id === breedingSpeciesId.value) || props.facility.species[0] || null)
+watch(breedingSpeciesId, () => { selected.value = []; naming.value = null })
 const room = computed(() => props.facility.capacity - props.facility.used)
 const pairing = computed(() => species.value?.breeding.mode === 'pair')
 
@@ -40,7 +42,7 @@ const { label: cycleLabel, progress: cycleProgress } = useCountdown(
 
 /** 能当种蛋的库存：品质就是基因载体，所以按品质分格展示，让人挑。 */
 const eggs = computed(() => {
-  const target = props.facility.species.find((entry) => entry.breeding.mode === 'incubate')
+  const target = species.value
   if (!target) return []
   return game.state?.inventory
     .filter((entry) => entry.item_id === target.breeding.incubate_item_id && entry.quality)
@@ -77,7 +79,7 @@ const traitBonuses = computed(() => {
 })
 
 const adults = computed(() =>
-  props.facility.animals.filter((animal) => animal.stage === 'adult' && animal.breeding_cooldown <= 0),
+  props.facility.animals.filter((animal) => animal.species_id === species.value?.id && animal.stage === 'adult' && animal.breeding_cooldown <= 0),
 )
 
 // 栏里的动物换了之后，选中的亲本可能已经卖掉或还在冷却里。
@@ -91,6 +93,7 @@ watch(
 
 const breedReason = computed(() => {
   if (!breeding.value) return '这里不配种'
+  if (!species.value?.unlocked) return species.value?.unlock_description || '尚未解锁'
   if (selected.value.length !== 2) return '选两只成年牲畜'
   if (room.value <= 0) return '栏里没有空位'
   if (props.feedSlot.quality_score < breeding.value.min_feed_score) {
@@ -102,6 +105,8 @@ const breedReason = computed(() => {
 
 function incubateReason(quality: number) {
   if (!breeding.value) return '这里不孵蛋'
+  if (!species.value?.unlocked) return species.value?.unlock_description || '尚未解锁'
+  if (props.feedSlot.quality_score < breeding.value.min_feed_score) return '饲料品质分不足'
   if (room.value <= 0) return '栏里没有空位'
   if (props.feedSlot.units < breeding.value.feed_units) return '饲料不足'
   return undefined
@@ -138,7 +143,7 @@ const namingDialog = computed(() => {
   }
   if (request.kind === 'incubate') {
     const egg = eggs.value.find((item) => item.quality === request.quality)
-    const target = props.facility.species.find((item) => item.breeding.mode === 'incubate')
+    const target = species.value
     if (!egg || !target) return null
     return {
       title: '孵化',
@@ -181,7 +186,7 @@ async function confirmNaming(nickname: string) {
     request.kind === 'buy'
       ? await game.buyAnimal(facilityId, request.speciesId, nickname)
       : request.kind === 'incubate'
-        ? await game.incubateEgg(facilityId, request.quality, nickname)
+        ? await game.incubateEgg(facilityId, request.quality, nickname, species.value?.id)
         : await game.breedAnimals(facilityId, selected.value, nickname)
   if (result) naming.value = null
 }
@@ -189,7 +194,7 @@ async function confirmNaming(nickname: string) {
 function toggle(animalId: string) {
   if (!pairing.value) return
   const animal = props.facility.animals.find((entry) => entry.animal_id === animalId)
-  if (!animal || animal.stage !== 'adult' || animal.breeding_cooldown > 0) return
+  if (!animal || animal.species_id !== species.value?.id || animal.stage !== 'adult' || animal.breeding_cooldown > 0) return
   const index = selected.value.indexOf(animalId)
   if (index >= 0) selected.value.splice(index, 1)
   else if (selected.value.length < 2) selected.value.push(animalId)
@@ -213,11 +218,24 @@ async function sell(animalId: string) {
   <article class="facility surface-card" :style="{ '--facility-accent': accent }">
     <header>
       <div>
-        <h3>{{ facility.name }}</h3>
+        <h3>{{ facility.name }} · {{ facility.tier }} 级</h3>
         <small>{{ facility.description }}</small>
       </div>
       <span class="facility-count">{{ facility.used }}<i>/{{ facility.capacity }}</i></span>
     </header>
+
+    <section v-if="facility.upgrade" class="buy">
+      <strong>扩建至 {{ facility.upgrade.level }} 级 · {{ facility.upgrade.capacity }} 个位置</strong>
+      <small>基因上限 {{ facility.upgrade.gene_cap }} · 可存 {{ facility.upgrade.overflow_cycles }} 个周期产物 · 本设施饲料槽容量贡献 {{ facility.upgrade.feed_slot_capacity_bonus }} 份</small>
+      <span>{{ facility.upgrade.build_coins }} 红叶币</span>
+      <span v-for="material in facility.upgrade.build_materials" :key="material.item_id">
+        {{ material.item.name }} ×{{ material.quantity }}（持有 {{ material.owned }}）
+      </span>
+      <ActionButton :action-key="`livestock:${facility.facility_id}:upgrade`"
+        :disabled="!facility.upgrade.unlocked || !facility.upgrade.affordable"
+        :reason="!facility.upgrade.unlocked ? `居民 ${facility.upgrade.min_level} 级解锁` : (!facility.upgrade.affordable ? '红叶币或材料不足' : undefined)"
+        @click="game.upgradeLivestockFacility(facility.facility_id, facility.upgrade.level)">扩建</ActionButton>
+    </section>
 
     <p v-if="facility.stalled" class="facility-alert">
       <AlertTriangle :size="15" /> 饲料槽已空，本栏暂停运转：不产出、不成长，也不能孵蛋配种，待收产出不会减少。
@@ -284,7 +302,7 @@ async function sell(animalId: string) {
         :key="animal.animal_id"
         :animal="animal"
         :cycle-seconds="livestock.cycle_seconds"
-        :selectable="pairing && animal.stage === 'adult' && animal.breeding_cooldown <= 0"
+        :selectable="pairing && animal.species_id === species?.id && animal.stage === 'adult' && animal.breeding_cooldown <= 0"
         :selected="selected.includes(animal.animal_id)"
         @toggle="toggle(animal.animal_id)"
         @sell="sell(animal.animal_id)"
@@ -319,12 +337,18 @@ async function sell(animalId: string) {
         :action-key="`livestock:${facility.facility_id}:buy:${entry.id}`"
         variant="secondary"
         :disabled="!entry.unlocked || !entry.affordable || room <= 0"
-        :reason="!entry.unlocked ? `居民等级 ${entry.min_level} 解锁` : (room <= 0 ? '栏里没有空位' : (!entry.affordable ? '红叶币不足' : undefined))"
+        :reason="!entry.unlocked ? entry.unlock_description : (room <= 0 ? '栏里没有空位' : (!entry.affordable ? '红叶币不足' : undefined))"
         @click="naming = { kind: 'buy', speciesId: entry.id }"
       >
         买入幼崽
       </ActionButton>
     </section>
+
+    <div v-if="facility.species.length > 1" class="breeding-picker" role="group" aria-label="选择繁殖物种">
+      <button v-for="entry in facility.species" :key="entry.id" type="button"
+        :class="{ active: species?.id === entry.id }" :disabled="!entry.unlocked"
+        @click="breedingSpeciesId = entry.id">{{ entry.name }}{{ entry.breeding.mode === 'incubate' ? '孵化' : '配种' }}</button>
+    </div>
 
     <section v-if="breeding?.mode === 'incubate'" class="hatch">
       <h4><Egg :size="15" /> 孵蛋</h4>
@@ -341,7 +365,7 @@ async function sell(animalId: string) {
           :quality="egg.quality"
           :badge="egg.quantity"
           :dimmed="Boolean(incubateReason(egg.quality))"
-          @click="naming = { kind: 'incubate', quality: egg.quality }"
+          @click="!incubateReason(egg.quality) && (naming = { kind: 'incubate', quality: egg.quality })"
         >
           <template #tooltip>
             <strong>{{ qualityName(egg.quality) }}{{ egg.name }}</strong>
@@ -356,7 +380,7 @@ async function sell(animalId: string) {
     <section v-if="breeding?.mode === 'pair'" class="breed">
       <h4><HeartHandshake :size="15" /> 配种</h4>
       <p>
-        选两只成年牲畜，占用一个位置并扣 {{ breeding.feed_units }} 份饲料，要求饲料槽品质分不低于
+        选两只同种成年牲畜，占用一个位置并扣 {{ breeding.feed_units }} 份饲料，要求饲料槽品质分不低于
         {{ breeding.min_feed_score }}，双亲各进入 {{ breeding.cooldown_cycles }} 个周期冷却。
         子代基因取双亲均值并随机浮动，不超过本设施的品种上限。
       </p>
@@ -393,6 +417,11 @@ async function sell(animalId: string) {
 </template>
 
 <style scoped>
+.breeding-picker { display: flex; flex-wrap: wrap; gap: 8px; }
+.breeding-picker button { padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: inherit; cursor: pointer; }
+.breeding-picker button.active { border-color: var(--facility-accent); color: var(--facility-accent); }
+.breeding-picker button:disabled { opacity: .4; cursor: default; }
+
 .facility { --facility-accent: #d7ad58; display: flex; flex-direction: column; gap: 14px; padding: 18px; }
 .facility header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .facility h3 { margin: 0; font: 600 17px Georgia, 'Noto Serif SC', serif; }

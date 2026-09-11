@@ -1,8 +1,6 @@
 {
   "min_level": 16,
   "construction_coins": 10000,
-  "construction_item_id": "composite_plank",
-  "construction_quantity": 20,
   "routes": [
     {
       "id": "reed_bay",
@@ -499,6 +497,16 @@
       "attribute": "luck",
       "success": "海面漂来一只旧木箱，里面的物产还完好无损。",
       "failure": "捞到的是一只空木箱，大家把它带走清理了海面。"
+    }
+  ],
+  "construction_materials": [
+    {
+      "item_id": "composite_plank",
+      "quantity": 20
+    },
+    {
+      "item_id": "voyage_sail",
+      "quantity": 1
     }
   ]
 }

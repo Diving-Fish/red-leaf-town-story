@@ -13,7 +13,7 @@
 - `frontend/`：Vue 3 前端
 - `tests/`：单元和接口测试
 
-居民等级表已经开到 16 级，经验按限流强度分档（矿产 12 / 加工与钓鱼 6 XP 每点体力）。设计约束和后续系统扩展方式见 [`docs/architecture.md`](docs/architecture.md)，伙伴、主角天赋、逐格生产和品质公式见 [`docs/game-design-foundations.md`](docs/game-design-foundations.md)。水产、畜牧与好友系统的完整设计见 [`docs/milestone-2-aquatic-livestock.md`](docs/milestone-2-aquatic-livestock.md)，剩余待办与实装时改过的口径见 [`docs/milestone-2-todo.md`](docs/milestone-2-todo.md)，探秘副本的装备、战斗数值与内测流程见 [`docs/delve-dungeon.md`](docs/delve-dungeon.md)。
+居民等级表已经配置到 20 级（17～20 级暂限内测白名单，体力上限依次为 52／54／56／58），经验按限流强度分档（矿产 12 / 加工与钓鱼 6 XP 每点体力）。设计约束和后续系统扩展方式见 [`docs/architecture.md`](docs/architecture.md)，伙伴、主角天赋、逐格生产和品质公式见 [`docs/game-design-foundations.md`](docs/game-design-foundations.md)。水产、畜牧与好友系统的完整设计见 [`docs/milestone-2-aquatic-livestock.md`](docs/milestone-2-aquatic-livestock.md)，剩余待办与实装时改过的口径见 [`docs/milestone-2-todo.md`](docs/milestone-2-todo.md)，探秘副本的装备、战斗数值与内测流程见 [`docs/delve-dungeon.md`](docs/delve-dungeon.md)。
 
 玩家首页 `/red-leaf-town/` 是经营 Dashboard，集中展示居民等级、经验、当日天气、快捷入口和七个产业方向共享的天赋树。农场位于 `/red-leaf-town/farm`；采集页只负责派驻与采集任务，不再重复展示天赋树。购买和出售合并在 `/red-leaf-town/market`，桌面端左右分栏、移动端用标签页切换，商品与库存物品共用 `MarketItem` 组件；出售侧按 `item_id` 折叠品质分桶（多品质的物品点开才列出各桶），两侧在条目超过 6 个或出现多种物品类型时自动显示搜索框与种类筛选；旧的 `/shop` 与 `/inventory` 会重定向过去。
 
@@ -85,3 +85,7 @@ https://chiyuki.diving-fish.com/api/oauth/red-leaf-town/callback
 
 随后在主服务的 `DF_OAUTH_CONFIG` 中加入同名配置项。作用域只需要
 `openid profile`，不申请邮箱或 QQ 号。
+
+新一批农作、苇风湿地、纺织和饲料、鸡舍／畜栏二级及鸭羊内容先在内测开放，配置与验收口径见 [`docs/growth-beta.md`](docs/growth-beta.md)。新增 `beta` 标记同时保护快照和业务操作；内测物产暂不进入公开委托池。扩建使用目标等级防重扣费，鸡鸭及牛羊各共享 8 个位置；孵化接口可传 `species_id`，配种由亲本物种决定。造船改为多材料需求，新增远航风帆一块，已建船不追缴。
+
+加工与探索各新增五节点内测天赋（见 `docs/growth-beta.md`）。限定五星凡妮莎 `vanessa` 的立绘暂空、不进常驻招募，由后台发放测试；出海特性「循星引航」全船检定＋2、首败优势重掷一次，成功额外抽取一次物产，日志与结果在出发时冻结。

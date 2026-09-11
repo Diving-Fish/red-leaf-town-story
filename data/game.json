@@ -260,6 +260,38 @@
       "plot_slots": 8,
       "stamina_cap": 50,
       "unlocks": []
+    },
+    {
+      "level": 17,
+      "total_xp": 33500,
+      "plot_slots": 8,
+      "stamina_cap": 52,
+      "unlocks": [],
+      "beta": true
+    },
+    {
+      "level": 18,
+      "total_xp": 50250,
+      "plot_slots": 8,
+      "stamina_cap": 54,
+      "unlocks": [],
+      "beta": true
+    },
+    {
+      "level": 19,
+      "total_xp": 75400,
+      "plot_slots": 8,
+      "stamina_cap": 56,
+      "unlocks": [],
+      "beta": true
+    },
+    {
+      "level": 20,
+      "total_xp": 113100,
+      "plot_slots": 8,
+      "stamina_cap": 58,
+      "unlocks": [],
+      "beta": true
     }
   ],
   "items": [
@@ -567,7 +599,12 @@
     },
     {
       "id": "herbal_salve",
-      "delve_use": {"effect": "heal", "dice": "2d6", "flat": 4, "quality_bonus": 3},
+      "delve_use": {
+        "effect": "heal",
+        "dice": "2d6",
+        "flat": 4,
+        "quality_bonus": 3
+      },
       "name": "秋露药膏",
       "icon": "flask-conical",
       "kind": "product",
@@ -1621,6 +1658,285 @@
       "tags": [
         "wood_product"
       ]
+    },
+    {
+      "id": "corn",
+      "name": "玉米",
+      "sell_price": 32,
+      "kind": "produce",
+      "icon": "wheat",
+      "tags": [
+        "crop",
+        "food",
+        "fodder"
+      ],
+      "has_quality": true,
+      "beta": true,
+      "feed": {
+        "units": 8,
+        "score": 28
+      }
+    },
+    {
+      "id": "corn_seed",
+      "name": "玉米种子",
+      "sell_price": 0,
+      "kind": "seed",
+      "icon": "sprout",
+      "tags": [
+        "crop_seed"
+      ],
+      "has_quality": false,
+      "beta": true
+    },
+    {
+      "id": "soybean",
+      "name": "大豆",
+      "sell_price": 45,
+      "kind": "produce",
+      "icon": "bean",
+      "tags": [
+        "crop",
+        "food",
+        "fodder"
+      ],
+      "has_quality": true,
+      "beta": true,
+      "feed": {
+        "units": 7,
+        "score": 38
+      }
+    },
+    {
+      "id": "soybean_seed",
+      "name": "大豆种子",
+      "sell_price": 0,
+      "kind": "seed",
+      "icon": "sprout",
+      "tags": [
+        "crop_seed"
+      ],
+      "has_quality": false,
+      "beta": true
+    },
+    {
+      "id": "flax",
+      "name": "亚麻",
+      "sell_price": 40,
+      "kind": "produce",
+      "icon": "sprout",
+      "tags": [
+        "crop"
+      ],
+      "has_quality": true,
+      "beta": true
+    },
+    {
+      "id": "flax_seed",
+      "name": "亚麻种子",
+      "sell_price": 0,
+      "kind": "seed",
+      "icon": "sprout",
+      "tags": [
+        "crop_seed"
+      ],
+      "has_quality": false,
+      "beta": true
+    },
+    {
+      "id": "tough_vine",
+      "name": "韧藤",
+      "sell_price": 8,
+      "kind": "material",
+      "icon": "leaf",
+      "tags": [
+        "forage"
+      ],
+      "has_quality": true,
+      "beta": true
+    },
+    {
+      "id": "reed",
+      "name": "芦苇",
+      "sell_price": 8,
+      "kind": "material",
+      "icon": "leaf",
+      "tags": [
+        "forage"
+      ],
+      "has_quality": true,
+      "beta": true
+    },
+    {
+      "id": "wild_lotus_root",
+      "name": "野莲藕",
+      "sell_price": 16,
+      "kind": "material",
+      "icon": "leaf",
+      "tags": [
+        "forage",
+        "food",
+        "fodder"
+      ],
+      "has_quality": true,
+      "beta": true,
+      "feed": {
+        "units": 4,
+        "score": 30
+      }
+    },
+    {
+      "id": "amber_cattail",
+      "name": "琥珀香蒲",
+      "sell_price": 30,
+      "kind": "material",
+      "icon": "leaf",
+      "tags": [
+        "forage"
+      ],
+      "has_quality": true,
+      "beta": true
+    },
+    {
+      "id": "flax_thread",
+      "name": "麻线",
+      "sell_price": 75,
+      "kind": "product",
+      "icon": "package",
+      "tags": [],
+      "has_quality": true,
+      "beta": true
+    },
+    {
+      "id": "reed_mat",
+      "name": "苇席",
+      "sell_price": 128,
+      "kind": "product",
+      "icon": "package",
+      "tags": [],
+      "has_quality": true,
+      "beta": true
+    },
+    {
+      "id": "rope",
+      "name": "绳索",
+      "sell_price": 199,
+      "kind": "product",
+      "icon": "package",
+      "tags": [],
+      "has_quality": true,
+      "beta": true
+    },
+    {
+      "id": "woven_cloth",
+      "name": "织布",
+      "sell_price": 427,
+      "kind": "product",
+      "icon": "package",
+      "tags": [],
+      "has_quality": true,
+      "beta": true
+    },
+    {
+      "id": "waterproof_canvas",
+      "name": "防水帆布",
+      "sell_price": 1084,
+      "kind": "product",
+      "icon": "package",
+      "tags": [],
+      "has_quality": true,
+      "beta": true
+    },
+    {
+      "id": "voyage_sail",
+      "name": "远航风帆",
+      "sell_price": 9738,
+      "kind": "product",
+      "icon": "package",
+      "tags": [],
+      "has_quality": true,
+      "beta": true
+    },
+    {
+      "id": "grain_fodder",
+      "name": "谷物饲料",
+      "sell_price": 44,
+      "kind": "product",
+      "icon": "package",
+      "tags": [
+        "fodder"
+      ],
+      "has_quality": true,
+      "beta": true,
+      "feed": {
+        "units": 9,
+        "score": 45
+      }
+    },
+    {
+      "id": "nutrition_fodder",
+      "name": "营养饲料",
+      "sell_price": 80,
+      "kind": "product",
+      "icon": "package",
+      "tags": [
+        "fodder"
+      ],
+      "has_quality": true,
+      "beta": true,
+      "feed": {
+        "units": 14,
+        "score": 96
+      }
+    },
+    {
+      "id": "duck_egg",
+      "name": "鸭蛋",
+      "sell_price": 55,
+      "kind": "produce",
+      "icon": "bird",
+      "tags": [
+        "poultry_product",
+        "food"
+      ],
+      "has_quality": true,
+      "beta": true
+    },
+    {
+      "id": "jade_duck_egg",
+      "name": "青玉鸭蛋",
+      "sell_price": 550,
+      "kind": "produce",
+      "icon": "bird",
+      "tags": [
+        "poultry_product"
+      ],
+      "has_quality": false,
+      "beta": true
+    },
+    {
+      "id": "wool",
+      "name": "羊毛",
+      "sell_price": 115,
+      "kind": "produce",
+      "icon": "beef",
+      "tags": [
+        "animal_product"
+      ],
+      "has_quality": true,
+      "beta": true
+    },
+    {
+      "id": "cloud_fleece",
+      "name": "云绒",
+      "sell_price": 900,
+      "kind": "produce",
+      "icon": "beef",
+      "tags": [
+        "animal_product"
+      ],
+      "has_quality": false,
+      "beta": true
     }
   ],
   "crops": [
@@ -1870,6 +2186,90 @@
         "miracle_probability_cap": 0.003,
         "miracle_eligible": true
       }
+    },
+    {
+      "id": "corn",
+      "name": "玉米",
+      "icon": "wheat",
+      "seed_item_id": "corn_seed",
+      "produce_item_id": "corn",
+      "growth_seconds": 28800,
+      "time_difficulty": 120,
+      "yield_min": 3,
+      "yield_max": 5,
+      "stamina_cost": 0,
+      "plant_xp": 3,
+      "harvest_xp": 9,
+      "min_level": 10,
+      "accent": "#b5a365",
+      "quality": {
+        "thresholds": [
+          60,
+          110,
+          225,
+          350
+        ],
+        "width": 30,
+        "miracle_probability_cap": 0.003,
+        "miracle_eligible": true
+      },
+      "beta": true
+    },
+    {
+      "id": "soybean",
+      "name": "大豆",
+      "icon": "bean",
+      "seed_item_id": "soybean_seed",
+      "produce_item_id": "soybean",
+      "growth_seconds": 36000,
+      "time_difficulty": 120,
+      "yield_min": 3,
+      "yield_max": 5,
+      "stamina_cost": 0,
+      "plant_xp": 3,
+      "harvest_xp": 10,
+      "min_level": 12,
+      "accent": "#b5a365",
+      "quality": {
+        "thresholds": [
+          70,
+          125,
+          245,
+          375
+        ],
+        "width": 30,
+        "miracle_probability_cap": 0.003,
+        "miracle_eligible": true
+      },
+      "beta": true
+    },
+    {
+      "id": "flax",
+      "name": "亚麻",
+      "icon": "sprout",
+      "seed_item_id": "flax_seed",
+      "produce_item_id": "flax",
+      "growth_seconds": 43200,
+      "time_difficulty": 120,
+      "yield_min": 4,
+      "yield_max": 6,
+      "stamina_cost": 0,
+      "plant_xp": 3,
+      "harvest_xp": 11,
+      "min_level": 13,
+      "accent": "#b5a365",
+      "quality": {
+        "thresholds": [
+          80,
+          140,
+          265,
+          400
+        ],
+        "width": 32,
+        "miracle_probability_cap": 0.003,
+        "miracle_eligible": true
+      },
+      "beta": true
     }
   ],
   "gathering_sites": [
@@ -1886,6 +2286,14 @@
       "description": "晨雾散去后，草叶间会显露带着露水的药草。",
       "accent": "#739765",
       "min_level": 2
+    },
+    {
+      "id": "reed_wetland",
+      "name": "苇风湿地",
+      "description": "风掠过芦苇与浅水，韧藤缠在岸边，泥下藏着野藕。",
+      "accent": "#8caa7a",
+      "min_level": 12,
+      "beta": true
     }
   ],
   "gathering_tasks": [
@@ -1994,6 +2402,60 @@
         "miracle_probability_cap": 0.003,
         "miracle_eligible": true
       }
+    },
+    {
+      "id": "collect_reed_wetland",
+      "site_id": "reed_wetland",
+      "name": "探索苇风湿地",
+      "duration_seconds": 50400,
+      "minimum_duration_seconds": 28800,
+      "time_difficulty": 180,
+      "outputs": [
+        {
+          "item_id": "tough_vine",
+          "weight": 50,
+          "quantity_min": 1,
+          "quantity_max": 2
+        },
+        {
+          "item_id": "reed",
+          "weight": 30,
+          "quantity_min": 1,
+          "quantity_max": 1
+        },
+        {
+          "item_id": "wild_lotus_root",
+          "weight": 15,
+          "quantity_min": 1,
+          "quantity_max": 1
+        },
+        {
+          "item_id": "amber_cattail",
+          "weight": 5,
+          "quantity_min": 1,
+          "quantity_max": 1
+        }
+      ],
+      "draws": {
+        "base_draws": 6,
+        "ability_bonus": 1.5,
+        "difficulty": 120
+      },
+      "stamina_cost": 0,
+      "collect_xp": 14,
+      "min_level": 12,
+      "quality": {
+        "thresholds": [
+          60,
+          90,
+          125,
+          270
+        ],
+        "width": 22,
+        "miracle_probability_cap": 0.003,
+        "miracle_eligible": true
+      },
+      "beta": true
     }
   ],
   "exploration_expeditions": [
@@ -2008,7 +2470,12 @@
       "max_depth": 7,
       "final_event_id": "hollow_ancient_maple",
       "quality": {
-        "thresholds": [40.0, 90.0, 160.0, 260.0],
+        "thresholds": [
+          40.0,
+          90.0,
+          160.0,
+          260.0
+        ],
         "width": 20.0,
         "miracle_probability_cap": 0.003,
         "miracle_eligible": true
@@ -2031,7 +2498,13 @@
               "action_stamina": 3,
               "success": {
                 "text": "队伍把散落在外围的木料归拢起来。",
-                "rewards": [{"item_id": "maple_wood", "quantity_min": 8, "quantity_max": 12}]
+                "rewards": [
+                  {
+                    "item_id": "maple_wood",
+                    "quantity_min": 8,
+                    "quantity_max": 12
+                  }
+                ]
               }
             },
             {
@@ -2040,31 +2513,64 @@
               "description": "消耗更多体力，成功时获得大量枫木。",
               "route_stamina": 2,
               "action_stamina": 4,
-              "check": {"attribute": "strength", "mode": "best", "dice": "normal", "dc": 12},
+              "check": {
+                "attribute": "strength",
+                "mode": "best",
+                "dice": "normal",
+                "dc": 12
+              },
               "success": {
                 "text": "完整的主干被顺利运上了回程用的拖架。",
                 "rewards": [
-                  {"item_id": "maple_wood", "quantity_min": 17, "quantity_max": 23},
-                  {"item_id": "maple_resin", "quantity_min": 1, "quantity_max": 2}
+                  {
+                    "item_id": "maple_wood",
+                    "quantity_min": 17,
+                    "quantity_max": 23
+                  },
+                  {
+                    "item_id": "maple_resin",
+                    "quantity_min": 1,
+                    "quantity_max": 2
+                  }
                 ],
                 "quality_ability_bonus": 10
               },
               "critical_success": {
                 "text": "借着完美的发力时机，整段主干几乎毫发无损地落上拖架。",
                 "rewards": [
-                  {"item_id": "maple_wood", "quantity_min": 24, "quantity_max": 30},
-                  {"item_id": "maple_resin", "quantity_min": 2, "quantity_max": 3}
+                  {
+                    "item_id": "maple_wood",
+                    "quantity_min": 24,
+                    "quantity_max": 30
+                  },
+                  {
+                    "item_id": "maple_resin",
+                    "quantity_min": 2,
+                    "quantity_max": 3
+                  }
                 ],
                 "quality_ability_bonus": 25
               },
               "failure": {
                 "text": "主干比预想中沉重，队伍只来得及拆下一部分。",
-                "rewards": [{"item_id": "maple_wood", "quantity_min": 8, "quantity_max": 11}],
+                "rewards": [
+                  {
+                    "item_id": "maple_wood",
+                    "quantity_min": 8,
+                    "quantity_max": 11
+                  }
+                ],
                 "stamina_surcharge": 1
               },
               "critical_failure": {
                 "text": "绳结突然松脱，主干滚回坡下，队伍只抢救出几段断木。",
-                "rewards": [{"item_id": "maple_wood", "quantity_min": 5, "quantity_max": 7}],
+                "rewards": [
+                  {
+                    "item_id": "maple_wood",
+                    "quantity_min": 5,
+                    "quantity_max": 7
+                  }
+                ],
                 "stamina_surcharge": 3
               }
             }
@@ -2085,7 +2591,9 @@
               "description": "不进行检定，但路途更长。",
               "route_stamina": 6,
               "action_stamina": 1,
-              "success": {"text": "队伍沿缓坡绕过了湿滑地带。"}
+              "success": {
+                "text": "队伍沿缓坡绕过了湿滑地带。"
+              }
             },
             {
               "id": "cross",
@@ -2093,7 +2601,12 @@
               "description": "成功时发现捷径，失败会额外消耗体力。",
               "route_stamina": 3,
               "action_stamina": 1,
-              "check": {"attribute": "agility", "mode": "best", "dice": "normal", "dc": 13},
+              "check": {
+                "attribute": "agility",
+                "mode": "best",
+                "dice": "normal",
+                "dc": 13
+              },
               "success": {
                 "text": "队伍稳稳穿过陡坡，还记下了一条捷径。",
                 "next_route_discount": 1
@@ -2128,33 +2641,68 @@
               "description": "较省体力，有机会取得高品质树脂。",
               "route_stamina": 2,
               "action_stamina": 5,
-              "check": {"attribute": "intelligence", "mode": "best", "dice": "normal", "dc": 14},
+              "check": {
+                "attribute": "intelligence",
+                "mode": "best",
+                "dice": "normal",
+                "dc": 14
+              },
               "success": {
                 "text": "队伍找到了没有腐坏的树心与凝固树脂。",
                 "rewards": [
-                  {"item_id": "maple_wood", "quantity_min": 10, "quantity_max": 15},
-                  {"item_id": "maple_resin", "quantity_min": 3, "quantity_max": 5}
+                  {
+                    "item_id": "maple_wood",
+                    "quantity_min": 10,
+                    "quantity_max": 15
+                  },
+                  {
+                    "item_id": "maple_resin",
+                    "quantity_min": 3,
+                    "quantity_max": 5
+                  }
                 ],
                 "quality_ability_bonus": 35
               },
               "critical_success": {
                 "text": "年轮与树洞中的痕迹彼此印证，队伍准确找到了保存最完好的树心。",
                 "rewards": [
-                  {"item_id": "maple_wood", "quantity_min": 14, "quantity_max": 18},
-                  {"item_id": "maple_resin", "quantity_min": 5, "quantity_max": 7}
+                  {
+                    "item_id": "maple_wood",
+                    "quantity_min": 14,
+                    "quantity_max": 18
+                  },
+                  {
+                    "item_id": "maple_resin",
+                    "quantity_min": 5,
+                    "quantity_max": 7
+                  }
                 ],
                 "quality_ability_bonus": 60
               },
               "failure": {
                 "text": "树洞的大半已经腐坏，只剩少量可用木料。",
                 "rewards": [
-                  {"item_id": "maple_wood", "quantity_min": 6, "quantity_max": 9},
-                  {"item_id": "maple_resin", "quantity_min": 1, "quantity_max": 2}
+                  {
+                    "item_id": "maple_wood",
+                    "quantity_min": 6,
+                    "quantity_max": 9
+                  },
+                  {
+                    "item_id": "maple_resin",
+                    "quantity_min": 1,
+                    "quantity_max": 2
+                  }
                 ]
               },
               "critical_failure": {
                 "text": "误判让一处脆弱树腔塌了下来，只来得及收起少量残料。",
-                "rewards": [{"item_id": "maple_wood", "quantity_min": 4, "quantity_max": 6}],
+                "rewards": [
+                  {
+                    "item_id": "maple_wood",
+                    "quantity_min": 4,
+                    "quantity_max": 6
+                  }
+                ],
                 "stamina_surcharge": 2
               }
             },
@@ -2164,28 +2712,59 @@
               "description": "放弃调查，消耗更多体力换取稳定的大批枫木。",
               "route_stamina": 2,
               "action_stamina": 6,
-              "check": {"attribute": "strength", "mode": "sum", "dice": "normal", "dc": 12},
+              "check": {
+                "attribute": "strength",
+                "mode": "sum",
+                "dice": "normal",
+                "dc": 12
+              },
               "success": {
                 "text": "古枫主干被分段装上拖架，队伍准备返程。",
-                "rewards": [{"item_id": "maple_wood", "quantity_min": 24, "quantity_max": 32}],
+                "rewards": [
+                  {
+                    "item_id": "maple_wood",
+                    "quantity_min": 24,
+                    "quantity_max": 32
+                  }
+                ],
                 "quality_ability_bonus": 15
               },
               "critical_success": {
                 "text": "全队配合得严丝合缝，古枫主干被完整而迅速地处理完毕。",
                 "rewards": [
-                  {"item_id": "maple_wood", "quantity_min": 32, "quantity_max": 38},
-                  {"item_id": "maple_resin", "quantity_min": 1, "quantity_max": 2}
+                  {
+                    "item_id": "maple_wood",
+                    "quantity_min": 32,
+                    "quantity_max": 38
+                  },
+                  {
+                    "item_id": "maple_resin",
+                    "quantity_min": 1,
+                    "quantity_max": 2
+                  }
                 ],
                 "quality_ability_bonus": 30
               },
               "failure": {
                 "text": "队伍没能协调好发力，只处理下主干中较容易搬运的一段。",
-                "rewards": [{"item_id": "maple_wood", "quantity_min": 12, "quantity_max": 18}],
+                "rewards": [
+                  {
+                    "item_id": "maple_wood",
+                    "quantity_min": 12,
+                    "quantity_max": 18
+                  }
+                ],
                 "stamina_surcharge": 2
               },
               "critical_failure": {
                 "text": "主干倾倒的方向完全失控，队伍费了很大力气才收拾好现场。",
-                "rewards": [{"item_id": "maple_wood", "quantity_min": 6, "quantity_max": 10}],
+                "rewards": [
+                  {
+                    "item_id": "maple_wood",
+                    "quantity_min": 6,
+                    "quantity_max": 10
+                  }
+                ],
                 "stamina_surcharge": 4
               }
             }
@@ -3169,6 +3748,144 @@
       "modifiers": {
         "livestock_mutation_chance": 0.05
       }
+    },
+    {
+      "id": "crafting_ability_1",
+      "industry": "crafting",
+      "name": "工艺入门",
+      "min_level": 3,
+      "description": "全局加工能力增加 10。",
+      "cost": 1,
+      "prerequisites": [],
+      "beta": true,
+      "global_ability_bonus": 10
+    },
+    {
+      "id": "crafting_speed_1",
+      "industry": "crafting",
+      "name": "熟练手艺",
+      "min_level": 6,
+      "description": "加工时间缩短 10%。",
+      "cost": 1,
+      "prerequisites": [
+        "crafting_ability_1"
+      ],
+      "beta": true,
+      "modifiers": {
+        "crafting_duration_reduction": 0.1
+      }
+    },
+    {
+      "id": "crafting_ability_2",
+      "industry": "crafting",
+      "name": "精工细作",
+      "min_level": 10,
+      "description": "全局加工能力再增加 10。",
+      "cost": 1,
+      "prerequisites": [
+        "crafting_speed_1"
+      ],
+      "beta": true,
+      "global_ability_bonus": 10
+    },
+    {
+      "id": "crafting_refund_1",
+      "industry": "crafting",
+      "name": "物尽其用",
+      "min_level": 14,
+      "description": "每份配方完成并领取时，有 10% 概率返还 1 点体力；取消不触发，返还不给经验。",
+      "cost": 1,
+      "prerequisites": [
+        "crafting_ability_2"
+      ],
+      "beta": true,
+      "modifiers": {
+        "crafting_stamina_refund_chance": 0.1
+      }
+    },
+    {
+      "id": "crafting_quality_1",
+      "industry": "crafting",
+      "name": "匠心",
+      "min_level": 18,
+      "description": "加工品质计算额外增加 15 能力，不影响速度。",
+      "cost": 1,
+      "prerequisites": [
+        "crafting_refund_1"
+      ],
+      "beta": true,
+      "modifiers": {
+        "crafting_quality_bonus": 15
+      }
+    },
+    {
+      "id": "exploration_ability_1",
+      "industry": "exploration",
+      "name": "行路经验",
+      "min_level": 6,
+      "description": "全局探索能力增加 10。",
+      "cost": 1,
+      "prerequisites": [],
+      "beta": true,
+      "global_ability_bonus": 10
+    },
+    {
+      "id": "exploration_check_1",
+      "industry": "exploration",
+      "name": "察言观势",
+      "min_level": 8,
+      "description": "非战斗探索事件检定增加 1，自然 1／20 规则不变。",
+      "cost": 1,
+      "prerequisites": [
+        "exploration_ability_1"
+      ],
+      "beta": true,
+      "modifiers": {
+        "exploration_check_bonus": 1
+      }
+    },
+    {
+      "id": "exploration_hp_1",
+      "industry": "exploration",
+      "name": "整装待发",
+      "min_level": 10,
+      "description": "探秘出发时，每名伙伴最大生命增加 4，并以满生命出发。",
+      "cost": 1,
+      "prerequisites": [
+        "exploration_check_1"
+      ],
+      "beta": true,
+      "modifiers": {
+        "delve_max_hp_bonus": 4
+      }
+    },
+    {
+      "id": "exploration_ability_2",
+      "industry": "exploration",
+      "name": "深境识途",
+      "min_level": 14,
+      "description": "全局探索能力再增加 10。",
+      "cost": 1,
+      "prerequisites": [
+        "exploration_hp_1"
+      ],
+      "beta": true,
+      "global_ability_bonus": 10
+    },
+    {
+      "id": "exploration_reroll_1",
+      "industry": "exploration",
+      "name": "临危应变",
+      "min_level": 18,
+      "description": "每趟探秘中，每名伙伴首次攻击未命中时重掷一次 d20，采用新结果。",
+      "cost": 1,
+      "prerequisites": [
+        "exploration_ability_2"
+      ],
+      "beta": true,
+      "modifiers": {
+        "delve_first_miss_reroll": 1
+      }
     }
   ],
   "crafting_stations": [
@@ -3611,6 +4328,322 @@
           "level": 16
         }
       }
+    },
+    {
+      "id": "make_flax_thread",
+      "station_id": "town_workbench",
+      "name": "制作麻线",
+      "inputs": [
+        {
+          "item_id": "flax",
+          "quantity": 3
+        }
+      ],
+      "produce_item_id": "flax_thread",
+      "produce_quantity": 3,
+      "duration_seconds": 120,
+      "time_difficulty": 130,
+      "stamina_cost": 2,
+      "collect_xp": 12,
+      "tags": [],
+      "quality": {
+        "thresholds": [
+          65,
+          120,
+          190,
+          290
+        ],
+        "width": 20,
+        "miracle_probability_cap": 0.003,
+        "miracle_eligible": false
+      },
+      "unlock_condition": {
+        "hook": "player_level",
+        "params": {
+          "level": 13
+        }
+      },
+      "beta": true
+    },
+    {
+      "id": "make_reed_mat",
+      "station_id": "town_workbench",
+      "name": "制作苇席",
+      "inputs": [
+        {
+          "item_id": "reed",
+          "quantity": 3
+        }
+      ],
+      "produce_item_id": "reed_mat",
+      "produce_quantity": 1,
+      "duration_seconds": 120,
+      "time_difficulty": 130,
+      "stamina_cost": 2,
+      "collect_xp": 12,
+      "tags": [],
+      "quality": {
+        "thresholds": [
+          65,
+          120,
+          190,
+          290
+        ],
+        "width": 20,
+        "miracle_probability_cap": 0.003,
+        "miracle_eligible": false
+      },
+      "unlock_condition": {
+        "hook": "player_level",
+        "params": {
+          "level": 12
+        }
+      },
+      "beta": true
+    },
+    {
+      "id": "make_rope",
+      "station_id": "town_workbench",
+      "name": "制作绳索",
+      "inputs": [
+        {
+          "item_id": "flax_thread",
+          "quantity": 1
+        },
+        {
+          "item_id": "tough_vine",
+          "quantity": 2
+        }
+      ],
+      "produce_item_id": "rope",
+      "produce_quantity": 1,
+      "duration_seconds": 180,
+      "time_difficulty": 145,
+      "stamina_cost": 2,
+      "collect_xp": 12,
+      "tags": [],
+      "quality": {
+        "thresholds": [
+          75,
+          135,
+          210,
+          310
+        ],
+        "width": 22,
+        "miracle_probability_cap": 0.003,
+        "miracle_eligible": false
+      },
+      "unlock_condition": {
+        "hook": "player_level",
+        "params": {
+          "level": 13
+        }
+      },
+      "beta": true
+    },
+    {
+      "id": "make_woven_cloth",
+      "station_id": "town_workbench",
+      "name": "制作织布",
+      "inputs": [
+        {
+          "item_id": "flax_thread",
+          "quantity": 2
+        },
+        {
+          "item_id": "wool",
+          "quantity": 1
+        }
+      ],
+      "produce_item_id": "woven_cloth",
+      "produce_quantity": 1,
+      "duration_seconds": 240,
+      "time_difficulty": 150,
+      "stamina_cost": 3,
+      "collect_xp": 18,
+      "tags": [],
+      "quality": {
+        "thresholds": [
+          85,
+          150,
+          230,
+          340
+        ],
+        "width": 22,
+        "miracle_probability_cap": 0.003,
+        "miracle_eligible": false
+      },
+      "unlock_condition": {
+        "hook": "player_level",
+        "params": {
+          "level": 14
+        }
+      },
+      "beta": true
+    },
+    {
+      "id": "make_waterproof_canvas",
+      "station_id": "town_workbench",
+      "name": "制作防水帆布",
+      "inputs": [
+        {
+          "item_id": "woven_cloth",
+          "quantity": 2
+        },
+        {
+          "item_id": "maple_resin",
+          "quantity": 1
+        }
+      ],
+      "produce_item_id": "waterproof_canvas",
+      "produce_quantity": 1,
+      "duration_seconds": 360,
+      "time_difficulty": 165,
+      "stamina_cost": 4,
+      "collect_xp": 24,
+      "tags": [],
+      "quality": {
+        "thresholds": [
+          95,
+          165,
+          250,
+          365
+        ],
+        "width": 24,
+        "miracle_probability_cap": 0.003,
+        "miracle_eligible": false
+      },
+      "unlock_condition": {
+        "hook": "player_level",
+        "params": {
+          "level": 15
+        }
+      },
+      "beta": true
+    },
+    {
+      "id": "make_voyage_sail",
+      "station_id": "town_workbench",
+      "name": "制作远航风帆",
+      "inputs": [
+        {
+          "item_id": "waterproof_canvas",
+          "quantity": 8
+        },
+        {
+          "item_id": "rope",
+          "quantity": 4
+        }
+      ],
+      "produce_item_id": "voyage_sail",
+      "produce_quantity": 1,
+      "duration_seconds": 600,
+      "time_difficulty": 180,
+      "stamina_cost": 5,
+      "collect_xp": 30,
+      "tags": [],
+      "quality": {
+        "thresholds": [
+          105,
+          180,
+          270,
+          390
+        ],
+        "width": 24,
+        "miracle_probability_cap": 0.003,
+        "miracle_eligible": false
+      },
+      "unlock_condition": {
+        "hook": "player_level",
+        "params": {
+          "level": 16
+        }
+      },
+      "beta": true
+    },
+    {
+      "id": "make_grain_fodder",
+      "station_id": "town_workbench",
+      "name": "制作谷物饲料",
+      "inputs": [
+        {
+          "item_id": "corn",
+          "quantity": 1
+        },
+        {
+          "item_id": "soybean",
+          "quantity": 1
+        }
+      ],
+      "produce_item_id": "grain_fodder",
+      "produce_quantity": 2,
+      "duration_seconds": 180,
+      "time_difficulty": 140,
+      "stamina_cost": 2,
+      "collect_xp": 12,
+      "tags": [
+        "fodder"
+      ],
+      "quality": {
+        "thresholds": [
+          75,
+          135,
+          210,
+          310
+        ],
+        "width": 22,
+        "miracle_probability_cap": 0.003,
+        "miracle_eligible": false
+      },
+      "unlock_condition": {
+        "hook": "player_level",
+        "params": {
+          "level": 12
+        }
+      },
+      "beta": true
+    },
+    {
+      "id": "make_nutrition_fodder",
+      "station_id": "town_workbench",
+      "name": "制作营养饲料",
+      "inputs": [
+        {
+          "item_id": "refined_fodder",
+          "quantity": 2
+        },
+        {
+          "item_id": "grain_fodder",
+          "quantity": 2
+        }
+      ],
+      "produce_item_id": "nutrition_fodder",
+      "produce_quantity": 3,
+      "duration_seconds": 360,
+      "time_difficulty": 170,
+      "stamina_cost": 3,
+      "collect_xp": 18,
+      "tags": [
+        "fodder"
+      ],
+      "quality": {
+        "thresholds": [
+          110,
+          190,
+          280,
+          410
+        ],
+        "width": 25,
+        "miracle_probability_cap": 0.003,
+        "miracle_eligible": false
+      },
+      "unlock_condition": {
+        "hook": "player_level",
+        "params": {
+          "level": 17
+        }
+      },
+      "beta": true
     }
   ],
   "mining_sites": [
@@ -4170,7 +5203,26 @@
       "sail_saury",
       "sail_silver_lobster",
       "sail_urchin",
-      "sail_whelk"
+      "sail_whelk",
+      "corn",
+      "soybean",
+      "flax",
+      "tough_vine",
+      "reed",
+      "wild_lotus_root",
+      "amber_cattail",
+      "flax_thread",
+      "reed_mat",
+      "rope",
+      "woven_cloth",
+      "waterproof_canvas",
+      "voyage_sail",
+      "grain_fodder",
+      "nutrition_fodder",
+      "duck_egg",
+      "jade_duck_egg",
+      "wool",
+      "cloud_fleece"
     ],
     "tiers": [
       {
@@ -4915,6 +5967,30 @@
       "price": 45,
       "currency": "coins",
       "min_level": 10
+    },
+    {
+      "id": "corn_seed",
+      "item_id": "corn_seed",
+      "price": 72,
+      "currency": "coins",
+      "min_level": 10,
+      "beta": true
+    },
+    {
+      "id": "soybean_seed",
+      "item_id": "soybean_seed",
+      "price": 106,
+      "currency": "coins",
+      "min_level": 12,
+      "beta": true
+    },
+    {
+      "id": "flax_seed",
+      "item_id": "flax_seed",
+      "price": 106,
+      "currency": "coins",
+      "min_level": 13,
+      "beta": true
     }
   ],
   "fishing_combo": {
@@ -5255,6 +6331,35 @@
               "quantity": 30
             }
           ]
+        },
+        {
+          "level": 2,
+          "min_level": 13,
+          "beta": true,
+          "capacity": 8,
+          "quality_multiplier": 1.0,
+          "overflow_cycles": 4,
+          "gene_cap": 85,
+          "feed_slot_capacity_bonus": 400,
+          "build_coins": 6000,
+          "build_materials": [
+            {
+              "item_id": "maple_plank",
+              "quantity": 30
+            },
+            {
+              "item_id": "red_copper_ore",
+              "quantity": 20
+            },
+            {
+              "item_id": "rope",
+              "quantity": 6
+            },
+            {
+              "item_id": "reed_mat",
+              "quantity": 4
+            }
+          ]
         }
       ]
     },
@@ -5278,6 +6383,31 @@
             {
               "item_id": "maple_plank",
               "quantity": 30
+            }
+          ]
+        },
+        {
+          "level": 2,
+          "min_level": 14,
+          "beta": true,
+          "capacity": 8,
+          "quality_multiplier": 1.0,
+          "overflow_cycles": 4,
+          "gene_cap": 85,
+          "feed_slot_capacity_bonus": 800,
+          "build_coins": 12000,
+          "build_materials": [
+            {
+              "item_id": "maple_plank",
+              "quantity": 50
+            },
+            {
+              "item_id": "red_copper_ore",
+              "quantity": 30
+            },
+            {
+              "item_id": "rope",
+              "quantity": 10
             }
           ]
         }
@@ -5362,6 +6492,90 @@
         "miracle_probability_cap": 0.003,
         "miracle_eligible": true
       }
+    },
+    {
+      "id": "duck",
+      "name": "鸭子",
+      "icon": "bird",
+      "category": "poultry",
+      "min_level": 13,
+      "purchase_price": 800,
+      "refund_base": 400,
+      "growth_cycles": 4,
+      "produce_item_id": "duck_egg",
+      "base_yield": 1,
+      "feed_per_cycle": 9,
+      "special_item_id": "jade_duck_egg",
+      "special_chance": 0.05,
+      "breeding": {
+        "mode": "incubate",
+        "feed_units": 24,
+        "min_feed_score": 0,
+        "gene_sigma": 8,
+        "mutation_chance": 0.06,
+        "mutation_bonus": 15,
+        "incubate_item_id": "duck_egg",
+        "incubate_cycles": 3,
+        "quality_gene_base": [
+          15,
+          30,
+          45,
+          60,
+          80
+        ]
+      },
+      "quality": {
+        "thresholds": [
+          75,
+          130,
+          215,
+          350
+        ],
+        "width": 24,
+        "miracle_probability_cap": 0.003,
+        "miracle_eligible": true
+      },
+      "beta": true,
+      "required_facility_id": "coop_1",
+      "required_facility_tier": 2
+    },
+    {
+      "id": "sheep",
+      "name": "绵羊",
+      "icon": "beef",
+      "category": "mammal",
+      "min_level": 14,
+      "purchase_price": 4500,
+      "refund_base": 2250,
+      "growth_cycles": 9,
+      "produce_item_id": "wool",
+      "base_yield": 2,
+      "feed_per_cycle": 26,
+      "special_item_id": "cloud_fleece",
+      "special_chance": 0.05,
+      "breeding": {
+        "mode": "pair",
+        "feed_units": 44,
+        "min_feed_score": 40,
+        "gene_sigma": 8,
+        "mutation_chance": 0.06,
+        "mutation_bonus": 15,
+        "cooldown_cycles": 9
+      },
+      "quality": {
+        "thresholds": [
+          80,
+          140,
+          230,
+          370
+        ],
+        "width": 25,
+        "miracle_probability_cap": 0.003,
+        "miracle_eligible": true
+      },
+      "beta": true,
+      "required_facility_id": "barn_1",
+      "required_facility_tier": 2
     }
   ]
 }

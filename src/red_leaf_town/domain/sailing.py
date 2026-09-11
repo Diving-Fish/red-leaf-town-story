@@ -7,6 +7,10 @@ class SailingDrop(BaseModel):
 
 
 class SailingLog(BaseModel):
+    initial_roll: int | None = Field(default=None, ge=1, le=20)
+    rerolls: list[int] = Field(default_factory=list, max_length=2)
+    rescue_partner_id: str = ""
+    rescue_bonus_draws: int = Field(default=0, ge=0)
     event_id: str
     name: str
     text: str
@@ -18,6 +22,7 @@ class SailingLog(BaseModel):
 
 
 class SailingRun(BaseModel):
+    applied_effects: list[dict] = Field(default_factory=list)
     run_id: str
     rule_version: int = 1
     route_id: str

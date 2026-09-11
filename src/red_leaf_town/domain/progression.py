@@ -60,12 +60,12 @@ def grant_stamina(player: PlayerState, amount: int, content: GameContent, now: i
     return amount
 
 
-def grant_experience(player: PlayerState, amount: int, content: GameContent) -> list[int]:
+def grant_experience(player: PlayerState, amount: int, content: GameContent, *, max_level: int | None = None) -> list[int]:
     if amount < 0:
         raise ValueError("经验值不能为负数")
     previous_level = player.level
     player.experience += amount
-    player.level = content.level_for_xp(player.experience).level
+    player.level = content.level_for_xp(player.experience, max_level=max_level).level
     unlocked_levels = list(range(previous_level + 1, player.level + 1))
     normalize_plot_slots(player, content)
     normalize_gathering_sites(player, content)

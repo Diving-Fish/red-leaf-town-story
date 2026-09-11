@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
-from red_leaf_town.content import GatheringDrawDefinition, GatheringOutputDefinition
+from red_leaf_town.content import GatheringDrawDefinition, GatheringOutputDefinition, RecipeInputDefinition
 
 
 class SailingOutput(GatheringOutputDefinition):
@@ -61,14 +61,15 @@ class SailingEvent(BaseModel):
 class SailingContent(BaseModel):
     min_level: int = Field(ge=1)
     construction_coins: int = Field(gt=0)
-    construction_item_id: str
-    construction_quantity: int = Field(gt=0)
+    construction_materials: list[RecipeInputDefinition] = Field(min_length=1)
     routes: list[SailingRoute] = Field(min_length=1)
     supplies: list[SailingSupply] = Field(min_length=1)
     events: list[SailingEvent] = Field(min_length=4)
 
     @model_validator(mode='after')
     def unique_ids(self):
+        if len({m.item_id for m in self.construction_materials}) != len(self.construction_materials):
+            raise ValueError("duplicate ship construction material")
         for entries in (self.routes, self.supplies, self.events):
             if len({entry.id for entry in entries}) != len(entries):
                 raise ValueError('duplicate sailing content ID')
@@ -83,7 +84,7 @@ class SailingContent(BaseModel):
 
     def validate_items(self, items):
         references = {o.item_id for r in self.routes for o in r.outputs}
-        references.add(self.construction_item_id)
+        references.update(m.item_id for m in self.construction_materials)
         references |= {s.item_id for s in self.supplies if s.item_id}
         if references - set(items):
             raise ValueError(f'unknown sailing items: {references - set(items)}')

@@ -33,6 +33,7 @@ import type {
 } from '@/types'
 
 export interface ProductionOutcome {
+  refunded_stamina?: number
   quantity?: number
   quality?: number
   quality_name?: string
@@ -229,12 +230,13 @@ export const useGameStore = defineStore('game', () => {
 
   function refundText(result: ProductionOutcome | undefined) {
     // 伙伴特性退回的原料是悄悄进仓库的，不写在提示里玩家根本看不出触发过。
-    if (!result?.refunded_inputs?.length) return ''
+    const staminaText = result?.refunded_stamina ? `（物尽其用返还 ${result.refunded_stamina} 点体力）` : ''
+    if (!result?.refunded_inputs?.length) return staminaText
     const summary = result.refunded_inputs
       .map((entry) => `${entry.quality_name || qualityName(entry.quality)}${entry.item?.name || entry.item_id}×${entry.quantity}`)
       .join('、')
     const traitName = result.refunded_inputs.find((entry) => entry.trait_name)?.trait_name
-    return `（${traitName ? `${traitName}返还 ` : '返还 '}${summary}）`
+    return `（${traitName ? `${traitName}返还 ` : '返还 '}${summary}）${staminaText}`
   }
 
   function outcomeText(result: ProductionOutcome | undefined, verb: string, noun: string) {
@@ -539,6 +541,12 @@ export const useGameStore = defineStore('game', () => {
     })
   }
 
+  function upgradeLivestockFacility(facilityId: string, targetTier: number) {
+    return action(`livestock:${facilityId}:upgrade`, `${API_ROOT}/livestock/facilities/${facilityId}/upgrade`, {
+      payload: { target_tier: targetTier }, successMessage: '扩建完成',
+    })
+  }
+
   function assignLivestockPartner(facilityId: string, partnerId: string | null) {
     return action(`livestock:${facilityId}:partner`, `${API_ROOT}/livestock/facilities/${facilityId}/partner`, {
       payload: { partner_id: partnerId || '' },
@@ -578,11 +586,11 @@ export const useGameStore = defineStore('game', () => {
     return result
   }
 
-  async function incubateEgg(facilityId: string, quality: number, nickname = '') {
+  async function incubateEgg(facilityId: string, quality: number, nickname = '', speciesId = '') {
     const result = (await action(
       `livestock:${facilityId}:incubate:${quality}`,
       `${API_ROOT}/livestock/facilities/${facilityId}/incubate`,
-      { payload: { quality, nickname } },
+      { payload: { quality, nickname, species_id: speciesId } },
     )) as AnimalBornResult | undefined
     if (result) showNotice('蛋已入窝')
     return result
@@ -870,6 +878,7 @@ export const useGameStore = defineStore('game', () => {
     stockPond,
     harvestPond,
     buildLivestockFacility,
+    upgradeLivestockFacility,
     assignLivestockPartner,
     buyAnimal,
     collectLivestock,

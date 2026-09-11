@@ -2156,6 +2156,68 @@
       "ascensions": []
     },
     {
+      "id": "vanessa",
+      "name": "凡妮莎",
+      "rarity": 5,
+      "standard_recruitable": false,
+      "description": "循星辨向的领航员，熟悉海风、航标与旧日航线。即使浓雾遮住归途，她也能镇定地找到方向。",
+      "growth_curve": "early",
+      "exploration_stats": {
+        "strength": 8,
+        "agility": 15,
+        "intelligence": 16,
+        "luck": 12
+      },
+      "tendencies": [
+        {
+          "industry": "aquatic",
+          "level_1": 37,
+          "level_60": 235
+        },
+        {
+          "industry": "exploration",
+          "level_1": 30,
+          "level_60": 190
+        }
+      ],
+      "trait_codes": [
+        "star_guidance"
+      ],
+      "artworks": [
+        {
+          "breakthrough": 0,
+          "asset_key": "red-leaf-town/partners/vanessa/breakthrough-0-1e393dfb06b0363d.webp",
+          "width": 936,
+          "height": 1664,
+          "content_type": "image/webp"
+        }
+      ],
+      "avatar_crops": [
+        {
+          "breakthrough": 0,
+          "x": 340,
+          "y": 72,
+          "w": 345,
+          "h": 345
+        },
+        {
+          "breakthrough": 1,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        },
+        {
+          "breakthrough": 2,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        }
+      ],
+      "ascensions": []
+    },
+    {
       "id": "wei_jiang",
       "name": "威酱",
       "rarity": 4,

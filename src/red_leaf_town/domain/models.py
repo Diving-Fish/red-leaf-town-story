@@ -678,6 +678,7 @@ class DelveLoadoutSnapshot(BaseModel):
 
 
 class DelveMemberState(BaseModel):
+    first_miss_reroll_ready: bool = False
     max_hp: int = Field(gt=0)
     hp: int = Field(ge=0)
     armor_class: int = Field(ge=1)
@@ -715,7 +716,7 @@ class DelveBattleLog(BaseModel):
     target: str = ""
     target_name: str = ""
     roll: int | None = None
-    rolls: list[int] = Field(default_factory=list, max_length=2)
+    rolls: list[int] = Field(default_factory=list, max_length=3)
     modifier: int | None = None
     total: int | None = None
     hit: bool | None = None
@@ -743,6 +744,7 @@ class DelveBattleState(BaseModel):
 
 
 class ExplorationRunState(BaseModel):
+    talent_check_bonus: int = Field(default=0, ge=0)
     run_id: str = Field(min_length=1)
     expedition_id: str = Field(min_length=1)
     expedition_kind: Literal["transport", "survey", "delve"]

@@ -17,6 +17,7 @@ TRAIT_PHASES = frozenset({
     "exploration_event",
     "delve_attack",
     "livestock_segment",
+    "sailing_prepare",
 })
 
 
@@ -908,3 +909,16 @@ def _strength_weapon_tradeoff(context: MutableMapping[str, Any]) -> None:
         return
     _add(context, "attack_bonus", -5, stacking_group="delve_attack_bonus")
     _add(context, "damage_bonus", 10, stacking_group="delve_damage_bonus")
+
+
+@register_partner_trait(
+    "star_guidance", "循星引航",
+    "参与出海时，全船事件检定＋2；首次失败以优势骰重掷，采用新结果，救场成功额外抽取一次物产。每趟一次。",
+    phases=("sailing_prepare",),
+)
+def _star_guidance(context):
+    if context.get("star_guidance_partner_id"):
+        return
+    context["event_check_bonus"] = int(context.get("event_check_bonus", 0)) + 2
+    context["star_guidance_partner_id"] = context["source_partner_id"]
+    record_partner_trait_effect(context, "star_guidance", value=2)

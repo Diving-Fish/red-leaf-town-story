@@ -296,7 +296,7 @@ def test_weighted_sailing_can_award_and_collect_exploration_equipment(sailing_ga
     monkeypatch.setattr(game.rng, 'random', lambda: 0.999999999)
     started = start(game)
     run = repo.get(player.player_id).sailing.active_run
-    assert run.rule_version == 2
+    assert run.rule_version == 3
     assert {d.item_id for d in run.drops} == {'bay_tide_blade'}
     finish(game, clock, started)
     assert repo.get(player.player_id).inventory['bay_tide_blade'][0] >= 1
@@ -332,6 +332,7 @@ def test_build_ship_charges_once_and_spends_low_quality_first(sailing_game):
     def prepare(p):
         p.sailing.ship_built = False
         p.inventory['composite_plank'] = {1: 7, 2: 16}
+        p.inventory['voyage_sail'] = {1: 1, 3: 1}
     repo.update(player.player_id, prepare)
     before = repo.get(player.player_id)
     result = game.build_sailing_ship('sailing-sub')
@@ -340,6 +341,7 @@ def test_build_ship_charges_once_and_spends_low_quality_first(sailing_game):
     assert after.coins == before.coins - 10_000
     assert after.stamina == before.stamina
     assert after.inventory['composite_plank'] == {2: 3}
+    assert after.inventory['voyage_sail'] == {3: 1}
     assert result['state']['sailing']['trial_available']
     assert game.build_sailing_ship('sailing-sub')['result']['duplicate']
     assert repo.get(player.player_id).inventory == after.inventory
@@ -347,7 +349,7 @@ def test_build_ship_charges_once_and_spends_low_quality_first(sailing_game):
     assert start(game)['result']['trial']
 
 
-@pytest.mark.parametrize('coins,boards', [(9999, 20), (10000, 19)])
+@pytest.mark.parametrize('coins,boards', [(9999, 20), (10000, 19), (10000, 20)])
 def test_build_ship_insufficient_resources_roll_back(sailing_game, coins, boards):
     game, repo, player, _ = sailing_game
     def prepare(p):

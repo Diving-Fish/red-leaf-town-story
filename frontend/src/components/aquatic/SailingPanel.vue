@@ -82,10 +82,12 @@ async function start() {
           <span v-if="sailing.ship_built" class="ui-label ship-upgrade-label"><Anchor :size="14" /> 船舶改装</span>
         </div>
         <div v-if="!sailing.ship_built" class="construction-panel">
-          <p class="ui-description">建造需要 {{ sailing.construction.coins }} 红叶币＋{{ sailing.construction.quantity }} 个{{ sailing.construction.item_name }}（持有 {{ sailing.construction.owned }} 个）。</p>
-          <p class="ui-description">镇民工坊配方：2 枫木板＋2 月银矿 → 1 复合木板。建造不消耗体力，即刻完成。</p>
+          <p class="ui-description">建造需要 {{ sailing.construction.coins }} 红叶币。</p>
+          <p v-for="material in sailing.construction.materials" :key="material.item_id" class="ui-description">
+            {{ material.item_name }} ×{{ material.quantity }}（持有 {{ material.owned }} 个）
+          </p>
           <div class="construction-actions">
-            <ActionButton action-key="sailing:build" group="sailing:" :disabled="(game.player?.coins || 0) < sailing.construction.coins || sailing.construction.owned < sailing.construction.quantity" @click="game.buildSailingShip()">建造初帆号</ActionButton>
+            <ActionButton action-key="sailing:build" group="sailing:" :disabled="(game.player?.coins || 0) < sailing.construction.coins || sailing.construction.materials.some(material => material.owned < material.quantity)" @click="game.buildSailingShip()">建造初帆号</ActionButton>
             <RouterLink class="text-button" to="/crafting">前往镇民工坊<ChevronRight :size="14" /></RouterLink>
           </div>
         </div>

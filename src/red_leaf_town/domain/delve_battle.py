@@ -203,6 +203,16 @@ def member_attack(
     total = kept + attack_modifier
     critical = kept >= critical_minimum(member.luck)
     hit = kept != 1 and (critical or total >= target.armor_class)
+    reroll_note = ""
+    if not hit and member.state.first_miss_reroll_ready:
+        member.state.first_miss_reroll_ready = False
+        original = kept
+        rerolls, kept = _roll_d20(rng, "normal")
+        rolls.extend(rerolls)
+        total = kept + attack_modifier
+        critical = kept >= critical_minimum(member.luck)
+        hit = kept != 1 and (critical or total >= target.armor_class)
+        reroll_note = f"临危应变：首次未命中（{original}），重掷为 {kept}。"
     damage = 0
     if hit:
         damage = max(
@@ -236,7 +246,7 @@ def member_attack(
         hit=hit,
         critical=critical and hit,
         damage=damage,
-        text=text,
+        text=reroll_note + text,
     )
 
 

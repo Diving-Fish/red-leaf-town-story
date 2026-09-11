@@ -121,6 +121,7 @@ class IndustryRulesDefinition(BaseModel):
 
 
 class LevelDefinition(BaseModel):
+    beta: bool = False
     level: int = Field(ge=1)
     total_xp: int = Field(ge=0)
     plot_slots: int = Field(ge=1)
@@ -189,6 +190,7 @@ class DelveUseDefinition(BaseModel):
 
 
 class ItemDefinition(BaseModel):
+    beta: bool = False
     id: str
     name: str
     icon: str
@@ -254,6 +256,7 @@ class QualityCurveDefinition(BaseModel):
 
 
 class CropDefinition(BaseModel):
+    beta: bool = False
     id: str
     name: str
     icon: str
@@ -281,6 +284,7 @@ class CropDefinition(BaseModel):
 
 
 class GatheringSiteDefinition(BaseModel):
+    beta: bool = False
     id: str = Field(min_length=1)
     name: str = Field(min_length=1)
     description: str = ""
@@ -312,6 +316,7 @@ class GatheringDrawDefinition(BaseModel):
 
 
 class GatheringTaskDefinition(BaseModel):
+    beta: bool = False
     id: str = Field(min_length=1)
     site_id: str = Field(min_length=1)
     name: str = Field(min_length=1)
@@ -509,6 +514,12 @@ class ExplorationExpeditionDefinition(BaseModel):
 
 # 特殊效果节点认得的修正键。没登记的键会在内容加载时被拦下，避免写错字静默失效。
 TALENT_MODIFIER_KEYS: dict[str, str] = {
+    "crafting_duration_reduction": "加工减时",
+    "crafting_stamina_refund_chance": "加工返还体力概率",
+    "crafting_quality_bonus": "加工品质能力",
+    "exploration_check_bonus": "探索事件检定加成",
+    "delve_max_hp_bonus": "探秘生命加成",
+    "delve_first_miss_reroll": "探秘首次未命中重掷",
     "fishing_combo_cap": "聚鱼度层数上限",
     "pond_generation_cap": "鱼塘世代加值上限",
     "pond_harvest_quality_floor": "捞鱼保底品质",
@@ -518,6 +529,7 @@ TALENT_MODIFIER_KEYS: dict[str, str] = {
 
 
 class TalentNodeDefinition(BaseModel):
+    beta: bool = False
     id: str = Field(min_length=1)
     industry: str = Field(min_length=1)
     name: str = Field(min_length=1)
@@ -556,6 +568,7 @@ class CraftingStationDefinition(BaseModel):
 
 
 class RecipeDefinition(BaseModel):
+    beta: bool = False
     id: str = Field(min_length=1)
     station_id: str = Field(min_length=1)
     name: str = Field(min_length=1)
@@ -757,9 +770,11 @@ class FeedSlotDefinition(BaseModel):
 
 
 class LivestockTierDefinition(BaseModel):
+    beta: bool = False
     """设施的一级。本批每种设施只有 Lv1，扩建时只补数据，模型不动。"""
 
     level: int = Field(ge=1)
+    min_level: int = Field(default=1, ge=1)
     capacity: int = Field(gt=0)
     quality_multiplier: float = Field(default=1, gt=0)
     overflow_cycles: int = Field(gt=0)
@@ -831,11 +846,14 @@ class LivestockBreedingDefinition(BaseModel):
 
 
 class LivestockSpeciesDefinition(BaseModel):
+    beta: bool = False
     id: str = Field(min_length=1)
     name: str = Field(min_length=1)
     icon: str = Field(min_length=1)
     category: Literal["poultry", "mammal"]
     min_level: int = Field(ge=1)
+    required_facility_id: str = ""
+    required_facility_tier: int = Field(default=1, ge=1)
     purchase_price: int = Field(ge=0)
     refund_base: int = Field(ge=0)
     growth_cycles: int = Field(gt=0)
@@ -1115,6 +1133,7 @@ class CommissionsDefinition(BaseModel):
 
 
 class ShopEntry(BaseModel):
+    beta: bool = False
     id: str
     item_id: str
     price: int = Field(gt=0)
@@ -1425,6 +1444,11 @@ class GameContent(BaseModel):
             if successor.category != facility.category:
                 raise ValueError(f"livestock facility {successor.id} cannot absorb another category")
         for species in self.livestock_species:
+            if species.required_facility_id:
+                facility = self.livestock_facility_map.get(species.required_facility_id)
+                if (facility is None or facility.category != species.category
+                        or not any(t.level == species.required_facility_tier for t in facility.tiers)):
+                    raise ValueError(f"livestock species {species.id} has an invalid required facility tier")
             if species.produce_item_id not in items:
                 raise ValueError(f"livestock species {species.id} references an unknown item")
             if not self.item_map[species.produce_item_id].has_quality:
@@ -1624,10 +1648,10 @@ class GameContent(BaseModel):
             for tribute in portal.tributes
         }
 
-    def level_for_xp(self, experience: int) -> LevelDefinition:
+    def level_for_xp(self, experience: int, max_level: int | None = None) -> LevelDefinition:
         current = self.levels[0]
         for entry in self.levels:
-            if experience < entry.total_xp:
+            if experience < entry.total_xp or (max_level is not None and entry.level > max_level):
                 break
             current = entry
         return current

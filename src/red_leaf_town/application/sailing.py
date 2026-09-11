@@ -42,16 +42,8 @@ class SailingServiceMixin:
                 return {'duplicate': True}
             try:
                 spend_coins(player, content.construction_coins)
-                remaining = content.construction_quantity
-                for quality, quantity in sorted(player.inventory.get(content.construction_item_id, {}).items()):
-                    count = min(remaining, quantity)
-                    if count:
-                        remove_item(player, content.construction_item_id, count, quality)
-                        remaining -= count
-                    if not remaining:
-                        break
-                if remaining:
-                    raise EconomyError('复合木板数量不足')
+                for material in content.construction_materials:
+                    self._consume_any_quality(player, material.item_id, material.quantity)
             except EconomyError as exc:
                 raise sailing_error('resource_insufficient', str(exc)) from exc
             player.sailing.ship_built = True
@@ -136,6 +128,10 @@ class SailingServiceMixin:
                 abilities.append(definition.ability_at(industry, level, member.stars)
                                  if any(t.industry == industry for t in definition.tendencies) else 0)
             ability = round(max(abilities) + (sum(abilities) - max(abilities)) * 0.25)
+            ability += self.content.industries[industry].character_base_ability + self._industry_ability_bonus(player, industry)
+            trait_context = {"industry": industry, "event_check_bonus": 0, "star_guidance_partner_id": "", "applied_effects": []}
+            self._execute_partner_trait_phase(partner_ids, "sailing_prepare", trait_context)
+            rescue_available = bool(trait_context["star_guidance_partner_id"])
             base = 1 if trial else route.draws.base_draws
             quantity = draw_count(ability, base, route.draws.ability_bonus, route.draws.difficulty)
             quantity += round(base * (state.cargo_level * 0.1 + (0.2 if supply.effect == 'quantity' else 0)))
@@ -143,9 +139,21 @@ class SailingServiceMixin:
             logs = []
             for event in self.rng.sample(content.events, 1 if trial else route.events):
                 actor = max(partner_ids, key=lambda p: catalog[p].exploration_stats.modifier(event.attribute))
-                modifier = catalog[actor].exploration_stats.modifier(event.attribute)
+                modifier = catalog[actor].exploration_stats.modifier(event.attribute) + int(trait_context["event_check_bonus"])
                 roll = self.rng.randint(1, 20)
                 success = roll == 20 or (roll != 1 and roll + modifier >= 12)
+                initial_roll = None
+                rerolls = []
+                rescue_id = ""
+                rescue_bonus = 0
+                if not success and rescue_available:
+                    rescue_available = False
+                    rescue_id = trait_context["star_guidance_partner_id"]
+                    initial_roll = roll
+                    rerolls = [self.rng.randint(1, 20), self.rng.randint(1, 20)]
+                    roll = max(rerolls)
+                    success = roll == 20 or (roll != 1 and roll + modifier >= 12)
+                    rescue_bonus = 1 if success else 0
                 text = event.success if success else event.failure
                 if success:
                     bonus += max(1, base // 8)
@@ -154,21 +162,25 @@ class SailingServiceMixin:
                         text = '伙伴用维修物资加固货舱，额外收获也安然无恙。'
                     else:
                         bonus = max(0, bonus - max(1, base // 8))
-                logs.append(SailingLog(event_id=event.id, name=event.name, text=text, success=success,
+                if rescue_id:
+                    text = (f"{catalog[rescue_id].name}循星引航：原骰 {initial_roll}，优势重掷 {rerolls[0]}／{rerolls[1]}，取 {roll}。"
+                            + text + (" 额外获得一次物产抽取。" if rescue_bonus else ""))
+                logs.append(SailingLog(initial_roll=initial_roll, rerolls=rerolls,
+                                       rescue_partner_id=rescue_id, rescue_bonus_draws=rescue_bonus, event_id=event.id, name=event.name, text=text, success=success,
                                        roll=roll, modifier=modifier, attribute=event.attribute, actor_id=actor))
-            count = quantity + bonus
+            count = quantity + bonus + sum(log.rescue_bonus_draws for log in logs)
             pool = sailing_output_pool(route, count, stamina, state.nets_level, supply.effect == 'rare')
             totals = Counter()
             for item_id, amount in draw_weighted_batches(self.rng, pool, count):
                 totals[item_id] += amount
             drops = [SailingDrop(item_id=item_id, quantity=amount) for item_id, amount in totals.items()]
             state.active_run = SailingRun(
-                rule_version=2,
+                rule_version=3,
                 run_id=str(uuid4()), route_id=route.id, route_name=route.name, partner_ids=partner_ids,
                 started_at=now, ready_at=now + duration, trial=trial, supply_id=supply.id, coins=coins,
                 stamina=stamina, experience=stamina * 6, partner_experience=max(1, duration // 720 + stamina * 2),
                 ability=ability, cargo_level=state.cargo_level, nets_level=state.nets_level,
-                consumed_inputs=consumed, drops=drops, logs=logs,
+                consumed_inputs=consumed, drops=drops, logs=logs, applied_effects=trait_context["applied_effects"],
             )
             state.start_requests = [*state.start_requests[-49:], request_id]
             return {'run_id': state.active_run.run_id, 'trial': trial}
@@ -193,7 +205,7 @@ class SailingServiceMixin:
             for drop in run.drops:
                 add_item(player, drop.item_id, drop.quantity)
                 state.collected_items[drop.item_id] = state.collected_items.get(drop.item_id, 0) + drop.quantity
-            grant_experience(player, run.experience, self.content)
+            grant_experience(player, run.experience, self.content, max_level=self._player_level_cap(player))
             for partner_id in run.partner_ids:
                 self._grant_partner_experience(self._owned_partner(player, partner_id), run.partner_experience)
             state.discoveries = sorted(set(state.discoveries) | {log.event_id for log in run.logs if log.success})
@@ -268,10 +280,12 @@ class SailingServiceMixin:
             'min_level': content.min_level, 'trial_available': trial,
             'ship_built': state.ship_built,
             'construction': {
-                'coins': content.construction_coins, 'item_id': content.construction_item_id,
-                'item_name': items[content.construction_item_id].name,
-                'quantity': content.construction_quantity,
-                'owned': sum(player.inventory.get(content.construction_item_id, {}).values()),
+                'coins': content.construction_coins,
+                'materials': [
+                    {**m.model_dump(), 'item_name': items[m.item_id].name,
+                     'owned': sum(player.inventory.get(m.item_id, {}).values())}
+                    for m in content.construction_materials
+                ],
             },
             'completed_voyages': state.completed_voyages,
             'routes': [{**r.model_dump(), 'duration': 60 if trial else r.duration,

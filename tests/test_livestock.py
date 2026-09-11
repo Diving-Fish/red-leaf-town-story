@@ -155,7 +155,7 @@ def test_livestock_content_loads_with_rules_facilities_and_species():
     assert rules is not None and rules.cycle_seconds == CYCLE
     # 周期是硬常量，任何能力都压不动它。
     assert [entry.id for entry in content.livestock_facilities] == ["free_range", "coop_1", "barn_1"]
-    assert [entry.id for entry in content.livestock_species] == ["chicken", "cow"]
+    assert [entry.id for entry in content.livestock_species] == ["chicken", "cow", "duck", "sheep"]
     coop = content.livestock_facility_map["coop_1"]
     assert coop.replaces == "free_range" and coop.tier(1).build_coins == 3000
     assert [(entry.item_id, entry.quantity) for entry in coop.tier(1).build_materials] == [("maple_wood", 30)]

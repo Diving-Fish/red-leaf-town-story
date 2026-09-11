@@ -157,10 +157,13 @@ def test_crafting_prices_reflect_inputs_and_mining_stamina_value():
             # 装备配方不按售价考核，见 test_equipment_recipes_are_a_gear_line_not_a_money_line。
             assert recipe.stamina_cost == 5
             continue
-        assert recipe.stamina_cost == 2
+        assert recipe.collect_xp == recipe.stamina_cost * 6
         if _is_refining_recipe(content, recipe):
             continue
-        assert minimum_value <= added_value_per_stamina <= maximum_value
+        if recipe.beta:
+            assert 52 <= added_value_per_stamina <= 55
+        else:
+            assert minimum_value <= added_value_per_stamina <= maximum_value
 
 
 def _is_equipment_recipe(content, recipe) -> bool:
@@ -209,7 +212,7 @@ def test_refining_recipes_trade_sale_value_for_feed_score():
     """提纯配方不按售价考核，但必须真的提高单位品质分，否则它就没有存在意义。"""
     content = load_content()
     refining = [recipe for recipe in content.recipes if _is_refining_recipe(content, recipe)]
-    assert {recipe.id for recipe in refining} == {"mill_fish_meal", "mix_fodder", "refine_fodder"}
+    assert {recipe.id for recipe in refining} == {"mill_fish_meal", "mix_fodder", "refine_fodder", "make_grain_fodder", "make_nutrition_fodder"}
     for recipe in refining:
         produce = content.item_map[recipe.produce_item_id].feed
         best_input = max(

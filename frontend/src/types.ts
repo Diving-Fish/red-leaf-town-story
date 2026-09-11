@@ -849,11 +849,26 @@ export interface LivestockSpeciesState {
   }
   produce_item: AquaticItemRef
   special_item: AquaticItemRef | null
+  unlock_description: string
   unlocked: boolean
   affordable: boolean
 }
 
+export interface LivestockUpgrade {
+  level: number
+  min_level: number
+  capacity: number
+  gene_cap: number
+  overflow_cycles: number
+  feed_slot_capacity_bonus: number
+  build_coins: number
+  unlocked: boolean
+  affordable: boolean
+  build_materials: Array<{ item_id: string; quantity: number; item: AquaticItemRef; owned: number }>
+}
+
 export interface LivestockFacilityState {
+  upgrade: LivestockUpgrade | null
   facility_id: string
   tier: number
   name: string
@@ -1739,7 +1754,7 @@ export interface SailingRun {
 
 export interface SailingState {
   ship_built: boolean
-  construction: { coins: number; item_id: string; item_name: string; quantity: number; owned: number }
+  construction: { coins: number; materials: Array<{ item_id: string; item_name: string; quantity: number; owned: number }> }
   unlocked: boolean
   min_level: number
   trial_available: boolean

@@ -1102,6 +1102,13 @@ def create_blueprint(
         result = get_service().build_livestock_facility(subject, facility_id)
         return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
 
+    @blueprint.post("/api/red-leaf-town/livestock/facilities/<string:facility_id>/upgrade")
+    @login_required
+    async def upgrade_livestock_facility(subject: str, facility_id: str):
+        payload = await request.get_json(silent=True) or {}
+        result = get_service().upgrade_livestock_facility(subject, facility_id, payload.get("target_tier"))
+        return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
+
     @blueprint.put("/api/red-leaf-town/livestock/facilities/<string:facility_id>/partner")
     @login_required
     async def assign_livestock_partner(subject: str, facility_id: str):
@@ -1141,6 +1148,7 @@ def create_blueprint(
             facility_id,
             int(payload.get("quality", 0)),
             str(payload.get("nickname", "")),
+            str(payload.get("species_id", "")),
         )
         return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
 

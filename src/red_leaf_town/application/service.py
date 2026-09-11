@@ -305,6 +305,8 @@ class GameService(SailingServiceMixin):
             raise GameError("shop_item_not_found", "商品不存在", 404)
 
         def mutation(player: PlayerState):
+            self._settle(player, self._now())
+            self._require_content(player, entry)
             if player.level < entry.min_level:
                 raise GameError("content_locked", f"达到 {entry.min_level} 级后解锁")
             try:
@@ -371,6 +373,7 @@ class GameService(SailingServiceMixin):
                 partner_ids=party,
                 leader_partner_id=leader_partner_id,
                 exploration_ability=ability,
+                talent_check_bonus=int(self._talent_modifier(player, "exploration_check_bonus")),
                 entry_fee=expedition.entry_fee,
                 started_at=now,
                 current_event_id=self._pick_exploration_event(expedition, None, 1),
@@ -426,7 +429,7 @@ class GameService(SailingServiceMixin):
                 "selected_actor_partner_id": actor_partner_id,
                 "check_attribute": choice.check.attribute if choice.check else None,
                 "check_mode": choice.check.mode if choice.check else None,
-                "check_bonus": 0,
+                "check_bonus": run.talent_check_bonus,
                 "dice_adjustment": 0,
                 "critical_success_min": 20,
                 "ordinary_failure_stamina_reduction": 0,
@@ -823,6 +826,7 @@ class GameService(SailingServiceMixin):
 
         def mutation(player: PlayerState):
             self._settle(player, now)
+            self._require_content(player, crop)
             if player.level < crop.min_level:
                 raise GameError("content_locked", f"达到 {crop.min_level} 级后解锁")
             plot = self._plot(player, slot)
@@ -839,7 +843,7 @@ class GameService(SailingServiceMixin):
             plot.ready_at = task_snapshot.ready_at
             plot.task_snapshot = task_snapshot
             plot.task_results = []
-            levels = grant_experience(player, crop.plant_xp, self.content)
+            levels = grant_experience(player, crop.plant_xp, self.content, max_level=self._player_level_cap(player))
             return {
                 "slot": slot,
                 "crop_id": crop.id,
@@ -875,7 +879,7 @@ class GameService(SailingServiceMixin):
             harvest_xp = task.harvest_xp if task else crop.harvest_xp if crop else 0
             for result in results:
                 add_item(player, result.item_id, result.quantity, result.quality)
-            levels = grant_experience(player, harvest_xp, self.content)
+            levels = grant_experience(player, harvest_xp, self.content, max_level=self._player_level_cap(player))
             partner_experience = self._grant_task_partner_experience(player, task)
             record_production_collection(player, "farming", plot.crop_id, results)
             plot.crop_id = ""
@@ -952,6 +956,7 @@ class GameService(SailingServiceMixin):
         def mutation(player: PlayerState):
             self._settle(player, now)
             site = self._gathering_site(player, site_id)
+            self._require_content(player, task)
             if player.level < task.min_level:
                 raise GameError("content_locked", f"达到 {task.min_level} 级后解锁")
             if not site.empty:
@@ -1018,7 +1023,7 @@ class GameService(SailingServiceMixin):
             task_id = site.task_snapshot.content_id
             for result in results:
                 add_item(player, result.item_id, result.quantity, result.quality)
-            levels = grant_experience(player, harvest_xp, self.content)
+            levels = grant_experience(player, harvest_xp, self.content, max_level=self._player_level_cap(player))
             partner_experience = self._grant_task_partner_experience(player, site.task_snapshot)
             record_production_collection(player, "gathering", task_id, results)
             site.task_snapshot = None
@@ -1093,6 +1098,7 @@ class GameService(SailingServiceMixin):
             self._settle(player, now)
             station = self._crafting_station(player, station_id)
             condition = recipe.unlock_condition
+            self._require_content(player, recipe)
             if not evaluate_recipe_unlock(player, condition.hook, condition.params):
                 raise GameError(
                     "recipe_locked",
@@ -1225,16 +1231,22 @@ class GameService(SailingServiceMixin):
             refunded_inputs = []
             partner_experience = []
             collect_xp = 0
+            refunded_stamina = 0
             for entry in completed:
                 task = entry.task_snapshot
                 results.extend(entry.task_results)
                 for result in entry.task_results:
                     add_item(player, result.item_id, result.quantity, result.quality)
                 refunded_inputs.extend(self._refund_crafting_inputs(player, task))
+                chance = sum(float(effect.get("value", 0)) for effect in task.applied_effects
+                             if effect.get("effect") == "crafting_stamina_refund_chance")
+                if chance > 0 and self.rng.random() < min(1, chance):
+                    refunded_stamina += 1
                 collect_xp += task.harvest_xp
                 partner_experience.extend(self._grant_task_partner_experience(player, task))
                 record_production_collection(player, "crafting", task.content_id, entry.task_results)
-            levels = grant_experience(player, collect_xp, self.content)
+            levels = grant_experience(player, collect_xp, self.content, max_level=self._player_level_cap(player))
+            grant_stamina(player, refunded_stamina, self.content, now)
             station.completed_tasks = []
             station.collected_count += len(completed)
             return {
@@ -1242,6 +1254,7 @@ class GameService(SailingServiceMixin):
                 "item_id": results[0].item_id,
                 "quantity": sum(result.quantity for result in results),
                 "completed_count": len(completed),
+                "refunded_stamina": refunded_stamina,
                 "drops": [self._result_snapshot(result) for result in results],
                 "experience": collect_xp,
                 "levels": levels,
@@ -1371,7 +1384,7 @@ class GameService(SailingServiceMixin):
             task_id = site.task_snapshot.content_id
             for result in results:
                 add_item(player, result.item_id, result.quantity, result.quality)
-            levels = grant_experience(player, collect_xp, self.content)
+            levels = grant_experience(player, collect_xp, self.content, max_level=self._player_level_cap(player))
             partner_experience = self._grant_task_partner_experience(player, site.task_snapshot)
             record_production_collection(player, "mining", task_id, results)
             site.task_snapshot = None
@@ -1501,7 +1514,7 @@ class GameService(SailingServiceMixin):
             )
             codex = self._record_codex(player, batches, now)
 
-            levels = grant_experience(player, spot.cast_xp, self.content)
+            levels = grant_experience(player, spot.cast_xp, self.content, max_level=self._player_level_cap(player))
             milestones = self._claim_codex_milestones(player, now)
             partner_experience = self._grant_companion_experience(player, stamina_cost)
             fishing.spot_id = spot_id
@@ -1924,6 +1937,53 @@ class GameService(SailingServiceMixin):
         player, result = self._update_by_sub(oauth_sub, mutation)
         return {"result": result, "state": self._snapshot(player, now)}
 
+    def upgrade_livestock_facility(self, oauth_sub: str, facility_id: str, target_tier: int) -> dict:
+        if type(target_tier) is not int or target_tier < 2:
+            raise GameError("invalid_tier", "请选择有效的扩建等级")
+        now = self._now()
+
+        def mutation(player):
+            self._settle(player, now)
+            facility, definition = self._livestock_facility_pair(player, facility_id)
+            tier = next((entry for entry in definition.tiers if entry.level == target_tier), None)
+            self._require_content(player, tier)
+            if facility.tier == target_tier:
+                return {"duplicate": True, "tier": facility.tier}
+            if target_tier != facility.tier + 1:
+                raise GameError("invalid_tier", "请逐级扩建设施", 409)
+            if player.level < tier.min_level:
+                raise GameError("content_locked", f"居民 {tier.min_level} 级后可以扩建")
+            if player.coins < tier.build_coins:
+                raise GameError("resource_insufficient", f"扩建需要 {tier.build_coins} 红叶币")
+            for material in tier.build_materials:
+                if sum(player.inventory.get(material.item_id, {}).values()) < material.quantity:
+                    raise GameError("resource_insufficient", f"扩建材料不足：{self.content.item_map[material.item_id].name}")
+            player.coins -= tier.build_coins
+            for material in tier.build_materials:
+                self._consume_any_quality(player, material.item_id, material.quantity)
+            facility.tier = target_tier
+            return {"facility_id": facility_id, "tier": target_tier, "coins": player.coins}
+
+        player, result = self._update_by_sub(oauth_sub, mutation)
+        return {"result": result, "state": self._snapshot(player, now)}
+
+    def _livestock_upgrade_snapshot(self, player, facility, definition):
+        tier = next((entry for entry in definition.tiers if entry.level == facility.tier + 1), None)
+        if not self._content_visible(player, tier):
+            return None
+        return {
+            **tier.model_dump(),
+            "unlocked": player.level >= tier.min_level,
+            "affordable": player.coins >= tier.build_coins and all(
+                sum(player.inventory.get(m.item_id, {}).values()) >= m.quantity for m in tier.build_materials
+            ),
+            "build_materials": [
+                {**m.model_dump(), "item": self.content.item_map[m.item_id].model_dump(),
+                 "owned": sum(player.inventory.get(m.item_id, {}).values())}
+                for m in tier.build_materials
+            ],
+        }
+
     def assign_livestock_partner(self, oauth_sub: str, facility_id: str, partner_id: str = "") -> dict:
         """畜栏也是资产格：周期开头的自由窗口内随时能换，过了就排队到下个周期。"""
         partner_id = str(partner_id or "").strip()
@@ -2002,8 +2062,7 @@ class GameService(SailingServiceMixin):
             facility, definition = self._livestock_facility_pair(player, facility_id)
             if definition.category != species.category:
                 raise GameError("livestock_category_mismatch", "这处设施养不了这种牲畜", 409)
-            if player.level < species.min_level:
-                raise GameError("content_locked", f"达到 {species.min_level} 级之后才能饲养{species.name}")
+            self._require_species(player, facility, definition, species)
             self._require_livestock_room(player, facility, definition)
             if player.coins < species.purchase_price:
                 raise GameError("resource_insufficient", f"买一只{species.name}需要 {species.purchase_price} 红叶币")
@@ -2118,7 +2177,7 @@ class GameService(SailingServiceMixin):
             gain = rules.affection_per_care + max(0, int(context["affection_per_care_bonus"]))
             before = animal.affection
             animal.affection = min(rules.affection_cap, animal.affection + gain)
-            levels = grant_experience(player, rules.care_experience, self.content)
+            levels = grant_experience(player, rules.care_experience, self.content, max_level=self._player_level_cap(player))
             return {
                 "animal_id": animal_id,
                 "facility_id": animal.facility_id,
@@ -2137,7 +2196,7 @@ class GameService(SailingServiceMixin):
         player, result = self._update_by_sub(oauth_sub, mutation)
         return {"result": result, "state": self._snapshot(player, now)}
 
-    def incubate_egg(self, oauth_sub: str, facility_id: str, quality: int, nickname: str = "") -> dict:
+    def incubate_egg(self, oauth_sub: str, facility_id: str, quality: int, nickname: str = "", species_id: str = "") -> dict:
         """孵蛋。蛋的品质就是种鸡的基因载体：好鸡下好蛋，好蛋孵好鸡。"""
         quality = int(quality or 0)
         nickname = self._animal_nickname(nickname)
@@ -2146,7 +2205,8 @@ class GameService(SailingServiceMixin):
         def mutation(player: PlayerState):
             self._settle(player, now)
             facility, definition = self._livestock_facility_pair(player, facility_id)
-            species = self._breeding_species(definition, "incubate")
+            species = self._breeding_species(definition, "incubate", species_id)
+            self._require_species(player, facility, definition, species)
             breeding = species.breeding
             if quality < 1 or quality > 5:
                 raise GameError("invalid_quality", "只能挑一个具体品质的蛋来孵")
@@ -2209,9 +2269,12 @@ class GameService(SailingServiceMixin):
         def mutation(player: PlayerState):
             self._settle(player, now)
             facility, definition = self._livestock_facility_pair(player, facility_id)
-            species = self._breeding_species(definition, "pair")
-            breeding = species.breeding
             chosen = [self._animal(player, entry) for entry in parents]
+            if any(parent.facility_id != facility_id for parent in chosen):
+                raise GameError("animal_elsewhere", "亲本不在这处设施里", 409)
+            species = self._breeding_species(definition, "pair", chosen[0].species_id)
+            self._require_species(player, facility, definition, species)
+            breeding = species.breeding
             for parent in chosen:
                 if parent.facility_id != facility_id:
                     raise GameError("animal_elsewhere", "亲本不在这处设施里", 409)
@@ -2340,12 +2403,13 @@ class GameService(SailingServiceMixin):
         if len(self._animals_in(player, facility.facility_id)) >= capacity:
             raise GameError("livestock_facility_full", f"{definition.name}已经住满了（{capacity} 位）", 409)
 
-    def _breeding_species(self, definition, mode: str):
+    def _breeding_species(self, definition, mode: str, species_id: str = ""):
         species = next(
             (
                 entry
                 for entry in self.content.livestock_species
                 if entry.category == definition.category and entry.breeding.mode == mode
+                and (not species_id or entry.id == species_id)
             ),
             None,
         )
@@ -2660,11 +2724,12 @@ class GameService(SailingServiceMixin):
             ]
             species_here = [
                 species for species in self.content.livestock_species
-                if species.category == definition.category
+                if species.category == definition.category and self._content_visible(player, species)
             ]
             facilities.append({
                 "facility_id": facility.facility_id,
                 "tier": facility.tier,
+                "upgrade": self._livestock_upgrade_snapshot(player, facility, definition),
                 "name": definition.name,
                 "description": definition.description,
                 "accent": definition.accent,
@@ -2706,7 +2771,8 @@ class GameService(SailingServiceMixin):
                             items[species.special_item_id].model_dump()
                             if species.special_item_id in items else None
                         ),
-                        "unlocked": player.level >= species.min_level,
+                        "unlocked": self._species_unlocked(player, facility, species),
+                        "unlock_description": f"居民 {species.min_level} 级" + (f"，设施 {species.required_facility_tier} 级" if species.required_facility_id else ""),
                         "affordable": player.coins >= species.purchase_price,
                     }
                     for species in species_here
@@ -3923,6 +3989,7 @@ class GameService(SailingServiceMixin):
 
         def mutation(player: PlayerState):
             self._settle(player, now)
+            self._require_content(player, node)
             if node_id in player.talent_nodes:
                 raise GameError("talent_already_unlocked", "这个天赋已经点亮", 409)
             if player.level < node.min_level:
@@ -4265,7 +4332,7 @@ class GameService(SailingServiceMixin):
             player.maple_flame += reward.maple_flame
         if reward.guide_leaves:
             player.guide_leaves += reward.guide_leaves
-        levels = grant_experience(player, reward.experience, self.content) if reward.experience else []
+        levels = grant_experience(player, reward.experience, self.content, max_level=self._player_level_cap(player)) if reward.experience else []
         return {
             "coins": reward.coins,
             "experience": reward.experience,
@@ -4611,7 +4678,7 @@ class GameService(SailingServiceMixin):
                 continue
             if evaluate_recipe_unlock(player, recipe.unlock_condition.hook, recipe.unlock_condition.params):
                 unlocked.add(recipe.produce_item_id)
-        return unlocked
+        return {item_id for item_id in unlocked if not self.content.item_map[item_id].beta}
 
     def _roll_commission(self, player: PlayerState, day: str) -> CommissionState | None:
         commissions = self.content.commissions
@@ -5138,7 +5205,7 @@ class GameService(SailingServiceMixin):
                 grant_coins(player, coins)
             if maple_flame:
                 player.maple_flame += maple_flame
-            unlocked_levels = grant_experience(player, experience, self.content) if experience else []
+            unlocked_levels = grant_experience(player, experience, self.content, max_level=self._player_level_cap(player)) if experience else []
             return unlocked_levels
 
         try:
@@ -5355,7 +5422,7 @@ class GameService(SailingServiceMixin):
         for owned in player.owned_partners:
             if owned.stars == 0 and owned.partner_id in partner_map:
                 owned.stars = partner_map[owned.partner_id].rarity
-        level = self.content.level_for_xp(player.experience)
+        level = self.content.level_for_xp(player.experience, max_level=self._player_level_cap(player))
         player.level = level.level
         normalize_plot_slots(player, self.content)
         normalize_gathering_sites(player, self.content)
@@ -5398,6 +5465,7 @@ class GameService(SailingServiceMixin):
         return player.plots[slot]
 
     def _gathering_site(self, player: PlayerState, site_id: str) -> GatheringSiteState:
+        self._require_content(player, self.content.gathering_site_map.get(site_id))
         site = next((entry for entry in player.gathering_sites if entry.site_id == site_id), None)
         if site is None:
             raise GameError("gathering_site_locked", "这个采集点尚未解锁", 404)
@@ -5555,6 +5623,12 @@ class GameService(SailingServiceMixin):
             "draw_bonus": 0,
             "applied_effects": [],
         }
+        if industry == "crafting":
+            trait_context["duration_multiplier"] *= max(0.01, 1 - self._talent_modifier(player, "crafting_duration_reduction"))
+            trait_context["quality_ability_bonus"] += self._talent_modifier(player, "crafting_quality_bonus")
+            refund_chance = self._talent_modifier(player, "crafting_stamina_refund_chance")
+            if refund_chance and stamina_cost:
+                applied_effects.append({"source_type": "talent", "effect": "crafting_stamina_refund_chance", "value": min(1, refund_chance)})
         for phase in ("task_prepare", "output_draw", "quality_roll", "result_finalize"):
             self._execute_partner_trait_phase(assigned_partner_ids, phase, trait_context)
         applied_effects.extend(trait_context["applied_effects"])
@@ -5701,6 +5775,26 @@ class GameService(SailingServiceMixin):
 
     def _is_beta_player(self, player: PlayerState) -> bool:
         return player.player_id in self._beta_player_ids()
+
+    def _content_visible(self, player, definition) -> bool:
+        return definition is not None and (not getattr(definition, "beta", False) or self._is_beta_player(player))
+
+    def _require_content(self, player, definition) -> None:
+        if not self._content_visible(player, definition):
+            raise GameError("content_locked", "此内容目前仅对内测玩家开放", 403)
+
+    def _player_level_cap(self, player) -> int:
+        # 移出白名单不降级、不扣掉已经获得的成长。
+        return max(player.level, max(entry.level for entry in self.content.levels if self._content_visible(player, entry)))
+
+    def _species_unlocked(self, player, facility, species) -> bool:
+        return (self._content_visible(player, species) and player.level >= species.min_level
+                and (not species.required_facility_id or
+                     (facility.facility_id == species.required_facility_id and facility.tier >= species.required_facility_tier)))
+
+    def _require_species(self, player, facility, definition, species) -> None:
+        if definition.category != species.category or not self._species_unlocked(player, facility, species):
+            raise GameError("content_locked", f"{species.name}需要居民 {species.min_level} 级及对应设施 {species.required_facility_tier} 级", 403)
 
     def _visible_expeditions(self, player: PlayerState) -> list:
         if self._is_beta_player(player):
@@ -5858,8 +5952,9 @@ class GameService(SailingServiceMixin):
             owned = owned_map[partner_id]
             stats = catalog[partner_id].exploration_stats
             snapshot = loadout.get(partner_id) or DelveLoadoutSnapshot()
-            max_hp = delve_battle.member_max_hp(owned.level, stats.strength, snapshot)
+            max_hp = delve_battle.member_max_hp(owned.level, stats.strength, snapshot) + int(self._talent_modifier(player, "delve_max_hp_bonus"))
             party[partner_id] = DelveMemberState(
+                first_miss_reroll_ready=bool(self._talent_modifier(player, "delve_first_miss_reroll")),
                 max_hp=max_hp,
                 hp=max_hp,
                 armor_class=delve_battle.armor_class(stats.agility, snapshot),
@@ -6187,7 +6282,7 @@ class GameService(SailingServiceMixin):
                 "selected_actor_partner_id": partner_id,
                 "check_attribute": choice.check.attribute,
                 "check_mode": choice.check.mode,
-                "check_bonus": 0,
+                "check_bonus": run.talent_check_bonus,
                 "dice_adjustment": 0,
                 "critical_success_min": 20,
                 "ordinary_failure_stamina_reduction": 0,
@@ -6278,7 +6373,7 @@ class GameService(SailingServiceMixin):
                     "selected_actor_partner_id": actor_partner_id,
                     "check_attribute": choice.check.attribute if choice.check else None,
                     "check_mode": choice.check.mode if choice.check else None,
-                    "check_bonus": 0,
+                    "check_bonus": run.talent_check_bonus,
                     "dice_adjustment": 0,
                     "critical_success_min": 20,
                     "ordinary_failure_stamina_reduction": 0,
@@ -6391,7 +6486,7 @@ class GameService(SailingServiceMixin):
     def _snapshot(self, player: PlayerState, now: int | None = None) -> dict:
         now = self._now() if now is None else now
         level = self.content.level_definition(player.level)
-        next_level = next((entry for entry in self.content.levels if entry.level > player.level), None)
+        next_level = next((entry for entry in self.content.levels if entry.level > player.level and self._content_visible(player, entry)), None)
         items = self.content.item_map
         crops = self.content.crop_map
         inventory = []
@@ -6453,6 +6548,8 @@ class GameService(SailingServiceMixin):
         gathering_task_map = self.content.gathering_task_map
         for site in player.gathering_sites:
             definition = self.content.gathering_site_map.get(site.site_id)
+            if not self._content_visible(player, definition):
+                continue
             task_snapshot = site.task_snapshot
             assigned_partners = [
                 partner_map[partner_id]
@@ -6488,7 +6585,7 @@ class GameService(SailingServiceMixin):
                         ],
                     }
                     for entry in self.content.gathering_tasks
-                    if entry.site_id == site.site_id and entry.min_level <= player.level
+                    if entry.site_id == site.site_id and entry.min_level <= player.level and self._content_visible(player, entry)
                 ],
                 "assigned_partners": assigned_partners,
                 "assignment_locked": assignment_locked_until > now,
@@ -6499,7 +6596,7 @@ class GameService(SailingServiceMixin):
             (
                 definition.min_level
                 for definition in self.content.gathering_sites
-                if definition.id not in unlocked_gathering_site_ids
+                if definition.id not in unlocked_gathering_site_ids and self._content_visible(player, definition)
             ),
             None,
         )
@@ -6539,7 +6636,7 @@ class GameService(SailingServiceMixin):
                 "recipes": [
                     self._recipe_snapshot(player, recipe)
                     for recipe in self.content.recipes
-                    if recipe.station_id == station.station_id
+                    if recipe.station_id == station.station_id and self._content_visible(player, recipe)
                 ],
                 "assigned_partners": assigned_partners,
                 "assignment_locked": assignment_locked_until > now,
@@ -6582,7 +6679,7 @@ class GameService(SailingServiceMixin):
                 "available_tasks": [
                     {**entry.model_dump(), "item": items[entry.produce_item_id].model_dump()}
                     for entry in self.content.mining_tasks
-                    if entry.site_id == site.site_id and entry.min_level <= player.level
+                    if entry.site_id == site.site_id and entry.min_level <= player.level and self._content_visible(player, entry)
                 ],
                 "assigned_partners": assigned_partners,
                 "assignment_locked": assignment_locked_until > now,
@@ -6673,7 +6770,7 @@ class GameService(SailingServiceMixin):
             "crops": [
                 crop.model_dump()
                 for crop in self.content.crops
-                if player.level >= crop.min_level
+                if player.level >= crop.min_level and self._content_visible(player, crop)
             ],
             "shop": [
                 {
@@ -6686,6 +6783,7 @@ class GameService(SailingServiceMixin):
                     "locked": player.level < entry.min_level,
                 }
                 for entry in self.content.shop
+                if self._content_visible(player, entry)
             ],
         }
 
@@ -7113,6 +7211,8 @@ class GameService(SailingServiceMixin):
         available_points = self._available_talent_points(player)
         nodes = []
         for node in self.content.talents:
+            if not self._content_visible(player, node):
+                continue
             unlocked = node.id in player.talent_nodes
             prerequisites_met = all(entry in player.talent_nodes for entry in node.prerequisites)
             locked_reason = None
