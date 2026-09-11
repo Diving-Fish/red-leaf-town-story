@@ -1004,6 +1004,7 @@ def create_blueprint(
             station_id,
             str(payload.get("recipe_id", "")),
             str(payload.get("task_item_id", "")),
+            quantity=payload.get("quantity", 1),
         )
         return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
 

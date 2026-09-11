@@ -2,6 +2,8 @@
 import { computed } from 'vue'
 import { Hammer } from 'lucide-vue-next'
 
+import ActionButton from '@/components/ActionButton.vue'
+import { formatDuration } from '@/lib/format'
 import ProductionCard from '@/components/ProductionCard.vue'
 import RecipeCard from '@/components/RecipeCard.vue'
 import StateBlock from '@/components/StateBlock.vue'
@@ -47,12 +49,21 @@ function inputName(station: CraftingStationState, itemId: string) {
               industry="crafting"
               :action-key="`crafting:${entry.node.nodeId}:start:${recipe.id}`"
               :group="`crafting:${entry.node.nodeId}:start`"
-              @start="(taskItemId) => game.startProduction('crafting', entry.node.nodeId, recipe.id, taskItemId)"
+              @start="(taskItemId, quantity) => game.startProduction('crafting', entry.node.nodeId, recipe.id, taskItemId, quantity)"
             />
           </div>
         </template>
 
         <template #running>
+          <div class="queue-status">
+            <span>正在加工第 {{ entry.station.collected_count + entry.station.completed_count + 1 }} / {{ entry.station.queue_total || 1 }} 次</span>
+            <small>待加工 {{ entry.station.queued_count || 0 }} 次 · 队列剩余约 {{ formatDuration(entry.station.queue_remaining_seconds) }}</small>
+            <ActionButton
+              v-if="entry.station.completed_count"
+              :action-key="`crafting:${entry.node.nodeId}:collect`"
+              @click="game.collectProduction('crafting', entry.node.nodeId)"
+            >领取已完成的 {{ entry.station.completed_count }} 次产物</ActionButton>
+          </div>
           <div class="consumed-list">
             <small>已投入</small>
             <span
@@ -67,10 +78,12 @@ function inputName(station: CraftingStationState, itemId: string) {
 </template>
 
 <style scoped>
+.queue-status { display: grid; gap: 8px; font-size: 13px; }
+.queue-status small { color: #a3aca4; }
 .station-list { display: grid; gap: 18px; }
-.recipe-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.recipe-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
 .consumed-list { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .consumed-list small { color: #7b867d; }
 .consumed-list span { padding: 4px 7px; color: #a3aca4; font-size: 12px; border-radius: 5px; background: #ffffff05; }
-@media (max-width: 720px) { .recipe-grid { grid-template-columns: 1fr; } }
+@media (max-width: 720px) { .recipe-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 </style>

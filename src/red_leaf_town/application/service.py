@@ -58,6 +58,7 @@ from red_leaf_town.domain import (
     TaskOutputSnapshot,
     TaskQualitySnapshot,
 )
+from red_leaf_town.domain.models import CompletedCraftingTask
 from red_leaf_town.domain.aquatic import (
     PondParameters,
     SlotError,
@@ -1080,7 +1081,9 @@ class GameService(SailingServiceMixin):
         player, result = self._update_by_sub(oauth_sub, mutation)
         return {"result": result, "state": self._snapshot(player, now)}
 
-    def start_crafting(self, oauth_sub: str, station_id: str, recipe_id: str, task_item_id: str = "") -> dict:
+    def start_crafting(self, oauth_sub: str, station_id: str, recipe_id: str, task_item_id: str = "", quantity: int = 1) -> dict:
+        if type(quantity) is not int or not 1 <= quantity <= 99:
+            raise GameError("invalid_quantity", "加工次数必须为 1 到 99 的整数")
         recipe = self.content.recipe_map.get(recipe_id)
         if recipe is None or recipe.station_id != station_id:
             raise GameError("recipe_not_found", "这个工位没有该配方", 404)
@@ -1100,31 +1103,49 @@ class GameService(SailingServiceMixin):
                 raise GameError("crafting_station_occupied", "这个工位已有加工任务")
             if self._industry_assigned_count(player, "crafting") > self._industry_partner_capacity(player, "crafting"):
                 raise GameError("partner_capacity_reached", "当前加工伙伴编制已满", 409)
-            consumed_inputs = self._consume_recipe_inputs(player, recipe)
-            snapshot = self._build_production_task_snapshot(
-                player=player,
-                assigned_partner_ids=station.assigned_partner_ids,
-                industry="crafting",
-                content_id=recipe.id,
-                production_slot_id=f"crafting:station:{station.station_id}",
-                now=now,
-                base_duration=recipe.duration_seconds,
-                time_difficulty=recipe.time_difficulty,
-                produce_item_id=recipe.produce_item_id,
-                yield_min=recipe.produce_quantity,
-                yield_max=recipe.produce_quantity,
-                harvest_xp=recipe.collect_xp,
-                stamina_cost=recipe.stamina_cost,
-                quality=recipe.quality,
-                consumed_inputs=consumed_inputs,
-                task_item_id=task_item_id,
-            )
+            task_item_id_clean = str(task_item_id or "").strip()
+            if task_item_id_clean:
+                item = self.content.task_item_map.get(task_item_id_clean)
+                if item is None or item.timing != "start":
+                    raise GameError("task_item_invalid", "这个道具不能在开工时使用")
+                if item.eligible_industries and "crafting" not in item.eligible_industries:
+                    raise GameError("task_item_industry_mismatch", "这个道具不能用于当前产业")
+            item_count = min(quantity, player.task_items.get(task_item_id_clean, 0))
             try:
-                consume_stamina(player, recipe.stamina_cost, self.content, now)
+                consume_stamina(player, recipe.stamina_cost * quantity, self.content, now)
             except ValueError as exc:
                 raise GameError("resource_insufficient", str(exc)) from exc
+            tasks = []
+            next_start = now
+            for index in range(quantity):
+                consumed_inputs = self._consume_recipe_inputs(player, recipe)
+                task = self._build_production_task_snapshot(
+                    player=player,
+                    assigned_partner_ids=station.assigned_partner_ids,
+                    industry="crafting",
+                    content_id=recipe.id,
+                    production_slot_id=f"crafting:station:{station.station_id}",
+                    now=next_start,
+                    base_duration=recipe.duration_seconds,
+                    time_difficulty=recipe.time_difficulty,
+                    produce_item_id=recipe.produce_item_id,
+                    yield_min=recipe.produce_quantity,
+                    yield_max=recipe.produce_quantity,
+                    harvest_xp=recipe.collect_xp,
+                    stamina_cost=recipe.stamina_cost,
+                    quality=recipe.quality,
+                    consumed_inputs=consumed_inputs,
+                    task_item_id=task_item_id_clean if index < item_count else "",
+                )
+                tasks.append(task)
+                next_start = task.ready_at
+            snapshot = tasks[0]
             station.task_snapshot = snapshot
             station.task_results = []
+            station.queued_tasks = tasks[1:]
+            station.completed_tasks = []
+            station.queue_total = quantity
+            station.collected_count = 0
             return {
                 "station_id": station_id,
                 "recipe_id": recipe_id,
@@ -1133,7 +1154,10 @@ class GameService(SailingServiceMixin):
                 "final_duration": snapshot.final_duration,
                 "total_ability": snapshot.total_ability,
                 "quality_ability": snapshot.quality_parameters.ability,
-                "consumed_inputs": [entry.model_dump() for entry in consumed_inputs],
+                "consumed_inputs": [entry.model_dump() for task in tasks for entry in task.consumed_inputs],
+                "quantity": quantity,
+                "task_items_reserved": item_count,
+                "queue_ready_at": tasks[-1].ready_at,
             }
 
         player, result = self._update_by_sub(oauth_sub, mutation)
@@ -1188,25 +1212,36 @@ class GameService(SailingServiceMixin):
             station = self._crafting_station(player, station_id)
             if station.task_snapshot is None:
                 raise GameError("crafting_station_empty", "这个工位没有进行中的任务")
-            if station.task_snapshot.ready_at > now:
+            completed = list(station.completed_tasks)
+            if station.task_snapshot.ready_at <= now and station.task_results:
+                completed.append(CompletedCraftingTask(
+                    task_snapshot=station.task_snapshot, task_results=station.task_results,
+                ))
+                station.task_snapshot = None
+                station.task_results = []
+            if not completed:
                 raise GameError("crafting_not_ready", "加工还没有完成")
-            results = station.task_results
-            if not results:
-                raise GameError("task_content_missing", "加工任务配置缺失，请联系管理员", 409)
-            collect_xp = station.task_snapshot.harvest_xp
-            recipe_id = station.task_snapshot.content_id
-            for result in results:
-                add_item(player, result.item_id, result.quantity, result.quality)
-            refunded_inputs = self._refund_crafting_inputs(player, station.task_snapshot)
+            results = []
+            refunded_inputs = []
+            partner_experience = []
+            collect_xp = 0
+            for entry in completed:
+                task = entry.task_snapshot
+                results.extend(entry.task_results)
+                for result in entry.task_results:
+                    add_item(player, result.item_id, result.quantity, result.quality)
+                refunded_inputs.extend(self._refund_crafting_inputs(player, task))
+                collect_xp += task.harvest_xp
+                partner_experience.extend(self._grant_task_partner_experience(player, task))
+                record_production_collection(player, "crafting", task.content_id, entry.task_results)
             levels = grant_experience(player, collect_xp, self.content)
-            partner_experience = self._grant_task_partner_experience(player, station.task_snapshot)
-            record_production_collection(player, "crafting", recipe_id, results)
-            station.task_snapshot = None
-            station.task_results = []
+            station.completed_tasks = []
+            station.collected_count += len(completed)
             return {
                 "station_id": station_id,
                 "item_id": results[0].item_id,
                 "quantity": sum(result.quantity for result in results),
+                "completed_count": len(completed),
                 "drops": [self._result_snapshot(result) for result in results],
                 "experience": collect_xp,
                 "levels": levels,
@@ -3818,6 +3853,35 @@ class GameService(SailingServiceMixin):
                 raise GameError("task_not_active", "这里没有可以取消的任务")
             if task.ready_at <= now:
                 raise GameError("task_already_ready", "任务已经完成，请直接收取产出")
+            if industry == "crafting" and production_slot.queue_total:
+                reserved = production_slot.queued_tasks
+                stamina_cost = sum(entry.stamina_cost for entry in reserved)
+                refund_stamina(player, stamina_cost, self.content, now)
+                refunded_inputs = []
+                refunded_task_items = {}
+                for queued in reserved:
+                    for entry in queued.consumed_inputs:
+                        add_item(player, entry.item_id, entry.quantity, entry.quality)
+                        refunded_inputs.append(entry.model_dump())
+                    for effect in queued.applied_effects:
+                        item_id = effect.get("task_item_id")
+                        if item_id:
+                            player.task_items[item_id] = player.task_items.get(item_id, 0) + 1
+                            refunded_task_items[item_id] = refunded_task_items.get(item_id, 0) + 1
+                production_slot.queued_tasks = []
+                production_slot.task_snapshot = None
+                production_slot.task_results = []
+                if production_slot.completed_tasks:
+                    last = production_slot.completed_tasks.pop()
+                    production_slot.task_snapshot = last.task_snapshot
+                    production_slot.task_results = last.task_results
+                return {
+                    "industry": industry,
+                    "slot_id": slot_id,
+                    "refunded_inputs": refunded_inputs,
+                    "refunded_stamina": stamina_cost,
+                    "refunded_task_items": refunded_task_items,
+                }
             # 各生产格目前彼此独立，取消只回滚这一格自身消耗的资源。
             # 如果未来出现"某格效果会影响其他格子"的机制（例如跨格加成、连锁触发），
             # 取消逻辑需要额外处理那些外溢效果，而不能只是清空这一格。
@@ -5308,8 +5372,21 @@ class GameService(SailingServiceMixin):
             if site.task_snapshot and site.task_snapshot.ready_at <= now and not site.task_results:
                 self._resolve_gathering_outputs(site, now)
         for station in player.crafting_stations:
-            if station.task_snapshot and station.task_snapshot.ready_at <= now and not station.task_results:
-                self._resolve_output(station, now)
+            while station.task_snapshot and station.task_snapshot.ready_at <= now:
+                if not station.task_results:
+                    self._resolve_output(station, station.task_snapshot.ready_at)
+                if not station.queued_tasks:
+                    break
+                finished_at = station.task_snapshot.ready_at
+                station.completed_tasks.append(CompletedCraftingTask(
+                    task_snapshot=station.task_snapshot, task_results=station.task_results,
+                ))
+                next_task = station.queued_tasks.pop(0)
+                # Active acceleration can finish the preceding task ahead of its original schedule.
+                next_task.started_at = finished_at
+                next_task.ready_at = finished_at + next_task.final_duration
+                station.task_snapshot = next_task
+                station.task_results = []
         for site in player.mining_sites:
             if site.task_snapshot and site.task_snapshot.ready_at <= now and not site.task_results:
                 self._resolve_output(site, now)
@@ -5594,10 +5671,14 @@ class GameService(SailingServiceMixin):
             task = production_slot.task_snapshot
             if task is None or task.ready_at <= now:
                 continue
-            if GameService._task_releases_partner(task):
-                continue
-            for partner_id in {*task.assigned_partner_ids, *task.support_partner_ids}:
-                deadlines[partner_id] = max(deadlines.get(partner_id, 0), task.ready_at)
+            deadline = task.ready_at
+            for index, queued in enumerate([task, *getattr(production_slot, "queued_tasks", [])]):
+                if index:
+                    deadline += queued.final_duration
+                if GameService._task_releases_partner(queued):
+                    continue
+                for partner_id in {*queued.assigned_partner_ids, *queued.support_partner_ids}:
+                    deadlines[partner_id] = max(deadlines.get(partner_id, 0), deadline)
         return deadlines
 
     @staticmethod
@@ -6437,7 +6518,17 @@ class GameService(SailingServiceMixin):
                 default=0,
             )
             crafting_stations.append({
-                **station.model_dump(),
+                **station.model_dump(exclude={"queued_tasks", "completed_tasks"}),
+                "queued_count": len(station.queued_tasks),
+                "completed_count": len(station.completed_tasks) + int(bool(station.task_results)),
+                "queue_remaining_seconds": (
+                    max(0, task_snapshot.ready_at - now)
+                    + sum(task.final_duration for task in station.queued_tasks)
+                ) if task_snapshot else 0,
+                "completed_results": [
+                    self._result_snapshot(result)
+                    for entry in station.completed_tasks for result in entry.task_results
+                ],
                 "task_results": [self._result_snapshot(result) for result in station.task_results],
                 "empty": station.empty,
                 "ready": bool(task_snapshot and task_snapshot.ready_at <= now),

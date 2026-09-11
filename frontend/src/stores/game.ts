@@ -441,10 +441,10 @@ export const useGameStore = defineStore('game', () => {
     })
   }
 
-  function startProduction(industry: ProductionIndustry, nodeId: string, taskId: string, taskItemId = '') {
+  function startProduction(industry: ProductionIndustry, nodeId: string, taskId: string, taskItemId = '', quantity = 1) {
     const copy = PRODUCTION_COPY[industry]
     return action(`${industry}:${nodeId}:start:${taskId}`, `${productionBase(industry, nodeId)}/start`, {
-      payload: { [copy.startPayloadKey]: taskId, task_item_id: taskItemId },
+      payload: { [copy.startPayloadKey]: taskId, task_item_id: taskItemId, ...(industry === 'crafting' ? { quantity } : {}) },
       successMessage: '任务已经开始',
       cue: `action:start_${industry}`,
     })
@@ -715,7 +715,9 @@ export const useGameStore = defineStore('game', () => {
   function cancelTask(industry: ProductionIndustry | 'farming', slotId: string | number) {
     return action(`${industry}:${slotId}:cancel`, `${API_ROOT}/tasks/cancel`, {
       payload: { industry, slot_id: String(slotId) },
-      successMessage: '任务已经取消，消耗的资源已退回',
+      successMessage: industry === 'crafting'
+        ? '加工已取消，未开始部分的预留资源已退回，已完成产物可继续领取'
+        : '任务已经取消，消耗的资源已退回',
       cue: `action:cancel_${industry}`,
     })
   }

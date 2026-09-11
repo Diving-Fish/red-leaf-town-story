@@ -1210,3 +1210,35 @@ async def test_sailing_api_full_trial_and_upgrade(client, service, monkeypatch):
     assert data['state']['sailing']['active_run'] is None
     response = await client.post('/api/red-leaf-town/sailing/collect', json={'run_id': run['run_id']})
     assert (await response.get_json())['data']['result']['duplicate']
+
+
+@runs
+async def test_crafting_queue_api_reservation_partial_collection_and_cancel(client, service):
+    player = service.repository.get_by_sub("route-sub")
+
+    def prepare(state):
+        state.experience = 60
+        state.inventory["maple_wood"] = {1: 6}
+        state.task_items["harvest_knot"] = 2
+
+    service.repository.update(player.player_id, prepare)
+    authenticate(client)
+    response = await client.post(
+        "/api/red-leaf-town/crafting/stations/town_workbench/start",
+        json={"recipe_id": "saw_maple_plank", "quantity": 3, "task_item_id": "harvest_knot"},
+    )
+    assert response.status_code == 200
+    data = (await response.get_json())["data"]
+    station = data["state"]["crafting_stations"][0]
+    assert station["queued_count"] == 2
+    assert data["result"]["task_items_reserved"] == 2
+    service.clock = lambda: station["task_snapshot"]["ready_at"]
+    response = await client.post("/api/red-leaf-town/crafting/stations/town_workbench/collect")
+    assert response.status_code == 200
+    data = (await response.get_json())["data"]
+    assert data["result"]["quantity"] == 2
+    assert data["state"]["crafting_stations"][0]["queued_count"] == 1
+    cancelled = service.cancel_task("route-sub", "crafting", "town_workbench")
+    assert cancelled["result"]["refunded_stamina"] == 2
+    assert cancelled["result"]["refunded_task_items"] == {}
+    assert cancelled["state"]["crafting_stations"][0]["empty"]

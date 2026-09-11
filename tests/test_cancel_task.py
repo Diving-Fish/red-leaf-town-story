@@ -98,7 +98,7 @@ def test_cancel_gathering_releases_site_without_refunding_items(game):
     assert restarted["state"]["gathering_sites"][0]["task_snapshot"] is not None
 
 
-def test_cancel_crafting_refunds_consumed_inputs_and_stamina(game):
+def test_cancel_crafting_does_not_refund_the_started_task(game):
     service, repository, _, player = game
     reach_level(repository, player.player_id, 60)
     service.snapshot_by_sub("cancel-sub")
@@ -115,9 +115,9 @@ def test_cancel_crafting_refunds_consumed_inputs_and_stamina(game):
     assert station["task_snapshot"] is None
 
     after = repository.get(player.player_id)
-    assert after.inventory["maple_wood"] == {1: 1, 3: 2}
-    assert after.stamina == before_stamina
-    assert started["result"]["consumed_inputs"] == cancelled["result"]["refunded_inputs"]
+    assert after.inventory["maple_wood"] == {3: 1}
+    assert after.stamina == before_stamina - 2
+    assert cancelled["result"]["refunded_inputs"] == []
 
 
 def test_cancel_mining_refunds_stamina(game):

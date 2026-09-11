@@ -225,11 +225,22 @@ class GatheringSiteState(BaseModel):
         return self.task_snapshot is None
 
 
+class CompletedCraftingTask(BaseModel):
+    task_snapshot: ProductionTaskSnapshot
+    task_results: list[ProductionResultSnapshot] = Field(default_factory=list, max_length=25)
+
+
 class CraftingStationState(BaseModel):
     station_id: str = Field(min_length=1)
     assigned_partner_ids: list[str] = Field(default_factory=list, max_length=1)
     task_snapshot: ProductionTaskSnapshot | None = None
     task_results: list[ProductionResultSnapshot] = Field(default_factory=list, max_length=25)
+
+    # Future tasks hold reserved resources; the current task has already consumed its inputs.
+    queued_tasks: list[ProductionTaskSnapshot] = Field(default_factory=list, max_length=98)
+    completed_tasks: list[CompletedCraftingTask] = Field(default_factory=list, max_length=99)
+    queue_total: int = Field(default=0, ge=0, le=99)
+    collected_count: int = Field(default=0, ge=0, le=99)
 
     @property
     def empty(self) -> bool:

@@ -81,7 +81,7 @@ export const PRODUCTION_COPY: Record<ProductionIndustry, ProductionCopy> = {
     collectNoun: '加工品',
     cancelLabel: '取消加工',
     cancelConfirmTitle: '取消这次加工？',
-    cancelConfirmDescription: '消耗的材料和体力会退回，伙伴仍留在这个工位。',
+    cancelConfirmDescription: '当前加工将终止且投入不退；未开始部分的材料、体力和特殊道具会退回，已完成产物保留供领取。',
     startPayloadKey: 'recipe_id',
     endpoint: 'crafting/stations',
   },
@@ -137,8 +137,16 @@ export function fromMiningSite(site: MiningSiteState): ProductionNode {
 }
 
 export function fromCraftingStation(station: CraftingStationState): ProductionNode {
+  const results = [...(station.completed_results || []), ...station.task_results]
+  const combined = new Map<string, typeof results[number]>()
+  for (const result of results) {
+    const key = `${result.item_id}:${result.quality}`
+    const previous = combined.get(key)
+    combined.set(key, { ...result, quantity: result.quantity + (previous?.quantity || 0) })
+  }
   return {
     ...baseNode('crafting', station.station_id, station, '#ad8159'),
+    taskResults: [...combined.values()],
     activeName: station.recipe?.name || '',
     activeItemName: station.recipe?.item.name || '',
     activeItemIcon: station.recipe?.item.icon || '',

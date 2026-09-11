@@ -325,3 +325,35 @@ def test_sailing_snapshot_and_claim_survive_service_reload(repository, monkeypat
     assert state.sailing.completed_voyages == 1
     assert reloaded.collect_sailing('redis-sailing-sub', frozen.run_id)['result']['duplicate']
     assert repository.get(player.player_id).inventory == state.inventory
+
+
+def test_crafting_queue_partial_rewards_and_reservations_survive_reload(repository):
+    now = 1_700_000_000
+    content = load_content()
+    service = GameService(content, repository, clock=lambda: now)
+    player = service.ensure_player("redis-craft-queue", "工坊居民")
+
+    def prepare(state):
+        state.experience = 60
+        state.inventory["maple_wood"] = {1: 8}
+        state.task_items["harvest_knot"] = 4
+
+    repository.update(player.player_id, prepare)
+    started = service.start_crafting(
+        "redis-craft-queue", "town_workbench", "saw_maple_plank", "harvest_knot", quantity=4,
+    )
+    now = started["state"]["crafting_stations"][0]["task_snapshot"]["ready_at"]
+    reloaded = GameService(content, repository, clock=lambda: now)
+    state = reloaded.snapshot_by_sub("redis-craft-queue")["crafting_stations"][0]
+    assert state["completed_count"] == 1
+    assert state["queued_count"] == 2
+    reloaded = GameService(content, repository, clock=lambda: now)
+    cancelled = reloaded.cancel_task("redis-craft-queue", "crafting", "town_workbench")
+    assert cancelled["result"]["refunded_task_items"] == {"harvest_knot": 2}
+    reloaded = GameService(content, repository, clock=lambda: now)
+    collected = reloaded.collect_crafting("redis-craft-queue", "town_workbench")
+    assert collected["result"]["quantity"] == 2
+    assert collected["state"]["crafting_stations"][0]["empty"]
+    state = repository.get(player.player_id)
+    assert state.inventory["maple_wood"] == {1: 4}
+    assert state.task_items["harvest_knot"] == 2

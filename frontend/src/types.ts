@@ -517,6 +517,12 @@ export interface CraftingStationState {
   assigned_partner_ids: string[]
   task_snapshot: ProductionTaskSnapshot | null
   task_results: ProductionResultSnapshot[]
+  queue_total: number
+  collected_count: number
+  queued_count: number
+  completed_count: number
+  queue_remaining_seconds: number
+  completed_results: ProductionResultSnapshot[]
   empty: boolean
   ready: boolean
   remaining_seconds: number
