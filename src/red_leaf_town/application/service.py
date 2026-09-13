@@ -1864,6 +1864,7 @@ class GameService(SailingServiceMixin):
                 deposit_into_slot(player.feed_slot, add_units, unit_score, self._feed_slot_capacity(player))
             except SlotError as exc:
                 raise GameError("feed_slot_full", str(exc)) from exc
+            self._settle_aquatic(player, now)
             return {
                 "item_id": item_id,
                 "quality": quality or None,

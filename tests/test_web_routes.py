@@ -1040,6 +1040,43 @@ async def test_fishing_and_feed_slot_api(client, service):
 
 
 @runs
+async def test_feed_deposit_completes_a_legacy_stalled_livestock_cycle(client, service):
+    authenticate(client)
+    player = service.repository.get_by_sub("route-sub")
+
+    def prepare(state):
+        state.experience = service.content.level_definition(12).total_xp
+        state.coins = 30_000
+        add_item(state, "maple_wood", 30, 1)
+        add_item(state, "meadow_hay", 2, 0)
+
+    service.repository.update(player.player_id, prepare)
+    service.build_livestock_facility("route-sub", "coop_1")
+    service.buy_animal("route-sub", "coop_1", "chicken")
+
+    def stall(state):
+        state.animals[0].stage = "adult"
+        state.livestock_facilities[0].stalled = True
+        state.livestock_facilities[0].settle_remainder = 123
+        state.feed_slot.units = 0
+
+    service.repository.update(player.player_id, stall)
+    response = await client.post(
+        "/api/red-leaf-town/feed-slot/deposit",
+        json={"item_id": "meadow_hay", "quality": 0, "count": 2},
+    )
+    assert response.status_code == 200
+    state = (await response.get_json())["data"]["state"]
+    coop = state["livestock"]["facilities"][0]
+    assert coop["stalled"] is False
+    assert coop["animals"][0]["pending_total"] == 1
+    assert state["aquatic"]["feed_slot"]["units"] == 0
+    refreshed = service.snapshot_by_sub("route-sub")["livestock"]["facilities"][0]
+    assert refreshed["animals"][0]["pending_total"] == 1
+    assert refreshed["stalled"] is False
+
+
+@runs
 async def test_pond_api(client, service):
     authenticate(client)
     player = service.repository.get_by_sub("route-sub")

@@ -376,7 +376,8 @@ def test_an_empty_feed_slot_stalls_the_whole_barn(ranch):
 
     # 断粮期间没有额外惩罚：补料之后从停摆点原样继续。
     fill_feed(repository, player.player_id, units=200, score=30)
-    clock.advance(2 * CYCLE)
+    service.snapshot_by_sub("stock-sub")
+    clock.advance(CYCLE)
     coop = facility_of(service.snapshot_by_sub("stock-sub"), "coop_1")
     assert coop["stalled"] is False
     assert coop["animals"][0]["pending_total"] == 2
@@ -393,7 +394,7 @@ def test_growth_pauses_while_the_slot_is_empty(ranch):
     assert coop["animals"][0]["remaining_stage_cycles"] == 3
 
 
-def test_stalling_at_a_cycle_boundary_keeps_the_existing_partial_cycle(ranch):
+def test_stalling_at_a_cycle_boundary_keeps_the_completed_cycle(ranch):
     service, repository, clock, player = ranch
     service.buy_animal("stock-sub", "coop_1", "chicken")
 
@@ -410,8 +411,40 @@ def test_stalling_at_a_cycle_boundary_keeps_the_existing_partial_cycle(ranch):
     assert coop["stalled"] is True
     assert coop["animals"][0]["stage"] == "juvenile"
     assert coop["animals"][0]["remaining_stage_cycles"] == 1
-    assert coop["settle_remainder"] == almost_three_cycles % CYCLE
-    assert coop["next_cycle_seconds"] == 52 * 60
+    assert coop["settle_remainder"] == CYCLE
+    assert coop["next_cycle_seconds"] == 0
+
+
+@pytest.mark.parametrize("refresh_before_deposit", [False, True])
+def test_refilling_feed_immediately_finishes_only_the_waiting_cycle(ranch, refresh_before_deposit):
+    service, repository, clock, player = ranch
+    service.buy_animal("stock-sub", "coop_1", "chicken")
+    clock.advance(3 * CYCLE)
+    service.snapshot_by_sub("stock-sub")
+    fill_feed(repository, player.player_id, units=0, score=0)
+    give(repository, player.player_id, "meadow_hay", 100)
+    clock.advance(10 * CYCLE)
+    if refresh_before_deposit:
+        for _ in range(3):
+            coop = facility_of(service.snapshot_by_sub("stock-sub"), "coop_1")
+            assert coop["stalled"] is True
+            assert coop["animals"][0]["pending_total"] == 0
+            clock.advance(CYCLE)
+
+    insufficient = service.deposit_feed("stock-sub", "meadow_hay", 0, 1)
+    assert facility_of(insufficient["state"], "coop_1")["stalled"] is True
+    result = service.deposit_feed("stock-sub", "meadow_hay", 0, 99)
+    coop = facility_of(result["state"], "coop_1")
+    assert coop["stalled"] is False
+    assert coop["animals"][0]["pending_total"] == 1
+    assert coop["next_cycle_seconds"] == CYCLE
+    assert result["state"]["aquatic"]["feed_slot"]["units"] == 392
+    for _ in range(3):
+        refreshed = facility_of(service.snapshot_by_sub("stock-sub"), "coop_1")
+        assert refreshed["animals"][0]["pending_total"] == 1
+    clock.advance(CYCLE)
+    coop = facility_of(service.snapshot_by_sub("stock-sub"), "coop_1")
+    assert coop["animals"][0]["pending_total"] == 2
 
 
 def test_a_long_offline_stretch_settles_in_one_pass(ranch):

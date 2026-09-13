@@ -241,6 +241,13 @@ def advance_facility(
     return advance
 
 
+def _pending_seconds(facility: LivestockFacilityState, cycle: int, seconds: int) -> int:
+    if facility.stalled:
+        # 缺料意味着已经到过结算边界；兼容旧存档留下的部分余量，只保留一个待付周期。
+        return max(0, cycle)
+    return facility.settle_remainder + max(0, int(seconds))
+
+
 def plan_facility(
     facility: LivestockFacilityState,
     animals: list[AnimalState],
@@ -256,7 +263,7 @@ def plan_facility(
     cycle = parameters.cycle_seconds
     if cycle <= 0:
         return 0, 0.0
-    elapsed = facility.settle_remainder + max(0, int(seconds))
+    elapsed = _pending_seconds(facility, cycle, seconds)
     cycles = elapsed // cycle
     if cycles <= 0:
         return 0, 0.0
@@ -306,9 +313,7 @@ def settle_livestock(
             facility.last_settled_at = now
             continue
         cycle = entry.cycle_seconds
-        was_stalled = facility.stalled
-        previous_remainder = facility.settle_remainder
-        elapsed = previous_remainder + max(0, now - facility.last_settled_at)
+        elapsed = _pending_seconds(facility, cycle, now - facility.last_settled_at)
         wanted_cycles = elapsed // cycle if cycle > 0 else 0
         _, units = plans.get(facility.facility_id, (0, 0.0))
         budget = units * max(0.0, min(1.0, ratio))
@@ -322,15 +327,11 @@ def settle_livestock(
         )
         consumed += advance.consumed_units
         if advance.stalled:
-            # 连下一个周期都买不起时，停在这段结算前已经走到的位置；
-            # 不能把之前的余量清零，否则一只还差几分钟长成的幼崽会倒退整整一个周期。
-            # 若本段已经付过若干整周期，则停在最后一个已付周期的末尾。
-            facility.settle_remainder = 0 if advance.cycles else previous_remainder
+            # 时间已经走完，只等付料；停摆期间不积攒后续周期。
+            facility.settle_remainder = cycle
         elif cycle > 0:
             facility.settle_remainder = elapsed % cycle
-        # 两次请求间还没到下一个周期边界时，没有发生新的结算尝试，
-        # 不能因此把上一次的停摆状态擦掉。
-        facility.stalled = advance.stalled or (was_stalled and wanted_cycles <= 0)
+        facility.stalled = advance.stalled
         facility.last_settled_at = now
         settlement.facilities[facility.facility_id] = advance
         settlement.stalled = settlement.stalled or advance.stalled
