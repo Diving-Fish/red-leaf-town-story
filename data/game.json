@@ -892,6 +892,21 @@
       }
     },
     {
+      "id": "balanced_fodder",
+      "name": "均衡饲料",
+      "icon": "package",
+      "kind": "product",
+      "sell_price": 10,
+      "has_quality": false,
+      "tags": [
+        "fodder"
+      ],
+      "feed": {
+        "units": 10,
+        "score": 50
+      }
+    },
+    {
       "id": "fish_meal",
       "name": "鱼粉",
       "icon": "package",
@@ -5094,6 +5109,7 @@
       "orange_berry",
       "fish_fry",
       "meadow_hay",
+      "balanced_fodder",
       "golden_egg",
       "rich_milk",
       "giant_stream_carp",
@@ -6297,6 +6313,13 @@
       "id": "meadow_hay",
       "item_id": "meadow_hay",
       "price": 8,
+      "currency": "coins",
+      "min_level": 2
+    },
+    {
+      "id": "balanced_fodder",
+      "item_id": "balanced_fodder",
+      "price": 30,
       "currency": "coins",
       "min_level": 2
     },
