@@ -1,0 +1,8 @@
+<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><div id="app"></div><script type="module">
+import {createApp, ref} from 'vue/dist/vue.esm-bundler.js';
+import Dialog from '/red-leaf-town/src/components/CraftingOutcomeDialog.vue';
+import ModalSheet from '/red-leaf-town/src/components/ModalSheet.vue';
+import '/red-leaf-town/src/styles.css';
+const sample = {completed_count:12,experience:72,drops:Array.from({length:12},(_,i)=>({item_id:'plank',item:{name:'枫木板'},quantity:1,quality:i%4===0?5:3,quality_name:i%4===0?'臻品':'上品'})),refunded_inputs:Array.from({length:3},(_,i)=>({item_id:'wood',item:{name:'枫木'},quantity:2,quality:i?5:3,quality_name:i?'臻品':'上品',trait_name:'万物归元'}))};
+createApp({components:{Dialog,ModalSheet},setup(){const outcome=ref(null); const sheet=ref(false);window.demo={open(){outcome.value=structuredClone(sample)},long(){outcome.value={...sample,drops:Array.from({length:50},(_,i)=>({...sample.drops[0],item_id:'item'+i,item:{name:'很长的测试物品名称'.repeat(4)}}))}}};return {outcome,sheet,open:window.demo.open}},template:`<button id="trigger" @click="open">领取加工</button><button id="sheet-trigger" @click="sheet=true">普通弹窗</button><ModalSheet :open="sheet" title="普通弹窗" @close="sheet=false"><button @click="open">嵌套结果</button></ModalSheet><Dialog :outcome="outcome" @close="outcome=null"/>`}).mount('#app');
+</script></body></html>

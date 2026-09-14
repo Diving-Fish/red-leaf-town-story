@@ -822,7 +822,7 @@ def _ripple_play(context: MutableMapping[str, Any]) -> None:
 @register_partner_trait(
     "azure_smelt",
     "蓝焰熔炼",
-    "加工与采矿任务的品质能力提高15%；加工结算时，品质最低的一件成品必定提升到「良品」以上。",
+    "加工与采矿任务的品质能力提高15%；加工结算时，品质最低的一件成品保底为「良品」，已有良品及以上品质不变。",
     phases=("task_prepare", "result_finalize"),
 )
 def _azure_smelt(context: MutableMapping[str, Any]) -> None:
@@ -833,7 +833,7 @@ def _azure_smelt(context: MutableMapping[str, Any]) -> None:
         record_partner_trait_effect(
             context,
             "promote_lowest_quality",
-            params={"chance": 1.0, "levels": 1, "minimum": 2},
+            params={"chance": 1.0, "levels": 0, "minimum": 2},
             stacking_group="quality_promotion",
         )
 

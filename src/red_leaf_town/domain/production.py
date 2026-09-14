@@ -171,9 +171,12 @@ def build_results(
         if not eligible:
             continue
         target = min(eligible, key=lambda result: (result.quality, order.index(result.item_id)))
-        levels = max(1, int(params.get("levels", 1)))
+        # 零级提升只提供品质保底；未指定时仍沿用升一级的快照语义。
+        levels = max(0, int(params.get("levels", 1)))
         minimum = max(1, min(5, int(params.get("minimum", 1))))
         promoted_quality = min(5, max(target.quality + levels, minimum))
+        if promoted_quality == target.quality:
+            continue
         target.quantity -= 1
         promoted = next(
             (

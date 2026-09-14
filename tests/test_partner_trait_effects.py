@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import pytest
+
 from red_leaf_town.domain import TaskOutputSnapshot
 from red_leaf_town.domain.production import build_results, draw_weighted_batches
+from red_leaf_town.partner_traits import execute_partner_traits
 
 
 class SequenceRandom:
@@ -16,6 +19,48 @@ class SequenceRandom:
 
     def randint(self, lower: int, upper: int) -> int:
         return lower
+
+
+@pytest.mark.parametrize("quality", [1, 2, 3, 4, 5])
+def test_azure_smelt_only_guarantees_fine_quality(quality):
+    context = {
+        "phase": "result_finalize",
+        "industry": "crafting",
+        "source_partner_id": "nuanyu_2",
+        "applied_effects": [],
+    }
+    execute_partner_traits(["azure_smelt"], context)
+    results = build_results(
+        SequenceRandom([0]),
+        [("maple_plank", 1)],
+        [float(tier == quality) for tier in range(1, 6)],
+        100,
+        context["applied_effects"],
+    )
+    assert [(entry.quality, entry.quantity) for entry in results] == [(max(2, quality), 1)]
+
+
+def test_quality_floor_only_promotes_one_unit_in_a_batch():
+    results = build_results(
+        SequenceRandom([0]),
+        [("maple_plank", 3)],
+        [1, 0, 0, 0, 0],
+        100,
+        [{"effect": "promote_lowest_quality", "params": {"levels": 0, "minimum": 2}}],
+    )
+    assert [(entry.quality, entry.quantity) for entry in results] == [(1, 2), (2, 1)]
+
+
+@pytest.mark.parametrize("params", [{}, {"levels": 1, "minimum": 2}])
+def test_existing_quality_promotion_snapshots_still_raise_one_level(params):
+    results = build_results(
+        SequenceRandom([0]),
+        [("maple_plank", 1)],
+        [0, 0, 0, 1, 0],
+        100,
+        [{"effect": "promote_lowest_quality", "params": params}],
+    )
+    assert [(entry.quality, entry.quantity) for entry in results] == [(5, 1)]
 
 
 def output(item_id: str, weight: float) -> TaskOutputSnapshot:
