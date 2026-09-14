@@ -630,3 +630,31 @@ def test_all_live_partner_ascensions_match_review_and_use_original_rarity():
         assert entry.items[2].item_id == rows[partner.id]["特色物品ID"]
         assert entry.items[2].quantity == int(rows[partner.id]["特色数量"])
         assert all(item.item_id in content.item_map for item in entry.items)
+
+
+@pytest.mark.parametrize("level, breakthrough, quantity", [(1, 0, 10), (19, 0, 99), (20, 1, 20), (39, 1, 99)])
+def test_batch_training_matches_snapshot_experience_costs(growth_game, level, breakthrough, quantity):
+    service, repository, _, player = growth_game
+    service.admin_grant_partner(player.player_id, "xiang_hanyang")
+    book_id, book_xp = next(iter(service.content.partner_growth.experience_books.items()))
+
+    def prepare(state):
+        partner = next(p for p in state.owned_partners if p.partner_id == "xiang_hanyang")
+        partner.level = level
+        partner.breakthrough = breakthrough
+        partner.experience = 30
+        add_item(state, book_id, quantity)
+
+    repository.update(player.player_id, prepare)
+    snapshot = service.snapshot_by_sub("growth-sub")
+    partner = next(p for p in snapshot["partners"] if p["partner_id"] == "xiang_hanyang")
+    costs = snapshot["partner_growth"]["level_experience_costs"]
+    expected_level, expected_xp = level, partner["experience"] + book_xp * quantity
+    while expected_level < partner["level_cap"] and expected_xp >= costs[expected_level]:
+        expected_xp -= costs[expected_level]
+        expected_level += 1
+
+    trained = service.train_partner("growth-sub", "xiang_hanyang", book_id, quantity)
+    result = next(p for p in trained["state"]["partners"] if p["partner_id"] == "xiang_hanyang")
+    assert (result["level"], result["experience"]) == (expected_level, expected_xp)
+    assert sum(repository.get(player.player_id).inventory.get(book_id, {}).values()) == 0

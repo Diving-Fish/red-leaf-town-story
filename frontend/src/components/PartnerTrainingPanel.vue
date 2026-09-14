@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { ArrowRight, BookOpen, Check, Gem, Star } from 'lucide-vue-next'
 import ActionButton from '@/components/ActionButton.vue'
+import QuantityStepper from '@/components/QuantityStepper.vue'
+import ProgressBar from '@/components/ProgressBar.vue'
 import GameIcon from '@/components/GameIcon.vue'
 import PartnerAscensionPanel from '@/components/PartnerAscensionPanel.vue'
 import { useGameStore } from '@/stores/game'
@@ -18,6 +20,25 @@ const activeTab = ref<string>('experience')
 const selectedBook = ref('')
 const books = computed(() => game.state?.partner_growth.experience_books || [])
 const book = computed(() => books.value.find(item => item.item_id === selectedBook.value) || books.value.find(item => item.owned > 0) || books.value[0])
+const quantity = ref(1)
+const maxQuantity = computed(() => Math.min(99, book.value?.owned || 0))
+watch(() => book.value?.item_id, () => { quantity.value = 1 })
+watch(maxQuantity, max => { quantity.value = Math.max(1, Math.min(quantity.value, max)) })
+const experienceGain = computed(() => (book.value?.experience || 0) * Math.min(quantity.value, maxQuantity.value))
+const preview = computed(() => {
+  let level = props.partner.level
+  let experience = props.partner.experience + experienceGain.value
+  const cap = props.partner.level_cap || 20
+  const costs = game.state?.partner_growth.level_experience_costs || {}
+  while (level < cap && costs[level] && experience >= costs[level]!) {
+    experience -= costs[level]!
+    level += 1
+  }
+  const cost = level < cap ? costs[level] : undefined
+  return { level, experience, cost, capped: level >= cap }
+})
+const currentProgress = computed(() => props.partner.experience_to_next_level ? Math.min(100, props.partner.experience / props.partner.experience_to_next_level * 100) : 100)
+const previewProgress = computed(() => preview.value.cost ? Math.min(100, preview.value.experience / preview.value.cost * 100) : 100)
 const marks = computed(() => game.player?.companion_marks || 0)
 const stars = computed(() => props.partner.stars || props.partner.rarity || 3)
 const starReady = computed(() => props.partner.star_up_available && marks.value >= (props.partner.star_up_cost || 0))
@@ -42,13 +63,19 @@ function moveTab(event: KeyboardEvent, index: number) {
 
     <div v-show="activeTab === 'experience'" id="training-panel-experience" class="training-panel" role="tabpanel" aria-labelledby="training-tab-experience" tabindex="0">
       <div class="training-heading"><span class="training-symbol"><BookOpen :size="23" /></span><div><p>伙伴成长</p><h3>伙伴升级</h3></div><span class="training-badge">Lv.{{ partner.level }} / {{ partner.level_cap }}</span></div>
-      <p class="training-description">{{ partner.experience_to_next_level ? '选择一本同行札记，增长伙伴经验。' : '当前阶段已满级，获得的经验会保留。' }}</p>
+      <div class="experience-preview" aria-live="polite">
+        <div><span>当前 · Lv.{{ partner.level }}</span><strong>{{ partner.experience.toLocaleString() }}<small>{{ partner.experience_to_next_level ? ` / ${partner.experience_to_next_level.toLocaleString()}` : ' · 留存经验' }}</small></strong><ProgressBar :value="currentProgress" :height="5" /></div>
+        <ArrowRight :size="16" />
+        <div><span>使用后 · Lv.{{ preview.level }}</span><strong>{{ preview.experience.toLocaleString() }}<small>{{ preview.cost ? ` / ${preview.cost.toLocaleString()}` : ' · 留存经验' }}</small></strong><ProgressBar :value="previewProgress" :height="5" /></div>
+      </div>
+      <p class="training-description">经验 +{{ experienceGain.toLocaleString() }}<template v-if="preview.level > partner.level"> · 提升 {{ preview.level - partner.level }} 级</template><template v-if="preview.capped"> · 达到等级上限，溢出经验保留</template></p>
       <div class="book-options" role="group" aria-label="选择经验书">
         <button v-for="item in books" :key="item.item_id" :aria-pressed="book?.item_id === item.item_id" @click="selectedBook = item.item_id">
           <GameIcon :name="item.item.icon" :size="23" /><span><strong>{{ item.item.name }}</strong><small>经验 +{{ item.experience }}</small></span><span class="book-stock">×{{ item.owned }}<Check v-if="book?.item_id === item.item_id" :size="14" /></span>
         </button>
       </div>
-      <div class="training-footer"><small>{{ book ? `持有 ${book.owned} 本 · 本次使用 1 本` : '暂无可用札记' }}</small><ActionButton :action-key="`partner:${partner.partner_id}:train:${book?.item_id || ''}`" :group="`partner:${partner.partner_id}:`" :disabled="!book?.owned" :reason="!book?.owned ? '仓库里没有这本札记' : undefined" @click="book && game.trainPartner(partner.partner_id, book.item_id)">使用札记 <ArrowRight :size="15" /></ActionButton></div>
+      <div class="book-quantity"><span>使用数量</span><QuantityStepper v-model="quantity" :max="Math.max(1, maxQuantity)" :disabled="!maxQuantity || game.isPendingPrefix(`partner:${partner.partner_id}:`)" /><button class="text-button" :disabled="!maxQuantity || game.isPendingPrefix(`partner:${partner.partner_id}:`)" @click="quantity = maxQuantity">最多</button></div>
+      <div class="training-footer"><small>{{ book ? `持有 ${book.owned} 本 · 本次使用 ${Math.min(quantity, maxQuantity)} 本` : '暂无可用札记' }}</small><ActionButton :action-key="`partner:${partner.partner_id}:train:${book?.item_id || ''}`" :group="`partner:${partner.partner_id}:`" :disabled="!maxQuantity" :reason="!maxQuantity ? '仓库里没有这本札记' : undefined" @click="book && game.trainPartner(partner.partner_id, book.item_id, quantity)">使用札记 <ArrowRight :size="15" /></ActionButton></div>
     </div>
 
     <div v-show="activeTab === 'ascension'" id="training-panel-ascension" class="training-panel" role="tabpanel" aria-labelledby="training-tab-ascension" tabindex="0">
@@ -78,6 +105,14 @@ function moveTab(event: KeyboardEvent, index: number) {
 .training-heading h3 { margin: 0; font-size: 16px; font-family: 'Noto Serif SC', serif; }
 .training-badge { display: flex; align-items: center; gap: 5px; margin-left: auto; color: #d8c796; font-size: 12px; }
 .training-description { margin: 12px 0; color: #a4afa4; font-size: 12px; line-height: 1.6; }
+.experience-preview { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 10px; margin-top: 16px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: #0002; }
+.experience-preview > div { display: grid; gap: 8px; min-width: 0; }
+.experience-preview span { color: #a4afa4; font-size: 12px; }
+.experience-preview strong { color: #d8c796; font-size: 15px; overflow-wrap: anywhere; }
+.experience-preview small { color: #a4afa4; font-size: 11px; font-weight: normal; }
+.experience-preview > svg { color: #a4afa4; }
+.book-quantity { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+.book-quantity > span { margin-right: auto; color: #a4afa4; font-size: 12px; }
 .book-options { display: grid; gap: 7px; }
 .book-options button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 9px; background: #0002; color: #b4beb2; text-align: left; cursor: pointer; }
 .book-options button[aria-pressed="true"] { border-color: #c7af7066; background: #c7af7010; }

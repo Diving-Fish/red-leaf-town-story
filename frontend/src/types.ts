@@ -1576,6 +1576,7 @@ export interface PartnerExperienceBook {
 }
 
 export interface PartnerGrowthState {
+  level_experience_costs: Record<number, number>
   experience_books: PartnerExperienceBook[]
 }
 

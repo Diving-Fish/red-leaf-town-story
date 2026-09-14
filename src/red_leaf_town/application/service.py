@@ -6781,6 +6781,10 @@ class GameService(SailingServiceMixin):
             "partners": partner_records,
             "partner_count": len(partner_records),
             "partner_growth": {
+                "level_experience_costs": {
+                    level: self.content.partner_growth.experience_for_next_level(level)
+                    for level in range(1, max((record.get("level_cap", 20) for record in partner_records), default=20))
+                },
                 "experience_books": [
                     {
                         "item_id": item_id,
