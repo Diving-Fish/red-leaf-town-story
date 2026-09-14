@@ -73,7 +73,30 @@
           "h": 1
         }
       ],
-      "ascensions": []
+      "ascensions": [
+        {
+          "breakthrough": 1,
+          "min_player_level": 15,
+          "coins": 8000,
+          "items": [
+            {
+              "item_id": "miracle_crystal",
+              "quantity": 18,
+              "min_quality": 0
+            },
+            {
+              "item_id": "lake_fish",
+              "quantity": 20,
+              "min_quality": 3
+            },
+            {
+              "item_id": "flour",
+              "quantity": 2,
+              "min_quality": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "ai_xinyu",
@@ -147,7 +170,30 @@
           "h": 1
         }
       ],
-      "ascensions": []
+      "ascensions": [
+        {
+          "breakthrough": 1,
+          "min_player_level": 15,
+          "coins": 6500,
+          "items": [
+            {
+              "item_id": "miracle_crystal",
+              "quantity": 15,
+              "min_quality": 0
+            },
+            {
+              "item_id": "lake_fish",
+              "quantity": 16,
+              "min_quality": 3
+            },
+            {
+              "item_id": "amber_beeswax",
+              "quantity": 1,
+              "min_quality": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "aishen",
@@ -221,7 +267,30 @@
           "h": 1
         }
       ],
-      "ascensions": []
+      "ascensions": [
+        {
+          "breakthrough": 1,
+          "min_player_level": 15,
+          "coins": 8000,
+          "items": [
+            {
+              "item_id": "miracle_crystal",
+              "quantity": 18,
+              "min_quality": 0
+            },
+            {
+              "item_id": "maple_resin",
+              "quantity": 5,
+              "min_quality": 3
+            },
+            {
+              "item_id": "red_copper_ore",
+              "quantity": 5,
+              "min_quality": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "aiweier",
@@ -295,7 +364,30 @@
           "h": 1
         }
       ],
-      "ascensions": []
+      "ascensions": [
+        {
+          "breakthrough": 1,
+          "min_player_level": 15,
+          "coins": 6500,
+          "items": [
+            {
+              "item_id": "miracle_crystal",
+              "quantity": 15,
+              "min_quality": 0
+            },
+            {
+              "item_id": "wheat",
+              "quantity": 16,
+              "min_quality": 3
+            },
+            {
+              "item_id": "mixed_fodder",
+              "quantity": 2,
+              "min_quality": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "aorui_jin",
@@ -359,7 +451,30 @@
           "h": 1
         }
       ],
-      "ascensions": []
+      "ascensions": [
+        {
+          "breakthrough": 1,
+          "min_player_level": 15,
+          "coins": 5000,
+          "items": [
+            {
+              "item_id": "miracle_crystal",
+              "quantity": 12,
+              "min_quality": 0
+            },
+            {
+              "item_id": "stream_fish",
+              "quantity": 20,
+              "min_quality": 3
+            },
+            {
+              "item_id": "stone_loach",
+              "quantity": 2,
+              "min_quality": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "babi",
@@ -428,7 +543,30 @@
           "h": 1
         }
       ],
-      "ascensions": []
+      "ascensions": [
+        {
+          "breakthrough": 1,
+          "min_player_level": 15,
+          "coins": 5000,
+          "items": [
+            {
+              "item_id": "miracle_crystal",
+              "quantity": 12,
+              "min_quality": 0
+            },
+            {
+              "item_id": "maple_plank",
+              "quantity": 4,
+              "min_quality": 3
+            },
+            {
+              "item_id": "pumpkin",
+              "quantity": 2,
+              "min_quality": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "bai_li",
@@ -497,7 +635,30 @@
           "h": 1
         }
       ],
-      "ascensions": []
+      "ascensions": [
+        {
+          "breakthrough": 1,
+          "min_player_level": 15,
+          "coins": 8000,
+          "items": [
+            {
+              "item_id": "miracle_crystal",
+              "quantity": 18,
+              "min_quality": 0
+            },
+            {
+              "item_id": "pumpkin",
+              "quantity": 8,
+              "min_quality": 3
+            },
+            {
+              "item_id": "peach_berry",
+              "quantity": 2,
+              "min_quality": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "bai_lin",
@@ -562,7 +723,30 @@
           "h": 1
         }
       ],
-      "ascensions": []
+      "ascensions": [
+        {
+          "breakthrough": 1,
+          "min_player_level": 15,
+          "coins": 6500,
+          "items": [
+            {
+              "item_id": "miracle_crystal",
+              "quantity": 15,
+              "min_quality": 0
+            },
+            {
+              "item_id": "maple_resin",
+              "quantity": 4,
+              "min_quality": 3
+            },
+            {
+              "item_id": "red_copper_greatsword",
+              "quantity": 1,
+              "min_quality": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "bai_lingxue",
@@ -631,7 +815,30 @@
           "h": 1
         }
       ],
-      "ascensions": []
+      "ascensions": [
+        {
+          "breakthrough": 1,
+          "min_player_level": 15,
+          "coins": 6500,
+          "items": [
+            {
+              "item_id": "miracle_crystal",
+              "quantity": 15,
+              "min_quality": 0
+            },
+            {
+              "item_id": "wool",
+              "quantity": 6,
+              "min_quality": 3
+            },
+            {
+              "item_id": "morning_dew_flower",
+              "quantity": 2,
+              "min_quality": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "bai_tiantian",
@@ -695,7 +902,30 @@
           "h": 1
         }
       ],
-      "ascensions": []
+      "ascensions": [
+        {
+          "breakthrough": 1,
+          "min_player_level": 15,
+          "coins": 8000,
+          "items": [
+            {
+              "item_id": "miracle_crystal",
+              "quantity": 18,
+              "min_quality": 0
+            },
+            {
+              "item_id": "maple_plank",
+              "quantity": 6,
+              "min_quality": 3
+            },
+            {
+              "item_id": "silver_star_moss",
+              "quantity": 2,
+              "min_quality": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "banniang",
@@ -769,7 +999,30 @@
           "h": 1
         }
       ],
-      "ascensions": []
+      "ascensions": [
+        {
+          "breakthrough": 1,
+          "min_player_level": 15,
+          "coins": 6500,
+          "items": [
+            {
+              "item_id": "miracle_crystal",
+              "quantity": 15,
+              "min_quality": 0
+            },
+            {
+              "item_id": "autumn_herb",
+              "quantity": 10,
+              "min_quality": 3
+            },
+            {
+              "item_id": "milk",
+              "quantity": 2,
+              "min_quality": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "bufeng_zhuoying",
@@ -843,7 +1096,30 @@
           "h": 1
         }
       ],
-      "ascensions": []
+      "ascensions": [
+        {
+          "breakthrough": 1,
+          "min_player_level": 15,
+          "coins": 6500,
+          "items": [
+            {
+              "item_id": "miracle_crystal",
+              "quantity": 15,
+              "min_quality": 0
+            },
+            {
+              "item_id": "moon_silver_ore",
+              "quantity": 8,
+              "min_quality": 3
+            },
+            {
+              "item_id": "maple_plank",
+              "quantity": 2,
+              "min_quality": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "daian_zeer",
@@ -912,7 +1188,30 @@
           "h": 1
         }
       ],
-      "ascensions": []
+      "ascensions": [
+        {
+          "breakthrough": 1,
+          "min_player_level": 15,
+          "coins": 5000,
+          "items": [
+            {
+              "item_id": "miracle_crystal",
+              "quantity": 12,
+              "min_quality": 0
+            },
+            {
+              "item_id": "wheat",
+              "quantity": 12,
+              "min_quality": 3
+            },
+            {
+              "item_id": "stream_fish",
+              "quantity": 3,
+              "min_quality": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "fein",
@@ -981,7 +1280,30 @@
           "h": 1
         }
       ],
-      "ascensions": []
+      "ascensions": [
+        {
+          "breakthrough": 1,
+          "min_player_level": 15,
+          "coins": 6500,
+          "items": [
+            {
+              "item_id": "miracle_crystal",
+              "quantity": 15,
+              "min_quality": 0
+            },
+            {
+              "item_id": "autumn_herb",
+              "quantity": 10,
+              "min_quality": 3
+            },
+            {
+              "item_id": "herbal_salve",
+              "quantity": 2,
+              "min_quality": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "fumeng",
@@ -1050,7 +1372,30 @@
           "h": 1
         }
       ],
-      "ascensions": []
+      "ascensions": [
+        {
+          "breakthrough": 1,
+          "min_player_level": 15,
+          "coins": 5000,
+          "items": [
+            {
+              "item_id": "miracle_crystal",
+              "quantity": 12,
+              "min_quality": 0
+            },
+            {
+              "item_id": "flour",
+              "quantity": 4,
+              "min_quality": 3
+            },
+            {
+              "item_id": "woodland_mushroom",
+              "quantity": 3,
+              "min_quality": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "guidengdeng",
@@ -1119,7 +1464,30 @@
           "h": 1
         }
       ],
-      "ascensions": []
+      "ascensions": [
+        {
+          "breakthrough": 1,
+          "min_player_level": 15,
+          "coins": 8000,
+          "items": [
+            {
+              "item_id": "miracle_crystal",
+              "quantity": 18,
+              "min_quality": 0
+            },
+            {
+              "item_id": "pumpkin",
+              "quantity": 8,
+              "min_quality": 3
+            },
+            {
+              "item_id": "amber_beeswax",
+              "quantity": 2,
+              "min_quality": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "gujian_bu",
@@ -1193,7 +1561,30 @@
           "h": 1
         }
       ],
-      "ascensions": []
+      "ascensions": [
+        {
+          "breakthrough": 1,
+          "min_player_level": 15,
+          "coins": 5000,
+          "items": [
+            {
+              "item_id": "miracle_crystal",
+              "quantity": 12,
+              "min_quality": 0
+            },
+            {
+              "item_id": "wheat",
+              "quantity": 12,
+              "min_quality": 3
+            },
+            {
+              "item_id": "red_copper_ore",
+              "quantity": 3,
+              "min_quality": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "gujian_miao",
@@ -1267,7 +1658,30 @@
           "h": 1
         }
       ],
-      "ascensions": []
+      "ascensions": [
+        {
+          "breakthrough": 1,
+          "min_player_level": 15,
+          "coins": 8000,
+          "items": [
+            {
+              "item_id": "miracle_crystal",
+              "quantity": 18,
+              "min_quality": 0
+            },
+            {
+              "item_id": "maple_resin",
+              "quantity": 5,
+              "min_quality": 3
+            },
+            {
+              "item_id": "lake_fish",
+              "quantity": 3,
+              "min_quality": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "guqi",
@@ -1336,7 +1750,30 @@
           "h": 1
         }
       ],
-      "ascensions": []
+      "ascensions": [
+        {
+          "breakthrough": 1,
+          "min_player_level": 15,
+          "coins": 8000,
+          "items": [
+            {
+              "item_id": "miracle_crystal",
+              "quantity": 18,
+              "min_quality": 0
+            },
+            {
+              "item_id": "moon_silver_ore",
+              "quantity": 10,
+              "min_quality": 3
+            },
+            {
+              "item_id": "amber_beeswax",
+              "quantity": 2,
+              "min_quality": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "guyu_yu",
@@ -1405,7 +1842,30 @@
           "h": 1
         }
       ],
-      "ascensions": []
+      "ascensions": [
+        {
+          "breakthrough": 1,
+          "min_player_level": 15,
+          "coins": 6500,
+          "items": [
+            {
+              "item_id": "miracle_crystal",
+              "quantity": 15,
+              "min_quality": 0
+            },
+            {
+              "item_id": "herbal_salve",
+              "quantity": 4,
+              "min_quality": 3
+            },
+            {
+              "item_id": "maple_resin",
+              "quantity": 3,
+              "min_quality": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "hei_yuchuan",
@@ -1479,7 +1939,30 @@
           "h": 1
         }
       ],
-      "ascensions": []
+      "ascensions": [
+        {
+          "breakthrough": 1,
+          "min_player_level": 15,
+          "coins": 6500,
+          "items": [
+            {
+              "item_id": "miracle_crystal",
+              "quantity": 15,
+              "min_quality": 0
+            },
+            {
+              "item_id": "corn",
+              "quantity": 10,
+              "min_quality": 3
+            },
+            {
+              "item_id": "milk",
+              "quantity": 2,
+              "min_quality": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "hongkai",
@@ -1553,7 +2036,30 @@
           "h": 1
         }
       ],
-      "ascensions": []
+      "ascensions": [
+        {
+          "breakthrough": 1,
+          "min_player_level": 15,
+          "coins": 6500,
+          "items": [
+            {
+              "item_id": "miracle_crystal",
+              "quantity": 15,
+              "min_quality": 0
+            },
+            {
+              "item_id": "maple_resin",
+              "quantity": 4,
+              "min_quality": 3
+            },
+            {
+              "item_id": "pickled_carrot",
+              "quantity": 2,
+              "min_quality": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "hongzhijian",
@@ -1622,7 +2128,30 @@
           "h": 1
         }
       ],
-      "ascensions": []
+      "ascensions": [
+        {
+          "breakthrough": 1,
+          "min_player_level": 15,
+          "coins": 5000,
+          "items": [
+            {
+              "item_id": "miracle_crystal",
+              "quantity": 12,
+              "min_quality": 0
+            },
+            {
+              "item_id": "autumn_herb",
+              "quantity": 8,
+              "min_quality": 3
+            },
+            {
+              "item_id": "morning_dew_flower",
+              "quantity": 2,
+              "min_quality": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "jia_gula",
@@ -1691,7 +2220,30 @@
           "h": 1
         }
       ],
-      "ascensions": []
+      "ascensions": [
+        {
+          "breakthrough": 1,
+          "min_player_level": 15,
+          "coins": 6500,
+          "items": [
+            {
+              "item_id": "miracle_crystal",
+              "quantity": 15,
+              "min_quality": 0
+            },
+            {
+              "item_id": "moon_silver_ore",
+              "quantity": 8,
+              "min_quality": 3
+            },
+            {
+              "item_id": "moon_silver_dagger",
+              "quantity": 1,
+              "min_quality": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "leilei",
@@ -1760,7 +2312,30 @@
           "h": 1
         }
       ],
-      "ascensions": []
+      "ascensions": [
+        {
+          "breakthrough": 1,
+          "min_player_level": 15,
+          "coins": 8000,
+          "items": [
+            {
+              "item_id": "miracle_crystal",
+              "quantity": 18,
+              "min_quality": 0
+            },
+            {
+              "item_id": "maple_resin",
+              "quantity": 5,
+              "min_quality": 3
+            },
+            {
+              "item_id": "carrot",
+              "quantity": 5,
+              "min_quality": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "lengyue",
@@ -1829,7 +2404,30 @@
           "h": 1
         }
       ],
-      "ascensions": []
+      "ascensions": [
+        {
+          "breakthrough": 1,
+          "min_player_level": 15,
+          "coins": 5000,
+          "items": [
+            {
+              "item_id": "miracle_crystal",
+              "quantity": 12,
+              "min_quality": 0
+            },
+            {
+              "item_id": "egg",
+              "quantity": 12,
+              "min_quality": 3
+            },
+            {
+              "item_id": "flax_thread",
+              "quantity": 2,
+              "min_quality": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "luo_nali",
@@ -1903,7 +2501,30 @@
           "h": 1
         }
       ],
-      "ascensions": []
+      "ascensions": [
+        {
+          "breakthrough": 1,
+          "min_player_level": 15,
+          "coins": 8000,
+          "items": [
+            {
+              "item_id": "miracle_crystal",
+              "quantity": 18,
+              "min_quality": 0
+            },
+            {
+              "item_id": "autumn_herb",
+              "quantity": 12,
+              "min_quality": 3
+            },
+            {
+              "item_id": "herbal_salve",
+              "quantity": 2,
+              "min_quality": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "mami",
@@ -1972,7 +2593,30 @@
           "h": 1
         }
       ],
-      "ascensions": []
+      "ascensions": [
+        {
+          "breakthrough": 1,
+          "min_player_level": 15,
+          "coins": 8000,
+          "items": [
+            {
+              "item_id": "miracle_crystal",
+              "quantity": 18,
+              "min_quality": 0
+            },
+            {
+              "item_id": "pumpkin",
+              "quantity": 8,
+              "min_quality": 3
+            },
+            {
+              "item_id": "milk",
+              "quantity": 3,
+              "min_quality": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "manlong",
@@ -2036,7 +2680,30 @@
           "h": 1
         }
       ],
-      "ascensions": []
+      "ascensions": [
+        {
+          "breakthrough": 1,
+          "min_player_level": 15,
+          "coins": 5000,
+          "items": [
+            {
+              "item_id": "miracle_crystal",
+              "quantity": 12,
+              "min_quality": 0
+            },
+            {
+              "item_id": "egg",
+              "quantity": 12,
+              "min_quality": 3
+            },
+            {
+              "item_id": "pickled_carrot",
+              "quantity": 2,
+              "min_quality": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "manlong_2",
@@ -2105,7 +2772,30 @@
           "h": 1
         }
       ],
-      "ascensions": []
+      "ascensions": [
+        {
+          "breakthrough": 1,
+          "min_player_level": 15,
+          "coins": 8000,
+          "items": [
+            {
+              "item_id": "miracle_crystal",
+              "quantity": 18,
+              "min_quality": 0
+            },
+            {
+              "item_id": "milk",
+              "quantity": 12,
+              "min_quality": 3
+            },
+            {
+              "item_id": "flour",
+              "quantity": 3,
+              "min_quality": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "nuanyu",
@@ -2179,7 +2869,30 @@
           "h": 1
         }
       ],
-      "ascensions": []
+      "ascensions": [
+        {
+          "breakthrough": 1,
+          "min_player_level": 15,
+          "coins": 6500,
+          "items": [
+            {
+              "item_id": "miracle_crystal",
+              "quantity": 15,
+              "min_quality": 0
+            },
+            {
+              "item_id": "corn",
+              "quantity": 10,
+              "min_quality": 3
+            },
+            {
+              "item_id": "maple_resin",
+              "quantity": 2,
+              "min_quality": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "nuanyu_2",
@@ -2248,7 +2961,30 @@
           "h": 1
         }
       ],
-      "ascensions": []
+      "ascensions": [
+        {
+          "breakthrough": 1,
+          "min_player_level": 15,
+          "coins": 8000,
+          "items": [
+            {
+              "item_id": "miracle_crystal",
+              "quantity": 18,
+              "min_quality": 0
+            },
+            {
+              "item_id": "maple_plank",
+              "quantity": 6,
+              "min_quality": 3
+            },
+            {
+              "item_id": "moon_silver_ore",
+              "quantity": 4,
+              "min_quality": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "shuiling",
@@ -2317,7 +3053,30 @@
           "h": 1
         }
       ],
-      "ascensions": []
+      "ascensions": [
+        {
+          "breakthrough": 1,
+          "min_player_level": 15,
+          "coins": 5000,
+          "items": [
+            {
+              "item_id": "miracle_crystal",
+              "quantity": 12,
+              "min_quality": 0
+            },
+            {
+              "item_id": "stream_fish",
+              "quantity": 20,
+              "min_quality": 3
+            },
+            {
+              "item_id": "morning_dew_flower",
+              "quantity": 2,
+              "min_quality": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "sunfeng_liya",
@@ -2391,7 +3150,30 @@
           "h": 1
         }
       ],
-      "ascensions": []
+      "ascensions": [
+        {
+          "breakthrough": 1,
+          "min_player_level": 15,
+          "coins": 8000,
+          "items": [
+            {
+              "item_id": "miracle_crystal",
+              "quantity": 18,
+              "min_quality": 0
+            },
+            {
+              "item_id": "maple_wood",
+              "quantity": 30,
+              "min_quality": 3
+            },
+            {
+              "item_id": "moon_silver_ore",
+              "quantity": 4,
+              "min_quality": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "vanessa",
@@ -2460,7 +3242,30 @@
           "h": 1
         }
       ],
-      "ascensions": []
+      "ascensions": [
+        {
+          "breakthrough": 1,
+          "min_player_level": 15,
+          "coins": 8000,
+          "items": [
+            {
+              "item_id": "miracle_crystal",
+              "quantity": 18,
+              "min_quality": 0
+            },
+            {
+              "item_id": "lake_fish",
+              "quantity": 20,
+              "min_quality": 3
+            },
+            {
+              "item_id": "rope",
+              "quantity": 2,
+              "min_quality": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "wei_jiang",
@@ -2529,7 +3334,30 @@
           "h": 1
         }
       ],
-      "ascensions": []
+      "ascensions": [
+        {
+          "breakthrough": 1,
+          "min_player_level": 15,
+          "coins": 6500,
+          "items": [
+            {
+              "item_id": "miracle_crystal",
+              "quantity": 15,
+              "min_quality": 0
+            },
+            {
+              "item_id": "flax",
+              "quantity": 10,
+              "min_quality": 3
+            },
+            {
+              "item_id": "moon_silver_ore",
+              "quantity": 3,
+              "min_quality": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "wujian",
@@ -2593,7 +3421,30 @@
           "h": 1
         }
       ],
-      "ascensions": []
+      "ascensions": [
+        {
+          "breakthrough": 1,
+          "min_player_level": 15,
+          "coins": 5000,
+          "items": [
+            {
+              "item_id": "miracle_crystal",
+              "quantity": 12,
+              "min_quality": 0
+            },
+            {
+              "item_id": "maple_resin",
+              "quantity": 3,
+              "min_quality": 3
+            },
+            {
+              "item_id": "moon_silver_ore",
+              "quantity": 3,
+              "min_quality": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "xiang_hanyang",
@@ -2657,7 +3508,30 @@
           "h": 1
         }
       ],
-      "ascensions": []
+      "ascensions": [
+        {
+          "breakthrough": 1,
+          "min_player_level": 15,
+          "coins": 5000,
+          "items": [
+            {
+              "item_id": "miracle_crystal",
+              "quantity": 12,
+              "min_quality": 0
+            },
+            {
+              "item_id": "red_copper_ore",
+              "quantity": 24,
+              "min_quality": 3
+            },
+            {
+              "item_id": "maple_plank",
+              "quantity": 2,
+              "min_quality": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "xiang_hanyuan",
@@ -2721,7 +3595,30 @@
           "h": 1
         }
       ],
-      "ascensions": []
+      "ascensions": [
+        {
+          "breakthrough": 1,
+          "min_player_level": 15,
+          "coins": 8000,
+          "items": [
+            {
+              "item_id": "miracle_crystal",
+              "quantity": 18,
+              "min_quality": 0
+            },
+            {
+              "item_id": "milk",
+              "quantity": 12,
+              "min_quality": 3
+            },
+            {
+              "item_id": "red_copper_ore",
+              "quantity": 5,
+              "min_quality": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "xiao_xingyun",
@@ -2780,7 +3677,30 @@
           "h": 1
         }
       ],
-      "ascensions": []
+      "ascensions": [
+        {
+          "breakthrough": 1,
+          "min_player_level": 15,
+          "coins": 6500,
+          "items": [
+            {
+              "item_id": "miracle_crystal",
+              "quantity": 15,
+              "min_quality": 0
+            },
+            {
+              "item_id": "reed",
+              "quantity": 8,
+              "min_quality": 3
+            },
+            {
+              "item_id": "silver_star_moss",
+              "quantity": 1,
+              "min_quality": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "xiaoha",
@@ -2844,7 +3764,30 @@
           "h": 1
         }
       ],
-      "ascensions": []
+      "ascensions": [
+        {
+          "breakthrough": 1,
+          "min_player_level": 15,
+          "coins": 5000,
+          "items": [
+            {
+              "item_id": "miracle_crystal",
+              "quantity": 12,
+              "min_quality": 0
+            },
+            {
+              "item_id": "maple_resin",
+              "quantity": 3,
+              "min_quality": 3
+            },
+            {
+              "item_id": "red_copper_ore",
+              "quantity": 3,
+              "min_quality": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "xixi",
@@ -2913,7 +3856,30 @@
           "h": 1
         }
       ],
-      "ascensions": []
+      "ascensions": [
+        {
+          "breakthrough": 1,
+          "min_player_level": 15,
+          "coins": 6500,
+          "items": [
+            {
+              "item_id": "miracle_crystal",
+              "quantity": 15,
+              "min_quality": 0
+            },
+            {
+              "item_id": "egg",
+              "quantity": 16,
+              "min_quality": 3
+            },
+            {
+              "item_id": "morning_dew_flower",
+              "quantity": 2,
+              "min_quality": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "xiyue_kanna",
@@ -2987,7 +3953,30 @@
           "h": 1
         }
       ],
-      "ascensions": []
+      "ascensions": [
+        {
+          "breakthrough": 1,
+          "min_player_level": 15,
+          "coins": 8000,
+          "items": [
+            {
+              "item_id": "miracle_crystal",
+              "quantity": 18,
+              "min_quality": 0
+            },
+            {
+              "item_id": "autumn_herb",
+              "quantity": 12,
+              "min_quality": 3
+            },
+            {
+              "item_id": "silver_star_moss",
+              "quantity": 2,
+              "min_quality": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "xuanyuan",
@@ -3061,7 +4050,30 @@
           "h": 1
         }
       ],
-      "ascensions": []
+      "ascensions": [
+        {
+          "breakthrough": 1,
+          "min_player_level": 15,
+          "coins": 8000,
+          "items": [
+            {
+              "item_id": "miracle_crystal",
+              "quantity": 18,
+              "min_quality": 0
+            },
+            {
+              "item_id": "milk",
+              "quantity": 12,
+              "min_quality": 3
+            },
+            {
+              "item_id": "flour",
+              "quantity": 3,
+              "min_quality": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "ya_ziweier",
@@ -3125,7 +4137,30 @@
           "h": 1
         }
       ],
-      "ascensions": []
+      "ascensions": [
+        {
+          "breakthrough": 1,
+          "min_player_level": 15,
+          "coins": 8000,
+          "items": [
+            {
+              "item_id": "miracle_crystal",
+              "quantity": 18,
+              "min_quality": 0
+            },
+            {
+              "item_id": "maple_resin",
+              "quantity": 5,
+              "min_quality": 3
+            },
+            {
+              "item_id": "maple_flame_tome",
+              "quantity": 1,
+              "min_quality": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "ye_huanan",
@@ -3199,7 +4234,30 @@
           "h": 1
         }
       ],
-      "ascensions": []
+      "ascensions": [
+        {
+          "breakthrough": 1,
+          "min_player_level": 15,
+          "coins": 6500,
+          "items": [
+            {
+              "item_id": "miracle_crystal",
+              "quantity": 15,
+              "min_quality": 0
+            },
+            {
+              "item_id": "flour",
+              "quantity": 5,
+              "min_quality": 3
+            },
+            {
+              "item_id": "woodland_mushroom",
+              "quantity": 3,
+              "min_quality": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "ye_lvsu",
@@ -3273,7 +4331,30 @@
           "h": 1
         }
       ],
-      "ascensions": []
+      "ascensions": [
+        {
+          "breakthrough": 1,
+          "min_player_level": 15,
+          "coins": 5000,
+          "items": [
+            {
+              "item_id": "miracle_crystal",
+              "quantity": 12,
+              "min_quality": 0
+            },
+            {
+              "item_id": "wheat",
+              "quantity": 12,
+              "min_quality": 3
+            },
+            {
+              "item_id": "maple_plank",
+              "quantity": 2,
+              "min_quality": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "yuan_huiqin",
@@ -3347,7 +4428,30 @@
           "h": 1
         }
       ],
-      "ascensions": []
+      "ascensions": [
+        {
+          "breakthrough": 1,
+          "min_player_level": 15,
+          "coins": 6500,
+          "items": [
+            {
+              "item_id": "miracle_crystal",
+              "quantity": 15,
+              "min_quality": 0
+            },
+            {
+              "item_id": "maple_resin",
+              "quantity": 4,
+              "min_quality": 3
+            },
+            {
+              "item_id": "moon_silver_ore",
+              "quantity": 3,
+              "min_quality": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "ze_feiyang",
@@ -3406,7 +4510,30 @@
           "h": 1
         }
       ],
-      "ascensions": []
+      "ascensions": [
+        {
+          "breakthrough": 1,
+          "min_player_level": 15,
+          "coins": 6500,
+          "items": [
+            {
+              "item_id": "miracle_crystal",
+              "quantity": 15,
+              "min_quality": 0
+            },
+            {
+              "item_id": "mixed_fodder",
+              "quantity": 8,
+              "min_quality": 3
+            },
+            {
+              "item_id": "wheat",
+              "quantity": 4,
+              "min_quality": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "zhake",
@@ -3480,7 +4607,30 @@
           "h": 1
         }
       ],
-      "ascensions": []
+      "ascensions": [
+        {
+          "breakthrough": 1,
+          "min_player_level": 15,
+          "coins": 6500,
+          "items": [
+            {
+              "item_id": "miracle_crystal",
+              "quantity": 15,
+              "min_quality": 0
+            },
+            {
+              "item_id": "reed",
+              "quantity": 8,
+              "min_quality": 3
+            },
+            {
+              "item_id": "moon_silver_ore",
+              "quantity": 3,
+              "min_quality": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "zhuoyan",
@@ -3544,7 +4694,30 @@
           "h": 1
         }
       ],
-      "ascensions": []
+      "ascensions": [
+        {
+          "breakthrough": 1,
+          "min_player_level": 15,
+          "coins": 8000,
+          "items": [
+            {
+              "item_id": "miracle_crystal",
+              "quantity": 18,
+              "min_quality": 0
+            },
+            {
+              "item_id": "maple_resin",
+              "quantity": 5,
+              "min_quality": 3
+            },
+            {
+              "item_id": "amber_beeswax",
+              "quantity": 2,
+              "min_quality": 0
+            }
+          ]
+        }
+      ]
     }
   ]
 }

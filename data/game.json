@@ -79,43 +79,43 @@
     "farming": {
       "character_base_ability": 0,
       "partner_capacity": 1,
-      "partner_level_cap": 20,
+      "partner_level_cap": 40,
       "collaborator_slots": 1
     },
     "gathering": {
       "character_base_ability": 0,
       "partner_capacity": 1,
-      "partner_level_cap": 20,
+      "partner_level_cap": 40,
       "collaborator_slots": 1
     },
     "crafting": {
       "character_base_ability": 0,
       "partner_capacity": 1,
-      "partner_level_cap": 20,
+      "partner_level_cap": 40,
       "collaborator_slots": 1
     },
     "mining": {
       "character_base_ability": 0,
       "partner_capacity": 1,
-      "partner_level_cap": 20,
+      "partner_level_cap": 40,
       "collaborator_slots": 1
     },
     "aquatic": {
       "character_base_ability": 0,
       "partner_capacity": 1,
-      "partner_level_cap": 20,
+      "partner_level_cap": 40,
       "collaborator_slots": 1
     },
     "livestock": {
       "character_base_ability": 0,
       "partner_capacity": 1,
-      "partner_level_cap": 20,
+      "partner_level_cap": 40,
       "collaborator_slots": 1
     },
     "exploration": {
       "character_base_ability": 0,
       "partner_capacity": 3,
-      "partner_level_cap": 20,
+      "partner_level_cap": 40,
       "collaborator_slots": 1
     }
   },
@@ -1926,6 +1926,15 @@
         "animal_product"
       ],
       "has_quality": false
+    },
+    {
+      "id": "miracle_crystal",
+      "name": "奇迹结晶",
+      "icon": "gem",
+      "kind": "material",
+      "sell_price": 0,
+      "has_quality": false,
+      "tags": []
     }
   ],
   "crops": [
@@ -3362,6 +3371,434 @@
           ]
         }
       ]
+    },
+    {
+      "id": "lost_corridor",
+      "kind": "delve",
+      "name": "失落回廊",
+      "description": "半掩的石门后，长廊一路伸进山腹。墙缝里的晶石泛着微光，深处偶尔传来沉重的脚步声。",
+      "accent": "#9d94c9",
+      "min_level": 15,
+      "entry_fee": 1000,
+      "max_depth": 6,
+      "final_event_id": "miracle_spring",
+      "quality": {
+        "thresholds": [
+          50.0,
+          110.0,
+          190.0,
+          300.0
+        ],
+        "width": 22.0,
+        "miracle_probability_cap": 0.004,
+        "miracle_eligible": true
+      },
+      "events": [
+        {
+          "id": "scuttlers_outer",
+          "name": "碎晶虫巢",
+          "description": "晶石裂缝里传来密集的爬行声，两只甲虫挡住了去路。",
+          "weight": 3,
+          "max_occurrences": 1,
+          "choices": [
+            {
+              "id": "fight",
+              "label": "迎战",
+              "description": "击败守卫后收取这一节点的战利品。",
+              "route_stamina": 2,
+              "action_stamina": 2,
+              "battle": {
+                "enemy_ids": [
+                  "ruin_scuttler",
+                  "ruin_scuttler"
+                ],
+                "can_flee": true,
+                "flee_dc": 13
+              },
+              "success": {
+                "text": "最后的晶光散去，队伍收起战利品，继续向回廊深处前进。",
+                "rewards": [
+                  {
+                    "item_id": "maple_resin",
+                    "quantity_min": 1,
+                    "quantity_max": 1
+                  }
+                ],
+                "fixed_rewards": []
+              }
+            }
+          ],
+          "min_depth": 1,
+          "max_depth": 2
+        },
+        {
+          "id": "sentry_outer",
+          "name": "巡逻石卫",
+          "description": "石像转过头，封住了通往下一间石室的门。",
+          "weight": 3,
+          "max_occurrences": 1,
+          "choices": [
+            {
+              "id": "fight",
+              "label": "迎战",
+              "description": "击败守卫后收取这一节点的战利品。",
+              "route_stamina": 2,
+              "action_stamina": 2,
+              "battle": {
+                "enemy_ids": [
+                  "ruin_sentry"
+                ],
+                "can_flee": true,
+                "flee_dc": 13
+              },
+              "success": {
+                "text": "最后的晶光散去，队伍收起战利品，继续向回廊深处前进。",
+                "rewards": [
+                  {
+                    "item_id": "red_copper_ore",
+                    "quantity_min": 1,
+                    "quantity_max": 1
+                  }
+                ],
+                "fixed_rewards": []
+              }
+            }
+          ],
+          "min_depth": 1,
+          "max_depth": 2
+        },
+        {
+          "id": "moths_outer",
+          "name": "噬光蛾群",
+          "description": "魔力微光引来了飞蛾，先赶走它们才能采下墙边的苔草。",
+          "weight": 3,
+          "max_occurrences": 1,
+          "choices": [
+            {
+              "id": "fight",
+              "label": "迎战",
+              "description": "击败守卫后收取这一节点的战利品。",
+              "route_stamina": 2,
+              "action_stamina": 2,
+              "battle": {
+                "enemy_ids": [
+                  "ruin_moth",
+                  "ruin_moth"
+                ],
+                "can_flee": true,
+                "flee_dc": 13
+              },
+              "success": {
+                "text": "最后的晶光散去，队伍收起战利品，继续向回廊深处前进。",
+                "rewards": [
+                  {
+                    "item_id": "silver_star_moss",
+                    "quantity_min": 1,
+                    "quantity_max": 1
+                  }
+                ],
+                "fixed_rewards": []
+              }
+            }
+          ],
+          "min_depth": 1,
+          "max_depth": 2
+        },
+        {
+          "id": "camp_outer",
+          "name": "废弃营地",
+          "description": "石阶旁的旧背包已经破损，里面还有一小包封好的物资。",
+          "weight": 1,
+          "max_occurrences": 1,
+          "choices": [
+            {
+              "id": "search",
+              "label": "整理补给",
+              "description": "收好还能使用的药膏与札记，继续前进。",
+              "route_stamina": 2,
+              "action_stamina": 2,
+              "success": {
+                "text": "队伍收起了保存完好的物资。",
+                "fixed_rewards": [
+                  {
+                    "item_id": "partner_notes_small",
+                    "quantity": 1
+                  }
+                ],
+                "rewards": [
+                  {
+                    "item_id": "herbal_salve",
+                    "quantity_min": 1,
+                    "quantity_max": 1
+                  }
+                ]
+              }
+            }
+          ],
+          "min_depth": 1,
+          "max_depth": 2
+        },
+        {
+          "id": "scuttlers_inner",
+          "name": "深层虫巢",
+          "description": "晶石裂缝里传来密集的爬行声，两只甲虫挡住了去路。",
+          "weight": 3,
+          "max_occurrences": 1,
+          "choices": [
+            {
+              "id": "fight",
+              "label": "迎战",
+              "description": "击败守卫后收取这一节点的战利品。",
+              "route_stamina": 2,
+              "action_stamina": 2,
+              "battle": {
+                "enemy_ids": [
+                  "ruin_scuttler",
+                  "ruin_scuttler"
+                ],
+                "can_flee": true,
+                "flee_dc": 13
+              },
+              "success": {
+                "text": "最后的晶光散去，队伍收起战利品，继续向回廊深处前进。",
+                "rewards": [
+                  {
+                    "item_id": "maple_resin",
+                    "quantity_min": 1,
+                    "quantity_max": 1
+                  }
+                ],
+                "fixed_rewards": []
+              }
+            }
+          ],
+          "min_depth": 4,
+          "max_depth": 5
+        },
+        {
+          "id": "sentry_inner",
+          "name": "沉默哨站",
+          "description": "石像转过头，封住了通往下一间石室的门。",
+          "weight": 3,
+          "max_occurrences": 1,
+          "choices": [
+            {
+              "id": "fight",
+              "label": "迎战",
+              "description": "击败守卫后收取这一节点的战利品。",
+              "route_stamina": 2,
+              "action_stamina": 2,
+              "battle": {
+                "enemy_ids": [
+                  "ruin_sentry"
+                ],
+                "can_flee": true,
+                "flee_dc": 13
+              },
+              "success": {
+                "text": "最后的晶光散去，队伍收起战利品，继续向回廊深处前进。",
+                "rewards": [
+                  {
+                    "item_id": "red_copper_ore",
+                    "quantity_min": 1,
+                    "quantity_max": 1
+                  }
+                ],
+                "fixed_rewards": []
+              }
+            }
+          ],
+          "min_depth": 4,
+          "max_depth": 5
+        },
+        {
+          "id": "moths_inner",
+          "name": "微光苔庭",
+          "description": "魔力微光引来了飞蛾，先赶走它们才能采下墙边的苔草。",
+          "weight": 3,
+          "max_occurrences": 1,
+          "choices": [
+            {
+              "id": "fight",
+              "label": "迎战",
+              "description": "击败守卫后收取这一节点的战利品。",
+              "route_stamina": 2,
+              "action_stamina": 2,
+              "battle": {
+                "enemy_ids": [
+                  "ruin_moth",
+                  "ruin_moth"
+                ],
+                "can_flee": true,
+                "flee_dc": 13
+              },
+              "success": {
+                "text": "最后的晶光散去，队伍收起战利品，继续向回廊深处前进。",
+                "rewards": [
+                  {
+                    "item_id": "silver_star_moss",
+                    "quantity_min": 1,
+                    "quantity_max": 1
+                  }
+                ],
+                "fixed_rewards": []
+              }
+            }
+          ],
+          "min_depth": 4,
+          "max_depth": 5
+        },
+        {
+          "id": "camp_inner",
+          "name": "遗落行囊",
+          "description": "石阶旁的旧背包已经破损，里面还有一小包封好的物资。",
+          "weight": 1,
+          "max_occurrences": 1,
+          "choices": [
+            {
+              "id": "search",
+              "label": "整理补给",
+              "description": "收好还能使用的药膏与札记，继续前进。",
+              "route_stamina": 2,
+              "action_stamina": 2,
+              "success": {
+                "text": "队伍收起了保存完好的物资。",
+                "fixed_rewards": [
+                  {
+                    "item_id": "partner_notes_small",
+                    "quantity": 1
+                  }
+                ],
+                "rewards": [
+                  {
+                    "item_id": "herbal_salve",
+                    "quantity_min": 1,
+                    "quantity_max": 1
+                  }
+                ]
+              }
+            }
+          ],
+          "min_depth": 4,
+          "max_depth": 5
+        },
+        {
+          "id": "forgotten_library",
+          "name": "残存书库",
+          "description": "书架倾倒在尘土里，几页记录仍留着清晰的字迹。",
+          "weight": 2,
+          "max_occurrences": 1,
+          "choices": [
+            {
+              "id": "read",
+              "label": "辨读旧记录",
+              "description": "智力检定成功可整理出两本同行札记，失败也能带回一本。",
+              "route_stamina": 2,
+              "action_stamina": 2,
+              "check": {
+                "attribute": "intelligence",
+                "mode": "best",
+                "dice": "normal",
+                "dc": 13
+              },
+              "success": {
+                "text": "散页被整理成册，旧日经验得以重新传递。",
+                "fixed_rewards": [
+                  {
+                    "item_id": "partner_notes_small",
+                    "quantity": 2
+                  }
+                ]
+              },
+              "failure": {
+                "text": "大部分字迹已经模糊，只抢救出一本札记。",
+                "fixed_rewards": [
+                  {
+                    "item_id": "partner_notes_small",
+                    "quantity": 1
+                  }
+                ]
+              }
+            }
+          ],
+          "min_depth": 4,
+          "max_depth": 5
+        },
+        {
+          "id": "outer_crystal_chamber",
+          "name": "外层结晶室",
+          "description": "石室四壁覆着淡蓝的晶簇，门前的守卫缓缓站起，抖落一身碎石与尘土。",
+          "weight": 1,
+          "max_occurrences": 1,
+          "choices": [
+            {
+              "id": "fight",
+              "label": "迎战",
+              "description": "击败守卫后收取这一节点的战利品。",
+              "route_stamina": 2,
+              "action_stamina": 3,
+              "battle": {
+                "enemy_ids": [
+                  "crystal_keeper"
+                ],
+                "can_flee": false,
+                "flee_dc": 13
+              },
+              "success": {
+                "text": "最后的晶光散去，队伍收起战利品，继续向回廊深处前进。",
+                "rewards": [],
+                "fixed_rewards": [
+                  {
+                    "item_id": "miracle_crystal",
+                    "quantity": 1
+                  }
+                ]
+              }
+            }
+          ],
+          "min_depth": 3,
+          "max_depth": 3
+        },
+        {
+          "id": "miracle_spring",
+          "name": "奇迹之泉",
+          "description": "回廊尽头，一汪泉水映亮了穹顶。泉心亮起两束光，古老的守望者在水声中苏醒。",
+          "weight": 1,
+          "max_occurrences": 1,
+          "choices": [
+            {
+              "id": "fight",
+              "label": "迎战",
+              "description": "击败守卫后收取这一节点的战利品。",
+              "route_stamina": 2,
+              "action_stamina": 3,
+              "battle": {
+                "enemy_ids": [
+                  "miracle_warden"
+                ],
+                "can_flee": false,
+                "flee_dc": 13
+              },
+              "success": {
+                "text": "最后的晶光散去，队伍收起战利品，继续向回廊深处前进。",
+                "rewards": [],
+                "fixed_rewards": [
+                  {
+                    "item_id": "miracle_crystal",
+                    "quantity": 2
+                  },
+                  {
+                    "item_id": "partner_notes_medium",
+                    "quantity": 2
+                  }
+                ]
+              }
+            }
+          ],
+          "min_depth": 6,
+          "max_depth": 6
+        }
+      ]
     }
   ],
   "delve_enemies": [
@@ -3452,6 +3889,101 @@
           "name": "落果震地",
           "to_hit": 5,
           "damage_dice": "2d6"
+        }
+      ]
+    },
+    {
+      "id": "ruin_scuttler",
+      "name": "碎晶甲虫",
+      "icon": "bug",
+      "description": "背甲嵌着碎晶，沿着墙根成对游走。",
+      "max_hp": 26,
+      "armor_class": 12,
+      "initiative_bonus": 2,
+      "attacks_per_turn": 1,
+      "boss": false,
+      "attacks": [
+        {
+          "name": "突击",
+          "to_hit": 4,
+          "damage_dice": "1d6",
+          "damage_bonus": 1
+        }
+      ]
+    },
+    {
+      "id": "ruin_sentry",
+      "name": "回廊石卫",
+      "icon": "shield-alert",
+      "description": "失去主人的巡逻石像，仍记得守卫回廊的命令。",
+      "max_hp": 40,
+      "armor_class": 13,
+      "initiative_bonus": 0,
+      "attacks_per_turn": 1,
+      "boss": false,
+      "attacks": [
+        {
+          "name": "突击",
+          "to_hit": 4,
+          "damage_dice": "1d8",
+          "damage_bonus": 1
+        }
+      ]
+    },
+    {
+      "id": "ruin_moth",
+      "name": "噬光飞蛾",
+      "icon": "bug",
+      "description": "追逐残余魔力的小群飞蛾，鳞粉在暗处微微发亮。",
+      "max_hp": 18,
+      "armor_class": 13,
+      "initiative_bonus": 4,
+      "attacks_per_turn": 1,
+      "boss": false,
+      "attacks": [
+        {
+          "name": "突击",
+          "to_hit": 4,
+          "damage_dice": "1d4",
+          "damage_bonus": 1
+        }
+      ]
+    },
+    {
+      "id": "crystal_keeper",
+      "name": "结晶守卫",
+      "icon": "gem",
+      "description": "守在外层结晶室门前，胸甲下透出一线澄澈光芒。",
+      "max_hp": 70,
+      "armor_class": 14,
+      "initiative_bonus": 1,
+      "attacks_per_turn": 1,
+      "boss": false,
+      "attacks": [
+        {
+          "name": "突击",
+          "to_hit": 5,
+          "damage_dice": "1d10",
+          "damage_bonus": 0
+        }
+      ]
+    },
+    {
+      "id": "miracle_warden",
+      "name": "奇迹守望者",
+      "icon": "crown",
+      "description": "汲取泉水魔力的古老守望者，守护着回廊深处的结晶。",
+      "max_hp": 110,
+      "armor_class": 14,
+      "initiative_bonus": 2,
+      "attacks_per_turn": 2,
+      "boss": true,
+      "attacks": [
+        {
+          "name": "晶光冲击",
+          "to_hit": 5,
+          "damage_dice": "1d8",
+          "damage_bonus": 1
         }
       ]
     }
@@ -4787,15 +5319,22 @@
   "partner_growth": {
     "experience_interval_seconds": 720,
     "experience_per_stamina": 2,
-    "level_cost_base": 20,
-    "level_cost_growth": 5,
+    "level_cost_base": 40,
+    "level_cost_growth": 15,
     "experience_books": {
       "partner_notes_small": 60,
       "partner_notes_medium": 250,
       "partner_notes_large": 900
     },
     "pond_experience_per_cycle": 3,
-    "livestock_experience_per_cycle": 12
+    "livestock_experience_per_cycle": 12,
+    "level_cost_segments": [
+      {
+        "start_level": 20,
+        "base": 350,
+        "growth": 140
+      }
+    ]
   },
   "portals": [
     {
@@ -5189,7 +5728,8 @@
       "duck_egg",
       "jade_duck_egg",
       "wool",
-      "cloud_fleece"
+      "cloud_fleece",
+      "miracle_crystal"
     ],
     "tiers": [
       {

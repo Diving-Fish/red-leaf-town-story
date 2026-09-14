@@ -3856,6 +3856,7 @@ class GameService(SailingServiceMixin):
         catalog = self.partner_catalog_loader()
 
         def mutation(player: PlayerState):
+            self._settle(player, self._now())
             owned = self._owned_partner(player, partner_id)
             definition = catalog.partner_map.get(partner_id)
             if definition is None:
@@ -3866,6 +3867,11 @@ class GameService(SailingServiceMixin):
             ascension = next((entry for entry in definition.ascensions if entry.breakthrough == target), None)
             if ascension is None:
                 raise GameError("breakthrough_unavailable", "这个伙伴暂不能突破", 409)
+            if player.level < ascension.min_player_level:
+                raise GameError("breakthrough_player_level", f"居民达到 {ascension.min_player_level} 级后才能突破", 409)
+            required_level = level_cap_for_breakthrough(owned.breakthrough)
+            if owned.level < required_level:
+                raise GameError("breakthrough_partner_level", f"伙伴达到 {required_level} 级后才能突破", 409)
             try:
                 spend_coins(player, ascension.coins)
                 consumed = []
@@ -6956,11 +6962,33 @@ class GameService(SailingServiceMixin):
                 "name": item.name if item else requirement.item_id,
                 "icon": item.icon if item else "package",
                 "owned": owned_quantity,
+                "kind": item.kind if item else "material",
             })
+        required_level = level_cap_for_breakthrough(owned.breakthrough)
+        artwork = definition.artwork_for(target)
+        reason = None
+        if player.level < ascension.min_player_level:
+            reason = f"居民达到 {ascension.min_player_level} 级后开放"
+        elif owned.level < required_level:
+            reason = f"伙伴达到 {required_level} 级后可突破"
+        elif not affordable:
+            reason = "突破材料或红叶币不足"
         return {
-            "breakthrough_available": affordable,
-            "breakthrough_reason": None if affordable else "突破材料不足",
-            "ascension": {"breakthrough": target, "coins": ascension.coins, "items": items},
+            "breakthrough_available": reason is None,
+            "breakthrough_reason": reason,
+            "ascension": {
+                "breakthrough": target, "coins": ascension.coins, "items": items,
+                "min_player_level": ascension.min_player_level,
+                "required_partner_level": required_level,
+                "level_cap": level_cap_for_breakthrough(target),
+                "artwork": artwork.model_dump() if artwork else None,
+                "tendencies": [
+                    {"industry": tendency.industry, "name": INDUSTRY_NAMES[tendency.industry],
+                     "current_ability": definition.ability_at(tendency.industry, owned.level, owned.stars),
+                     "max_ability": definition.ability_at(tendency.industry, level_cap_for_breakthrough(target), owned.stars)}
+                    for tendency in definition.tendencies
+                ],
+            },
         }
 
     def _gacha_pools_snapshot(self, player: PlayerState) -> list[dict]:

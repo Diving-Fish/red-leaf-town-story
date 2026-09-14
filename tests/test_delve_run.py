@@ -54,7 +54,7 @@ class SteadyRandom(random.Random):
 
 @pytest.fixture
 def delve_game():
-    content = load_content()
+    content = load_content().model_copy(deep=True)
     repository = InMemoryPlayerRepository(content)
     catalog = PartnerCatalog(partners=[
         partner("leader", 40, {"strength": 15, "agility": 12, "intelligence": 12, "luck": 13}),
@@ -328,7 +328,7 @@ def test_tree_fruit_seeds_only_drop_off_rare_branches_and_the_boss():
 
 
 def test_the_boss_hands_over_the_hunters_charm_the_second_gate_asks_for():
-    content = load_content()
+    content = load_content().model_copy(deep=True)
     boss_fight = content.exploration_expedition_map["spiritfruit_meadow"].event_map["warden_grove"].choices[0]
 
     assert [enemy for enemy in boss_fight.battle.enemy_ids] == ["fruitheart_warden"]
@@ -440,3 +440,102 @@ def test_delve_achievements_distinguish_battle_victory_and_boss_return(delve_gam
     assert next(a for a in returned['state']['achievements']['entries'] if a['achievement_id'] == 'meadow_completed')['completed'] == boss
     with pytest.raises(GameError):
         service.withdraw_exploration('delve-sub')
+
+
+def test_lost_corridor_random_pool_and_fixed_depths(delve_game):
+    service, _, _ = delve_game
+    route = service.content.exploration_expedition_map["lost_corridor"]
+    assert (route.kind, route.min_level, route.max_depth, route.entry_fee) == ("delve", 15, 6, 1000)
+    from red_leaf_town.domain.models import ExplorationRunState
+    starts = set()
+    for seed in range(100):
+        service.rng = random.Random(seed)
+        run = ExplorationRunState(run_id=str(seed), expedition_id=route.id, partner_ids=list(PARTY), leader_partner_id="leader", exploration_ability=100, entry_fee=1000, started_at=0, current_event_id="scuttlers_outer", expedition_kind="delve", current_rolls=[10, 10])
+        for depth in range(1, 7):
+            event_id = service._pick_exploration_event(route, run, depth)
+            if depth == 1:
+                starts.add(event_id)
+            if depth == 3:
+                assert event_id == "outer_crystal_chamber"
+            if depth == 6:
+                assert event_id == "miracle_spring"
+            run.event_counts[event_id] = run.event_counts.get(event_id, 0) + 1
+    assert len(starts) >= 3
+
+
+def _start_corridor(delve_game):
+    service, repository, player = delve_game
+    # 流程测试缩短战斗；真实敌人数值另做固定种子的整趟模拟。
+    for enemy in service.content.delve_enemies:
+        enemy.max_hp = 1
+    return service.start_exploration("delve-sub", "lost_corridor", list(PARTY), "leader", loadout={
+        "leader": {"weapon_item_id": "red_copper_greatsword"},
+        "scout": {"weapon_item_id": "moon_silver_dagger"},
+        "guard": {"weapon_item_id": "red_copper_greatsword"},
+    })
+
+
+@pytest.mark.parametrize("finish_depth,crystals,books", [(3, 1, 0), (6, 3, 2)])
+def test_corridor_crystals_and_books_only_settle_after_victory_and_withdrawal(delve_game, finish_depth, crystals, books):
+    service, repository, player = delve_game
+    _start_corridor(delve_game)
+    for depth in range(1, finish_depth + 1):
+        run = service.snapshot_by_sub("delve-sub")["exploration"]["active_run"]
+        event = run["current_event"]
+        service.resolve_exploration_event("delve-sub", event["choices"][0]["id"])
+        assert not repository.get(player.player_id).inventory.get("miracle_crystal")
+        if repository.get(player.player_id).exploration_run.battle:
+            with pytest.raises(GameError, match="战斗结束之前"):
+                service.withdraw_exploration("delve-sub")
+            fight_until_resolved(service)
+    saved = repository.get(player.player_id)
+    assert sum(i.quantity for i in saved.exploration_run.pending_fixed_rewards if i.item_id == "miracle_crystal") == crystals
+    service.withdraw_exploration("delve-sub")
+    saved = repository.get(player.player_id)
+    assert saved.inventory["miracle_crystal"] == {0: crystals}
+    assert saved.inventory.get("partner_notes_medium", {}).get(0, 0) == books
+    before = saved.inventory.copy()
+    with pytest.raises(GameError):
+        service.withdraw_exploration("delve-sub")
+    assert repository.get(player.player_id).inventory == before
+
+
+def test_corridor_is_locked_below_15(delve_game):
+    service, repository, player = delve_game
+    repository.update(player.player_id, lambda state: setattr(state, "experience", service.content.level_definition(14).total_xp))
+    with pytest.raises(GameError, match="15"):
+        service.start_exploration("delve-sub", "lost_corridor", list(PARTY), "leader")
+
+
+def test_corridor_wipe_loses_unbanked_crystals(delve_game):
+    service, repository, player = delve_game
+    _start_corridor(delve_game)
+    for _ in range(3):
+        run = service.snapshot_by_sub("delve-sub")["exploration"]["active_run"]
+        service.resolve_exploration_event("delve-sub", run["current_event"]["choices"][0]["id"])
+        fight_until_resolved(service)
+    assert any(item.item_id == "miracle_crystal" for item in repository.get(player.player_id).exploration_run.pending_fixed_rewards)
+    def prepare_wipe(state):
+        run = state.exploration_run
+        run.current_event_id = "sentry_inner"
+        for member in run.combat_party.values():
+            member.hp = 1
+    repository.update(player.player_id, prepare_wipe)
+    enemy = service.content.delve_enemy_map["ruin_sentry"]
+    enemy.max_hp = 10000
+    enemy.armor_class = 100
+    enemy.initiative_bonus = 100
+    enemy.attacks[0].to_hit = 100
+    service.rng = SteadyRandom(1)
+    service.resolve_exploration_event("delve-sub", "fight")
+    for _ in range(20):
+        saved = repository.get(player.player_id)
+        if saved.exploration_run is None:
+            break
+        target = saved.exploration_run.battle.enemies[0].key
+        service.resolve_delve_battle_action("delve-sub", "attack", target)
+    saved = repository.get(player.player_id)
+    assert saved.exploration_run is None
+    assert not saved.inventory.get("miracle_crystal")
+    assert saved.inventory["red_copper_greatsword"][0] == 2
+    assert all(member.partner_id in PARTY for member in saved.owned_partners)

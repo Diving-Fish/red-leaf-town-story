@@ -117,7 +117,7 @@ button:disabled { cursor: not-allowed; opacity: .48; }
 .icon-button { width: 38px; height: 38px; display: grid; place-items: center; padding: 0; border: 1px solid var(--line); border-radius: 10px; background: rgba(255,255,255,.025); cursor: pointer; }
 .menu-button, .mobile-close { display: none; }
 .nav-scrim { position: fixed; inset: 0; z-index: 65; display: none; background: rgba(5, 8, 6, .55); backdrop-filter: blur(2px); }
-.status-strip { position: relative; display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 7px clamp(18px, 4vw, 48px); border-bottom: 1px solid rgba(255,255,255,.04); }
+.status-strip { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; min-height: 52px; padding: 7px clamp(18px, 4vw, 48px); border-bottom: 1px solid rgba(255,255,255,.04); }
 .level-underline { display: none; }
 .level-chip { display: flex; align-items: center; gap: 12px; margin-left: auto; color: #89958b; font-size: 12px; white-space: nowrap; }
 .level-chip > span { color: var(--leaf-bright); font-weight: 700; }.level-track { width: 120px; background: #27312a; }

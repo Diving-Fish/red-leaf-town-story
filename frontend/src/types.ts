@@ -1543,12 +1543,17 @@ export interface PartnerAscensionItem {
 
 export interface PartnerAscension {
   breakthrough: 1 | 2
+  min_player_level?: number
   coins: number
   items: PartnerAscensionItem[]
 }
 
 export interface PartnerAscensionState extends PartnerAscension {
-  items: Array<PartnerAscensionItem & { name: string; icon: string; owned: number }>
+  items: Array<PartnerAscensionItem & { name: string; icon: string; owned: number; kind: string }>
+  required_partner_level: number
+  level_cap: number
+  artwork: PartnerArtwork | null
+  tendencies: Array<{ industry: string; name: string; current_ability: number; max_ability: number }>
 }
 
 export interface TaskItemState {

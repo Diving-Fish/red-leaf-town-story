@@ -369,6 +369,9 @@ def test_mining_ability_changes_yield_but_not_duration(growth_game):
 
 def test_partner_books_star_up_and_unconfigured_breakthrough(growth_game):
     service, repository, _, player = growth_game
+    catalog = load_partner_catalog().model_copy(deep=True)
+    catalog.partner_map["xiang_hanyang"].ascensions = []
+    service.partner_catalog_loader = lambda: catalog
     service.admin_grant_partner(player.player_id, "xiang_hanyang")
     book_id = next(iter(service.content.partner_growth.experience_books))
 
@@ -524,3 +527,106 @@ def test_up_guarantee_survives_other_drops_reload_and_replay(growth_game, monkey
     assert replay["result"]["replayed"] is True
     assert replay["result"]["results"] == first["result"]["results"]
     assert service._gacha_featured_guaranteed(repository.get(player.player_id), gacha) is False
+
+
+def test_new_partner_experience_curve_and_existing_progress(growth_game):
+    service, repository, _, player = growth_game
+    growth = service.content.partner_growth
+    assert sum(growth.experience_for_next_level(level) for level in range(1, 20)) == 3325
+    assert sum(growth.experience_for_next_level(level) for level in range(20, 40)) == 33600
+    assert [growth.experience_for_next_level(level) for level in (19, 20, 39)] == [310, 350, 3010]
+    service.admin_grant_partner(player.player_id, "bai_li")
+
+    def prepare(state):
+        owned = next(p for p in state.owned_partners if p.partner_id == "bai_li")
+        owned.level, owned.experience = 20, 500
+    repository.update(player.player_id, prepare)
+    restored = service.snapshot_by_sub("growth-sub")
+    owned = next(p for p in restored["partners"] if p["partner_id"] == "bai_li")
+    assert (owned["level"], owned["experience"]) == (20, 500)
+
+
+def _prepare_ascension(service, repository, player, *, level=20, resident=15, material_quality=3):
+    service.admin_grant_partner(player.player_id, "bai_li")
+    definition = service.partner_catalog_loader().partner_map["bai_li"].ascensions[0]
+    def prepare(state):
+        state.level = resident
+        state.experience = service.content.level_definition(resident).total_xp
+        state.coins = 50_000
+        owned = next(p for p in state.owned_partners if p.partner_id == "bai_li")
+        owned.level, owned.experience = level, 500 if level == 20 else 0
+        for item in definition.items:
+            add_item(state, item.item_id, item.quantity, material_quality if item.min_quality else 0 if not service.content.item_map[item.item_id].has_quality else 1)
+    repository.update(player.player_id, prepare)
+    return definition
+
+
+@pytest.mark.parametrize("level,resident,quality,code", [
+    (19, 15, 3, "breakthrough_partner_level"),
+    (20, 14, 3, "breakthrough_player_level"),
+    (20, 15, 2, "resource_insufficient"),
+])
+def test_ascension_guards_are_atomic(growth_game, level, resident, quality, code):
+    service, repository, _, player = growth_game
+    _prepare_ascension(service, repository, player, level=level, resident=resident, material_quality=quality)
+    before = repository.get(player.player_id)
+    snapshot = service.snapshot_by_sub("growth-sub")
+    preview = next(p for p in snapshot["partners"] if p["partner_id"] == "bai_li")
+    assert not preview["breakthrough_available"]
+    with pytest.raises(GameError) as error:
+        service.breakthrough_partner("growth-sub", "bai_li")
+    assert error.value.code == code
+    after = repository.get(player.player_id)
+    assert (after.coins, after.inventory, after.owned_partners) == (before.coins, before.inventory, before.owned_partners)
+
+
+def test_ascension_consumes_lowest_eligible_quality_and_unlocks_effective_levels(growth_game):
+    service, repository, _, player = growth_game
+    definition = _prepare_ascension(service, repository, player)
+    def extra(state):
+        add_item(state, "pumpkin", 7, 2)
+        add_item(state, "pumpkin", 4, 4)
+        add_item(state, "carrot_seed", 1)
+    repository.update(player.player_id, extra)
+    service.assign_partner("growth-sub", 0, "bai_li")
+    started = service.plant("growth-sub", 0, "carrot")
+    frozen = started["state"]["plots"][0]["task_snapshot"]
+    preview = next(p for p in started["state"]["partners"] if p["partner_id"] == "bai_li")
+    assert preview["ascension"]["artwork"]["breakthrough"] == 1
+    assert preview["ascension"]["items"][1]["owned"] == 12
+    result = service.breakthrough_partner("growth-sub", "bai_li")
+    owned = next(p for p in result["state"]["partners"] if p["partner_id"] == "bai_li")
+    assert (owned["level"], owned["experience"], owned["level_cap"], owned["breakthrough"]) == (21, 150, 40, 1)
+    assert owned["tendencies"][0]["effective_level"] == 21
+    assert owned["artwork"]["breakthrough"] == 1
+    assert result["state"]["plots"][0]["task_snapshot"] == frozen
+    saved = repository.get(player.player_id)
+    assert saved.inventory["pumpkin"] == {2: 7, 4: 4}
+    assert saved.coins == 50_000 - definition.coins
+    assert "miracle_crystal" not in saved.inventory
+    with pytest.raises(GameError) as repeated:
+        service.breakthrough_partner("growth-sub", "bai_li")
+    assert repeated.value.code == "breakthrough_unavailable"
+    assert repository.get(player.player_id).coins == saved.coins
+
+
+def test_all_live_partner_ascensions_match_review_and_use_original_rarity():
+    import csv
+    from pathlib import Path
+    content = load_content()
+    catalog = load_partner_catalog()
+    rows = {row["partner_id"]: row for row in csv.DictReader(
+        (Path(__file__).parents[1] / "docs/partner-ascension-review.tsv").open(), delimiter="\t",
+    )}
+    assert set(rows) == set(catalog.partner_map)
+    for partner in catalog.partners:
+        entry = partner.ascensions[0]
+        assert entry.min_player_level == 15
+        assert entry.items[0].quantity == {3: 12, 4: 15, 5: 18}[partner.rarity]
+        assert entry.coins == int(rows[partner.id]["突破币"])
+        assert entry.items[1].min_quality == 3
+        assert entry.items[1].item_id == rows[partner.id]["产业物品ID"]
+        assert entry.items[1].quantity == int(rows[partner.id]["数量"])
+        assert entry.items[2].item_id == rows[partner.id]["特色物品ID"]
+        assert entry.items[2].quantity == int(rows[partner.id]["特色数量"])
+        assert all(item.item_id in content.item_map for item in entry.items)

@@ -928,6 +928,12 @@ class GachaEconomyDefinition(BaseModel):
         return self
 
 
+class PartnerLevelCostSegment(BaseModel):
+    start_level: int = Field(ge=2, le=59)
+    base: int = Field(gt=0)
+    growth: int = Field(ge=0)
+
+
 class PartnerGrowthDefinition(BaseModel):
     experience_interval_seconds: int = Field(gt=0)
     experience_per_stamina: int = Field(gt=0)
@@ -937,9 +943,23 @@ class PartnerGrowthDefinition(BaseModel):
     livestock_experience_per_cycle: int = Field(default=0, ge=0)
     level_cost_base: int = Field(gt=0)
     level_cost_growth: int = Field(ge=0)
+    level_cost_segments: list[PartnerLevelCostSegment] = Field(default_factory=list)
     experience_books: dict[str, int] = Field(min_length=1)
 
+    @model_validator(mode="after")
+    def validate_cost_segments(self):
+        starts = [segment.start_level for segment in self.level_cost_segments]
+        if starts != sorted(set(starts)):
+            raise ValueError("partner experience segments must have unique increasing start levels")
+        for segment in self.level_cost_segments:
+            if segment.base < self.experience_for_next_level(segment.start_level - 1):
+                raise ValueError("partner experience costs cannot decrease at a segment boundary")
+        return self
+
     def experience_for_next_level(self, level: int) -> int:
+        for segment in reversed(self.level_cost_segments):
+            if level >= segment.start_level:
+                return segment.base + segment.growth * (level - segment.start_level)
         return self.level_cost_base + self.level_cost_growth * max(0, level - 1)
 
 

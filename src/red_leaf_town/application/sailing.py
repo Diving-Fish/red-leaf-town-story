@@ -9,6 +9,7 @@ from red_leaf_town.domain.models import TaskOutputSnapshot
 from red_leaf_town.domain.production import draw_count, draw_weighted_batches
 from red_leaf_town.domain.quality import QUALITY_NAMES, quality_probabilities, roll_quality
 from red_leaf_town.sailing_content import load_sailing_content
+from red_leaf_town.partner_content import level_cap_for_breakthrough
 
 
 def sailing_error(code, message, status=400):
@@ -123,7 +124,7 @@ class SailingServiceMixin:
             for partner_id in partner_ids:
                 member = owned[partner_id]
                 definition = catalog[partner_id]
-                level = min(member.level, self.content.industries[industry].partner_level_cap)
+                level = min(member.level, level_cap_for_breakthrough(member.breakthrough), self.content.industries[industry].partner_level_cap)
                 abilities.append(definition.ability_at(industry, level, member.stars)
                                  if any(t.industry == industry for t in definition.tendencies) else 0)
             ability = round(max(abilities) + (sum(abilities) - max(abilities)) * 0.25)

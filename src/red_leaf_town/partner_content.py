@@ -94,6 +94,7 @@ class AscensionItemRequirement(BaseModel):
 
 class PartnerAscension(BaseModel):
     breakthrough: Literal[1, 2]
+    min_player_level: int = Field(default=1, ge=1)
     coins: int = Field(default=0, ge=0)
     items: list[AscensionItemRequirement] = Field(min_length=1, max_length=4)
 

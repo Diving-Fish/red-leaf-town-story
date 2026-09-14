@@ -35,6 +35,7 @@ const props = withDefaults(
     elevated?: boolean
     presentation?: 'sheet' | 'dialog'
     closeOnBackdrop?: boolean
+    size?: 'default' | 'wide'
   }>(),
   { elevated: false, presentation: 'sheet', closeOnBackdrop: true },
 )
@@ -94,7 +95,7 @@ onBeforeUnmount(unbindSheet)
   <Teleport to="body">
     <Transition name="sheet">
       <div v-if="open" class="sheet-backdrop" :class="{ elevated, 'centered-dialog': presentation === 'dialog' }" @click.self="closeOnBackdrop && emit('close')">
-        <section ref="panel" class="sheet-panel" role="dialog" aria-modal="true" :aria-labelledby="titleId">
+        <section ref="panel" class="sheet-panel" :class="{ 'sheet-wide': size === 'wide' }" role="dialog" aria-modal="true" :aria-labelledby="titleId">
           <header class="sheet-heading">
             <div class="sheet-title-group">
               <slot name="icon" />
@@ -140,6 +141,7 @@ onBeforeUnmount(unbindSheet)
   background: #1a251e;
   box-shadow: 0 35px 100px #0008;
 }
+.sheet-panel.sheet-wide { width: min(860px, 100%); max-height: min(860px, calc(100dvh - 48px)); }
 .sheet-heading {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

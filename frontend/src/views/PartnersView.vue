@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { computed, watch } from 'vue'
-import { ArrowUpCircle, Sparkles, Star, WandSparkles } from 'lucide-vue-next'
+import { computed, ref, watch } from 'vue'
+import { Sparkles, WandSparkles } from 'lucide-vue-next'
 import { useRoute, useRouter } from 'vue-router'
 
 import PartnerAvatar from '@/components/PartnerAvatar.vue'
-import ActionButton from '@/components/ActionButton.vue'
+import PartnerTrainingPanel from '@/components/PartnerTrainingPanel.vue'
+import ModalSheet from '@/components/ModalSheet.vue'
 import ProgressBar from '@/components/ProgressBar.vue'
 import RarityBadge from '@/components/RarityBadge.vue'
 import RarityFrame from '@/components/RarityFrame.vue'
@@ -17,11 +18,13 @@ import type { OwnedPartner } from '@/types'
 const game = useGameStore()
 const route = useRoute()
 const router = useRouter()
+const trainingOpen = ref(false)
 
 const selected = computed(() => {
   const requested = String(route.params.partnerId || '')
   return game.state?.partners.find((partner) => partner.partner_id === requested) || game.state?.partners[0] || null
 })
+watch(() => selected.value?.partner_id, () => { trainingOpen.value = false })
 const experienceProgress = computed(() => {
   if (!selected.value?.experience_to_next_level) return 100
   return Math.min(100, selected.value.experience / selected.value.experience_to_next_level * 100)
@@ -90,7 +93,7 @@ function rosterSubtitle(partner: OwnedPartner) {
 
         <div class="partner-profile">
           <p class="eyebrow">{{ selected.partner_id }}</p>
-          <div class="profile-title"><h2>{{ selected.name }}</h2><span>Lv.{{ selected.level }} / {{ selected.level_cap || 20 }}</span></div>
+          <div class="profile-title"><h2>{{ selected.name }}</h2><span>Lv.{{ selected.level }} / {{ selected.level_cap || 20 }}</span><button class="primary-button training-trigger" aria-haspopup="dialog" @click="trainingOpen = true"><WandSparkles :size="17" />培养</button></div>
           <p class="partner-description">{{ selected.description || '这位伙伴的故事尚未记录。' }}</p>
 
           <div class="partner-xp">
@@ -122,35 +125,9 @@ function rosterSubtitle(partner: OwnedPartner) {
             <p v-else class="section-placeholder">当前没有已配置特性。</p>
           </section>
 
-          <section class="profile-section">
-            <h3>培养</h3>
-            <div class="training-books">
-              <ActionButton
-                v-for="book in game.state.partner_growth.experience_books"
-                :key="book.item_id"
-                variant="secondary"
-                :action-key="`partner:${selected.partner_id}:train:${book.item_id}`"
-                :disabled="!book.owned"
-                reason="仓库里没有这本札记"
-                @click="game.trainPartner(selected.partner_id, book.item_id)"
-              ><ArrowUpCircle :size="16" />{{ book.item.name }} ×{{ book.owned }}</ActionButton>
-            </div>
-          </section>
-
-          <div class="reserved-actions">
-            <ActionButton
-              :action-key="`partner:${selected.partner_id}:star-up`"
-              :disabled="!selected.star_up_available || (game.player?.companion_marks || 0) < (selected.star_up_cost || 0)"
-              :reason="selected.star_up_available ? '同行印记不足' : '已达到五星'"
-              @click="game.starUpPartner(selected.partner_id)"
-            ><Star :size="17" /><span><strong>升星</strong><small>{{ selected.star_up_available ? `消耗 ${selected.star_up_cost} 同行印记` : '已达到五星' }}</small></span></ActionButton>
-            <ActionButton
-              :action-key="`partner:${selected.partner_id}:breakthrough`"
-              :disabled="!selected.breakthrough_available"
-              :reason="selected.breakthrough_reason || undefined"
-              @click="game.breakthroughPartner(selected.partner_id)"
-            ><WandSparkles :size="17" /><span><strong>突破</strong><small>{{ selected.breakthrough_reason || `突破至阶段 ${selected.breakthrough + 1}` }}</small></span></ActionButton>
-          </div>
+          <ModalSheet :open="trainingOpen" :title="`${selected.name} · 培养`" presentation="dialog" @close="trainingOpen = false">
+            <PartnerTrainingPanel v-if="trainingOpen" :key="selected.partner_id" :partner="selected" />
+          </ModalSheet>
         </div>
       </article>
     </div>
@@ -164,11 +141,13 @@ function rosterSubtitle(partner: OwnedPartner) {
   --roster-lead: 152px;
   display: grid; grid-template-columns: 245px minmax(0, 1fr); gap: 16px; align-items: start;
 }
-.partner-roster { position: sticky; top: var(--roster-top); max-height: calc(100vh - var(--roster-top) - var(--roster-lead)); overflow-y: auto; overscroll-behavior: contain; padding: 13px; border: 1px solid var(--line); border-radius: 19px 6px; background: var(--surface); }.partner-roster > p { position: sticky; top: -13px; z-index: 1; margin: 0 7px 13px; padding: 4px 0 6px; color: #77837a; font-size: 12px; font-weight: 800; letter-spacing: .12em; background: var(--surface); }.partner-roster a { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 9px; padding: 9px; margin-top: 4px; border: 1px solid transparent; border-radius: 11px; }.partner-roster a.active { border-color: #9abb7833; background: #9abb7811; }.partner-roster strong,.partner-roster small { display: block; }.partner-roster strong { font-size: 12px; }.partner-roster small { margin-top: 3px; color: #768178; font-size: 12px; }.partner-roster :deep(.rarity-badge-group) { flex: 0 0 auto; }
+.partner-roster { min-width: 0; position: sticky; top: var(--roster-top); max-height: calc(100vh - var(--roster-top) - var(--roster-lead)); overflow-y: auto; overscroll-behavior: contain; padding: 13px; border: 1px solid var(--line); border-radius: 19px 6px; background: var(--surface); }.partner-roster > p { position: sticky; top: -13px; z-index: 1; margin: 0 7px 13px; padding: 4px 0 6px; color: #77837a; font-size: 12px; font-weight: 800; letter-spacing: .12em; background: var(--surface); }.partner-roster a { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 9px; padding: 9px; margin-top: 4px; border: 1px solid transparent; border-radius: 11px; }.partner-roster a.active { border-color: #9abb7833; background: #9abb7811; }.partner-roster strong,.partner-roster small { display: block; }.partner-roster strong { font-size: 12px; }.partner-roster small { margin-top: 3px; color: #768178; font-size: 12px; }.partner-roster :deep(.rarity-badge-group) { flex: 0 0 auto; }
 .partner-detail { min-width: 0; display: grid; grid-template-columns: minmax(230px, 330px) minmax(0, 1fr); gap: clamp(24px, 4vw, 48px); padding: clamp(18px, 3vw, 34px); border: 1px solid var(--line); border-radius: 25px 8px; background: linear-gradient(145deg, #1b271f, #151e19); }.partner-illustration { width: 100%; box-shadow: 0 22px 60px #0005; }.partner-illustration-empty { display: grid; place-items: center; gap: 9px; width: 100%; height: 100%; color: #708078; font-size: 12px; }
-.partner-profile { padding: 10px 0; }.partner-profile > .eyebrow { margin: 0; }.profile-title { display: flex; align-items: baseline; gap: 13px; }.profile-title h2 { margin: 5px 0 0; font: 700 clamp(2rem, 4vw, 3rem) Georgia, 'Noto Serif SC', serif; }.profile-title > span { color: var(--leaf-bright); font-weight: 700; }.partner-description { max-width: 620px; margin: 16px 0 22px; color: #9ba69c; font-size: 13px; line-height: 1.8; }.profile-meta { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }.profile-meta > span { padding: 11px; border: 1px solid var(--line); border-radius: 10px; background: #ffffff04; }.profile-meta small,.profile-meta strong { display: block; }.profile-meta small { color: #6f7b72; font-size: 12px; }.profile-meta strong { margin-top: 4px; font-size: 12px; }
-.profile-section { margin-top: 25px; }.profile-section h3 { margin: 0 0 10px; font-size: 13px; }.tendency-list { display: grid; grid-template-columns: repeat(3, minmax(100px, 1fr)); gap: 8px; }.tendency-list > div { display: grid; grid-template-columns: 1fr auto; align-items: end; padding: 11px; border: 1px solid #87a96b24; border-radius: 10px; background: #87a96b0b; }.tendency-list span { font-size: 12px; }.tendency-list strong { color: var(--leaf-bright); font-size: 17px; }.tendency-list small { grid-column: 1 / -1; margin-top: 3px; color: #6e7a71; font-size: 12px; }.owned-traits { display: grid; gap: 7px; }.owned-traits > div { padding: 10px 12px; border-left: 2px solid var(--gold); background: #ffffff04; }.owned-traits strong,.owned-traits span { display: block; }.owned-traits strong { font-size: 12px; }.owned-traits span { margin-top: 4px; color: #7e8a81; font-size: 12px; }.section-placeholder { color: #707c73; font-size: 12px; }
-.partner-xp { display: grid; gap: 8px; margin: 18px 0; }.partner-xp > span { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; }.partner-xp small { color: #7e8a81; }.training-books { display: flex; flex-wrap: wrap; gap: 7px; }.training-books :deep(button) { display: flex; align-items: center; gap: 6px; }.reserved-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 28px; }.reserved-actions :deep(button) { min-height: 53px; display: flex; align-items: center; gap: 9px; padding: 0 13px; text-align: left; }.reserved-actions span { flex: 1; }.reserved-actions strong,.reserved-actions small { display: block; }.reserved-actions small { margin-top: 2px; font-size: 12px; }
-@media (max-width: 900px) { .partner-warehouse { grid-template-columns: 1fr; }.partner-roster { position: static; max-height: none; display: flex; overflow-x: auto; }.partner-roster > p { display: none; }.partner-roster a { min-width: 205px; }.partner-detail { grid-template-columns: minmax(190px, 270px) 1fr; } }
+.training-trigger { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 44px; margin-left: auto; flex-shrink: 0; }
+.partner-profile { min-width: 0; padding: 10px 0; }.partner-profile > .eyebrow { margin: 0; }.profile-title { display: flex; flex-wrap: wrap; align-items: baseline; gap: 13px; }.profile-title h2 { margin: 5px 0 0; font: 700 clamp(2rem, 4vw, 3rem) Georgia, 'Noto Serif SC', serif; }.profile-title > span { color: var(--leaf-bright); font-weight: 700; }.partner-description { max-width: 620px; margin: 16px 0 22px; color: #9ba69c; font-size: 13px; line-height: 1.8; }.profile-meta { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }.profile-meta > span { padding: 11px; border: 1px solid var(--line); border-radius: 10px; background: #ffffff04; }.profile-meta small,.profile-meta strong { display: block; }.profile-meta small { color: #6f7b72; font-size: 12px; }.profile-meta strong { margin-top: 4px; font-size: 12px; }
+.profile-section { margin-top: 25px; }.profile-section h3 { margin: 0 0 10px; font-size: 13px; }.tendency-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 8px; }.tendency-list > div { display: grid; grid-template-columns: 1fr auto; align-items: end; padding: 11px; border: 1px solid #87a96b24; border-radius: 10px; background: #87a96b0b; }.tendency-list span { font-size: 12px; }.tendency-list strong { color: var(--leaf-bright); font-size: 17px; }.tendency-list small { grid-column: 1 / -1; margin-top: 3px; color: #6e7a71; font-size: 12px; }.owned-traits { display: grid; gap: 7px; }.owned-traits > div { padding: 10px 12px; border-left: 2px solid var(--gold); background: #ffffff04; }.owned-traits strong,.owned-traits span { display: block; }.owned-traits strong { font-size: 12px; }.owned-traits span { margin-top: 4px; color: #7e8a81; font-size: 12px; }.section-placeholder { color: #707c73; font-size: 12px; }
+.partner-xp { display: grid; gap: 8px; margin: 18px 0; }.partner-xp > span { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; font-size: 12px; }.partner-xp small { color: #7e8a81; }
+@media (max-width: 900px) { .partner-warehouse { grid-template-columns: minmax(0, 1fr); }.partner-roster { min-width: 0; position: static; max-height: none; display: flex; overflow-x: auto; }.partner-roster > p { display: none; }.partner-roster a { min-width: 205px; }.partner-detail { grid-template-columns: minmax(190px, 270px) 1fr; } }
+@media (min-width: 761px) and (max-width: 1050px) { .partner-detail { grid-template-columns: minmax(0, 1fr); }.partner-illustration { width: min(260px, 100%); margin: auto; }.profile-meta { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 650px) { .partner-detail { grid-template-columns: 1fr; }.partner-illustration { width: min(280px, 100%); margin: auto; }.profile-meta { grid-template-columns: 1fr 1fr; }.tendency-list { grid-template-columns: 1fr 1fr; } }
 </style>
