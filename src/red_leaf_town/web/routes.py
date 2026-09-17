@@ -1246,6 +1246,14 @@ def create_blueprint(
         result = get_service().star_up_partner(subject, partner_id)
         return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
 
+    @blueprint.post("/api/red-leaf-town/partners/<string:partner_id>/artwork")
+    @login_required
+    async def select_partner_artwork(subject: str, partner_id: str):
+        payload = await request.get_json(silent=True) or {}
+        stage = payload.get("artwork_stage") if isinstance(payload, dict) else None
+        result = get_service().select_partner_artwork(subject, partner_id, stage)
+        return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
+
     @blueprint.post("/api/red-leaf-town/partners/<string:partner_id>/breakthrough")
     @login_required
     async def breakthrough_partner(subject: str, partner_id: str):

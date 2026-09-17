@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { Sparkles, WandSparkles } from 'lucide-vue-next'
+import { ChevronLeft, ChevronRight, Sparkles, WandSparkles } from 'lucide-vue-next'
 import { useRoute, useRouter } from 'vue-router'
 
 import PartnerAvatar from '@/components/PartnerAvatar.vue'
@@ -25,6 +25,34 @@ const selected = computed(() => {
   return game.state?.partners.find((partner) => partner.partner_id === requested) || game.state?.partners[0] || null
 })
 watch(() => selected.value?.partner_id, () => { trainingOpen.value = false })
+const artworkChoices = computed(() => selected.value?.available_artworks || [])
+const artworkSaving = computed(() => game.pending.has(`partner:${selected.value?.partner_id}:artwork`))
+const artworkIndex = computed(() => artworkChoices.value.findIndex((artwork) => artwork.breakthrough === selected.value?.artwork_stage))
+const artworkLabel = computed(() => selected.value?.artwork_stage ? `${selected.value.artwork_stage} 次突破立绘` : '初始立绘')
+let swipeStart: { x: number; y: number; partnerId: string; pointerId: number } | null = null
+
+function switchArtwork(direction: number) {
+  if (!selected.value || artworkSaving.value || artworkChoices.value.length < 2) return
+  const index = (artworkIndex.value + direction + artworkChoices.value.length) % artworkChoices.value.length
+  const artwork = artworkChoices.value[index]
+  if (artwork) void game.selectPartnerArtwork(selected.value.partner_id, artwork.breakthrough)
+}
+
+function startSwipe(event: PointerEvent) {
+  if (!selected.value || !event.isPrimary || event.button !== 0 || artworkSaving.value) return
+  swipeStart = { x: event.clientX, y: event.clientY, partnerId: selected.value.partner_id, pointerId: event.pointerId }
+  ;(event.currentTarget as HTMLElement).setPointerCapture(event.pointerId)
+}
+
+function endSwipe(event: PointerEvent) {
+  const start = swipeStart
+  swipeStart = null
+  if (!start || start.pointerId !== event.pointerId || start.partnerId !== selected.value?.partner_id) return
+  const dx = event.clientX - start.x
+  const dy = event.clientY - start.y
+  if (Math.abs(dx) >= 45 && Math.abs(dx) > Math.abs(dy) * 1.3) switchArtwork(dx < 0 ? 1 : -1)
+}
+
 const experienceProgress = computed(() => {
   if (!selected.value?.experience_to_next_level) return 100
   return Math.min(100, selected.value.experience / selected.value.experience_to_next_level * 100)
@@ -86,10 +114,18 @@ function rosterSubtitle(partner: OwnedPartner) {
       </aside>
 
       <article v-if="selected" class="partner-detail">
-        <RarityFrame class="partner-illustration" :rarity="selected.stars || selected.rarity" aspect="9 / 16" badge-size="md">
-          <img v-if="selected.artwork?.url" :src="selected.artwork.url" :alt="selected.name" />
-          <div v-else class="partner-illustration-empty"><Sparkles :size="46" /><span>暂无当前形态插画</span></div>
-        </RarityFrame>
+        <div class="partner-artwork-picker">
+          <RarityFrame class="partner-illustration" :rarity="selected.stars || selected.rarity" aspect="9 / 16" badge-size="md"
+            @pointerdown="startSwipe" @pointerup="endSwipe" @pointercancel="swipeStart = null" @lostpointercapture="swipeStart = null">
+            <img v-if="selected.artwork?.url" :src="selected.artwork.url" :alt="`${selected.name} · ${artworkLabel}`" :draggable="false" />
+            <div v-else class="partner-illustration-empty"><Sparkles :size="46" /><span>暂无当前形态插画</span></div>
+          </RarityFrame>
+          <div v-if="artworkChoices.length > 1" class="artwork-controls" :aria-busy="artworkSaving">
+            <button class="secondary-button" aria-label="上一张立绘" :disabled="artworkSaving" @click="switchArtwork(-1)"><ChevronLeft :size="20" /></button>
+            <span aria-live="polite"><strong>{{ artworkLabel }}</strong><small>{{ artworkSaving ? '正在保存…' : '左右滑动切换 · 自动保存' }}</small></span>
+            <button class="secondary-button" aria-label="下一张立绘" :disabled="artworkSaving" @click="switchArtwork(1)"><ChevronRight :size="20" /></button>
+          </div>
+        </div>
 
         <div class="partner-profile">
           <p class="eyebrow">{{ selected.partner_id }}</p>
@@ -143,6 +179,13 @@ function rosterSubtitle(partner: OwnedPartner) {
 }
 .partner-roster { min-width: 0; position: sticky; top: var(--roster-top); max-height: calc(100vh - var(--roster-top) - var(--roster-lead)); overflow-y: auto; overscroll-behavior: contain; padding: 13px; border: 1px solid var(--line); border-radius: 19px 6px; background: var(--surface); }.partner-roster > p { position: sticky; top: -13px; z-index: 1; margin: 0 7px 13px; padding: 4px 0 6px; color: #77837a; font-size: 12px; font-weight: 800; letter-spacing: .12em; background: var(--surface); }.partner-roster a { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 9px; padding: 9px; margin-top: 4px; border: 1px solid transparent; border-radius: 11px; }.partner-roster a.active { border-color: #9abb7833; background: #9abb7811; }.partner-roster strong,.partner-roster small { display: block; }.partner-roster strong { font-size: 12px; }.partner-roster small { margin-top: 3px; color: #768178; font-size: 12px; }.partner-roster :deep(.rarity-badge-group) { flex: 0 0 auto; }
 .partner-detail { min-width: 0; display: grid; grid-template-columns: minmax(230px, 330px) minmax(0, 1fr); gap: clamp(24px, 4vw, 48px); padding: clamp(18px, 3vw, 34px); border: 1px solid var(--line); border-radius: 25px 8px; background: linear-gradient(145deg, #1b271f, #151e19); }.partner-illustration { width: 100%; box-shadow: 0 22px 60px #0005; }.partner-illustration-empty { display: grid; place-items: center; gap: 9px; width: 100%; height: 100%; color: #708078; font-size: 12px; }
+.partner-artwork-picker { min-width: 0; }
+.partner-illustration { touch-action: pan-y; user-select: none; }
+.artwork-controls { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 14px; }
+.artwork-controls button { display: grid; place-items: center; min-width: 44px; min-height: 44px; padding: 8px; }
+.artwork-controls span { text-align: center; }
+.artwork-controls strong, .artwork-controls small { display: block; font-size: 12px; }
+.artwork-controls small { margin-top: 5px; color: var(--text-muted); }
 .training-trigger { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 44px; margin-left: auto; flex-shrink: 0; }
 .partner-profile { min-width: 0; padding: 10px 0; }.partner-profile > .eyebrow { margin: 0; }.profile-title { display: flex; flex-wrap: wrap; align-items: baseline; gap: 13px; }.profile-title h2 { margin: 5px 0 0; font: 700 clamp(2rem, 4vw, 3rem) Georgia, 'Noto Serif SC', serif; }.profile-title > span { color: var(--leaf-bright); font-weight: 700; }.partner-description { max-width: 620px; margin: 16px 0 22px; color: #9ba69c; font-size: 13px; line-height: 1.8; }.profile-meta { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }.profile-meta > span { padding: 11px; border: 1px solid var(--line); border-radius: 10px; background: #ffffff04; }.profile-meta small,.profile-meta strong { display: block; }.profile-meta small { color: #6f7b72; font-size: 12px; }.profile-meta strong { margin-top: 4px; font-size: 12px; }
 .profile-section { margin-top: 25px; }.profile-section h3 { margin: 0 0 10px; font-size: 13px; }.tendency-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 8px; }.tendency-list > div { display: grid; grid-template-columns: 1fr auto; align-items: end; padding: 11px; border: 1px solid #87a96b24; border-radius: 10px; background: #87a96b0b; }.tendency-list span { font-size: 12px; }.tendency-list strong { color: var(--leaf-bright); font-size: 17px; }.tendency-list small { grid-column: 1 / -1; margin-top: 3px; color: #6e7a71; font-size: 12px; }.owned-traits { display: grid; gap: 7px; }.owned-traits > div { padding: 10px 12px; border-left: 2px solid var(--gold); background: #ffffff04; }.owned-traits strong,.owned-traits span { display: block; }.owned-traits strong { font-size: 12px; }.owned-traits span { margin-top: 4px; color: #7e8a81; font-size: 12px; }.section-placeholder { color: #707c73; font-size: 12px; }

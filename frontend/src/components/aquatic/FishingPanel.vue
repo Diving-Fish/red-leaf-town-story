@@ -9,6 +9,7 @@ import PartnerPicker from '@/components/PartnerPicker.vue'
 import ProgressBar from '@/components/ProgressBar.vue'
 import QualityTag from '@/components/QualityTag.vue'
 import StateBlock from '@/components/StateBlock.vue'
+import { rewardSummary } from '@/lib/rewards'
 import { useGameStore } from '@/stores/game'
 import type { AquaticState, FishingDrop, FishingSpotState } from '@/types'
 
@@ -190,12 +191,14 @@ async function cast(spot: FishingSpotState) {
 
       <div class="codex-milestones">
         <h4>完成度奖励</h4>
+        <p class="codex-reward-hint">收齐指定种类时，奖励自动发放，无需手动领取。</p>
         <div v-for="milestone in aquatic.codex.milestones" :key="milestone.id" class="milestone" :class="{ claimed: milestone.claimed }">
           <div>
             <strong>{{ milestone.name }}</strong>
             <small>收齐 {{ milestone.required }} 种</small>
+            <p class="milestone-reward">{{ rewardSummary(milestone.reward) }}</p>
           </div>
-          <span v-if="milestone.claimed">已领取</span>
+          <span v-if="milestone.claimed">已自动发放</span>
           <span v-else-if="aquatic.codex.recorded >= milestone.required">即将发放</span>
           <span v-else>还差 {{ milestone.required - aquatic.codex.recorded }} 种</span>
         </div>
@@ -263,4 +266,8 @@ async function cast(spot: FishingSpotState) {
 .milestone span { color: #8d998e; font-size: 12px; }
 .milestone.claimed { border-color: rgba(168, 201, 133, .26); }
 .milestone.claimed span { color: var(--leaf-bright); }
+.codex-reward-hint { margin: 0 0 12px; color: var(--text-muted); font-size: 12px; line-height: 1.6; }
+.milestone > div { min-width: 0; }
+.milestone > span { flex-shrink: 0; }
+.milestone-reward { margin: 7px 0 0; color: var(--gold); font-size: 12px; line-height: 1.7; overflow-wrap: anywhere; }
 </style>

@@ -1305,3 +1305,24 @@ async def test_beta_livestock_upgrade_and_duck_incubation_api(client, service, m
     response = await client.post('/api/red-leaf-town/livestock/facilities/coop_1/incubate', json={'species_id':'duck','quality':1})
     assert response.status_code == 200
     assert (await response.get_json())['data']['result']['animal']['species_id'] == 'duck'
+
+
+@runs
+async def test_partner_artwork_selection_requires_login_and_returns_cdn_urls(client, service, monkeypatch):
+    from src.libraries import cdn_client
+
+    monkeypatch.setattr(cdn_client, "cdn_url_at", lambda path: f"https://cdn.example/{path}")
+    path = "/api/red-leaf-town/partners/bai_li/artwork"
+    assert (await client.post(path, json={"artwork_stage": 0})).status_code == 401
+    authenticate(client)
+    player = service.repository.get_by_sub("route-sub")
+    service.admin_grant_partner(player.player_id, "bai_li")
+    response = await client.post(path, json={"artwork_stage": 0})
+    assert response.status_code == 200
+    data = (await response.get_json())["data"]
+    partner = next(p for p in data["state"]["partners"] if p["partner_id"] == "bai_li")
+    assert partner["artwork_stage"] == partner["avatar_crop"]["breakthrough"] == 0
+    assert partner["artwork"]["url"]
+    assert partner["available_artworks"][0]["url"]
+    assert (await client.post(path, json={"artwork_stage": 1})).status_code == 409
+    assert (await client.post(path, json={"artwork_stage": "bad"})).status_code == 409

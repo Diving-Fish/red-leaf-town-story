@@ -1002,6 +1002,7 @@ export interface CastResult {
 }
 
 export interface BigCatchResult {
+  codex_milestones: CastResult['codex_milestones']
   action: string
   success: boolean
   chance: number
@@ -1502,6 +1503,8 @@ export interface OwnedPartnerTrait {
 }
 
 export interface OwnedPartner {
+  artwork_stage?: number | null
+  available_artworks?: PartnerArtwork[]
   partner_id: string
   level: number
   experience: number

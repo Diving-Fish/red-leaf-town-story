@@ -429,6 +429,7 @@ class OwnedPartnerState(BaseModel):
     level: int = Field(default=1, ge=1, le=60)
     experience: int = Field(default=0, ge=0)
     breakthrough: int = Field(default=0, ge=0, le=2)
+    artwork_stage: int | None = Field(default=None, ge=0, le=2)
     stars: int = Field(default=0, ge=0, le=5)
     acquired_at: int = Field(ge=0)
 

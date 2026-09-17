@@ -1532,7 +1532,7 @@
         },
         {
           "breakthrough": 1,
-          "asset_key": "red-leaf-town/partners/gujian_bu/breakthrough-2-2edc074741611ca0.webp",
+          "asset_key": "red-leaf-town/partners/gujian_bu/breakthrough-1-80531d4f42f9df52.webp",
           "width": 936,
           "height": 1664,
           "content_type": "image/webp"
@@ -1548,10 +1548,10 @@
         },
         {
           "breakthrough": 1,
-          "x": 268,
-          "y": 91,
-          "w": 430,
-          "h": 430
+          "x": 293,
+          "y": 64,
+          "w": 422,
+          "h": 422
         },
         {
           "breakthrough": 2,
@@ -1629,9 +1629,9 @@
         },
         {
           "breakthrough": 1,
-          "asset_key": "red-leaf-town/partners/gujian_miao/breakthrough-2-ce8d8f7e6efefdb1.webp",
-          "width": 936,
-          "height": 1664,
+          "asset_key": "red-leaf-town/partners/gujian_miao/breakthrough-1-2ebdf09746f18b53.webp",
+          "width": 765,
+          "height": 1360,
           "content_type": "image/webp"
         }
       ],
@@ -1645,10 +1645,10 @@
         },
         {
           "breakthrough": 1,
-          "x": 239,
-          "y": 36,
-          "w": 563,
-          "h": 563
+          "x": 171,
+          "y": 54,
+          "w": 417,
+          "h": 417
         },
         {
           "breakthrough": 2,
@@ -1721,7 +1721,7 @@
         },
         {
           "breakthrough": 1,
-          "asset_key": "red-leaf-town/partners/guqi/breakthrough-2-66d82e6e83e4a668.webp",
+          "asset_key": "red-leaf-town/partners/guqi/breakthrough-1-a1d03e1b2bfb0414.webp",
           "width": 936,
           "height": 1664,
           "content_type": "image/webp"
@@ -1737,10 +1737,10 @@
         },
         {
           "breakthrough": 1,
-          "x": 208,
-          "y": 106,
-          "w": 445,
-          "h": 445
+          "x": 398,
+          "y": 184,
+          "w": 232,
+          "h": 232
         },
         {
           "breakthrough": 2,

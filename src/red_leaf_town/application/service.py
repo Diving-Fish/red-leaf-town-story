@@ -3852,6 +3852,24 @@ class GameService(SailingServiceMixin):
         player, result = self._update_by_sub(oauth_sub, mutation)
         return {"result": result, "state": self._snapshot(player)}
 
+    def select_partner_artwork(self, oauth_sub: str, partner_id: str, stage: int) -> dict:
+        catalog = self.partner_catalog_loader()
+
+        def mutation(player: PlayerState):
+            owned = self._owned_partner(player, partner_id)
+            definition = catalog.partner_map.get(partner_id)
+            if definition is None:
+                raise GameError("partner_not_found", "伙伴配置不存在", 404)
+            if type(stage) is not int or not 0 <= stage <= owned.breakthrough:
+                raise GameError("partner_artwork_locked", "尚未解锁这张立绘", 409)
+            if definition.artwork_for(stage) is None:
+                raise GameError("partner_artwork_missing", "这张立绘尚未配置", 409)
+            owned.artwork_stage = stage
+            return {"partner_id": partner_id, "artwork_stage": stage}
+
+        player, result = self._update_by_sub(oauth_sub, mutation)
+        return {"result": result, "state": self._snapshot(player)}
+
     def breakthrough_partner(self, oauth_sub: str, partner_id: str) -> dict:
         catalog = self.partner_catalog_loader()
 
@@ -6877,9 +6895,13 @@ class GameService(SailingServiceMixin):
                     "locked_until": lock_deadlines.get(owned.partner_id) or None,
                 })
                 continue
-            artwork = definition.artwork_for(owned.breakthrough)
+            artwork_stage = owned.artwork_stage
+            if (artwork_stage is None or artwork_stage > owned.breakthrough
+                    or definition.artwork_for(artwork_stage) is None):
+                artwork_stage = owned.breakthrough
+            artwork = definition.artwork_for(artwork_stage)
             avatar_crop = next(
-                (crop for crop in definition.avatar_crops if crop.breakthrough == owned.breakthrough),
+                (crop for crop in definition.avatar_crops if crop.breakthrough == artwork_stage),
                 None,
             )
             records.append({
@@ -6899,6 +6921,11 @@ class GameService(SailingServiceMixin):
                     if owned.level < level_cap_for_breakthrough(owned.breakthrough)
                     else None
                 ),
+                "artwork_stage": artwork_stage,
+                "available_artworks": [
+                    entry.model_dump() for entry in sorted(definition.artworks, key=lambda entry: entry.breakthrough)
+                    if entry.breakthrough <= owned.breakthrough
+                ],
                 "artwork": artwork.model_dump() if artwork else None,
                 "avatar_crop": avatar_crop.model_dump() if avatar_crop else None,
                 "tendencies": [

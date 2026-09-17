@@ -4,6 +4,7 @@ import { defineStore } from 'pinia'
 import { api, ApiError } from '@/api'
 import { PRODUCTION_COPY, type ProductionIndustry } from '@/lib/production'
 import { qualityName } from '@/lib/quality'
+import { rewardSummary } from '@/lib/rewards'
 import { useStoryStore } from '@/stores/story'
 import { useTickerStore } from '@/stores/ticker'
 import type {
@@ -144,13 +145,8 @@ export const useGameStore = defineStore('game', () => {
   })
 
   function rewardText(reward: Reward) {
-    const parts: string[] = []
-    if (reward.coins) parts.push(`红叶币 ×${reward.coins}`)
-    if (reward.experience) parts.push(`经验 ×${reward.experience}`)
-    if (reward.talent_points) parts.push(`天赋点 ×${reward.talent_points}`)
-    parts.push(...reward.items.map((item) => `${item.name} ×${item.quantity}`))
-    parts.push(...reward.partners.map((partner) => `${partner.name} 加入`))
-    return parts.length ? `获得 ${parts.join('、')}` : ''
+    const summary = rewardSummary(reward)
+    return summary ? `获得 ${summary}` : ''
   }
 
   function isPending(key: string) {
@@ -493,9 +489,7 @@ export const useGameStore = defineStore('game', () => {
     if (!result || result.duplicate) return result
     if (result.big_catch) showNotice(`有大家伙咬钩了！`)
     else if (result.drops.length) showNotice(`钓上${dropText(result.drops)}`)
-    for (const milestone of result.codex_milestones) {
-      showNotice(`鱼类图鉴达成「${milestone.name}」`)
-    }
+    showCodexRewards(result.codex_milestones)
     return result
   }
 
@@ -507,7 +501,14 @@ export const useGameStore = defineStore('game', () => {
     if (!result) return result
     if (result.success) showNotice(`拉上来了！${dropText(result.drops)} ${result.size} 厘米`)
     else showNotice(`跑了，只剩${dropText(result.drops)}`)
+    showCodexRewards(result.codex_milestones)
     return result
+  }
+
+  function showCodexRewards(milestones: CastResult['codex_milestones']) {
+    for (const milestone of milestones) {
+      showNotice(`鱼类图鉴达成「${milestone.name}」，已自动发放：${rewardSummary(milestone.granted)}`)
+    }
   }
 
   function buildPond(pondId: string) {
@@ -713,6 +714,12 @@ export const useGameStore = defineStore('game', () => {
     })
   }
 
+  function selectPartnerArtwork(partnerId: string, stage: number) {
+    return action(`partner:${partnerId}:artwork`, `${API_ROOT}/partners/${partnerId}/artwork`, {
+      payload: { artwork_stage: stage },
+    })
+  }
+
   function breakthroughPartner(partnerId: string) {
     return action(`partner:${partnerId}:breakthrough`, `${API_ROOT}/partners/${partnerId}/breakthrough`, {
       successMessage: '伙伴突破完成',
@@ -788,11 +795,22 @@ export const useGameStore = defineStore('game', () => {
     return Math.floor((Date.now() + serverOffsetMs.value) / 1000)
   }
 
+  const noticeQueue: string[] = []
+  let noticeShowing = false
+
   function showNotice(message: string) {
-    notice.value = message
+    noticeQueue.push(message)
+    if (!noticeShowing) showNextNotice()
+  }
+
+  function showNextNotice() {
+    const message = noticeQueue.shift()
+    noticeShowing = message !== undefined
+    notice.value = message ?? ''
+    if (message === undefined) return
     window.setTimeout(() => {
-      if (notice.value === message) notice.value = ''
-    }, 2800)
+      showNextNotice()
+    }, Math.min(10000, Math.max(2800, message.length * 100)))
   }
 
   function showAchievementNotice(achievements: AchievementUnlock[] | undefined) {
@@ -904,6 +922,7 @@ export const useGameStore = defineStore('game', () => {
     trainPartner,
     starUpPartner,
     breakthroughPartner,
+    selectPartnerArtwork,
     useActiveTaskItem,
     cancelTask,
     deliverTribute,

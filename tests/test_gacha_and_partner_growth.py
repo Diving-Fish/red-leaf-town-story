@@ -658,3 +658,49 @@ def test_batch_training_matches_snapshot_experience_costs(growth_game, level, br
     result = next(p for p in trained["state"]["partners"] if p["partner_id"] == "xiang_hanyang")
     assert (result["level"], result["experience"]) == (expected_level, expected_xp)
     assert sum(repository.get(player.player_id).inventory.get(book_id, {}).values()) == 0
+
+
+def test_partner_artwork_choice_persists_and_is_account_scoped(growth_game):
+    service, repository, _, player = growth_game
+    _prepare_ascension(service, repository, player)
+    service.breakthrough_partner("growth-sub", "bai_li")
+    other = service.ensure_player("artwork-other", "另一位居民")
+    service.admin_grant_partner(other.player_id, "bai_li")
+    result = service.select_partner_artwork("growth-sub", "bai_li", 0)
+    owned = next(p for p in result["state"]["partners"] if p["partner_id"] == "bai_li")
+    assert owned["breakthrough"] == 1
+    assert owned["artwork_stage"] == owned["artwork"]["breakthrough"] == owned["avatar_crop"]["breakthrough"] == 0
+    assert [art["breakthrough"] for art in owned["available_artworks"]] == [0, 1]
+    # Recreate the service to ensure the selection comes from the account save.
+    restored = GameService(service.content, repository, clock=service.clock)
+    saved = next(p for p in restored.snapshot_by_sub("growth-sub")["partners"] if p["partner_id"] == "bai_li")
+    assert saved["artwork_stage"] == 0
+    result = service.select_partner_artwork("growth-sub", "bai_li", 1)
+    owned = next(p for p in result["state"]["partners"] if p["partner_id"] == "bai_li")
+    assert owned["artwork"]["breakthrough"] == owned["avatar_crop"]["breakthrough"] == 1
+    other_saved = next(p for p in service.snapshot_by_sub("artwork-other")["partners"] if p["partner_id"] == "bai_li")
+    assert other_saved["artwork_stage"] == 0
+
+
+@pytest.mark.parametrize("stage", [1, 2, -1, None, True, "0", 0.5])
+def test_partner_artwork_rejects_locked_or_invalid_stage(growth_game, stage):
+    service, repository, _, player = growth_game
+    service.admin_grant_partner(player.player_id, "bai_li")
+    before = repository.get(player.player_id)
+    with pytest.raises(GameError) as error:
+        service.select_partner_artwork("growth-sub", "bai_li", stage)
+    assert error.value.code == "partner_artwork_locked"
+    assert repository.get(player.player_id).owned_partners == before.owned_partners
+
+
+def test_partner_artwork_requires_ownership_and_configured_art(growth_game):
+    service, repository, _, player = growth_game
+    with pytest.raises(GameError):
+        service.select_partner_artwork("growth-sub", "bai_li", 0)
+    service.admin_grant_partner(player.player_id, "bai_li")
+    catalog = service.partner_catalog_loader().model_copy(deep=True)
+    catalog.partner_map["bai_li"].artworks = []
+    service.partner_catalog_loader = lambda: catalog
+    with pytest.raises(GameError) as error:
+        service.select_partner_artwork("growth-sub", "bai_li", 0)
+    assert error.value.code == "partner_artwork_missing"
