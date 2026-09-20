@@ -2,9 +2,15 @@ import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 
 import { api } from '@/api'
+import {
+  emptyCast,
+  resolveBackground,
+  resolvePortrait,
+  type StoryBackgroundState,
+  type StoryPortraitState,
+} from '@/lib/story-stage'
 import type {
   ActionResult,
-  StoryAsset,
   StoryCueResult,
   StoryDialogueStep,
   StoryPortraitSlot,
@@ -14,22 +20,13 @@ import type {
 
 const API_ROOT = '/api/red-leaf-town'
 
-export interface StoryPortraitState {
-  asset: StoryAsset
-  scale: number
-  offsetX: number
-  offsetY: number
-}
-
-function emptyPortraits(): Record<StoryPortraitSlot, StoryPortraitState | null> {
-  return { left: null, right: null }
-}
+export type { StoryPortraitState } from '@/lib/story-stage'
 
 export const useStoryStore = defineStore('story', () => {
   const queue = ref<StoryScript[]>([])
   const script = ref<StoryScript | null>(null)
-  const background = ref<StoryAsset | null>(null)
-  const portraits = ref(emptyPortraits())
+  const background = ref<StoryBackgroundState | null>(null)
+  const portraits = ref(emptyCast())
   const line = ref<StoryDialogueStep | null>(null)
   const previewing = ref(false)
   const locked = ref(false)
@@ -106,7 +103,7 @@ export const useStoryStore = defineStore('story', () => {
       const step = steps[cursor]
       cursor += 1
       if (step.type === 'background') {
-        background.value = step.asset
+        background.value = resolveBackground(step)
         continue
       }
       if (step.type === 'portrait') {
@@ -120,17 +117,7 @@ export const useStoryStore = defineStore('story', () => {
   }
 
   function applyPortrait(step: StoryPortraitStep) {
-    if (!step.visible || !step.asset) {
-      portraits.value[step.slot] = null
-      return
-    }
-    const layout = step.asset.layouts?.[script.value?.mode || 'inline']
-    portraits.value[step.slot] = {
-      asset: step.asset,
-      scale: layout?.scale ?? 1,
-      offsetX: layout?.offset_x ?? 0,
-      offsetY: layout?.offset_y ?? 0,
-    }
+    portraits.value[step.slot] = resolvePortrait(step, script.value?.mode || 'inline')
   }
 
   function finish() {
@@ -148,7 +135,7 @@ export const useStoryStore = defineStore('story', () => {
   function clearStage() {
     script.value = null
     background.value = null
-    portraits.value = emptyPortraits()
+    portraits.value = emptyCast()
     line.value = null
     previewing.value = false
     locked.value = false

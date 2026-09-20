@@ -1671,7 +1671,7 @@ export interface AdminPartnerGrantResult {
 
 export type StoryAssetKind = 'background' | 'portrait'
 export type StoryMode = 'inline' | 'stage'
-export type StoryPortraitSlot = 'left' | 'right'
+export type StoryPortraitSlot = 'left' | 'right' | 'center'
 
 export interface StoryAssetLayout {
   scale: number
@@ -1692,12 +1692,55 @@ export interface StoryAsset {
   content_type?: string
   created_at?: number
   url?: string
+  /** 公共素材库的图，还是自己传上来的图 */
+  source?: 'official' | 'upload'
+}
+
+export interface StoryUpload {
+  id: string
+  kind: StoryAssetKind
+  name: string
+  asset_key: string
+  width: number
+  height: number
+  uploader_name: string
+  created_at: number
+  mine: boolean
+  url?: string
+  layout: StoryAssetLayout
+}
+
+export interface StoryUploadQuota {
+  quota_bytes: number
+  used_bytes: number
+  window_seconds: number
+  max_file_bytes: number
+}
+
+/** 新作者第一次打开编辑器时的起手草稿，来自游戏里现成的那段剧情。 */
+export interface StoryExample {
+  id: string
+  title: string
+  priority: number
+  steps: unknown[]
+}
+
+export type StoryBackgroundTransition = 'fade' | 'cut'
+export type StoryPortraitTransition = 'fade' | 'slide' | 'cut'
+
+/** 某一步单独覆盖的立绘站位，比素材默认站位放得开。留空表示沿用素材调好的值。 */
+export interface StoryStepLayout {
+  scale: number
+  offset_x: number
+  offset_y: number
 }
 
 export interface StoryBackgroundStep {
   type: 'background'
   asset_id: string
   asset: StoryAsset | null
+  transition?: StoryBackgroundTransition
+  duration?: number
 }
 
 export interface StoryPortraitStep {
@@ -1708,6 +1751,10 @@ export interface StoryPortraitStep {
   partner_id: string
   breakthrough: number
   asset: StoryAsset | null
+  transition?: StoryPortraitTransition
+  duration?: number
+  flip?: boolean
+  layout?: StoryStepLayout | null
 }
 
 export interface StoryDialogueStep {
@@ -1733,6 +1780,14 @@ export interface StoryScript {
 export interface StoryCueResult {
   cue: string
   stories: StoryScript[]
+}
+
+export interface StoryResources {
+  assets: StoryAsset[]
+  partners: { id: string; name: string; artworks: { breakthrough: number; asset_key: string; width: number; height: number; url?: string }[] }[]
+  uploads: StoryUpload[]
+  upload: StoryUploadQuota
+  example: StoryExample | null
 }
 
 export interface StoryAdminPayload {

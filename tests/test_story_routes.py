@@ -4,6 +4,7 @@ import asyncio
 import functools
 import io
 import json
+import re
 
 import pytest
 from quart import Quart
@@ -14,10 +15,11 @@ from private.libraries.jwt import AUD_RED_LEAF_TOWN, subject_encode
 from red_leaf_town.application import GameService
 from red_leaf_town.content import load_content
 from red_leaf_town.infrastructure import InMemoryPlayerRepository
-from red_leaf_town.runtime import set_service
+from red_leaf_town.runtime import get_service, set_service
 from red_leaf_town.partner_content import load_partner_catalog
 from red_leaf_town.story_assets import load_story_asset_catalog
 from red_leaf_town.story_content import load_story_catalog
+from red_leaf_town.story_uploads import load_story_upload_index
 from red_leaf_town.web.routes import COOKIE_NAME, create_blueprint
 
 
@@ -39,6 +41,9 @@ WELCOME_SCRIPT = {
 }
 
 
+UPLOAD_TEST_QUOTA = 4096
+
+
 @pytest.fixture
 def story_paths(tmp_path):
     asset_path = tmp_path / "story_assets.json"
@@ -47,16 +52,19 @@ def story_paths(tmp_path):
     script_dir.mkdir()
     (script_dir / "welcome.json").write_text(json.dumps(WELCOME_SCRIPT), encoding="utf-8")
     partner_path = tmp_path / "partners.json"
+    upload_path = tmp_path / "story_uploads.json"
     load_story_asset_catalog.cache_clear()
     load_story_catalog.cache_clear()
-    yield asset_path, script_dir, partner_path
+    load_story_upload_index.cache_clear()
+    yield asset_path, script_dir, partner_path, upload_path
     load_story_asset_catalog.cache_clear()
     load_story_catalog.cache_clear()
+    load_story_upload_index.cache_clear()
 
 
 @pytest.fixture
 def client(story_paths, monkeypatch):
-    asset_path, script_dir, partner_path = story_paths
+    asset_path, script_dir, partner_path, upload_path = story_paths
     monkeypatch.setenv("RED_LEAF_TOWN_ADMIN_TOKEN", "test-admin-token")
     content = load_content()
     service = GameService(
@@ -74,6 +82,8 @@ def client(story_paths, monkeypatch):
         partner_catalog_path=partner_path,
         story_asset_path=asset_path,
         story_script_dir=script_dir,
+        story_upload_path=upload_path,
+        upload_quota_bytes=UPLOAD_TEST_QUOTA,
     ))
     yield app.test_client()
     set_service(None)
@@ -271,7 +281,7 @@ async def test_portrait_layout_is_saved_on_the_asset(client, monkeypatch):
 async def test_asset_delete_blocked_while_referenced(client, monkeypatch, story_paths):
     from src.libraries import cdn_client
 
-    asset_path, script_dir, _ = story_paths
+    asset_path, script_dir, *_ = story_paths
     monkeypatch.setattr(cdn_client, "upload_bytes_at", lambda path, data, content_type: True)
     monkeypatch.setattr(cdn_client, "cdn_url_at", lambda path: f"https://cdn.example/{path}")
     await client.post(
@@ -303,7 +313,7 @@ async def test_asset_delete_blocked_while_referenced(client, monkeypatch, story_
 
 @runs
 async def test_broken_script_reports_invalid_content(client, story_paths):
-    _, script_dir, _ = story_paths
+    _, script_dir, *_ = story_paths
     (script_dir / "broken.json").write_text(json.dumps({
         "id": "broken",
         "title": "坏剧本",
@@ -402,7 +412,7 @@ async def test_overwrite_cannot_change_the_asset_kind(client, monkeypatch):
 @runs
 async def test_overwrite_fills_in_a_placeholder_asset(client, monkeypatch, story_paths):
     stub_cdn(monkeypatch)
-    asset_path, _, _ = story_paths
+    asset_path, *_ = story_paths
     asset_path.write_text(
         json.dumps({"schema_version": 1, "assets": [
             {"id": "portal_hollow", "kind": "background", "name": "TODO 传送门空地"},
@@ -418,3 +428,232 @@ async def test_overwrite_fills_in_a_placeholder_asset(client, monkeypatch, story
     assert body["data"]["asset_key"].startswith("red-leaf-town/story/background/portal_hollow-")
     assert body["data"]["name"] == "TODO 传送门空地"
     assert body["data"]["url"].startswith("https://cdn.example/")
+
+
+@runs
+async def test_story_resources_requires_login(client):
+    response = await client.get("/api/red-leaf-town/story/resources")
+    assert response.status_code == 401
+
+
+@runs
+async def test_story_resources_lists_assets_and_partner_artworks(client, story_paths):
+    """剧情编辑器要给社区用，所以素材清单只要登录就能读，不需要管理员 Token。"""
+    asset_path, _script_dir, partner_path, _upload_path = story_paths
+    asset_path.write_text(json.dumps({
+        "schema_version": 1,
+        "assets": [
+            {
+                "id": "autumn_gate",
+                "kind": "background",
+                "name": "镇口 · 黄昏",
+                "asset_key": "red-leaf-town/story/background/autumn_gate.webp",
+                "width": 1920,
+                "height": 1080,
+                "content_type": "image/webp",
+            },
+            {
+                "id": "maple_smile",
+                "kind": "portrait",
+                "name": "枫糖 微笑",
+                "asset_key": "red-leaf-town/story/portrait/maple_smile.webp",
+                "width": 900,
+                "height": 1600,
+                "content_type": "image/webp",
+                "inline_layout": {"scale": 2.4, "offset_x": -0.1, "offset_y": 0.2},
+            },
+            {"id": "todo_shrine", "kind": "background", "name": "TODO 神社"},
+        ],
+    }), encoding="utf-8")
+    partner_path.write_text(json.dumps({
+        "partners": [
+            {
+                "id": "fein",
+                "name": "绯恩",
+                "rarity": 4,
+                "tendencies": [{"industry": "gathering", "level_1": 40, "level_60": 300}],
+                "artworks": [{
+                    "breakthrough": 0,
+                    "asset_key": "red-leaf-town/partners/fein/breakthrough-0.webp",
+                    "width": 900,
+                    "height": 1600,
+                    "content_type": "image/webp",
+                }],
+            },
+            {
+                "id": "nobody",
+                "name": "还没画",
+                "rarity": 3,
+                "tendencies": [{"industry": "farming", "level_1": 40, "level_60": 300}],
+            },
+        ],
+    }), encoding="utf-8")
+    load_story_asset_catalog.cache_clear()
+    load_partner_catalog.cache_clear()
+
+    authenticate(client)
+    response = await client.get("/api/red-leaf-town/story/resources")
+    body = await response.get_json()
+    assert response.status_code == 200
+
+    # 占位素材没有图，编辑器选了也画不出来，所以不列出来。
+    assert [entry["id"] for entry in body["data"]["assets"]] == ["autumn_gate", "maple_smile"]
+    portrait = body["data"]["assets"][1]
+    assert portrait["layouts"]["inline"]["scale"] == 2.4
+    assert portrait["layouts"]["stage"]["scale"] == 1.0
+
+    # 没有插画的伙伴当不了立绘。
+    assert [entry["id"] for entry in body["data"]["partners"]] == ["fein"]
+    assert body["data"]["partners"][0]["artworks"][0]["breakthrough"] == 0
+
+    load_partner_catalog.cache_clear()
+
+
+async def upload_image(client, size=(320, 180), kind="background", name="社区背景"):
+    return await client.post(
+        "/api/red-leaf-town/story/uploads",
+        files={"file": FileStorage(io.BytesIO(png_bytes(size)), filename="shot.png")},
+        form={"kind": kind, "name": name},
+    )
+
+
+@runs
+async def test_story_upload_requires_login(client):
+    response = await client.post("/api/red-leaf-town/story/uploads", form={"kind": "background"})
+    assert response.status_code == 401
+
+
+@runs
+async def test_story_upload_transcodes_and_records_uploader(client, monkeypatch, story_paths):
+    stub_cdn(monkeypatch)
+    authenticate(client)
+    response = await upload_image(client)
+    body = await response.get_json()
+    assert response.status_code == 201
+    assert body["data"]["id"].startswith("up_")
+    assert body["data"]["mine"] is True
+    assert body["data"]["url"].startswith("https://cdn.example/")
+
+    # 本地只留索引，图在 CDN 上；上传者记在索引里但不外发。
+    _, _, _, upload_path = story_paths
+    load_story_upload_index.cache_clear()
+    record = load_story_upload_index(upload_path).uploads[0]
+    assert record.uploader_sub == "story-sub"
+    assert record.content_type == "image/webp"
+    assert record.asset_key.endswith(".webp")
+    assert record.source_bytes > 0
+    assert "uploader_sub" not in body["data"]
+
+
+@runs
+async def test_story_upload_id_is_a_valid_script_asset_id(client, monkeypatch):
+    """导出的剧本会直接引用这个 ID，格式必须过得了 StoryScript 的校验。"""
+    stub_cdn(monkeypatch)
+    authenticate(client)
+    body = await (await upload_image(client)).get_json()
+    assert re.fullmatch(r"^[a-z][a-z0-9_-]{1,63}$", body["data"]["id"])
+
+
+@runs
+async def test_story_upload_quota_is_enforced_within_the_hour(client, monkeypatch):
+    stub_cdn(monkeypatch)
+    authenticate(client)
+    # 额度在 fixture 里压到 4 KB。PNG 压缩后的大小不好预判，所以一直传到被挡住为止。
+    codes = []
+    for index in range(30):
+        codes.append((await upload_image(client, name=f"第 {index} 张")).status_code)
+        if codes[-1] == 429:
+            break
+    assert codes[0] == 201, "第一张应该能传上去"
+    assert codes[-1] == 429, f"额度没有拦住：{codes}"
+
+    blocked = await upload_image(client)
+    assert (await blocked.get_json())["code"] == "upload_quota_exceeded"
+
+
+@runs
+async def test_uploads_are_private_to_their_uploader(client, monkeypatch):
+    stub_cdn(monkeypatch)
+    authenticate(client)
+    mine = (await (await upload_image(client, name="我的图")).get_json())["data"]["id"]
+
+    get_service().ensure_player("other-sub", "别人")
+    authenticate(client, "other-sub")
+    listed = (await (await client.get("/api/red-leaf-town/story/resources")).get_json())["data"]
+    assert listed["uploads"] == []
+    # 也不能借着 ID 删掉别人的图
+    assert (await client.delete(f"/api/red-leaf-town/story/uploads/{mine}")).status_code == 403
+
+    authenticate(client)
+    own = (await (await client.get("/api/red-leaf-town/story/resources")).get_json())["data"]["uploads"]
+    assert [entry["id"] for entry in own] == [mine]
+    assert (await client.delete(f"/api/red-leaf-town/story/uploads/{mine}")).status_code == 200
+
+
+@runs
+async def test_resources_report_remaining_quota(client, monkeypatch):
+    stub_cdn(monkeypatch)
+    authenticate(client)
+    before = (await (await client.get("/api/red-leaf-town/story/resources")).get_json())["data"]["upload"]
+    assert before["used_bytes"] == 0
+    assert before["quota_bytes"] == UPLOAD_TEST_QUOTA
+    await upload_image(client)
+    after = (await (await client.get("/api/red-leaf-town/story/resources")).get_json())["data"]["upload"]
+    assert after["used_bytes"] > 0
+
+
+@runs
+async def test_resources_offer_an_example_script_for_new_authors(client):
+    authenticate(client)
+    example = (await (await client.get("/api/red-leaf-town/story/resources")).get_json())["data"]["example"]
+    assert example["id"] == "demo_welcome"
+    assert example["title"].endswith("（示例）")
+    assert example["steps"][0]["type"] == "dialogue"
+
+
+@runs
+async def test_upload_owner_can_tune_default_layout(client, monkeypatch, story_paths):
+    stub_cdn(monkeypatch)
+    authenticate(client)
+    created = (await (await upload_image(client, size=(180, 320), kind="portrait", name="小孩")).get_json())["data"]
+    assert created["layout"] == {"scale": 1.0, "offset_x": 0.0, "offset_y": 0.0}
+
+    response = await client.patch(
+        f"/api/red-leaf-town/story/uploads/{created['id']}",
+        json={"name": "小孩 · 站正了", "layout": {"scale": 2.4, "offset_x": -0.2, "offset_y": 0.35}},
+    )
+    body = await response.get_json()
+    assert response.status_code == 200
+    assert body["data"]["name"] == "小孩 · 站正了"
+    assert body["data"]["layout"] == {"scale": 2.4, "offset_x": -0.2, "offset_y": 0.35}
+
+    _, _, _, upload_path = story_paths
+    load_story_upload_index.cache_clear()
+    assert load_story_upload_index(upload_path).uploads[0].layout.scale == 2.4
+
+
+@runs
+async def test_layout_out_of_range_is_rejected(client, monkeypatch):
+    stub_cdn(monkeypatch)
+    authenticate(client)
+    created = (await (await upload_image(client, kind="portrait")).get_json())["data"]
+    response = await client.patch(
+        f"/api/red-leaf-town/story/uploads/{created['id']}",
+        json={"layout": {"scale": 9.0, "offset_x": 0, "offset_y": 0}},
+    )
+    assert response.status_code == 400
+
+
+@runs
+async def test_cannot_tune_someone_elses_upload(client, monkeypatch):
+    stub_cdn(monkeypatch)
+    authenticate(client)
+    created = (await (await upload_image(client, kind="portrait")).get_json())["data"]
+
+    get_service().ensure_player("other-sub", "别人")
+    authenticate(client, "other-sub")
+    response = await client.patch(
+        f"/api/red-leaf-town/story/uploads/{created['id']}",
+        json={"layout": {"scale": 2.0, "offset_x": 0, "offset_y": 0}},
+    )
+    assert response.status_code == 404

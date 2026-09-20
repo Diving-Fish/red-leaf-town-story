@@ -26,7 +26,8 @@ const route = useRoute()
 const bindingCommand = ref('')
 let pollTimer = 0
 
-const isAdminRoute = computed(() => route.meta.admin === true)
+// 后台和剧情编辑器都不套玩家端的外壳：不拉存档、不轮询、不发剧情信号。
+const isBareRoute = computed(() => route.meta.admin === true || route.meta.standalone === true)
 const routeTitle = computed(() => String(route.meta.title || '红叶镇'))
 // 未读优先，都读完了还留着没领的附件就换成金色提醒。
 const mailBadge = computed(() => {
@@ -53,7 +54,7 @@ const levelHint = computed(() => {
 useReadyWatch()
 
 onMounted(async () => {
-  if (isAdminRoute.value) return
+  if (isBareRoute.value) return
   await game.initialize()
   pollTimer = window.setInterval(() => game.refresh(true), 15_000)
 })
@@ -62,7 +63,7 @@ onBeforeUnmount(() => window.clearInterval(pollTimer))
 watch(
   () => [game.status, route.name] as const,
   ([status, name]) => {
-    if (status !== 'ready' || !name || isAdminRoute.value) return
+    if (status !== 'ready' || !name || isBareRoute.value) return
     story.cue(`view:${String(name)}`)
   },
   { immediate: true },
@@ -88,7 +89,7 @@ async function copyBindingCommand() {
 </script>
 
 <template>
-  <RouterView v-if="isAdminRoute" />
+  <RouterView v-if="isBareRoute" />
 
   <div v-else-if="game.status === 'checking'" class="splash-screen">
     <div class="brand-seal"><Leaf :size="42" /></div>
@@ -213,11 +214,11 @@ async function copyBindingCommand() {
     </div>
   </div>
 
-  <MonthlyCardDialog v-if="!isAdminRoute" :open="ui.monthlyCardOpen" @close="ui.monthlyCardOpen = false" />
-  <StaminaDialog v-if="!isAdminRoute" :open="ui.staminaOpen" @close="ui.staminaOpen = false" />
-  <MailInbox v-if="!isAdminRoute" />
-  <AchievementPanel v-if="!isAdminRoute" />
-  <StoryOverlay v-if="!isAdminRoute" />
+  <MonthlyCardDialog v-if="!isBareRoute" :open="ui.monthlyCardOpen" @close="ui.monthlyCardOpen = false" />
+  <StaminaDialog v-if="!isBareRoute" :open="ui.staminaOpen" @close="ui.staminaOpen = false" />
+  <MailInbox v-if="!isBareRoute" />
+  <AchievementPanel v-if="!isBareRoute" />
+  <StoryOverlay v-if="!isBareRoute" />
   <ConfirmDialog />
   <CraftingOutcomeDialog :outcome="game.craftingOutcome" @close="game.craftingOutcome = null" />
   <Transition name="toast"><div v-if="game.notice" class="toast">{{ game.notice }}</div></Transition>

@@ -283,6 +283,7 @@ async function saveLayout() {
         <div class="brand"><span><Leaf :size="22" /></span><div><strong>红叶镇后台</strong><small>剧情素材与剧本</small></div></div>
         <div class="header-actions">
           <span v-if="notice" class="notice"><Check :size="15" />{{ notice }}</span>
+          <RouterLink :to="{ name: 'story-editor' }">剧情编辑器</RouterLink>
           <RouterLink :to="{ name: 'admin-crops' }">作物数值</RouterLink>
           <RouterLink :to="{ name: 'admin-mail' }">镇邮局</RouterLink>
           <RouterLink :to="{ name: 'admin-codes' }">激活码</RouterLink>
@@ -371,7 +372,11 @@ async function saveLayout() {
 
         <div class="section-heading">
           <div><small>SCRIPTS</small><h2>剧本</h2></div>
-          <p>剧本是手写的 JSON，放在 <code>{{ payload?.options.script_directory }}</code>。改完点上面的重新读取。</p>
+          <p>
+            剧本放在 <code>{{ payload?.options.script_directory }}</code>，改完点上面的重新读取。
+            排一段新剧情用<RouterLink :to="{ name: 'story-editor' }">剧情编辑器</RouterLink>，
+            导出的 JSON 补上触发条件就能放进这个目录。
+          </p>
         </div>
 
         <section class="script-list">
@@ -455,7 +460,7 @@ button { color: inherit; }
 .admin-header { height: 72px; position: sticky; top: 0; z-index: 10; display: flex; align-items: center; justify-content: space-between; padding: 0 28px; border-bottom: 1px solid #ffffff12; background: #0e1611ef; backdrop-filter: blur(16px); }.brand { display: flex; align-items: center; gap: 11px; }.brand > span { width: 39px; height: 39px; display: grid; place-items: center; color: #d5ad60; border: 1px solid #d5ad6044; border-radius: 13px 4px; }.brand strong,.brand small { display: block; }.brand small { color: #778278; font-size: 12px; margin-top: 2px; }.header-actions { display: flex; align-items: center; gap: 10px; }.header-actions a,.header-actions button { min-height: 37px; display: inline-flex; align-items: center; gap: 7px; padding: 0 13px; border-radius: 9px; cursor: pointer; }.header-actions a { color: #a8b2a8; border: 1px solid #ffffff14; }.save-button { color: #182116; font-weight: 800; border: 0; background: #aacb88; }.save-button:disabled { opacity: .5; cursor: not-allowed; }.notice { display: flex; align-items: center; gap: 5px; color: #aacb88; font-size: 12px; }
 .admin-body { width: min(1180px, 100%); padding: 30px clamp(16px, 4vw, 54px) 90px; }
 .editor-error { padding: 11px 14px; color: #f0a696; border: 1px solid #dc7c6933; border-radius: 10px; background: #dc7c6910; }
-.section-heading { display: flex; align-items: end; justify-content: space-between; gap: 20px; margin: 34px 0 15px; }.section-heading small { color: #d0714b; font-size: 12px; font-weight: 800; letter-spacing: .18em; }.section-heading h2 { margin: 4px 0 0; font-size: 19px; }.section-heading p { margin: 0; max-width: 460px; color: #7f8b81; font-size: 12px; line-height: 1.7; }.section-heading p.cdn-warning { color: #df947d; }.section-heading code { color: #b7c9ab; }
+.section-heading { display: flex; align-items: end; justify-content: space-between; gap: 20px; margin: 34px 0 15px; }.section-heading small { color: #d0714b; font-size: 12px; font-weight: 800; letter-spacing: .18em; }.section-heading h2 { margin: 4px 0 0; font-size: 19px; }.section-heading p { margin: 0; max-width: 460px; color: #7f8b81; font-size: 12px; line-height: 1.7; }.section-heading p.cdn-warning { color: #df947d; }.section-heading code { color: #b7c9ab; }.section-heading a { color: #c8a55c; text-decoration: underline; }
 .form-card { padding: 20px; border: 1px solid #ffffff11; border-radius: 18px 6px; background: #17211b; }
 .upload-card { display: grid; grid-template-columns: minmax(220px, 300px) 1fr; gap: 18px; }
 .file-drop { display: grid; justify-items: center; align-content: center; gap: 7px; padding: 20px; text-align: center; color: #8fa090; border: 1px dashed #ffffff1c; border-radius: 14px 5px; background: #0f1712; cursor: pointer; }.file-drop input { display: none; }.file-drop strong { color: #dfe4d8; font-size: 13px; word-break: break-all; }.file-drop small { color: #78847b; font-size: 12px; line-height: 1.6; }

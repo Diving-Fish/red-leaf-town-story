@@ -5,3 +5,4 @@ __pycache__/
 frontend/node_modules/
 frontend/dist/
 frontend/dist-beta/
+data/story_uploads.json

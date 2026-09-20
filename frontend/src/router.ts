@@ -47,6 +47,12 @@ export default createRouter({
       component: () => import('@/views/AdminStoryView.vue'),
       meta: { title: '剧情素材', admin: true },
     },
+    {
+      path: '/story-editor',
+      name: 'story-editor',
+      component: () => import('@/views/StoryEditorView.vue'),
+      meta: { title: '剧情编辑器', standalone: true },
+    },
     { path: '/', name: 'dashboard', component: DashboardView, meta: { title: '总览' } },
     { path: '/farm', name: 'farm', component: FarmView, meta: { title: '农场' } },
     { path: '/gathering', name: 'gathering', component: GatheringView, meta: { title: '采集' } },

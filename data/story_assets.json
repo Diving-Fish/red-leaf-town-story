@@ -24,7 +24,7 @@
     {
       "id": "farm_house_night",
       "kind": "background",
-      "name": "TODO 空屋与农田 · 入夜",
+      "name": "空屋与农田 · 入夜",
       "asset_key": "red-leaf-town/story/background/farm_house_night-6fa916a78383b500.webp",
       "width": 1672,
       "height": 941,
@@ -84,7 +84,7 @@
     {
       "id": "portal_hollow",
       "kind": "background",
-      "name": "TODO 传送门空地 · 黄昏",
+      "name": "传送门空地 · 黄昏",
       "asset_key": "red-leaf-town/story/background/portal_hollow-13e505784a666a0f.webp",
       "width": 1672,
       "height": 941,
@@ -124,7 +124,7 @@
     {
       "id": "town_gate_dusk",
       "kind": "background",
-      "name": "TODO 红叶镇镇口 · 黄昏",
+      "name": "红叶镇镇口 · 黄昏",
       "asset_key": "red-leaf-town/story/background/town_gate_dusk-53c4b56e6b21da00.webp",
       "width": 1672,
       "height": 941,

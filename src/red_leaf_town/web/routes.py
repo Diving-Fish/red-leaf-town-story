@@ -4,6 +4,7 @@ import hashlib
 import io
 import os
 import secrets
+import time
 from functools import wraps
 from pathlib import Path
 from urllib.parse import quote
@@ -44,6 +45,18 @@ from red_leaf_town.story_assets import (
     save_story_asset_catalog,
 )
 from red_leaf_town.story_content import DEFAULT_STORY_SCRIPT_DIR, load_story_catalog
+from red_leaf_town.story_uploads import (
+    DEFAULT_STORY_UPLOAD_PATH,
+    UPLOAD_QUOTA_BYTES,
+    UPLOAD_WINDOW_SECONDS,
+    StoryUpload,
+    append_story_upload,
+    load_story_upload_index,
+    new_upload_id,
+    remove_story_upload,
+    update_story_upload,
+    used_quota,
+)
 from red_leaf_town.story_triggers import story_trigger_hook_codes
 
 
@@ -242,12 +255,15 @@ def create_blueprint(
     partner_catalog_path: str | Path = DEFAULT_PARTNER_CONTENT_PATH,
     story_asset_path: str | Path = DEFAULT_STORY_ASSET_PATH,
     story_script_dir: str | Path = DEFAULT_STORY_SCRIPT_DIR,
+    story_upload_path: str | Path = DEFAULT_STORY_UPLOAD_PATH,
+    upload_quota_bytes: int = UPLOAD_QUOTA_BYTES,
 ) -> Blueprint:
     blueprint = Blueprint("red_leaf_town", __name__)
     content_path = Path(game_content_path)
     catalog_path = Path(partner_catalog_path)
     story_asset_catalog_path = Path(story_asset_path)
     story_script_path = Path(story_script_dir)
+    story_upload_index_path = Path(story_upload_path)
 
     def story_catalog():
         return load_story_catalog(story_script_path, story_asset_catalog_path, catalog_path)
@@ -829,6 +845,194 @@ def create_blueprint(
     @login_required
     async def state(subject: str):
         return jsonify({"code": 0, "data": _attach_cdn_urls(get_service().snapshot_by_sub(subject))})
+
+    def serialize_upload(upload, subject: str) -> dict:
+        """上传者的 oauth sub 不外发，别人只看得到昵称。"""
+        return {
+            "id": upload.id,
+            "kind": upload.kind,
+            "name": upload.name,
+            "asset_key": upload.asset_key,
+            "width": upload.width,
+            "height": upload.height,
+            "uploader_name": upload.uploader_name,
+            "created_at": upload.created_at,
+            "mine": upload.uploader_sub == subject,
+            "layout": upload.layout.model_dump(),
+        }
+
+    def story_example() -> dict | None:
+        """新用户第一次进编辑器时的起手草稿，用现成的那段全屏剧情当样板。"""
+        try:
+            scripts = story_catalog().scripts
+        except (ValueError, ValidationError):
+            return None
+        staged = [script for script in scripts if script.mode == "stage"]
+        script = next(iter(sorted(staged or scripts, key=lambda entry: -entry.priority)), None)
+        if script is None:
+            return None
+        return {
+            "id": f"demo_{script.id}"[:64],
+            "title": f"{script.title}（示例）"[:64],
+            "priority": script.priority,
+            "steps": [step.model_dump() for step in script.steps],
+        }
+
+    def uploader_name(subject: str) -> str:
+        player = get_service().repository.get_by_sub(subject)
+        return player.display_name if player else ""
+
+    @blueprint.get("/api/red-leaf-town/story/resources")
+    @login_required
+    async def story_resources(subject: str):
+        """剧情编辑器要拿到素材库、可用作立绘的伙伴插画，以及大家传上来的图。只读。"""
+        assets = load_story_asset_catalog(story_asset_catalog_path)
+        partners = load_partner_catalog(catalog_path)
+        uploads = load_story_upload_index(story_upload_index_path)
+        now = int(time.time())
+        return jsonify({
+            "code": 0,
+            "data": _attach_cdn_urls({
+                "assets": [
+                    {
+                        "id": asset.id,
+                        "kind": asset.kind,
+                        "name": asset.name,
+                        "asset_key": asset.asset_key,
+                        "width": asset.width,
+                        "height": asset.height,
+                        "layouts": {
+                            "inline": asset.inline_layout.model_dump(),
+                            "stage": asset.stage_layout.model_dump(),
+                        },
+                    }
+                    for asset in sorted(assets.assets, key=lambda entry: entry.id)
+                    if not asset.pending
+                ],
+                "partners": [
+                    {
+                        "id": partner.id,
+                        "name": partner.name,
+                        "artworks": [
+                            {
+                                "breakthrough": artwork.breakthrough,
+                                "asset_key": artwork.asset_key,
+                                "width": artwork.width,
+                                "height": artwork.height,
+                            }
+                            for artwork in sorted(partner.artworks, key=lambda entry: entry.breakthrough)
+                        ],
+                    }
+                    for partner in sorted(partners.partners, key=lambda entry: entry.id)
+                    if partner.artworks
+                ],
+                # 别人传的图不外发：玩家只看得到公共素材和自己传的。
+                "uploads": [
+                    serialize_upload(upload, subject)
+                    for upload in sorted(uploads.uploads, key=lambda entry: -entry.created_at)
+                    if upload.uploader_sub == subject
+                ],
+                "example": story_example(),
+                "upload": {
+                    "quota_bytes": upload_quota_bytes,
+                    "used_bytes": used_quota(uploads, subject, now),
+                    "window_seconds": UPLOAD_WINDOW_SECONDS,
+                    "max_file_bytes": MAX_STORY_ASSET_SIZE,
+                },
+            }),
+        })
+
+    @blueprint.post("/api/red-leaf-town/story/uploads")
+    @login_required
+    async def story_upload(subject: str):
+        """玩家自己给剧情传图。转码成 WebP 推到 CDN，本地只留索引和上传者记录。"""
+        form = await request.form
+        kind = str(form.get("kind", "")).strip()
+        if kind not in STORY_ASSET_KIND_NAMES:
+            return _error("素材类型必须是背景或立绘", 400, "invalid_asset_kind")
+        files = await request.files
+        uploaded = files.get("file")
+        if uploaded is None or not uploaded.filename:
+            return _error("未选择图片", 400, "file_required")
+        data = uploaded.read()
+        if not data:
+            return _error("图片内容为空", 400, "empty_file")
+        if len(data) > MAX_STORY_ASSET_SIZE:
+            return _error("单张图片不能超过 12 MB", 413, "file_too_large")
+
+        now = int(time.time())
+        index = load_story_upload_index(story_upload_index_path)
+        used = used_quota(index, subject, now)
+        if used + len(data) > upload_quota_bytes:
+            remaining = max(0, upload_quota_bytes - used)
+            return _error(
+                f"一小时内最多上传 {upload_quota_bytes // (1024 * 1024)} MB，"
+                f"现在还剩 {remaining // (1024 * 1024)} MB，过一会再试",
+                429,
+                "upload_quota_exceeded",
+            )
+
+        try:
+            webp_data, width, height = _prepare_story_image(data, kind)
+        except ValueError as exc:
+            return _error(str(exc), 400, "invalid_image")
+        except Exception:
+            return _error("无法识别图片内容", 400, "invalid_image")
+
+        upload_id = new_upload_id()
+        digest = hashlib.sha256(webp_data).hexdigest()[:16]
+        try:
+            upload = StoryUpload(
+                id=upload_id,
+                kind=kind,
+                name=str(form.get("name", "")).strip()[:64] or uploaded.filename.rsplit(".", 1)[0][:64] or upload_id,
+                asset_key=f"red-leaf-town/story/community/{kind}/{upload_id}-{digest}.webp",
+                width=width,
+                height=height,
+                content_type="image/webp",
+                uploader_sub=subject,
+                uploader_name=uploader_name(subject),
+                source_bytes=len(data),
+                created_at=now,
+            )
+        except ValidationError as exc:
+            return _validation_error(exc)
+        from src.libraries import cdn_client
+
+        if not cdn_client.upload_bytes_at(upload.asset_key, webp_data, upload.content_type):
+            return _error("CDN 上传失败，请稍后再试", 503, "cdn_upload_failed")
+        # 配额在写入时再核一次，并发同时传也不会超额。
+        if not append_story_upload(upload, story_upload_index_path, quota_bytes=upload_quota_bytes):
+            return _error("一小时内的上传额度已经用完，过一会再试", 429, "upload_quota_exceeded")
+        return jsonify({"code": 0, "data": _attach_cdn_urls(serialize_upload(upload, subject))}), 201
+
+    @blueprint.patch("/api/red-leaf-town/story/uploads/<string:upload_id>")
+    @login_required
+    async def story_upload_update(subject: str, upload_id: str):
+        """改自己传的图的名称和默认站位。别人的图连改带删都碰不到。"""
+        body = await request.get_json(silent=True) or {}
+        changes = {field: body[field] for field in ("name", "layout") if field in body}
+        if not changes:
+            return _error("没有要修改的内容", 400, "nothing_to_update")
+        try:
+            updated = update_story_upload(upload_id, subject, story_upload_index_path, **changes)
+        except ValidationError as exc:
+            return _validation_error(exc)
+        if updated is None:
+            return _error("这张图不存在，或者不是你传的", 404, "upload_not_found")
+        return jsonify({"code": 0, "data": _attach_cdn_urls(serialize_upload(updated, subject))})
+
+    @blueprint.delete("/api/red-leaf-town/story/uploads/<string:upload_id>")
+    @login_required
+    async def story_upload_delete(subject: str, upload_id: str):
+        index = load_story_upload_index(story_upload_index_path)
+        upload = index.upload_map.get(upload_id)
+        if upload is None:
+            return _error("这张图不存在", 404, "upload_not_found")
+        if upload.uploader_sub != subject:
+            return _error("只能删自己传的图", 403, "not_your_upload")
+        remove_story_upload(upload_id, story_upload_index_path)
+        return jsonify({"code": 0, "message": "已删除"})
 
     @blueprint.post("/api/red-leaf-town/shop/buy")
     @login_required

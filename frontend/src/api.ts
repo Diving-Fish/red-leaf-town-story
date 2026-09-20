@@ -11,10 +11,12 @@ export class ApiError extends Error {
 
 export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   let response: Response
+  // 上传走 FormData，Content-Type 必须留给浏览器自己填（它要带上 multipart 边界）。
+  const jsonType: Record<string, string> = init.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }
   try {
     response = await fetch(path, {
       credentials: 'same-origin',
-      headers: { 'Content-Type': 'application/json', ...(init.headers || {}) },
+      headers: { ...jsonType, ...(init.headers || {}) },
       ...init,
     })
   } catch {

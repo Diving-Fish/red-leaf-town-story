@@ -29,7 +29,17 @@ from red_leaf_town.story_triggers import (
 
 
 DEFAULT_STORY_SCRIPT_DIR = Path(__file__).resolve().parents[2] / "data" / "story"
-PortraitSlot = Literal["left", "right"]
+PortraitSlot = Literal["left", "right", "center"]
+BackgroundTransition = Literal["fade", "cut"]
+PortraitTransition = Literal["fade", "slide", "cut"]
+
+
+class StepLayout(BaseModel):
+    """某一步单独覆盖的立绘站位。比素材默认站位放得开，允许把立绘推到画面中间甚至半出画。"""
+
+    scale: float = Field(default=1.0, ge=0.2, le=4.0)
+    offset_x: float = Field(default=0.0, ge=-1.5, le=1.5)
+    offset_y: float = Field(default=0.0, ge=-0.8, le=0.8)
 
 
 class BackgroundStep(BaseModel):
@@ -37,6 +47,8 @@ class BackgroundStep(BaseModel):
 
     type: Literal["background"]
     asset_id: str = ""
+    transition: BackgroundTransition = "fade"
+    duration: float = Field(default=0.45, ge=0.0, le=3.0)
 
 
 class PortraitStep(BaseModel):
@@ -48,6 +60,10 @@ class PortraitStep(BaseModel):
     asset_id: str = ""
     partner_id: str = ""
     breakthrough: int = Field(default=0, ge=0, le=2)
+    transition: PortraitTransition = "fade"
+    duration: float = Field(default=0.28, ge=0.0, le=3.0)
+    flip: bool = False
+    layout: StepLayout | None = None
 
     @model_validator(mode="after")
     def validate_source(self):

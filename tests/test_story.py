@@ -565,3 +565,122 @@ def test_renamed_partner_id_migrates_everywhere():
     assert site.task_snapshot.assigned_partner_ids == ["fein"]
     assert site.task_snapshot.support_partner_ids == ["fein"]
     assert [entry.partner_id for entry in site.task_snapshot.partner_snapshots] == ["fein"]
+
+
+def test_steps_keep_演出_defaults_when_not_written():
+    """老剧本一个字都不用改，新字段的默认值就是原来的表现。"""
+    script = stage_script()
+    background = script.steps[0]
+    portrait = script.steps[1]
+    assert (background.transition, background.duration) == ("fade", 0.45)
+    assert (portrait.transition, portrait.duration, portrait.flip, portrait.layout) == ("fade", 0.28, False, None)
+
+
+def test_portrait_step_carries_its_own_layout():
+    script = StoryScript.model_validate({
+        "id": "staging",
+        "title": "站位",
+        "trigger": {"hook": "cue", "params": {"cue": "view:farm"}},
+        "steps": [
+            {
+                "type": "portrait",
+                "slot": "left",
+                "asset_id": "maple_smile",
+                "transition": "slide",
+                "duration": 1.2,
+                "flip": True,
+                "layout": {"scale": 2.5, "offset_x": 1.2, "offset_y": -0.4},
+            },
+            {"type": "dialogue", "speaker": "枫糖", "text": "我站过来一点。"},
+        ],
+    })
+    step = script.steps[0]
+    assert step.transition == "slide"
+    assert step.duration == 1.2
+    assert step.flip is True
+    assert (step.layout.scale, step.layout.offset_x, step.layout.offset_y) == (2.5, 1.2, -0.4)
+
+
+@pytest.mark.parametrize(
+    "layout",
+    [
+        {"scale": 5.0, "offset_x": 0, "offset_y": 0},
+        {"scale": 1.0, "offset_x": 2.0, "offset_y": 0},
+        {"scale": 1.0, "offset_x": 0, "offset_y": -1.0},
+    ],
+)
+def test_step_layout_is_range_checked(layout):
+    with pytest.raises(Exception):
+        StoryScript.model_validate({
+            "id": "bad-staging",
+            "title": "越界",
+            "trigger": {"hook": "cue", "params": {"cue": "view:farm"}},
+            "steps": [
+                {"type": "portrait", "slot": "left", "asset_id": "maple_smile", "layout": layout},
+                {"type": "dialogue", "text": "。"},
+            ],
+        })
+
+
+@pytest.mark.parametrize("field,value", [("transition", "wipe"), ("duration", 9.0)])
+def test_unknown_transition_and_overlong_duration_are_rejected(field, value):
+    with pytest.raises(Exception):
+        StoryScript.model_validate({
+            "id": "bad-transition",
+            "title": "越界",
+            "trigger": {"hook": "cue", "params": {"cue": "view:farm"}},
+            "steps": [
+                {"type": "background", "asset_id": "autumn_gate", field: value},
+                {"type": "dialogue", "text": "。"},
+            ],
+        })
+
+
+def test_serialized_step_exposes_演出_parameters():
+    """编辑器和播放器都读序列化结果，转场参数必须原样带出去。"""
+    script = StoryScript.model_validate({
+        "id": "serialized",
+        "title": "序列化",
+        "trigger": {"hook": "cue", "params": {"cue": "view:farm"}},
+        "steps": [
+            {"type": "background", "asset_id": "autumn_gate", "transition": "cut", "duration": 0},
+            {"type": "portrait", "slot": "right", "asset_id": "maple_smile", "flip": True, "layout": {"scale": 1.8, "offset_x": 0.2, "offset_y": 0.1}},
+            {"type": "dialogue", "speaker": "枫糖", "text": "看这里。", "focus": "right"},
+        ],
+    })
+    payload = serialize_script(
+        script,
+        StoryAssetCatalog(assets=[background_asset(), portrait_asset()]),
+        PartnerCatalog(partners=[partner_definition()]),
+    )
+    assert payload["steps"][0]["transition"] == "cut"
+    assert payload["steps"][0]["duration"] == 0
+    assert payload["steps"][1]["flip"] is True
+    assert payload["steps"][1]["layout"] == {"scale": 1.8, "offset_x": 0.2, "offset_y": 0.1}
+
+
+def test_portrait_can_stand_in_the_center():
+    script = StoryScript.model_validate({
+        "id": "centered",
+        "title": "居中",
+        "trigger": {"hook": "cue", "params": {"cue": "view:farm"}},
+        "steps": [
+            {"type": "portrait", "slot": "center", "asset_id": "maple_smile"},
+            {"type": "dialogue", "speaker": "枫糖", "text": "我站中间。"},
+            {"type": "portrait", "slot": "center", "visible": False},
+        ],
+    })
+    assert [step.slot for step in script.steps if step.type == "portrait"] == ["center", "center"]
+
+
+def test_unknown_slot_is_rejected():
+    with pytest.raises(Exception):
+        StoryScript.model_validate({
+            "id": "bad-slot",
+            "title": "越界",
+            "trigger": {"hook": "cue", "params": {"cue": "view:farm"}},
+            "steps": [
+                {"type": "portrait", "slot": "middle", "asset_id": "maple_smile"},
+                {"type": "dialogue", "text": "。"},
+            ],
+        })
