@@ -657,3 +657,60 @@ async def test_cannot_tune_someone_elses_upload(client, monkeypatch):
         json={"layout": {"scale": 2.0, "offset_x": 0, "offset_y": 0}},
     )
     assert response.status_code == 404
+
+
+def shared_script(asset_id):
+    return {
+        **WELCOME_SCRIPT,
+        "steps": [{"type": "background", "asset_id": asset_id}, *WELCOME_SCRIPT["steps"]],
+        "rewards": {"coins": 99999},
+    }
+
+
+@runs
+async def test_share_requires_login_and_missing_share_is_404(client):
+    assert (await client.post("/api/red-leaf-town/story/shares", json={})).status_code == 401
+    assert (await client.get("/api/red-leaf-town/story/shares/invalid")).status_code == 404
+    assert (await client.get("/api/red-leaf-town/story/shares/" + "a" * 64)).status_code == 404
+
+
+@runs
+async def test_share_snapshot_public_and_survives_upload_removal(client, monkeypatch):
+    stub_cdn(monkeypatch)
+    authenticate(client)
+    uploaded = (await (await upload_image(client)).get_json())["data"]
+    unused = (await (await upload_image(client)).get_json())["data"]
+    raw = shared_script(uploaded["id"])
+    raw["metadata"] = {"community_assets": [{"asset_key": "evil"}]}
+    response = await client.post("/api/red-leaf-town/story/shares", json=raw)
+    assert response.status_code == 201
+    share_id = (await response.get_json())["data"]["id"]
+    repeated = await client.post("/api/red-leaf-town/story/shares", json=raw)
+    assert (await repeated.get_json())["data"]["id"] == share_id
+    await client.delete(f"/api/red-leaf-town/story/uploads/{uploaded['id']}")
+    client.delete_cookie("localhost", COOKIE_NAME)
+    response = await client.get(f"/api/red-leaf-town/story/shares/{share_id}")
+    assert response.status_code == 200
+    script = (await response.get_json())["data"]
+    assert script["steps"][0]["asset"]["url"].startswith("https://cdn.example/")
+    assert script["steps"][0]["asset"]["asset_key"] == uploaded["asset_key"]
+    assert script["rewards"]["empty"] is True
+    serialized = json.dumps(script)
+    assert unused["id"] not in serialized
+    assert "story-sub" not in serialized
+    assert "evil" not in serialized
+
+
+@runs
+async def test_share_rejects_foreign_missing_and_wrong_kind_assets(client, monkeypatch):
+    stub_cdn(monkeypatch)
+    authenticate(client)
+    uploaded = (await (await upload_image(client)).get_json())["data"]
+    authenticate(client, "other-sub")
+    assert (await client.post("/api/red-leaf-town/story/shares", json=shared_script(uploaded["id"]))).status_code == 400
+    authenticate(client)
+    portrait = (await (await upload_image(client, kind="portrait")).get_json())["data"]
+    for asset_id in (portrait["id"], "missing_asset"):
+        assert (await client.post("/api/red-leaf-town/story/shares", json=shared_script(asset_id))).status_code == 400
+    for raw in ([], {}, WELCOME_SCRIPT, {**shared_script(uploaded["id"]), "steps": []}):
+        assert (await client.post("/api/red-leaf-town/story/shares", json=raw)).status_code == 400

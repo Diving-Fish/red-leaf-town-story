@@ -57,6 +57,7 @@ from red_leaf_town.story_uploads import (
     update_story_upload,
     used_quota,
 )
+from red_leaf_town.story_shares import build_share, load_share, save_share
 from red_leaf_town.story_triggers import story_trigger_hook_codes
 
 
@@ -941,6 +942,31 @@ def create_blueprint(
                 },
             }),
         })
+
+    @blueprint.post("/api/red-leaf-town/story/shares")
+    @login_required
+    async def story_share_create(subject: str):
+        if len(await request.get_data()) > 512 * 1024:
+            return _error("剧本文件过大", 413, "story_too_large")
+        raw = await request.get_json(silent=True)
+        try:
+            script = build_share(
+                raw, subject,
+                load_story_asset_catalog(story_asset_catalog_path),
+                load_partner_catalog(catalog_path),
+                load_story_upload_index(story_upload_index_path),
+            )
+        except (ValueError, ValidationError) as exc:
+            return _error(f"无法分享剧本：{exc}", 400, "invalid_story_share")
+        share_id = save_share(script, story_upload_index_path.parent / "story_shares")
+        return jsonify({"code": 0, "data": {"id": share_id}}), 201
+
+    @blueprint.get("/api/red-leaf-town/story/shares/<string:share_id>")
+    async def story_share_read(share_id: str):
+        script = load_share(share_id, story_upload_index_path.parent / "story_shares")
+        if script is None:
+            return _error("分享的剧情不存在", 404, "story_share_not_found")
+        return jsonify({"code": 0, "data": _attach_cdn_urls(script)})
 
     @blueprint.post("/api/red-leaf-town/story/uploads")
     @login_required

@@ -35,6 +35,8 @@ const loadError = ref('')
 const status = ref<'checking' | 'guest' | 'ready'>('checking')
 const narrow = ref(false)
 const notice = ref('')
+const shareUrl = ref('')
+const sharing = ref(false)
 const sheet = ref<'' | 'meta' | 'drafts'>('')
 const dragFrom = ref(-1)
 const dragOver = ref(-1)
@@ -238,6 +240,32 @@ function dropDraft(key: string) {
 
 /* ---------- 导入导出 ---------- */
 
+async function shareStory() {
+  if (problems.value.length) {
+    flash(problems.value[0]!)
+    return
+  }
+  sharing.value = true
+  shareUrl.value = ''
+  try {
+    const result = await api<{ id: string }>('/api/red-leaf-town/story/shares', {
+      method: 'POST',
+      body: JSON.stringify(toScriptFile(draft.value, catalog.value)),
+    })
+    shareUrl.value = new URL(`${import.meta.env.BASE_URL}story-share/${result.id}`, window.location.origin).href
+    try {
+      await navigator.clipboard.writeText(shareUrl.value)
+      flash('分享链接已复制，其他人无需登录即可观看')
+    } catch {
+      flash('分享已生成，请复制下方链接')
+    }
+  } catch (caught) {
+    flash(caught instanceof Error ? caught.message : '分享失败，请重试')
+  } finally {
+    sharing.value = false
+  }
+}
+
 function exportFile() {
   const payload = JSON.stringify(toScriptFile(draft.value, catalog.value), null, 2)
   const url = URL.createObjectURL(new Blob([payload], { type: 'application/json' }))
@@ -393,9 +421,15 @@ watch(draft, schedulePersist, { deep: true })
         <button type="button" @click="sheet = 'meta'"><FileText :size="14" />剧本信息</button>
         <button type="button" @click="fileInput?.click()"><Upload :size="14" />导入</button>
         <button type="button" class="primary" @click="exportFile"><Download :size="14" />导出</button>
+        <button type="button" :disabled="sharing" @click="shareStory"><Copy :size="14" />{{ sharing ? '生成中…' : '分享' }}</button>
         <input ref="fileInput" type="file" accept="application/json,.json" hidden @change="importFile" />
       </nav>
 
+      <div v-if="shareUrl" class="strip strip--ok">
+        <span>分享的是当前版本，修改后请重新分享。链接包含本剧本使用的上传素材。</span>
+        <input :value="shareUrl" readonly aria-label="剧情分享链接" style="width: 100%" @focus="($event.target as HTMLInputElement).select()" />
+        <a :href="shareUrl" target="_blank" rel="noopener">打开分享页面</a>
+      </div>
       <p v-if="notice" class="strip strip--ok">{{ notice }}</p>
       <p v-if="loadError" class="strip strip--alert">
         素材库加载失败：{{ loadError }}。请<a href="/red-leaf-town/">登录红叶镇</a>后重试。

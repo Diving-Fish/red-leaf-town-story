@@ -15,6 +15,12 @@ export default createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
+      path: '/story-share/:id',
+      name: 'story-share',
+      component: () => import('@/views/StoryShareView.vue'),
+      meta: { title: '分享剧情', standalone: true },
+    },
+    {
       path: '/sailing', redirect: { name: 'aquatic', query: { tab: 'sailing' } },
     },
     {
