@@ -95,3 +95,7 @@ https://chiyuki.diving-fish.com/api/oauth/red-leaf-town/callback
 2026-09-11 配套成就新增 24 项（总数 52），覆盖成长内容、远航、探索与探秘、第二传送门；条件、奖励与历史追认见 `docs/growth-achievements.md`。远航物产精简为 20 种，常见／稀有物产使用航海能力抽五档品质，种子和装备不分品质，规则版本 4；完整售价与品质曲线见 `docs/sailing-products.md`。
 
 2026-09-14 开放伙伴一破与15级探秘本「失落回廊」：六层随机遭遇，第3层精英和第6层BOSS固定，完整返程保底3枚奇迹结晶、2本厚册同行札记。一破要求居民15级、伙伴20级，按角色消耗核心材料＋上品产业物产＋特色需求＋钱，产业有效等级同步支持到40级。新经验曲线1→20为3325、20→40为33600，保留旧角色等级和溢出经验。配方、战斗数值与验证见 `docs/ascension-and-lost-corridor.md`。
+
+## 管理员配置
+
+复制仓库根目录的 `config.example.json` 为 `config.json`，在 `admin_subs` 数组中填写已授权水鱼账号的 OAuth `sub` 字符串。`config.json` 已被 Git 忽略。配置缺失、格式错误或名单为空时拒绝管理员访问；修改名单立即生效。管理员先通过水鱼 OAuth 登录，后台只验证本产品会话中的 `sub`，不接受旧管理员 token、昵称、QQ 号或前端提交的身份。写操作需带 `X-Requested-With: XMLHttpRequest`，前端管理页面已统一添加。QQ 玩家命令不受影响。

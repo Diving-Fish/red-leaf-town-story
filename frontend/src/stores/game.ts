@@ -785,10 +785,15 @@ export const useGameStore = defineStore('game', () => {
   }
 
   async function logout() {
-    await api<unknown>(`${API_ROOT}/logout`, { method: 'POST' }).catch(() => undefined)
-    account.value = null
-    state.value = null
-    status.value = 'guest'
+    try {
+      const result = await api<{ logout_url: string }>(`${API_ROOT}/logout`, { method: 'POST' })
+      account.value = null
+      state.value = null
+      status.value = 'guest'
+      window.location.assign(result.logout_url)
+    } catch (caught) {
+      fail(caught)
+    }
   }
 
   function effectiveNow() {

@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { ArrowLeft, Check, ImageUp, Leaf, LockKeyhole, Move, Play, RefreshCw, RotateCcw, Trash2, X } from 'lucide-vue-next'
 
 import { api, ApiError } from '@/api'
+import { loginAsAdmin, clearLegacyAdminToken } from '@/composables/adminAuth'
 import RewardChips from '@/components/RewardChips.vue'
 import StoryOverlay from '@/components/story/StoryOverlay.vue'
 import { useStoryStore } from '@/stores/story'
@@ -17,10 +18,8 @@ import type {
   StoryStep,
 } from '@/types'
 
-const TOKEN_KEY = 'red_leaf_town_admin_token'
+clearLegacyAdminToken()
 const story = useStoryStore()
-const token = ref(localStorage.getItem(TOKEN_KEY) || '')
-const tokenInput = ref(token.value)
 const authenticated = ref(false)
 const busy = ref(false)
 const error = ref('')
@@ -57,7 +56,7 @@ const uploadReady = computed(() => Boolean(
 ))
 
 function headers(json = true): Record<string, string> {
-  return { 'X-Admin-Token': token.value, ...(json ? { 'Content-Type': 'application/json' } : {}) }
+  return { 'X-Requested-With': 'XMLHttpRequest', ...(json ? { 'Content-Type': 'application/json' } : {}) }
 }
 
 async function load() {
@@ -69,17 +68,11 @@ async function load() {
     error.value = caught instanceof Error ? caught.message : '后台加载失败'
     if (caught instanceof ApiError && caught.status === 403) {
       authenticated.value = false
-      localStorage.removeItem(TOKEN_KEY)
+
     }
   }
 }
 
-async function unlock() {
-  token.value = tokenInput.value.trim()
-  if (!token.value) return
-  localStorage.setItem(TOKEN_KEY, token.value)
-  await load()
-}
 
 function pickFile(event: Event) {
   const input = event.target as HTMLInputElement
@@ -261,6 +254,7 @@ async function saveLayout() {
     busy.value = false
   }
 }
+onMounted(load)
 </script>
 
 <template>
@@ -269,10 +263,9 @@ async function saveLayout() {
       <div class="admin-seal"><LockKeyhole :size="34" /></div>
       <p class="kicker">RED LEAF TOWN ADMIN</p>
       <h1>剧情素材管理</h1>
-      <p>请输入管理员 Token。凭据只保存在当前浏览器。</p>
-      <form @submit.prevent="unlock">
-        <input v-model="tokenInput" type="password" autocomplete="current-password" placeholder="Admin Token" />
-        <button type="submit">进入后台</button>
+      <p>请使用已获得管理员权限的水鱼账号登录。</p>
+      <form @submit.prevent="loginAsAdmin">
+        <button type="submit">水鱼账号登录</button>
       </form>
       <span v-if="error" class="form-error">{{ error }}</span>
       <a href="/red-leaf-town/"><ArrowLeft :size="15" />返回红叶镇</a>

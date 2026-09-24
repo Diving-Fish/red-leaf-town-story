@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { ArrowLeft, Check, LockKeyhole, Mail, Megaphone, Plus, Search, Send, Trash2, UserRound, X } from 'lucide-vue-next'
 
 import { api, ApiError } from '@/api'
+import { loginAsAdmin, clearLegacyAdminToken } from '@/composables/adminAuth'
 import type { AdminMailEntry, AdminPlayerSummary, ItemDefinition, MailScope } from '@/types'
 
 interface MailCatalogPartner {
@@ -24,9 +25,7 @@ interface DraftItem {
   quality: number
 }
 
-const TOKEN_KEY = 'red_leaf_town_admin_token'
-const token = ref(localStorage.getItem(TOKEN_KEY) || '')
-const tokenInput = ref(token.value)
+clearLegacyAdminToken()
 const authenticated = ref(false)
 const busy = ref(false)
 const error = ref('')
@@ -74,7 +73,7 @@ watch(recipientId, () => {
 })
 
 function headers(): Record<string, string> {
-  return { 'X-Admin-Token': token.value, 'Content-Type': 'application/json' }
+  return { 'X-Requested-With': 'XMLHttpRequest', 'Content-Type': 'application/json' }
 }
 
 function localInput(milliseconds: number) {
@@ -101,14 +100,14 @@ function hasQuality(itemId: string) {
 }
 
 async function unlock() {
-  token.value = tokenInput.value.trim()
+
   error.value = ''
   try {
     await refresh()
-    localStorage.setItem(TOKEN_KEY, token.value)
+
     authenticated.value = true
   } catch (caught) {
-    error.value = caught instanceof ApiError && caught.status === 403 ? 'Token 不正确' : '后台连接失败'
+    error.value = caught instanceof ApiError && caught.status === 403 ? '当前账号没有管理员权限' : '后台连接失败'
   }
 }
 
@@ -215,6 +214,7 @@ async function withdraw(entry: AdminMailEntry) {
     busy.value = false
   }
 }
+onMounted(unlock)
 </script>
 
 <template>
@@ -223,10 +223,9 @@ async function withdraw(entry: AdminMailEntry) {
       <div class="admin-seal"><LockKeyhole :size="34" /></div>
       <p class="kicker">RED LEAF TOWN ADMIN</p>
       <h1>镇邮局</h1>
-      <p>请输入管理员 Token。凭据只保存在当前浏览器。</p>
-      <form @submit.prevent="unlock">
-        <input v-model="tokenInput" type="password" autocomplete="current-password" placeholder="Admin Token" />
-        <button type="submit">进入后台</button>
+      <p>请使用已获得管理员权限的水鱼账号登录。</p>
+      <form @submit.prevent="loginAsAdmin">
+        <button type="submit">水鱼账号登录</button>
       </form>
       <span v-if="error" class="form-error">{{ error }}</span>
       <a href="/red-leaf-town/"><ArrowLeft :size="15" />返回红叶镇</a>

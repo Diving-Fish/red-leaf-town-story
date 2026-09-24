@@ -78,7 +78,9 @@ def valid_partner_payload():
 
 @pytest.fixture
 def admin_client(service, tmp_path, monkeypatch):
-    monkeypatch.setenv("RED_LEAF_TOWN_ADMIN_TOKEN", "test-admin-token")
+    config_path = tmp_path / "config.json"
+    config_path.write_text('{"admin_subs": ["test-admin-sub"]}', encoding="utf-8")
+    monkeypatch.setattr("red_leaf_town.config.CONFIG_PATH", config_path)
     catalog_path = tmp_path / "partners.json"
     content_path = tmp_path / "game.json"
     content_path.write_text(f"{load_content().model_dump_json(indent=2)}\n", encoding="utf-8")
@@ -88,8 +90,9 @@ def admin_client(service, tmp_path, monkeypatch):
     return app.test_client()
 
 
-def admin_headers():
-    return {"X-Admin-Token": "test-admin-token"}
+def admin_headers(client):
+    client.set_cookie("localhost", COOKIE_NAME, subject_encode("test-admin-sub", AUD_RED_LEAF_TOWN))
+    return {"X-Requested-With": "XMLHttpRequest"}
 
 
 @runs
@@ -507,7 +510,7 @@ async def test_oauth_callback_creates_one_player_and_sets_isolated_cookie(client
 
 
 @runs
-async def test_partner_admin_requires_token(admin_client):
+async def test_partner_admin_requires_admin_session(admin_client):
     response = await admin_client.get("/api/red-leaf-town/admin/partners")
     assert response.status_code == 403
     assert (await response.get_json())["code"] == "forbidden"
@@ -518,7 +521,7 @@ async def test_crop_admin_updates_content_and_live_service(admin_client, service
     forbidden = await admin_client.get("/api/red-leaf-town/admin/crops")
     assert forbidden.status_code == 403
 
-    listed = await admin_client.get("/api/red-leaf-town/admin/crops", headers=admin_headers())
+    listed = await admin_client.get("/api/red-leaf-town/admin/crops", headers=admin_headers(admin_client))
     payload = (await listed.get_json())["data"]
     carrot = next(crop for crop in payload["crops"] if crop["id"] == "carrot")
     tutorial = next(crop for crop in payload["crops"] if crop["id"] == "orange_berry")
@@ -539,7 +542,7 @@ async def test_crop_admin_updates_content_and_live_service(admin_client, service
                 "miracle_eligible": True,
             },
         }]},
-        headers=admin_headers(),
+        headers=admin_headers(admin_client),
     )
     assert updated.status_code == 200
     assert service.content.crop_map["carrot"].growth_seconds == 7200
@@ -549,7 +552,7 @@ async def test_crop_admin_updates_content_and_live_service(admin_client, service
     invalid = await admin_client.put(
         "/api/red-leaf-town/admin/crops",
         json={"crops": [{"id": "carrot", "quality": {"thresholds": [5, 5, 45, 160], "width": 10}}]},
-        headers=admin_headers(),
+        headers=admin_headers(admin_client),
     )
     assert invalid.status_code == 400
     assert (await invalid.get_json())["code"] == "invalid_crop_balance"
@@ -560,7 +563,7 @@ async def test_partner_admin_crud(admin_client):
     created = await admin_client.post(
         "/api/red-leaf-town/admin/partners",
         json=valid_partner_payload(),
-        headers=admin_headers(),
+        headers=admin_headers(admin_client),
     )
     assert created.status_code == 201
     created_data = (await created.get_json())["data"]
@@ -570,7 +573,7 @@ async def test_partner_admin_crud(admin_client):
     duplicate = await admin_client.post(
         "/api/red-leaf-town/admin/partners",
         json=valid_partner_payload(),
-        headers=admin_headers(),
+        headers=admin_headers(admin_client),
     )
     assert duplicate.status_code == 409
 
@@ -580,11 +583,11 @@ async def test_partner_admin_crud(admin_client):
     updated = await admin_client.put(
         "/api/red-leaf-town/admin/partners/maple_sprite",
         json=payload,
-        headers=admin_headers(),
+        headers=admin_headers(admin_client),
     )
     assert updated.status_code == 200
 
-    listed = await admin_client.get("/api/red-leaf-town/admin/partners", headers=admin_headers())
+    listed = await admin_client.get("/api/red-leaf-town/admin/partners", headers=admin_headers(admin_client))
     body = await listed.get_json()
     assert body["data"]["partners"][0]["name"] == "枫糖糖"
     assert body["data"]["partners"][0]["standard_recruitable"] is False
@@ -594,7 +597,7 @@ async def test_partner_admin_crud(admin_client):
 
     deleted = await admin_client.delete(
         "/api/red-leaf-town/admin/partners/maple_sprite",
-        headers=admin_headers(),
+        headers=admin_headers(admin_client),
     )
     assert deleted.status_code == 200
 
@@ -604,14 +607,14 @@ async def test_admin_searches_player_and_grants_partner_once(admin_client):
     created = await admin_client.post(
         "/api/red-leaf-town/admin/partners",
         json=valid_partner_payload(),
-        headers=admin_headers(),
+        headers=admin_headers(admin_client),
     )
     assert created.status_code == 201
 
     searched = await admin_client.get(
         "/api/red-leaf-town/admin/players",
         query_string={"q": "小枫"},
-        headers=admin_headers(),
+        headers=admin_headers(admin_client),
     )
     player = (await searched.get_json())["data"][0]
     assert player["owned_partner_ids"] == []
@@ -619,7 +622,7 @@ async def test_admin_searches_player_and_grants_partner_once(admin_client):
     granted = await admin_client.post(
         f"/api/red-leaf-town/admin/players/{player['player_id']}/partners",
         json={"partner_id": "maple_sprite"},
-        headers=admin_headers(),
+        headers=admin_headers(admin_client),
     )
     assert granted.status_code == 200
     assert (await granted.get_json())["data"]["player"]["owned_partner_ids"] == ["maple_sprite"]
@@ -627,7 +630,7 @@ async def test_admin_searches_player_and_grants_partner_once(admin_client):
     duplicate = await admin_client.post(
         f"/api/red-leaf-town/admin/players/{player['player_id']}/partners",
         json={"partner_id": "maple_sprite"},
-        headers=admin_headers(),
+        headers=admin_headers(admin_client),
     )
     assert duplicate.status_code == 409
 
@@ -671,7 +674,7 @@ async def test_partner_artwork_uploads_through_cdn_provider(admin_client, monkey
     await admin_client.post(
         "/api/red-leaf-town/admin/partners",
         json=valid_partner_payload(),
-        headers=admin_headers(),
+        headers=admin_headers(admin_client),
     )
     uploaded = {}
 
@@ -688,7 +691,7 @@ async def test_partner_artwork_uploads_through_cdn_provider(admin_client, monkey
         "/api/red-leaf-town/admin/partners/maple_sprite/artworks/0",
         files={"file": FileStorage(stream=io.BytesIO(image.getvalue()), filename="portrait.png", content_type="image/png")},
         form={"x": "150", "y": "0", "w": "900", "h": "1600"},
-        headers=admin_headers(),
+        headers=admin_headers(admin_client),
     )
     body = await response.get_json()
     assert response.status_code == 200
@@ -714,7 +717,7 @@ async def test_partner_artwork_center_crops_non_nine_sixteen_image(admin_client,
     await admin_client.post(
         "/api/red-leaf-town/admin/partners",
         json=valid_partner_payload(),
-        headers=admin_headers(),
+        headers=admin_headers(admin_client),
     )
     uploaded = {}
     monkeypatch.setattr(
@@ -728,7 +731,7 @@ async def test_partner_artwork_center_crops_non_nine_sixteen_image(admin_client,
     response = await admin_client.post(
         "/api/red-leaf-town/admin/partners/maple_sprite/artworks/0",
         files={"file": FileStorage(stream=io.BytesIO(image.getvalue()), filename="square.png", content_type="image/png")},
-        headers=admin_headers(),
+        headers=admin_headers(admin_client),
     )
     assert response.status_code == 200
     with Image.open(io.BytesIO(uploaded["data"])) as converted:
@@ -742,7 +745,7 @@ async def test_partner_artwork_rejects_invalid_manual_crop_before_upload(admin_c
     await admin_client.post(
         "/api/red-leaf-town/admin/partners",
         json=valid_partner_payload(),
-        headers=admin_headers(),
+        headers=admin_headers(admin_client),
     )
     monkeypatch.setattr(cdn_client, "upload_bytes_at", lambda *args: pytest.fail("invalid crop must not upload"))
     image = io.BytesIO()
@@ -751,7 +754,7 @@ async def test_partner_artwork_rejects_invalid_manual_crop_before_upload(admin_c
         "/api/red-leaf-town/admin/partners/maple_sprite/artworks/0",
         files={"file": FileStorage(stream=io.BytesIO(image.getvalue()), filename="square.png", content_type="image/png")},
         form={"x": "0", "y": "0", "w": "100", "h": "100"},
-        headers=admin_headers(),
+        headers=admin_headers(admin_client),
     )
     assert response.status_code == 400
     assert (await response.get_json())["code"] == "invalid_artwork_crop"
@@ -766,7 +769,7 @@ async def test_admin_can_delete_a_player(admin_client, service):
 
     response = await admin_client.delete(
         f"/api/red-leaf-town/admin/players/{player.player_id}",
-        headers=admin_headers(),
+        headers=admin_headers(admin_client),
     )
     body = await response.get_json()
 
@@ -778,14 +781,14 @@ async def test_admin_can_delete_a_player(admin_client, service):
 
     missing = await admin_client.delete(
         f"/api/red-leaf-town/admin/players/{player.player_id}",
-        headers=admin_headers(),
+        headers=admin_headers(admin_client),
     )
     assert missing.status_code == 404
     assert (await missing.get_json())["code"] == "player_not_found"
 
 
 @runs
-async def test_player_delete_requires_admin_token(admin_client, service):
+async def test_player_delete_requires_admin_session(admin_client, service):
     player = service.repository.get_by_sub("route-sub")
     response = await admin_client.delete(f"/api/red-leaf-town/admin/players/{player.player_id}")
     assert response.status_code == 403
@@ -798,7 +801,7 @@ async def test_deleted_player_starts_over_on_the_next_login(admin_client, servic
     service.mark_story_seen("route-sub", "fein_farm_greeting")
     await admin_client.delete(
         f"/api/red-leaf-town/admin/players/{player.player_id}",
-        headers=admin_headers(),
+        headers=admin_headers(admin_client),
     )
 
     recreated = service.ensure_player("route-sub", "小枫")
@@ -976,7 +979,7 @@ async def test_admin_mail_send_list_and_withdraw(admin_client, service):
             "body": "记得来取你的东西。",
             "attachments": {"items": [{"item_id": "carrot_seed", "quantity": 2}]},
         },
-        headers=admin_headers(),
+        headers=admin_headers(admin_client),
     )
     mail = (await sent.get_json())["data"]["mail"]
     assert sent.status_code == 200
@@ -985,20 +988,20 @@ async def test_admin_mail_send_list_and_withdraw(admin_client, service):
 
     listed = await admin_client.get(
         f"/api/red-leaf-town/admin/mail?scope=player&player_id={player.player_id}",
-        headers=admin_headers(),
+        headers=admin_headers(admin_client),
     )
     assert [entry["mail_id"] for entry in (await listed.get_json())["data"]["entries"]] == [mail["mail_id"]]
 
     withdrawn = await admin_client.delete(
         f"/api/red-leaf-town/admin/mail/{mail['mail_id']}?recipient_id={player.player_id}",
-        headers=admin_headers(),
+        headers=admin_headers(admin_client),
     )
     assert withdrawn.status_code == 200
     assert service.mailbox_repository.list_for_player(player.player_id) == []
 
 
 @runs
-async def test_admin_mail_requires_token(admin_client):
+async def test_admin_mail_requires_admin_session(admin_client):
     assert (await admin_client.get("/api/red-leaf-town/admin/mail")).status_code == 403
     assert (await admin_client.post("/api/red-leaf-town/admin/mail", json={})).status_code == 403
 
@@ -1126,12 +1129,12 @@ async def test_redemption_code_admin_generates_and_lists(admin_client, service):
     created = await admin_client.post(
         "/api/red-leaf-town/admin/redemption-codes",
         json={"count": 3, "batch": "首发"},
-        headers=admin_headers(),
+        headers=admin_headers(admin_client),
     )
     codes = (await created.get_json())["data"]["codes"]
     assert len(codes) == 3
 
-    listed = await admin_client.get("/api/red-leaf-town/admin/redemption-codes", headers=admin_headers())
+    listed = await admin_client.get("/api/red-leaf-town/admin/redemption-codes", headers=admin_headers(admin_client))
     records = (await listed.get_json())["data"]
     assert {record["code"] for record in records} == set(codes)
     assert all(record["batch"] == "首发" for record in records)
@@ -1326,3 +1329,18 @@ async def test_partner_artwork_selection_requires_login_and_returns_cdn_urls(cli
     assert partner["available_artworks"][0]["url"]
     assert (await client.post(path, json={"artwork_stage": 1})).status_code == 409
     assert (await client.post(path, json={"artwork_stage": "bad"})).status_code == 409
+
+
+@runs
+async def test_logout_clears_session_and_returns_oauth_logout(client):
+    from http.cookies import SimpleCookie
+    authenticate(client)
+    response = await client.post('/api/red-leaf-town/logout?next=https://untrusted.example/')
+    assert response.status_code == 200
+    assert (await response.get_json())['data']['logout_url'] == 'https://auth.diving-fish.com/logout'
+    cookie = SimpleCookie()
+    for value in response.headers.getlist('Set-Cookie'):
+        cookie.load(value)
+    assert cookie[COOKIE_NAME].value == ''
+    assert cookie[COOKIE_NAME]['max-age'] == '0'
+    assert (await client.get('/api/red-leaf-town/state')).status_code == 401

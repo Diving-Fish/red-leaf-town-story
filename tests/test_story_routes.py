@@ -63,9 +63,11 @@ def story_paths(tmp_path):
 
 
 @pytest.fixture
-def client(story_paths, monkeypatch):
+def client(story_paths, monkeypatch, tmp_path):
     asset_path, script_dir, partner_path, upload_path = story_paths
-    monkeypatch.setenv("RED_LEAF_TOWN_ADMIN_TOKEN", "test-admin-token")
+    config_path = tmp_path / "config.json"
+    config_path.write_text('{"admin_subs": ["test-admin-sub"]}', encoding="utf-8")
+    monkeypatch.setattr("red_leaf_town.config.CONFIG_PATH", config_path)
     content = load_content()
     service = GameService(
         content,
@@ -93,8 +95,9 @@ def authenticate(client, sub="story-sub"):
     client.set_cookie("localhost", COOKIE_NAME, subject_encode(sub, AUD_RED_LEAF_TOWN))
 
 
-def admin_headers():
-    return {"X-Admin-Token": "test-admin-token"}
+def admin_headers(client):
+    client.set_cookie("localhost", COOKIE_NAME, subject_encode("test-admin-sub", AUD_RED_LEAF_TOWN))
+    return {"X-Requested-With": "XMLHttpRequest"}
 
 
 @runs
@@ -143,14 +146,14 @@ async def test_unknown_story_seen_returns_404(client):
 
 
 @runs
-async def test_admin_story_payload_requires_token(client):
+async def test_admin_story_payload_requires_admin_session(client):
     response = await client.get("/api/red-leaf-town/admin/story")
     assert response.status_code == 403
 
 
 @runs
 async def test_admin_story_payload_lists_scripts(client):
-    response = await client.get("/api/red-leaf-town/admin/story", headers=admin_headers())
+    response = await client.get("/api/red-leaf-town/admin/story", headers=admin_headers(client))
     body = await response.get_json()
     assert response.status_code == 200
     assert [entry["id"] for entry in body["data"]["scripts"]] == ["welcome"]
@@ -179,7 +182,7 @@ async def test_story_asset_upload_transcodes_and_registers(client, monkeypatch):
         "/api/red-leaf-town/admin/story/assets",
         files={"file": FileStorage(stream=io.BytesIO(png_bytes((3200, 1800))), filename="gate.png", content_type="image/png")},
         form={"id": "autumn_gate", "name": "镇口", "kind": "background"},
-        headers=admin_headers(),
+        headers=admin_headers(client),
     )
     body = await response.get_json()
     assert response.status_code == 201
@@ -191,7 +194,7 @@ async def test_story_asset_upload_transcodes_and_registers(client, monkeypatch):
     assert body["data"]["width"] == 2560
     assert body["data"]["url"].startswith("https://cdn.example/")
 
-    listed = await client.get("/api/red-leaf-town/admin/story", headers=admin_headers())
+    listed = await client.get("/api/red-leaf-town/admin/story", headers=admin_headers(client))
     assert [entry["id"] for entry in (await listed.get_json())["data"]["assets"]] == ["autumn_gate"]
 
 
@@ -211,7 +214,7 @@ async def test_portrait_upload_keeps_alpha(client, monkeypatch):
             content_type="image/png",
         )},
         form={"id": "maple_smile", "name": "枫糖 微笑", "kind": "portrait"},
-        headers=admin_headers(),
+        headers=admin_headers(client),
     )
     assert response.status_code == 201
     with Image.open(io.BytesIO(uploaded["data"])) as converted:
@@ -227,7 +230,7 @@ async def test_asset_id_must_be_a_slug(client, monkeypatch):
         "/api/red-leaf-town/admin/story/assets",
         files={"file": FileStorage(stream=io.BytesIO(png_bytes((640, 360))), filename="gate.png", content_type="image/png")},
         form={"id": "Autumn Gate", "name": "镇口", "kind": "background"},
-        headers=admin_headers(),
+        headers=admin_headers(client),
     )
     assert response.status_code == 400
     assert (await response.get_json())["code"] == "invalid_asset"
@@ -243,7 +246,7 @@ async def test_portrait_layout_is_saved_on_the_asset(client, monkeypatch):
         "/api/red-leaf-town/admin/story/assets",
         files={"file": FileStorage(stream=io.BytesIO(png_bytes((900, 1600))), filename="maple.png", content_type="image/png")},
         form={"id": "maple_smile", "name": "枫糖", "kind": "portrait"},
-        headers=admin_headers(),
+        headers=admin_headers(client),
     )
 
     updated = await client.patch(
@@ -252,27 +255,27 @@ async def test_portrait_layout_is_saved_on_the_asset(client, monkeypatch):
             "inline_layout": {"scale": 1.35, "offset_x": -0.12, "offset_y": 0.06},
             "stage_layout": {"scale": 3.2, "offset_x": 0, "offset_y": 0},
         },
-        headers=admin_headers(),
+        headers=admin_headers(client),
     )
     body = await updated.get_json()
     assert updated.status_code == 200
     assert body["data"]["inline_layout"] == {"scale": 1.35, "offset_x": -0.12, "offset_y": 0.06}
     assert body["data"]["stage_layout"]["scale"] == 3.2
 
-    listed = await client.get("/api/red-leaf-town/admin/story", headers=admin_headers())
+    listed = await client.get("/api/red-leaf-town/admin/story", headers=admin_headers(client))
     assert (await listed.get_json())["data"]["assets"][0]["inline_layout"]["scale"] == 1.35
 
     rejected = await client.patch(
         "/api/red-leaf-town/admin/story/assets/maple_smile",
         json={"inline_layout": {"scale": 5}},
-        headers=admin_headers(),
+        headers=admin_headers(client),
     )
     assert rejected.status_code == 400
 
     missing = await client.patch(
         "/api/red-leaf-town/admin/story/assets/nope",
         json={"scale": 1.2},
-        headers=admin_headers(),
+        headers=admin_headers(client),
     )
     assert missing.status_code == 404
 
@@ -288,7 +291,7 @@ async def test_asset_delete_blocked_while_referenced(client, monkeypatch, story_
         "/api/red-leaf-town/admin/story/assets",
         files={"file": FileStorage(stream=io.BytesIO(png_bytes((640, 360))), filename="gate.png", content_type="image/png")},
         form={"id": "autumn_gate", "name": "镇口", "kind": "background"},
-        headers=admin_headers(),
+        headers=admin_headers(client),
     )
     (script_dir / "opening.json").write_text(json.dumps({
         "id": "opening",
@@ -299,15 +302,15 @@ async def test_asset_delete_blocked_while_referenced(client, monkeypatch, story_
             {"type": "dialogue", "speaker": "枫糖", "text": "欢迎来到红叶镇。"},
         ],
     }), encoding="utf-8")
-    reloaded = await client.post("/api/red-leaf-town/admin/story/reload", headers=admin_headers())
+    reloaded = await client.post("/api/red-leaf-town/admin/story/reload", headers=admin_headers(client))
     assert (await reloaded.get_json())["data"]["script_count"] == 2
 
-    blocked = await client.delete("/api/red-leaf-town/admin/story/assets/autumn_gate", headers=admin_headers())
+    blocked = await client.delete("/api/red-leaf-town/admin/story/assets/autumn_gate", headers=admin_headers(client))
     assert blocked.status_code == 409
 
     (script_dir / "opening.json").unlink()
-    await client.post("/api/red-leaf-town/admin/story/reload", headers=admin_headers())
-    removed = await client.delete("/api/red-leaf-town/admin/story/assets/autumn_gate", headers=admin_headers())
+    await client.post("/api/red-leaf-town/admin/story/reload", headers=admin_headers(client))
+    removed = await client.delete("/api/red-leaf-town/admin/story/assets/autumn_gate", headers=admin_headers(client))
     assert removed.status_code == 200
 
 
@@ -320,8 +323,8 @@ async def test_broken_script_reports_invalid_content(client, story_paths):
         "trigger": {"hook": "cue", "params": {"cue": "view:farm"}},
         "steps": [{"type": "background", "asset_id": "missing_asset"}, {"type": "dialogue", "text": "……"}],
     }), encoding="utf-8")
-    await client.post("/api/red-leaf-town/admin/story/reload", headers=admin_headers())
-    response = await client.get("/api/red-leaf-town/admin/story", headers=admin_headers())
+    await client.post("/api/red-leaf-town/admin/story/reload", headers=admin_headers(client))
+    response = await client.get("/api/red-leaf-town/admin/story", headers=admin_headers(client))
     assert response.status_code == 400
     assert (await response.get_json())["code"] == "invalid_story_content"
 
@@ -342,7 +345,7 @@ async def upload_asset(client, asset_id, kind="background", size=(1600, 900), **
             content_type="image/png",
         )},
         form={"id": asset_id, "kind": kind, **form},
-        headers=admin_headers(),
+        headers=admin_headers(client),
     )
 
 
@@ -358,7 +361,7 @@ async def test_upload_refuses_to_replace_an_asset_without_the_overwrite_flag(cli
     assert conflict.status_code == 409
     assert body["code"] == "asset_exists"
 
-    listed = await client.get("/api/red-leaf-town/admin/story", headers=admin_headers())
+    listed = await client.get("/api/red-leaf-town/admin/story", headers=admin_headers(client))
     assets = (await listed.get_json())["data"]["assets"]
     assert [(entry["id"], entry["name"], entry["asset_key"]) for entry in assets] == [
         ("autumn_gate", "镇口", original_key),
@@ -372,7 +375,7 @@ async def test_overwrite_replaces_the_image_and_keeps_the_portrait_layout(client
     await client.patch(
         "/api/red-leaf-town/admin/story/assets/maple_smile",
         json={"inline_layout": {"scale": 2.4, "offset_x": -0.1, "offset_y": 0.3}},
-        headers=admin_headers(),
+        headers=admin_headers(client),
     )
 
     replaced = await upload_asset(

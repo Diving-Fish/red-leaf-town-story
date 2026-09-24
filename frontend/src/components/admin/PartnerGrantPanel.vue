@@ -7,7 +7,6 @@ import PartnerAvatar from '@/components/PartnerAvatar.vue'
 import type { AdminPlayerResourceGrantResult, AdminPlayerSummary, AdminPartnerGrantResult, PartnerDefinition } from '@/types'
 
 const props = defineProps<{
-  adminToken: string
   partners: PartnerDefinition[]
 }>()
 
@@ -39,7 +38,7 @@ watch(selectedPlayerId, () => {
 })
 
 function headers() {
-  return { 'X-Admin-Token': props.adminToken, 'Content-Type': 'application/json' }
+  return { 'X-Requested-With': 'XMLHttpRequest', 'Content-Type': 'application/json' }
 }
 
 function initialArtwork(partner: PartnerDefinition) {

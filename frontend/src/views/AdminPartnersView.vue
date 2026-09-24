@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { ArrowLeft, Check, ImageUp, Leaf, LockKeyhole, Plus, Search, Settings2, Save, Trash2, X } from 'lucide-vue-next'
 
 import { api, ApiError } from '@/api'
+import { loginAsAdmin, clearLegacyAdminToken } from '@/composables/adminAuth'
 import PartnerAvatar from '@/components/PartnerAvatar.vue'
 import PartnerGrantPanel from '@/components/admin/PartnerGrantPanel.vue'
 import ImageCropper from '@/components/ImageCropper.vue'
@@ -35,9 +36,7 @@ const traitViews = [
   ['pending', '待接入'],
 ] as const
 
-const TOKEN_KEY = 'red_leaf_town_admin_token'
-const token = ref(localStorage.getItem(TOKEN_KEY) || '')
-const tokenInput = ref(token.value)
+clearLegacyAdminToken()
 const authenticated = ref(false)
 const busy = ref(false)
 const error = ref('')
@@ -128,7 +127,7 @@ function blankPartner(): PartnerDefinition {
 
 function headers(json = true): Record<string, string> {
   return {
-    'X-Admin-Token': token.value,
+    'X-Requested-With': 'XMLHttpRequest',
     ...(json ? { 'Content-Type': 'application/json' } : {}),
   }
 }
@@ -147,17 +146,11 @@ async function loadCatalog(selectId = selectedId.value) {
     error.value = caught instanceof Error ? caught.message : '后台加载失败'
     if (caught instanceof ApiError && caught.status === 403) {
       authenticated.value = false
-      localStorage.removeItem(TOKEN_KEY)
+
     }
   }
 }
 
-async function unlock() {
-  token.value = tokenInput.value.trim()
-  if (!token.value) return
-  localStorage.setItem(TOKEN_KEY, token.value)
-  await loadCatalog()
-}
 
 function selectPartner(id: string) {
   const partner = partners.value.find((entry) => entry.id === id)
@@ -355,7 +348,7 @@ async function removePartner() {
 }
 
 onMounted(() => {
-  if (token.value) loadCatalog()
+  loadCatalog()
 })
 </script>
 
@@ -365,10 +358,9 @@ onMounted(() => {
       <div class="admin-seal"><LockKeyhole :size="34" /></div>
       <p class="kicker">RED LEAF TOWN ADMIN</p>
       <h1>伙伴卡片管理</h1>
-      <p>请输入管理员 Token。凭据只保存在当前浏览器。</p>
-      <form @submit.prevent="unlock">
-        <input v-model="tokenInput" type="password" autocomplete="current-password" placeholder="Admin Token" />
-        <button type="submit">进入后台</button>
+      <p>请使用已获得管理员权限的水鱼账号登录。</p>
+      <form @submit.prevent="loginAsAdmin">
+        <button type="submit">水鱼账号登录</button>
       </form>
       <span v-if="error" class="form-error">{{ error }}</span>
       <a href="/red-leaf-town/"><ArrowLeft :size="15" />返回红叶镇</a>
@@ -573,7 +565,7 @@ onMounted(() => {
           </div>
         </section>
       </div>
-      <PartnerGrantPanel v-if="adminSection === 'grants'" :admin-token="token" :partners="partners" />
+      <PartnerGrantPanel v-if="adminSection === 'grants'" :partners="partners" />
     </template>
   </main>
 </template>

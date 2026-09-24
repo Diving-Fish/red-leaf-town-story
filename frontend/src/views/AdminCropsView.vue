@@ -3,12 +3,11 @@ import { computed, onMounted, ref } from 'vue'
 import { ArrowLeft, BarChart3, Check, LockKeyhole, Save, Sprout } from 'lucide-vue-next'
 
 import { api, ApiError } from '@/api'
+import { loginAsAdmin, clearLegacyAdminToken } from '@/composables/adminAuth'
 import ExpectedProfitChart, { type ProfitSeries } from '@/components/admin/ExpectedProfitChart.vue'
 import type { CropAdminDefinition, CropAdminPayload, QualityGradeDefinition } from '@/types'
 
-const TOKEN_KEY = 'red_leaf_town_admin_token'
-const token = ref(localStorage.getItem(TOKEN_KEY) || '')
-const tokenInput = ref(token.value)
+clearLegacyAdminToken()
 const authenticated = ref(false)
 const busy = ref(false)
 const error = ref('')
@@ -64,7 +63,7 @@ const winnerBands = computed(() => {
 })
 
 function headers(): Record<string, string> {
-  return { 'X-Admin-Token': token.value, 'Content-Type': 'application/json' }
+  return { 'X-Requested-With': 'XMLHttpRequest', 'Content-Type': 'application/json' }
 }
 
 function clonePayload(payload: CropAdminPayload) {
@@ -114,17 +113,11 @@ async function load() {
     error.value = caught instanceof Error ? caught.message : '作物配置加载失败'
     if (caught instanceof ApiError && caught.status === 403) {
       authenticated.value = false
-      localStorage.removeItem(TOKEN_KEY)
+
     }
   }
 }
 
-async function unlock() {
-  token.value = tokenInput.value.trim()
-  if (!token.value) return
-  localStorage.setItem(TOKEN_KEY, token.value)
-  await load()
-}
 
 function sigmoid(value: number) {
   if (value >= 0) {
@@ -229,7 +222,7 @@ async function save() {
 }
 
 onMounted(() => {
-  if (token.value) load()
+  load()
 })
 </script>
 
@@ -239,10 +232,9 @@ onMounted(() => {
       <div class="admin-seal"><LockKeyhole :size="34" /></div>
       <p class="kicker">RED LEAF TOWN ADMIN</p>
       <h1>作物数值工作台</h1>
-      <p>请输入管理员 Token。凭据只保存在当前浏览器。</p>
-      <form @submit.prevent="unlock">
-        <input v-model="tokenInput" type="password" autocomplete="current-password" placeholder="Admin Token" />
-        <button type="submit">进入后台</button>
+      <p>请使用已获得管理员权限的水鱼账号登录。</p>
+      <form @submit.prevent="loginAsAdmin">
+        <button type="submit">水鱼账号登录</button>
       </form>
       <span v-if="error" class="form-error">{{ error }}</span>
       <a href="/red-leaf-town/"><ArrowLeft :size="15" />返回红叶镇</a>

@@ -3,7 +3,6 @@ from __future__ import annotations
 import hashlib
 import io
 import os
-import secrets
 import time
 from functools import wraps
 from pathlib import Path
@@ -12,6 +11,7 @@ from urllib.parse import quote
 from quart import Blueprint, jsonify, make_response, redirect, request, send_from_directory
 from pydantic import ValidationError
 
+from red_leaf_town.config import get_admin_subs
 from red_leaf_town.application import GameError
 from red_leaf_town.content import (
     DEFAULT_CONTENT_PATH,
@@ -91,15 +91,10 @@ def _error(message: str, status: int = 400, code: str = "request_error"):
 
 
 def _is_admin_request() -> bool:
-    expected = (
-        os.environ.get("RED_LEAF_TOWN_ADMIN_TOKEN")
-        or os.environ.get("AETHER_ADMIN_TOKEN")
-        or "Chiyuk123456"
-    ).strip()
-    if not expected:
-        return True
-    provided = request.headers.get("X-Admin-Token", "")
-    return bool(provided) and secrets.compare_digest(provided, expected)
+    from private.libraries.admin_auth import is_admin_request
+    from private.libraries.jwt import AUD_RED_LEAF_TOWN
+
+    return is_admin_request(COOKIE_NAME, AUD_RED_LEAF_TOWN, get_admin_subs())
 
 
 def _admin_error():
@@ -833,7 +828,9 @@ def create_blueprint(
 
     @blueprint.post("/api/red-leaf-town/logout")
     async def logout():
-        response = await make_response(jsonify({"code": 0, "message": "logged out"}))
+        from private.libraries.df_oauth import LOGOUT_URL
+
+        response = await make_response(jsonify({"code": 0, "message": "logged out", "data": {"logout_url": LOGOUT_URL}}))
         response.delete_cookie(COOKIE_NAME, path="/")
         return response
 
