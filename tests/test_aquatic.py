@@ -136,11 +136,11 @@ def test_fishing_expectation_per_draw_stays_where_it_was():
         assert value / total == pytest.approx(expected[spot.id], rel=0.02)
 
 
-def test_level_table_reaches_twenty_and_mining_experience_is_rebalanced():
+def test_level_table_reaches_twenty_five_and_mining_experience_is_rebalanced():
     content = load_content()
-    assert content.levels[-1].level == 20
-    assert content.levels[-1].total_xp == 113100
-    assert content.levels[-1].stamina_cap == 58
+    assert content.levels[-1].level == 25
+    assert content.levels[-1].total_xp == 100650
+    assert content.levels[-1].stamina_cap == 68
     # 12 / 10 / 6 阶梯：矿产 12 XP/体力，加工 6 XP/体力。
     assert [task.collect_xp / task.stamina_cost for task in content.mining_tasks] == [12, 12]
     assert all(recipe.collect_xp / recipe.stamina_cost == 6 for recipe in content.recipes)

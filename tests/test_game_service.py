@@ -386,3 +386,53 @@ def test_partner_assignment_enforces_tendency_ownership_and_capacity(game):
     moved = service.assign_partner("oauth-sub-1", 1, "farm_one")
     assert moved["state"]["plots"][0]["assigned_partner_ids"] == []
     assert moved["state"]["plots"][1]["assigned_partner_ids"] == ["farm_one"]
+
+
+@pytest.mark.parametrize("entrypoint", ["web", "qq"])
+@pytest.mark.parametrize("old_level,experience,expected_level,next_xp", [
+    (17, 33500, 18, 33850),
+    (18, 50250, 20, 50650),
+    (19, 75400, 23, 85850),
+    (20, 113100, 25, None),
+    (20, 150000, 25, None),
+])
+def test_resident_curve_preserves_experience_and_persists_recalculated_level(
+    game, entrypoint, old_level, experience, expected_level, next_xp,
+):
+    service, repository, _, player = game
+    identity = QQIdentity(platform="QQ", bot_id="curve-test", subject="curve-player")
+    service.bind_identity(service.create_binding_code("oauth-sub-1"), identity)
+
+    def legacy_state(state):
+        state.level = old_level
+        state.experience = experience
+
+    repository.update(player.player_id, legacy_state)
+    snapshot = (
+        service.snapshot_by_identity(identity) if entrypoint == "qq"
+        else service.snapshot_by_sub("oauth-sub-1")
+    )
+    assert snapshot["player"]["level"] == expected_level
+    assert snapshot["player"]["experience"] == experience
+    assert snapshot["player"]["next_level_xp"] == next_xp
+    assert snapshot["player"]["stamina_cap"] == 20 + 2 * (expected_level - 1)
+    assert len(snapshot["plots"]) == 8
+    saved = repository.get(player.player_id)
+    assert (saved.level, saved.experience) == (expected_level, experience)
+    assert service.snapshot_by_sub("oauth-sub-1")["player"] == snapshot["player"]
+
+
+def test_resident_curve_thresholds_and_level_boundaries():
+    content = load_content()
+    thresholds = [
+        0, 20, 60, 130, 240, 400, 620, 910, 1350, 2000, 2980, 4450,
+        6650, 9350, 12650, 16650, 21450, 27150, 33850, 41650,
+        50650, 60950, 72650, 85850, 100650,
+    ]
+    assert [entry.total_xp for entry in content.levels] == thresholds
+    for level, threshold in enumerate(thresholds[1:], start=2):
+        assert content.level_for_xp(threshold - 1).level == level - 1
+        assert content.level_for_xp(threshold).level == level
+    assert content.level_for_xp(100651).level == 25
+    assert [entry.stamina_cap for entry in content.levels[-5:]] == [60, 62, 64, 66, 68]
+    assert all(entry.plot_slots == 8 for entry in content.levels[12:])

@@ -242,51 +242,86 @@
     },
     {
       "level": 14,
-      "total_xp": 9950,
+      "total_xp": 9350,
       "plot_slots": 8,
       "stamina_cap": 46,
       "unlocks": []
     },
     {
       "level": 15,
-      "total_xp": 14900,
+      "total_xp": 12650,
       "plot_slots": 8,
       "stamina_cap": 48,
       "unlocks": []
     },
     {
       "level": 16,
-      "total_xp": 22350,
+      "total_xp": 16650,
       "plot_slots": 8,
       "stamina_cap": 50,
       "unlocks": []
     },
     {
       "level": 17,
-      "total_xp": 33500,
+      "total_xp": 21450,
       "plot_slots": 8,
       "stamina_cap": 52,
       "unlocks": []
     },
     {
       "level": 18,
-      "total_xp": 50250,
+      "total_xp": 27150,
       "plot_slots": 8,
       "stamina_cap": 54,
       "unlocks": []
     },
     {
       "level": 19,
-      "total_xp": 75400,
+      "total_xp": 33850,
       "plot_slots": 8,
       "stamina_cap": 56,
       "unlocks": []
     },
     {
       "level": 20,
-      "total_xp": 113100,
+      "total_xp": 41650,
       "plot_slots": 8,
       "stamina_cap": 58,
+      "unlocks": []
+    },
+    {
+      "level": 21,
+      "total_xp": 50650,
+      "plot_slots": 8,
+      "stamina_cap": 60,
+      "unlocks": []
+    },
+    {
+      "level": 22,
+      "total_xp": 60950,
+      "plot_slots": 8,
+      "stamina_cap": 62,
+      "unlocks": []
+    },
+    {
+      "level": 23,
+      "total_xp": 72650,
+      "plot_slots": 8,
+      "stamina_cap": 64,
+      "unlocks": []
+    },
+    {
+      "level": 24,
+      "total_xp": 85850,
+      "plot_slots": 8,
+      "stamina_cap": 66,
+      "unlocks": []
+    },
+    {
+      "level": 25,
+      "total_xp": 100650,
+      "plot_slots": 8,
+      "stamina_cap": 68,
       "unlocks": []
     }
   ],

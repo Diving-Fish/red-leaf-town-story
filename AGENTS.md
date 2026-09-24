@@ -13,7 +13,7 @@
 - `frontend/`：Vue 3 前端
 - `tests/`：单元和接口测试
 
-居民等级表已经配置到 20 级（17～20 级体力上限依次为 52／54／56／58），经验按限流强度分档（矿产 12 / 加工与钓鱼 6 XP 每点体力）。设计约束和后续系统扩展方式见 [`docs/architecture.md`](docs/architecture.md)，伙伴、主角天赋、逐格生产和品质公式见 [`docs/game-design-foundations.md`](docs/game-design-foundations.md)。水产、畜牧与好友系统的完整设计见 [`docs/milestone-2-aquatic-livestock.md`](docs/milestone-2-aquatic-livestock.md)，剩余待办与实装时改过的口径见 [`docs/milestone-2-todo.md`](docs/milestone-2-todo.md)，探秘副本的装备、战斗数值与内测流程见 [`docs/delve-dungeon.md`](docs/delve-dungeon.md)。
+居民等级表已经配置到 25 级（21～25 级体力上限依次为 60／62／64／66／68，农田保持 8 格）；1～13 级累计经验不变，14 级起使用平滑经验曲线，25 级累计经验为 100650。旧玩家保留累计经验，在下次 Web 或 QQ 状态结算时按新表重算并保存等级，经验按限流强度分档（矿产 12 / 加工与钓鱼 6 XP 每点体力）。设计约束和后续系统扩展方式见 [`docs/architecture.md`](docs/architecture.md)，伙伴、主角天赋、逐格生产和品质公式见 [`docs/game-design-foundations.md`](docs/game-design-foundations.md)。水产、畜牧与好友系统的完整设计见 [`docs/milestone-2-aquatic-livestock.md`](docs/milestone-2-aquatic-livestock.md)，剩余待办与实装时改过的口径见 [`docs/milestone-2-todo.md`](docs/milestone-2-todo.md)，探秘副本的装备、战斗数值与内测流程见 [`docs/delve-dungeon.md`](docs/delve-dungeon.md)。
 
 玩家首页 `/red-leaf-town/` 是经营 Dashboard，集中展示居民等级、经验、当日天气、快捷入口和七个产业方向共享的天赋树。农场位于 `/red-leaf-town/farm`；采集页只负责派驻与采集任务，不再重复展示天赋树。购买和出售合并在 `/red-leaf-town/market`，桌面端左右分栏、移动端用标签页切换，商品与库存物品共用 `MarketItem` 组件；出售侧按 `item_id` 折叠品质分桶（多品质的物品点开才列出各桶），两侧在条目超过 6 个或出现多种物品类型时自动显示搜索框与种类筛选；旧的 `/shop` 与 `/inventory` 会重定向过去。
 
