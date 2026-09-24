@@ -469,10 +469,10 @@ def test_vanessa_up_pool_features_only_vanessa_and_standard_partners(growth_game
     assert 0.76 < picks.count("vanessa") / len(picks) < 0.84
 
 
-def test_vanessa_is_first_and_retired_guqi_pool_cannot_be_pulled(growth_game):
+def test_bai_tiantian_is_first_and_retired_guqi_pool_cannot_be_pulled(growth_game):
     service, repository, _, player = growth_game
     snapshot = service.snapshot_by_sub("growth-sub")
-    assert snapshot["gacha_pools"][0]["pool_id"] == "vanessa-up-1"
+    assert snapshot["gacha_pools"][0]["pool_id"] == "bai-tiantian-up-1"
     assert "guqi-up-1" not in {pool["pool_id"] for pool in snapshot["gacha_pools"]}
     before = repository.get(player.player_id).model_dump()
     with pytest.raises(GameError, match="招募池不存在"):
@@ -704,3 +704,40 @@ def test_partner_artwork_requires_ownership_and_configured_art(growth_game):
     with pytest.raises(GameError) as error:
         service.select_partner_artwork("growth-sub", "bai_li", 0)
     assert error.value.code == "partner_artwork_missing"
+
+
+def test_bai_tiantian_up_pool_roster_metadata_and_featured_rate(growth_game):
+    service, _, _, _ = growth_game
+    catalog = load_partner_catalog()
+    pool = load_gacha_pools()["bai-tiantian-up-1"]
+    assert pool.featured_partner_id == "bai_tiantian"
+    assert pool.featured_rate == pytest.approx(0.8)
+    assert pool.rarity_probabilities[5] == pytest.approx(0.025)
+    assert pool.four_star_guarantee == 10
+    assert pool.five_star_pity == 50
+    candidates = service._pool_partner_candidates(pool, catalog)
+    standard = service._pool_partner_candidates(load_gacha_pools()["standard-1"], catalog)
+    for rarity in (3, 4, 5):
+        assert {entry.id for entry in candidates[rarity]} == {entry.id for entry in standard[rarity]}
+    listed = service.snapshot_by_sub("growth-sub")["gacha_pools"][0]
+    assert listed["title"] == "万物归元"
+    assert listed["featured_partner_id"] == "bai_tiantian"
+    assert listed["background"]["asset_key"].startswith("red-leaf-town/story/background/bai_tiantian_gacha-")
+    service.rng = random.Random(11)
+    picks = [service._pick_gacha_partner(pool, candidates[5], 5).id for _ in range(4000)]
+    assert 0.76 < picks.count("bai_tiantian") / len(picks) < 0.84
+
+
+def test_bai_tiantian_up_guarantee_and_independent_progress(growth_game, monkeypatch):
+    service, _, _, _ = growth_game
+    monkeypatch.setattr(service, "_roll_gacha_rarity", lambda *args: 5)
+    monkeypatch.setattr(service.rng, "random", lambda: 0.99)
+    first = service.recruit("growth-sub", 1, "tiantian-miss", "bai-tiantian-up-1")
+    assert first["result"]["results"][0]["content_id"] != "bai_tiantian"
+    pools = {pool["pool_id"]: pool for pool in first["state"]["gacha_pools"]}
+    assert pools["bai-tiantian-up-1"]["featured_guaranteed"] is True
+    assert pools["vanessa-up-1"]["featured_guaranteed"] is False
+    second = service.recruit("growth-sub", 1, "tiantian-guarantee", "bai-tiantian-up-1")
+    assert second["result"]["results"][0]["content_id"] == "bai_tiantian"
+    pools = {pool["pool_id"]: pool for pool in second["state"]["gacha_pools"]}
+    assert pools["bai-tiantian-up-1"]["featured_guaranteed"] is False

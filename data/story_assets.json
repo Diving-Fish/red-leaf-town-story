@@ -160,6 +160,26 @@
         "offset_y": 0.0
       },
       "created_at": 0
+    },
+    {
+      "id": "bai_tiantian_gacha",
+      "kind": "background",
+      "name": "白天天 · 万物归元",
+      "asset_key": "red-leaf-town/story/background/bai_tiantian_gacha-49cf1f5f58b12079.png",
+      "width": 1672,
+      "height": 941,
+      "content_type": "image/png",
+      "inline_layout": {
+        "scale": 1.0,
+        "offset_x": 0.0,
+        "offset_y": 0.0
+      },
+      "stage_layout": {
+        "scale": 1.0,
+        "offset_x": 0.0,
+        "offset_y": 0.0
+      },
+      "created_at": 0
     }
   ]
 }
