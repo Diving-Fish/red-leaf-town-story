@@ -851,12 +851,11 @@ class GameService(SailingServiceMixin):
             plot.ready_at = task_snapshot.ready_at
             plot.task_snapshot = task_snapshot
             plot.task_results = []
-            levels = grant_experience(player, crop.plant_xp, self.content, max_level=self._player_level_cap(player))
             return {
                 "slot": slot,
                 "crop_id": crop.id,
                 "ready_at": plot.ready_at,
-                "levels": levels,
+                "levels": [],
                 "base_duration": task_snapshot.base_duration,
                 "final_duration": task_snapshot.final_duration,
                 "time_saved": task_snapshot.base_duration - task_snapshot.final_duration,
@@ -5567,7 +5566,7 @@ class GameService(SailingServiceMixin):
             produce_item_id=crop.produce_item_id,
             yield_min=crop.yield_min,
             yield_max=crop.yield_max,
-            harvest_xp=crop.harvest_xp,
+            harvest_xp=crop.plant_xp + crop.harvest_xp,
             stamina_cost=crop.stamina_cost,
             quality=crop.quality,
             consumed_inputs=[TaskInputSnapshot(item_id=crop.seed_item_id, quality=0, quantity=1)],

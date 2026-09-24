@@ -150,3 +150,52 @@ def test_cannot_cancel_when_there_is_no_active_task(game):
     service, _, _, _ = game
     with pytest.raises(GameError, match="没有可以取消"):
         service.cancel_task("cancel-sub", "gathering", "maple_forest")
+
+
+@pytest.mark.parametrize("crop_id", ["carrot", "peach_berry", "orange_berry"])
+def test_plant_cancel_replant_defers_all_experience_until_harvest(game, crop_id):
+    service, repository, clock, player = game
+    crop = service.content.crop_map[crop_id]
+    repository.update(player.player_id, lambda state: state.inventory.update({crop.seed_item_id: {0: 1}}))
+    before = repository.get(player.player_id)
+    expected_xp = crop.plant_xp + crop.harvest_xp
+
+    for _ in range(3):
+        planted = service.plant("cancel-sub", 0, crop_id)
+        assert planted["result"]["levels"] == []
+        assert repository.get(player.player_id).experience == before.experience
+        assert repository.get(player.player_id).level == before.level
+        assert planted["state"]["plots"][0]["task_snapshot"]["harvest_xp"] == expected_xp
+        service.cancel_task("cancel-sub", "farming", "0")
+        assert repository.get(player.player_id).experience == before.experience
+
+    planted = service.plant("cancel-sub", 0, crop_id)
+    with pytest.raises(GameError, match="还没有成熟"):
+        service.harvest("cancel-sub", 0)
+    assert repository.get(player.player_id).experience == before.experience
+    crop.plant_xp += 100
+    crop.harvest_xp += 100
+    clock.advance(planted["result"]["final_duration"])
+    harvested = service.harvest("cancel-sub", 0)
+    assert harvested["result"]["experience"] == expected_xp
+    assert repository.get(player.player_id).experience == before.experience + expected_xp
+    with pytest.raises(GameError, match="还没有作物"):
+        service.harvest("cancel-sub", 0)
+    assert repository.get(player.player_id).experience == before.experience + expected_xp
+
+
+def test_existing_farming_snapshot_does_not_award_plant_experience_twice(game):
+    service, repository, clock, player = game
+    service.buy("cancel-sub", "carrot_seed", 1)
+    crop = service.content.crop_map["carrot"]
+    planted = service.plant("cancel-sub", 0, "carrot")
+
+    def restore_old_task(state):
+        state.experience += crop.plant_xp
+        state.plots[0].task_snapshot.harvest_xp = crop.harvest_xp
+
+    repository.update(player.player_id, restore_old_task)
+    clock.advance(planted["result"]["final_duration"])
+    harvested = service.harvest("cancel-sub", 0)
+    assert harvested["result"]["experience"] == crop.harvest_xp
+    assert repository.get(player.player_id).experience == crop.plant_xp + crop.harvest_xp

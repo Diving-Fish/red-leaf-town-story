@@ -304,7 +304,7 @@ onMounted(() => {
                 <label><span>时间难度</span><input v-model.number="crop.time_difficulty" type="number" min="1" /></label>
                 <label><span>最小产量</span><input v-model.number="crop.yield_min" type="number" min="1" /></label>
                 <label><span>最大产量</span><input v-model.number="crop.yield_max" type="number" min="1" /></label>
-                <label><span>播种经验</span><input v-model.number="crop.plant_xp" type="number" min="0" /></label>
+                <label><span>播种经验（收获时发放）</span><input v-model.number="crop.plant_xp" type="number" min="0" /></label>
                 <label><span>收获经验</span><input v-model.number="crop.harvest_xp" type="number" min="0" /></label>
               </div>
 
