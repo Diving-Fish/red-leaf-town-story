@@ -2099,7 +2099,7 @@
         },
         {
           "breakthrough": 1,
-          "asset_key": "red-leaf-town/partners/hongzhijian/breakthrough-2-c7b3a87b483e040a.webp",
+          "asset_key": "red-leaf-town/partners/hongzhijian/breakthrough-1-c07e6ab7a3094bba.webp",
           "width": 936,
           "height": 1664,
           "content_type": "image/webp"
@@ -2115,10 +2115,10 @@
         },
         {
           "breakthrough": 1,
-          "x": 228,
-          "y": 141,
-          "w": 537,
-          "h": 537
+          "x": 284,
+          "y": 209,
+          "w": 421,
+          "h": 421
         },
         {
           "breakthrough": 2,
