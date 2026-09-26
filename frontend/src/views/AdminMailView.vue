@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { ArrowLeft, Check, LockKeyhole, Mail, Megaphone, Plus, Search, Send, Trash2, UserRound, X } from 'lucide-vue-next'
 
 import { api, ApiError } from '@/api'
+import { useUiStore } from '@/stores/ui'
 import { loginAsAdmin, clearLegacyAdminToken } from '@/composables/adminAuth'
 import type { AdminMailEntry, AdminPlayerSummary, ItemDefinition, MailScope } from '@/types'
 
@@ -25,6 +26,7 @@ interface DraftItem {
   quality: number
 }
 
+const ui = useUiStore()
 clearLegacyAdminToken()
 const authenticated = ref(false)
 const busy = ref(false)
@@ -198,6 +200,14 @@ async function send() {
 
 async function withdraw(entry: AdminMailEntry) {
   if (busy.value) return
+  const accepted = await ui.confirm({
+    title: '撤回这封邮件？',
+    description: `确认撤回《${entry.title}》？撤回后玩家将无法再领取这封邮件。`,
+    confirmLabel: '撤回邮件',
+    cancelLabel: '保留邮件',
+    tone: 'danger',
+  })
+  if (!accepted || busy.value) return
   busy.value = true
   error.value = ''
   try {

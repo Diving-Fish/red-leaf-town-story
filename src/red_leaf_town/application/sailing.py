@@ -3,7 +3,7 @@ from collections import Counter
 from math import expm1, log1p
 
 from red_leaf_town.domain.economy import EconomyError, add_item, remove_item, spend_coins
-from red_leaf_town.domain.progression import consume_stamina, grant_experience
+from red_leaf_town.domain.progression import consume_stamina, grant_experience, refund_stamina
 from red_leaf_town.domain.sailing import SailingDrop, SailingLog, SailingRun
 from red_leaf_town.domain.models import TaskOutputSnapshot
 from red_leaf_town.domain.production import draw_count, draw_weighted_batches
@@ -192,6 +192,28 @@ class SailingServiceMixin:
             )
             state.start_requests = [*state.start_requests[-49:], request_id]
             return {'run_id': state.active_run.run_id, 'trial': trial}
+
+        player, result = self._update_by_sub(oauth_sub, mutation)
+        return {'result': result, 'state': self._snapshot(player, now)}
+
+    def cancel_sailing(self, oauth_sub, run_id):
+        now = self._now()
+
+        def mutation(player):
+            self._settle(player, now)
+            self._require_sailing(player)
+            run = player.sailing.active_run
+            if not run or run.run_id != run_id:
+                raise sailing_error('sailing_not_found', '没有这次进行中的航行', 404)
+            if now >= run.ready_at:
+                raise sailing_error('sailing_already_arrived', '船已回港，请领取航海收获', 409)
+            player.coins += run.coins
+            refund_stamina(player, run.stamina, self.content, now)
+            for item in run.consumed_inputs:
+                add_item(player, item['item_id'], item['quantity'], item['quality'])
+            player.sailing.active_run = None
+            return {'run_id': run.run_id, 'refunded_coins': run.coins,
+                    'returned_items': run.consumed_inputs}
 
         player, result = self._update_by_sub(oauth_sub, mutation)
         return {'result': result, 'state': self._snapshot(player, now)}

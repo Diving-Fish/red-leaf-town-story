@@ -1140,6 +1140,16 @@ def create_blueprint(
         )
         return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
 
+    @blueprint.post("/api/red-leaf-town/sailing/cancel")
+    @login_required
+    async def cancel_sailing(subject: str):
+        payload = await request.get_json(silent=True)
+        if (not isinstance(payload, dict) or not isinstance(payload.get("run_id"), str)
+                or not payload["run_id"].strip()):
+            raise GameError("invalid_payload", "请提供航行编号")
+        result = get_service().cancel_sailing(subject, payload["run_id"])
+        return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
+
     @blueprint.post("/api/red-leaf-town/sailing/collect")
     @login_required
     async def collect_sailing(subject: str):

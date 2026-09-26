@@ -9,9 +9,11 @@ import StateBlock from '@/components/StateBlock.vue'
 import { useCountdown } from '@/composables/useCountdown'
 import { formatDuration } from '@/lib/format'
 import { useGameStore } from '@/stores/game'
+import { useUiStore } from '@/stores/ui'
 import type { OwnedPartner } from '@/types'
 
 const game = useGameStore()
+const ui = useUiStore()
 const sailing = computed(() => game.state?.sailing)
 const selectedRoute = ref('reed_bay')
 const selectedSupply = ref('none')
@@ -59,6 +61,19 @@ function selectPartner(index: number, id: string | null) {
 watch([selectedRoute, selectedSupply, slots], () => { requestId.value = crypto.randomUUID() })
 watch(elapsed, ready => { if (ready) void game.refresh(true) })
 
+async function cancelVoyage() {
+  const voyage = run.value
+  if (!voyage || elapsed.value) return
+  const accepted = await ui.confirm({
+    title: '取消这次航行？',
+    description: `将返还 ${voyage.coins} 红叶币及实际消耗的补给（保留原品质），${voyage.stamina} 点体力按上限返还。伙伴立即空闲，本次不获得收获、经验，也不计入完成航次。`,
+    confirmLabel: '取消航行',
+    cancelLabel: '继续航行',
+    tone: 'danger',
+  })
+  if (accepted) await game.cancelSailing(voyage.run_id)
+}
+
 async function start() {
   const result = await game.startSailing(selectedRoute.value, party.value, selectedSupply.value, requestId.value)
   if (result) requestId.value = crypto.randomUUID()
@@ -104,7 +119,10 @@ async function start() {
         <div class="panel-heading"><h3 class="ui-section-title"><Waves :size="18" /> {{ run.route_name }}{{ run.trial ? ' · 首次试航' : '' }}</h3><strong>{{ elapsed ? '已回港' : label }}</strong></div>
         <ProgressBar :value="progress" color="#80c8cb" :height="8" />
         <p class="ui-description">{{ run.partner_ids.map(id => partnerById(id)?.name || id).join('、') }} · 出航能力 {{ run.ability }}</p>
-        <ActionButton action-key="sailing:collect" :disabled="!elapsed" @click="game.collectSailing(run.run_id)">{{ elapsed ? '领取航海收获' : '伙伴正在航行' }}</ActionButton>
+        <div class="voyage-actions">
+          <ActionButton action-key="sailing:collect" group="sailing:" :disabled="!elapsed" @click="game.collectSailing(run.run_id)">{{ elapsed ? '领取航海收获' : '伙伴正在航行' }}</ActionButton>
+          <ActionButton v-if="!elapsed" action-key="sailing:cancel" group="sailing:" variant="secondary" @click="cancelVoyage"><Anchor :size="15" />取消航行</ActionButton>
+        </div>
       </article>
 
       <template v-else-if="sailing.ship_built">
@@ -168,6 +186,10 @@ async function start() {
 </template>
 
 <style scoped>
+.voyage-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.voyage-actions > :first-child { flex: 1 1 180px; }
+.voyage-actions > * { min-height: 42px; }
+@media (max-width: 420px) { .voyage-actions > * { flex: 1 1 100%; } }
 .sailing-view { --expedition-accent: #80b6b0; display: grid; gap: 16px; min-width: 0; }
 .sailing-heading { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
 .sailing-heading h2 { display: flex; align-items: center; gap: 8px; margin: 0; font: 600 18px Georgia, 'Noto Serif SC', serif; }

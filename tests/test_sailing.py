@@ -458,3 +458,72 @@ def test_sailing_achievements_only_count_claims_and_preserve_known_legacy_route(
     assert repo.get(player.player_id).achievement_stats.sailing_route_ids == ['reed_bay', 'white_sail']
     game.collect_sailing('sailing-sub', second['result']['run_id'])
     assert repo.get(player.player_id).sailing.completed_voyages == 2
+
+
+@pytest.mark.parametrize('completed_voyages', [0, 1])
+def test_cancel_sailing_refunds_snapshot_and_unlocks_without_rewards(sailing_game, completed_voyages):
+    game, repo, player, clock = sailing_game
+    def prepare(p):
+        p.stamina = 40
+        p.inventory['pickled_carrot'] = {1: 1, 3: 4}
+        p.sailing.completed_voyages = completed_voyages
+    repo.update(player.player_id, prepare)
+    before = repo.get(player.player_id)
+    started = start(game, supply='ration')
+    run = started['state']['sailing']['active_run']
+    assert next(p for p in started['state']['partners'] if p['partner_id'] == 'sailor')['locked']
+    clock[0] += 1
+    result = game.cancel_sailing('sailing-sub', run['run_id'])
+    after = repo.get(player.player_id)
+    assert after.coins == before.coins
+    assert after.stamina == before.stamina
+    assert after.inventory == before.inventory
+    assert after.experience == before.experience
+    assert after.owned_partners == before.owned_partners
+    assert after.sailing.active_run is None
+    assert after.sailing.completed_voyages == completed_voyages
+    assert after.sailing.last_run == before.sailing.last_run
+    assert after.sailing.discoveries == before.sailing.discoveries
+    assert after.sailing.collected_items == before.sailing.collected_items
+    assert not next(p for p in result['state']['partners'] if p['partner_id'] == 'sailor')['locked']
+    assert result['state']['sailing']['trial_available'] == (completed_voyages == 0)
+    with pytest.raises(GameError):
+        game.cancel_sailing('sailing-sub', run['run_id'])
+    assert repo.get(player.player_id).coins == after.coins
+    assert repo.get(player.player_id).inventory == after.inventory
+    with pytest.raises(GameError):
+        game.collect_sailing('sailing-sub', run['run_id'])
+    assert start(game)['result']['duplicate']
+    assert repo.get(player.player_id).sailing.active_run is None
+    second = start(game, request_id='new-voyage')
+    with pytest.raises(GameError):
+        game.cancel_sailing('sailing-sub', run['run_id'])
+    assert repo.get(player.player_id).sailing.active_run.run_id == second['result']['run_id']
+
+
+@pytest.mark.parametrize('offset', [0, 1])
+def test_cancel_arrived_sailing_is_rejected_and_can_still_collect(sailing_game, offset):
+    game, repo, player, clock = sailing_game
+    started = start(game, supply='ration')
+    run = started['state']['sailing']['active_run']
+    clock[0] = run['ready_at'] + offset
+    before = repo.get(player.player_id)
+    with pytest.raises(GameError, match='船已回港'):
+        game.cancel_sailing('sailing-sub', run['run_id'])
+    after = repo.get(player.player_id)
+    assert after.coins == before.coins
+    assert after.inventory == before.inventory
+    assert after.sailing.active_run == before.sailing.active_run
+    assert game.collect_sailing('sailing-sub', run['run_id'])['result']['drops']
+
+
+@pytest.mark.parametrize('stamina_at_cancel', [47, 60])
+def test_cancel_sailing_stamina_respects_cap_and_preserves_overflow(sailing_game, stamina_at_cancel):
+    game, repo, player, _ = sailing_game
+    repo.update(player.player_id, lambda p: setattr(p.sailing, 'completed_voyages', 1))
+    started = start(game)
+    repo.update(player.player_id, lambda p: setattr(p, 'stamina', stamina_at_cancel))
+    game.cancel_sailing('sailing-sub', started['result']['run_id'])
+    cap = game.content.level_definition(16).stamina_cap
+    cost = started['state']['sailing']['active_run']['stamina']
+    assert repo.get(player.player_id).stamina == max(stamina_at_cancel, min(cap, stamina_at_cancel + cost))

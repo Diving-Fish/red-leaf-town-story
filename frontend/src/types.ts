@@ -1803,6 +1803,8 @@ export interface StoryAdminPayload {
 
 
 export interface SailingRun {
+  coins: number
+  stamina: number
   run_id: string
   route_id: string
   route_name: string

@@ -10,11 +10,13 @@ import StateBlock from '@/components/StateBlock.vue'
 import ViewHeader from '@/components/ViewHeader.vue'
 import { useCountdown } from '@/composables/useCountdown'
 import { useGameStore } from '@/stores/game'
+import { useUiStore } from '@/stores/ui'
 import type { CommissionBoard, CommissionBoardEntry } from '@/types'
 
 const WEEKDAYS = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
 
 const game = useGameStore()
+const ui = useUiStore()
 const board = ref<CommissionBoard | null>(null)
 
 const commissions = computed(() => game.state?.commissions || null)
@@ -59,6 +61,13 @@ async function forward() {
 }
 
 async function withdraw() {
+  const accepted = await ui.confirm({
+    title: '收回这份委托？',
+    description: '将从公共转发池收回尚未被接走的委托，之后仍可自行交付并获得全额奖励。',
+    confirmLabel: '收回委托',
+    cancelLabel: '保留委托',
+  })
+  if (!accepted) return
   await game.withdrawCommission()
   await reloadBoard()
 }

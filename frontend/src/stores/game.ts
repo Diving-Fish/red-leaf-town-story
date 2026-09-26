@@ -882,6 +882,9 @@ export const useGameStore = defineStore('game', () => {
         payload: { route_id: routeId, partner_ids: partnerIds, supply_id: supplyId, request_id: requestId },
         successMessage: '船已离港，伙伴将按时带回收获',
       }),
+    cancelSailing: (runId: string) => action('sailing:cancel', `${API_ROOT}/sailing/cancel`, {
+      payload: { run_id: runId }, successMessage: '航行已取消，红叶币和补给已退回，体力按上限返还',
+    }),
     collectSailing: (runId: string) => action('sailing:collect', `${API_ROOT}/sailing/collect`, {
       payload: { run_id: runId }, successMessage: '航海收获已放入仓库',
     }),

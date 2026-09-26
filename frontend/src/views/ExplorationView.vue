@@ -483,6 +483,17 @@ function continueRoute() {
 }
 
 async function withdraw() {
+  if (!run.value) return
+  if (run.value.status !== 'completed') {
+    const accepted = await ui.confirm({
+      title: '提前撤离并结算？',
+      description: '将结束本次路线，带回已有战利品和未用完的携带道具。已花费的入场费和体力不退还，无法继续本次进度。',
+      confirmLabel: '撤离并结算',
+      cancelLabel: '继续探索',
+      tone: 'danger',
+    })
+    if (!accepted) return
+  }
   const result = await game.withdrawExploration()
   if (result) {
     resolution.value = null

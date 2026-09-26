@@ -1189,7 +1189,7 @@ async def test_stamina_supply_endpoints(client, service):
 
 @runs
 async def test_sailing_api_requires_login(client):
-    for endpoint in ('build', 'start', 'collect', 'upgrade'):
+    for endpoint in ('build', 'start', 'collect', 'cancel', 'upgrade'):
         response = await client.post(f'/api/red-leaf-town/sailing/{endpoint}', json={})
         assert response.status_code == 401
 
@@ -1203,7 +1203,7 @@ async def test_sailing_api_beta_gate_and_bad_payloads(client, service, monkeypat
     })
     assert response.status_code == 403
     assert (await response.get_json())['code'] == 'content_locked'
-    for endpoint in ('start', 'collect', 'upgrade'):
+    for endpoint in ('start', 'collect', 'cancel', 'upgrade'):
         response = await client.post(f'/api/red-leaf-town/sailing/{endpoint}', json=['invalid'])
         assert response.status_code == 400
     response = await client.post('/api/red-leaf-town/sailing/start', json={'partner_ids': 'wrong'})
@@ -1344,3 +1344,48 @@ async def test_logout_clears_session_and_returns_oauth_logout(client):
     assert cookie[COOKIE_NAME].value == ''
     assert cookie[COOKIE_NAME]['max-age'] == '0'
     assert (await client.get('/api/red-leaf-town/state')).status_code == 401
+
+
+@runs
+async def test_sailing_cancel_api_refunds_and_rejects_stale_or_arrived_runs(client, service):
+    authenticate(client)
+    player = service.repository.get_by_sub('route-sub')
+    partner = service.partner_catalog_loader().partners[0]
+    service.admin_grant_partner(player.player_id, partner.id)
+    def prepare(p):
+        p.experience = service.content.level_definition(16).total_xp
+        p.coins = 20000
+        p.stamina = 40
+        p.sailing.ship_built = True
+        p.inventory['pickled_carrot'] = {1: 1, 3: 2}
+    service.repository.update(player.player_id, prepare)
+    path = '/api/red-leaf-town/sailing/cancel'
+    for payload in ({}, {'run_id': ''}, {'run_id': ' '}, {'run_id': 123}, []):
+        assert (await client.post(path, json=payload)).status_code == 400
+    assert (await client.post(path, json={'run_id': 'missing'})).status_code == 404
+    before = service.repository.get(player.player_id)
+    response = await client.post('/api/red-leaf-town/sailing/start', json={
+        'route_id': 'reed_bay', 'partner_ids': [partner.id], 'supply_id': 'ration', 'request_id': 'cancel-trial',
+    })
+    run = (await response.get_json())['data']['state']['sailing']['active_run']
+    authenticate(client, 'another-sub')
+    service.ensure_player('another-sub', '另一位居民')
+    service.repository.update(service.repository.get_by_sub('another-sub').player_id, prepare)
+    assert (await client.post(path, json={'run_id': run['run_id']})).status_code == 404
+    authenticate(client)
+    response = await client.post(path, json={'run_id': run['run_id']})
+    assert response.status_code == 200
+    data = (await response.get_json())['data']
+    assert data['state']['sailing']['active_run'] is None
+    after = service.repository.get(player.player_id)
+    assert after.coins == before.coins and after.inventory == before.inventory
+    assert after.stamina == before.stamina
+    assert (await client.post(path, json={'run_id': run['run_id']})).status_code == 404
+    assert service.repository.get(player.player_id).coins == before.coins
+    response = await client.post('/api/red-leaf-town/sailing/start', json={
+        'route_id': 'reed_bay', 'partner_ids': [partner.id], 'request_id': 'arrived-trial',
+    })
+    arrived = (await response.get_json())['data']['state']['sailing']['active_run']
+    service.clock = lambda: arrived['ready_at']
+    assert (await client.post(path, json={'run_id': arrived['run_id']})).status_code == 409
+    assert (await client.post('/api/red-leaf-town/sailing/collect', json={'run_id': arrived['run_id']})).status_code == 200

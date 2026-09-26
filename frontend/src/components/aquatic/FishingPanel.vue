@@ -11,14 +11,26 @@ import QualityTag from '@/components/QualityTag.vue'
 import StateBlock from '@/components/StateBlock.vue'
 import { rewardSummary } from '@/lib/rewards'
 import { useGameStore } from '@/stores/game'
+import { useUiStore } from '@/stores/ui'
 import type { AquaticState, FishingDrop, FishingSpotState } from '@/types'
 
 const props = defineProps<{ aquatic: AquaticState }>()
 
 const aquatic = computed(() => props.aquatic)
 const game = useGameStore()
+const ui = useUiStore()
 const lastCatch = ref<{ spotId: string; drops: FishingDrop[] } | null>(null)
 const codexOpen = ref(false)
+
+async function releaseBigCatch() {
+  const accepted = await ui.confirm({
+    title: '放线并放弃这次大物？',
+    description: '放线后将改收一条普通渔获，无法再挑战这次咬钩的大物。',
+    confirmLabel: '放线',
+    cancelLabel: '再想想',
+  })
+  if (accepted) await game.resolveBigCatch('release')
+}
 
 const QUALITY_NAMES = ['', '普通', '良品', '上品', '臻品', '奇迹']
 
@@ -98,7 +110,7 @@ async function cast(spot: FishingSpotState) {
           action-key="aquatic:big-catch:release"
           group="aquatic:big-catch"
           variant="secondary"
-          @click="game.resolveBigCatch('release')"
+          @click="releaseBigCatch"
         >
           放线
         </ActionButton>
