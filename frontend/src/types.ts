@@ -218,6 +218,10 @@ export interface GatheringSiteState {
   assigned_partners: OwnedPartner[]
   assignment_locked: boolean
   assignment_locked_until: number | null
+  /** 活动期间由本地档期补丁下发（如「夏日限定」），平时没有这个字段 */
+  event_badge?: string
+  /** 活动期间由本地档期补丁下发的蓝字收益说明，平时没有这个字段 */
+  event_note?: string
 }
 
 export interface TalentNode {
@@ -634,6 +638,9 @@ export interface FishingSpotState {
   unlocked: boolean
   combo: number
   draws: { base_draws: number; ability_bonus: number; difficulty: number; expected: number }
+  event_badge?: string
+  /** 活动期间由本地档期补丁下发的蓝字收益说明，平时没有这个字段 */
+  event_note?: string
 }
 
 export interface PendingBigCatch {
@@ -1184,6 +1191,8 @@ export interface ExplorationExpedition {
   quality: QualityCurveDefinition
   unlocked: boolean
   affordable: boolean
+  /** 活动路线由本地档期补丁下发的蓝字收益说明，平时没有这个字段 */
+  leader_note?: string
 }
 
 export interface ExplorationChoice {

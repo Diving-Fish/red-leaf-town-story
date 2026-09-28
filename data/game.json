@@ -1324,7 +1324,8 @@
         "attribute": "agility",
         "damage_dice": "1d8",
         "attack_bonus": 1
-      }
+      },
+      "description": "退潮那晚从旧货堆里翻出来的短刃，刃口还带着盐味。出手比看起来轻，落点比看起来准。"
     },
     {
       "id": "sail_mackerel",
@@ -1935,6 +1936,188 @@
       "sell_price": 0,
       "has_quality": false,
       "tags": []
+    },
+    {
+      "id": "heartscale_fish",
+      "name": "心鳞鱼",
+      "icon": "fish",
+      "kind": "material",
+      "sell_price": 52,
+      "has_quality": true,
+      "tags": [
+        "fish",
+        "food",
+        "fodder"
+      ],
+      "feed": {
+        "units": 2,
+        "score": 23
+      }
+    },
+    {
+      "id": "lantern_fish",
+      "name": "灯影鱼",
+      "icon": "fish",
+      "kind": "material",
+      "sell_price": 44,
+      "has_quality": true,
+      "tags": [
+        "fish",
+        "food",
+        "fodder"
+      ],
+      "feed": {
+        "units": 2,
+        "score": 21
+      }
+    },
+    {
+      "id": "giant_heartscale_fish",
+      "name": "灯湾巨鲷",
+      "icon": "fish-symbol",
+      "kind": "material",
+      "sell_price": 620,
+      "has_quality": true,
+      "tags": [
+        "fish",
+        "food"
+      ]
+    },
+    {
+      "id": "heart_scale",
+      "name": "心之鳞片",
+      "icon": "gem",
+      "kind": "material",
+      "sell_price": 160,
+      "has_quality": true,
+      "tags": [
+        "fish"
+      ]
+    },
+    {
+      "id": "star_sand",
+      "name": "星砂",
+      "icon": "shell",
+      "kind": "material",
+      "sell_price": 28,
+      "has_quality": true,
+      "tags": [
+        "forage"
+      ]
+    },
+    {
+      "id": "summer_kelp",
+      "name": "夏凉海带",
+      "icon": "waves",
+      "kind": "material",
+      "sell_price": 18,
+      "has_quality": true,
+      "tags": [
+        "forage",
+        "fodder"
+      ],
+      "feed": {
+        "units": 3,
+        "score": 7
+      }
+    },
+    {
+      "id": "heartscale_pendant",
+      "name": "心鳞坠饰",
+      "icon": "gem",
+      "kind": "equipment",
+      "sell_price": 1500,
+      "has_quality": false,
+      "tags": [
+        "exploration_equipment"
+      ],
+      "equipment": {
+        "slot": "accessory",
+        "advantage_uses": 1,
+        "proficiency_bonus": 1,
+        "description": "心鳞嵌成的坠子。握紧它，会莫名想起一些以为已经忘了的事。"
+      }
+    },
+    {
+      "id": "firefly_grass",
+      "name": "萤火草",
+      "icon": "sprout",
+      "kind": "material",
+      "sell_price": 8,
+      "has_quality": true,
+      "tags": [
+        "forage"
+      ]
+    },
+    {
+      "id": "night_bellflower",
+      "name": "夜铃花",
+      "icon": "flower-2",
+      "kind": "material",
+      "sell_price": 12,
+      "has_quality": true,
+      "tags": [
+        "forage",
+        "medicine"
+      ]
+    },
+    {
+      "id": "summer_dew_nectar",
+      "name": "夏夜蜜露",
+      "icon": "droplets",
+      "kind": "material",
+      "sell_price": 24,
+      "has_quality": true,
+      "tags": [
+        "forage",
+        "food"
+      ]
+    },
+    {
+      "id": "falling_star_ear",
+      "name": "落星穗",
+      "icon": "wheat",
+      "kind": "material",
+      "sell_price": 45,
+      "has_quality": true,
+      "tags": [
+        "forage"
+      ]
+    },
+    {
+      "id": "night_bell_brew",
+      "name": "夜铃蜜饮",
+      "icon": "glass-water",
+      "kind": "product",
+      "sell_price": 280,
+      "has_quality": true,
+      "tags": [
+        "food"
+      ]
+    },
+    {
+      "id": "ribbed_berry",
+      "name": "棱瓜果",
+      "icon": "cherry",
+      "kind": "produce",
+      "sell_price": 1600,
+      "has_quality": true,
+      "tags": [
+        "crop",
+        "food",
+        "tree_fruit"
+      ]
+    },
+    {
+      "id": "ribbed_berry_seed",
+      "name": "棱瓜果种子",
+      "icon": "sprout",
+      "kind": "seed",
+      "sell_price": 0,
+      "has_quality": false,
+      "tags": [
+        "crop_seed"
+      ]
     }
   ],
   "crops": [
@@ -2265,6 +2448,34 @@
         "miracle_probability_cap": 0.003,
         "miracle_eligible": true
       }
+    },
+    {
+      "id": "ribbed_berry",
+      "name": "棱瓜果",
+      "icon": "cherry",
+      "seed_item_id": "ribbed_berry_seed",
+      "produce_item_id": "ribbed_berry",
+      "growth_seconds": 86400,
+      "minimum_duration_seconds": 43200,
+      "time_difficulty": 300,
+      "yield_min": 2,
+      "yield_max": 2,
+      "stamina_cost": 8,
+      "plant_xp": 6,
+      "harvest_xp": 40,
+      "min_level": 16,
+      "accent": "#8d7bd8",
+      "quality": {
+        "thresholds": [
+          70.0,
+          130.0,
+          220.0,
+          320.0
+        ],
+        "width": 50.0,
+        "miracle_probability_cap": 0.003,
+        "miracle_eligible": true
+      }
     }
   ],
   "gathering_sites": [
@@ -2287,6 +2498,13 @@
       "name": "苇风湿地",
       "description": "风掠过芦苇与浅水，韧藤缠在岸边，泥下藏着野藕。",
       "accent": "#8caa7a",
+      "min_level": 12
+    },
+    {
+      "id": "summer_firefly_meadow",
+      "name": "夏夜萤野",
+      "description": "入夏才浮出萤火的野地，草叶间凝着整夜不散的露水。",
+      "accent": "#7f8ee0",
       "min_level": 12
     }
   ],
@@ -2425,6 +2643,59 @@
         },
         {
           "item_id": "amber_cattail",
+          "weight": 5,
+          "quantity_min": 1,
+          "quantity_max": 1
+        }
+      ],
+      "draws": {
+        "base_draws": 6,
+        "ability_bonus": 1.5,
+        "difficulty": 120
+      },
+      "stamina_cost": 0,
+      "collect_xp": 14,
+      "min_level": 12,
+      "quality": {
+        "thresholds": [
+          60,
+          90,
+          125,
+          270
+        ],
+        "width": 22,
+        "miracle_probability_cap": 0.003,
+        "miracle_eligible": true
+      }
+    },
+    {
+      "id": "gather_summer_firefly_meadow",
+      "site_id": "summer_firefly_meadow",
+      "name": "夏夜拾萤",
+      "duration_seconds": 50400,
+      "minimum_duration_seconds": 28800,
+      "time_difficulty": 180,
+      "outputs": [
+        {
+          "item_id": "firefly_grass",
+          "weight": 50,
+          "quantity_min": 1,
+          "quantity_max": 2
+        },
+        {
+          "item_id": "night_bellflower",
+          "weight": 30,
+          "quantity_min": 1,
+          "quantity_max": 1
+        },
+        {
+          "item_id": "summer_dew_nectar",
+          "weight": 15,
+          "quantity_min": 1,
+          "quantity_max": 1
+        },
+        {
+          "item_id": "falling_star_ear",
           "weight": 5,
           "quantity_min": 1,
           "quantity_max": 1
@@ -3799,6 +4070,1029 @@
           "max_depth": 6
         }
       ]
+    },
+    {
+      "id": "summer_tide_festival",
+      "kind": "delve",
+      "name": "夏夜潮祭",
+      "description": "入夜后的潮间带支起一串灯，海风里全是烤物和糖水的味道。夏夜潮祭的台子搭在最里头，想走到那盏最大的灯下面，得先穿过滩涂上的东西。",
+      "accent": "#2fa4b8",
+      "min_level": 15,
+      "entry_fee": 1000,
+      "max_depth": 7,
+      "final_event_id": "firework_finale",
+      "quality": {
+        "thresholds": [
+          50.0,
+          110.0,
+          190.0,
+          300.0
+        ],
+        "width": 22.0,
+        "miracle_probability_cap": 0.004,
+        "miracle_eligible": true
+      },
+      "events": [
+        {
+          "id": "boardwalk_sprint",
+          "name": "湿滑栈道",
+          "description": "栈道的木板刚退过潮，还挂着一层水。摊主的货就堆在对岸，队伍得先过去。",
+          "min_depth": 1,
+          "max_depth": 6,
+          "weight": 3.0,
+          "max_occurrences": 3,
+          "choices": [
+            {
+              "id": "dash_across",
+              "label": "踩着板子冲过去",
+              "description": "靠身法省时间，滑倒就要重走。",
+              "route_stamina": 2,
+              "action_stamina": 2,
+              "check": {
+                "attribute": "agility",
+                "mode": "best",
+                "dice": "normal",
+                "dc": 13
+              },
+              "success": {
+                "text": "队伍顺着板面一路滑到尽头，连摊主落在半路的半筐货也顺手带了回来。",
+                "rewards": [
+                  {
+                    "item_id": "bay_shrimp",
+                    "quantity_min": 2,
+                    "quantity_max": 4
+                  }
+                ],
+                "next_route_discount": 1,
+                "quality_ability_bonus": 10
+              },
+              "critical_success": {
+                "text": "脚底几乎没沾到水。队伍在栈道尽头刹住的时候，海风才刚追上来。",
+                "rewards": [
+                  {
+                    "item_id": "bay_shrimp",
+                    "quantity_min": 3,
+                    "quantity_max": 6
+                  },
+                  {
+                    "item_id": "sea_shell",
+                    "quantity_min": 1,
+                    "quantity_max": 2
+                  }
+                ],
+                "next_route_discount": 2,
+                "quality_ability_bonus": 25
+              },
+              "failure": {
+                "text": "有人踩上一块松动的板子，整队退回来重走了一遍。",
+                "stamina_surcharge": 2
+              },
+              "critical_failure": {
+                "text": "队伍连人带货摔进浅水，湿着鞋子重新上路。",
+                "stamina_surcharge": 4
+              }
+            },
+            {
+              "id": "kick_the_shells_loose",
+              "label": "先把栈道底下的蟹清出来",
+              "description": "空壳堆里窝着蟹，掀干净了再走，路也就稳了。",
+              "route_stamina": 2,
+              "action_stamina": 2,
+              "battle": {
+                "enemy_ids": [
+                  "tide_hermit",
+                  "tide_hermit"
+                ],
+                "can_flee": true,
+                "flee_dc": 12
+              },
+              "success": {
+                "text": "壳被掀下栈道。队伍踩着干净板面过去，顺手把对岸堆着的货也点了数。",
+                "rewards": [
+                  {
+                    "item_id": "bay_shrimp",
+                    "quantity_min": 2,
+                    "quantity_max": 4
+                  },
+                  {
+                    "item_id": "sea_shell",
+                    "quantity_min": 1,
+                    "quantity_max": 2
+                  }
+                ],
+                "quality_ability_bonus": 12
+              }
+            },
+            {
+              "id": "walk_the_rail",
+              "label": "扶着栏杆慢慢挪",
+              "description": "不做检定，多花时间换稳妥。",
+              "route_stamina": 5,
+              "action_stamina": 1,
+              "success": {
+                "text": "队伍扶着栏杆一寸寸挪过去。慢是慢，谁也没湿。"
+              }
+            }
+          ]
+        },
+        {
+          "id": "hermit_crab_pack",
+          "name": "寄居蟹群",
+          "description": "退潮后的沙脊上爬满了背壳的蟹，把唯一一条干路堵得严严实实。",
+          "min_depth": 1,
+          "max_depth": 5,
+          "weight": 3.0,
+          "max_occurrences": 2,
+          "choices": [
+            {
+              "id": "fight",
+              "label": "掀壳清场",
+              "description": "打散它们，窝底下压着的虾也一并收走。",
+              "route_stamina": 2,
+              "action_stamina": 2,
+              "battle": {
+                "enemy_ids": [
+                  "tide_hermit",
+                  "tide_hermit"
+                ],
+                "can_flee": true,
+                "flee_dc": 12
+              },
+              "success": {
+                "text": "壳翻了一地。队伍把还活着的推到一边，收走了底下压着的虾。",
+                "rewards": [
+                  {
+                    "item_id": "bay_shrimp",
+                    "quantity_min": 2,
+                    "quantity_max": 4
+                  },
+                  {
+                    "item_id": "sea_shell",
+                    "quantity_min": 1,
+                    "quantity_max": 2
+                  }
+                ]
+              }
+            },
+            {
+              "id": "sift_around",
+              "label": "沿沙脊小跑过去",
+              "description": "不碰它们，只看脚步稳不稳。",
+              "route_stamina": 3,
+              "action_stamina": 1,
+              "check": {
+                "attribute": "agility",
+                "mode": "best",
+                "dice": "normal",
+                "dc": 12
+              },
+              "success": {
+                "text": "队伍沿着沙脊跑过这一段，蟹钳只夹到空气。",
+                "next_route_discount": 1
+              },
+              "critical_success": {
+                "text": "几乎没留下脚印就过去了，还摸出一条更贴着潮线的近路。",
+                "next_route_discount": 2
+              },
+              "failure": {
+                "text": "撞上蟹群最密的一段，队伍退回沙脊重新找路。",
+                "stamina_surcharge": 3
+              },
+              "critical_failure": {
+                "text": "一脚踩塌寄居蟹堆起来的沙包，队伍连滚带爬退了出去。",
+                "stamina_surcharge": 5
+              }
+            }
+          ]
+        },
+        {
+          "id": "foam_jelly_drift",
+          "name": "浪沫水母",
+          "description": "一团水母被浪推到了灯串底下，触丝横着铺了一地，正挡在必经的路口。",
+          "min_depth": 2,
+          "max_depth": 6,
+          "weight": 2.5,
+          "max_occurrences": 2,
+          "choices": [
+            {
+              "id": "clear_the_drift",
+              "label": "把它们挑出去",
+              "description": "打完再走，摊边晒着的海货就是队伍的。",
+              "route_stamina": 2,
+              "action_stamina": 2,
+              "battle": {
+                "enemy_ids": [
+                  "foam_jelly",
+                  "foam_jelly"
+                ],
+                "can_flee": true,
+                "flee_dc": 14
+              },
+              "success": {
+                "text": "触丝在灯下缩成一团。队伍把摊边晒着的海葡萄也一并收了。",
+                "rewards": [
+                  {
+                    "item_id": "mist_grape",
+                    "quantity_min": 2,
+                    "quantity_max": 4
+                  },
+                  {
+                    "item_id": "sea_shell",
+                    "quantity_min": 1,
+                    "quantity_max": 3
+                  }
+                ],
+                "quality_ability_bonus": 15
+              }
+            },
+            {
+              "id": "wait_for_the_wave",
+              "label": "等下一道浪把它们带走",
+              "description": "退到灯影外头干等，绝对安全。",
+              "route_stamina": 4,
+              "action_stamina": 1,
+              "success": {
+                "text": "队伍退到灯串外面，等浪把那一团重新卷回水里。"
+              }
+            }
+          ]
+        },
+        {
+          "id": "lantern_strings",
+          "name": "灯串高架",
+          "description": "祭典的灯串还差一大截没挂完，架子就搭在路边，摊主喊谁搭把手就给谁分货。",
+          "min_depth": 1,
+          "max_depth": 6,
+          "weight": 2.0,
+          "max_occurrences": 2,
+          "choices": [
+            {
+              "id": "climb_the_frame",
+              "label": "爬到架子上挂灯",
+              "description": "架子湿，位置又不趁手，全靠身上功夫。",
+              "route_stamina": 2,
+              "action_stamina": 2,
+              "check": {
+                "attribute": "agility",
+                "mode": "best",
+                "dice": "normal",
+                "dc": 14
+              },
+              "success": {
+                "text": "灯串一条条挂上去。队伍顺手把架子上晒着的海带也收了下来。",
+                "rewards": [
+                  {
+                    "item_id": "bay_kelp",
+                    "quantity_min": 3,
+                    "quantity_max": 5
+                  }
+                ],
+                "quality_ability_bonus": 15
+              },
+              "critical_success": {
+                "text": "最后一条灯串挂得笔直。架子上的海带整片都被队伍带走了。",
+                "rewards": [
+                  {
+                    "item_id": "bay_kelp",
+                    "quantity_min": 4,
+                    "quantity_max": 7
+                  },
+                  {
+                    "item_id": "bay_moon_scallop",
+                    "quantity_min": 1,
+                    "quantity_max": 2
+                  }
+                ],
+                "quality_ability_bonus": 35
+              },
+              "failure": {
+                "text": "灯串挂歪了，队伍只够把散在地上的海带收拢。",
+                "rewards": [
+                  {
+                    "item_id": "bay_kelp",
+                    "quantity_min": 1,
+                    "quantity_max": 2
+                  }
+                ],
+                "stamina_surcharge": 2
+              },
+              "critical_failure": {
+                "text": "架子晃了一下，半片海带掉进泥里，队伍只好从头收拾。",
+                "rewards": [
+                  {
+                    "item_id": "bay_kelp",
+                    "quantity_min": 1,
+                    "quantity_max": 1
+                  }
+                ],
+                "stamina_surcharge": 4
+              }
+            },
+            {
+              "id": "talk_it_through",
+              "label": "在下面报位置",
+              "description": "自己不上去，靠眼力指挥上面的人。",
+              "route_stamina": 3,
+              "action_stamina": 1,
+              "check": {
+                "attribute": "intelligence",
+                "mode": "best",
+                "dice": "normal",
+                "dc": 13
+              },
+              "success": {
+                "text": "下面报一句，上面挂一条，队伍省下一半来回。",
+                "rewards": [
+                  {
+                    "item_id": "bay_kelp",
+                    "quantity_min": 2,
+                    "quantity_max": 4
+                  }
+                ],
+                "next_route_discount": 1,
+                "quality_ability_bonus": 10
+              },
+              "critical_success": {
+                "text": "位置一次报准，灯串整条挂完还剩一截空架子。",
+                "rewards": [
+                  {
+                    "item_id": "bay_kelp",
+                    "quantity_min": 3,
+                    "quantity_max": 5
+                  }
+                ],
+                "next_route_discount": 2,
+                "quality_ability_bonus": 20
+              },
+              "failure": {
+                "text": "报错两次位置，队伍多爬了两趟。",
+                "stamina_surcharge": 2
+              },
+              "critical_failure": {
+                "text": "位置全报反了，挂好的灯又被拆下来重来。",
+                "stamina_surcharge": 4
+              }
+            }
+          ]
+        },
+        {
+          "id": "sandluck_dig",
+          "name": "潮线沙窝",
+          "description": "退潮后的沙面留着一层浅浅的纹路，老手看得出哪道纹底下压着东西。",
+          "min_depth": 2,
+          "max_depth": 6,
+          "weight": 2.0,
+          "max_occurrences": 2,
+          "choices": [
+            {
+              "id": "sift_the_sand",
+              "label": "按纹路掏沙窝",
+              "description": "掏对了是一窝，掏错了是空手。",
+              "route_stamina": 2,
+              "action_stamina": 2,
+              "check": {
+                "attribute": "luck",
+                "mode": "best",
+                "dice": "normal",
+                "dc": 13
+              },
+              "success": {
+                "text": "队伍顺着沙纹挖开一个窝，里面压着一枚还带着潮气的贝壳。",
+                "rewards": [
+                  {
+                    "item_id": "sea_shell",
+                    "quantity_min": 2,
+                    "quantity_max": 4
+                  }
+                ],
+                "quality_ability_bonus": 20
+              },
+              "critical_success": {
+                "text": "沙纹底下连着三四个窝，队伍一趟掏出了平时好几趟的量。",
+                "rewards": [
+                  {
+                    "item_id": "sea_shell",
+                    "quantity_min": 3,
+                    "quantity_max": 6
+                  },
+                  {
+                    "item_id": "bay_moon_scallop",
+                    "quantity_min": 1,
+                    "quantity_max": 2
+                  }
+                ],
+                "quality_ability_bonus": 40,
+                "fixed_rewards": [
+                  {
+                    "item_id": "ribbed_berry_seed",
+                    "quantity": 1,
+                    "quality": 0
+                  }
+                ]
+              },
+              "failure": {
+                "text": "掏开的是空窝，队伍只捡到几片碎壳。",
+                "rewards": [
+                  {
+                    "item_id": "sea_shell",
+                    "quantity_min": 1,
+                    "quantity_max": 2
+                  }
+                ]
+              },
+              "critical_failure": {
+                "text": "一铲下去涌上来的水把沙窝冲平了。",
+                "stamina_surcharge": 2
+              }
+            },
+            {
+              "id": "let_the_water_sort",
+              "label": "等退潮自己露出来",
+              "description": "不猜纹路，坐等潮水把东西筛出来。",
+              "route_stamina": 4,
+              "action_stamina": 1,
+              "success": {
+                "text": "队伍坐在灯下等到潮线退下去。露出来的东西自己就摆在那儿。",
+                "rewards": [
+                  {
+                    "item_id": "sea_shell",
+                    "quantity_min": 1,
+                    "quantity_max": 3
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "reef_harvest",
+          "name": "礁岸收菜",
+          "description": "礁石上长着一层嫩海带，根扎得死，礁面又滑，怎么下手都能吵起来。",
+          "min_depth": 1,
+          "max_depth": 6,
+          "weight": 2.0,
+          "max_occurrences": 2,
+          "choices": [
+            {
+              "id": "pry_it_loose",
+              "label": "连根撬下来",
+              "description": "用蛮力一次清一片，撬棍滑手就白干。",
+              "route_stamina": 2,
+              "action_stamina": 2,
+              "check": {
+                "attribute": "strength",
+                "mode": "best",
+                "dice": "normal",
+                "dc": 13
+              },
+              "success": {
+                "text": "海带连根被撬下来，礁缝里的虾也一起进了筐。",
+                "rewards": [
+                  {
+                    "item_id": "bay_kelp",
+                    "quantity_min": 3,
+                    "quantity_max": 5
+                  },
+                  {
+                    "item_id": "bay_shrimp",
+                    "quantity_min": 1,
+                    "quantity_max": 2
+                  }
+                ],
+                "quality_ability_bonus": 12
+              },
+              "critical_success": {
+                "text": "整片礁岸一口气清完，筐里的海带码得整整齐齐。",
+                "rewards": [
+                  {
+                    "item_id": "bay_kelp",
+                    "quantity_min": 5,
+                    "quantity_max": 8
+                  },
+                  {
+                    "item_id": "bay_shrimp",
+                    "quantity_min": 2,
+                    "quantity_max": 3
+                  }
+                ],
+                "quality_ability_bonus": 28
+              },
+              "failure": {
+                "text": "根扎得太死，队伍只撕下几片边角。",
+                "rewards": [
+                  {
+                    "item_id": "bay_kelp",
+                    "quantity_min": 1,
+                    "quantity_max": 3
+                  }
+                ],
+                "stamina_surcharge": 2
+              },
+              "critical_failure": {
+                "text": "撬棍一滑，队伍摔进礁石缝里，湿了整整半身。",
+                "rewards": [
+                  {
+                    "item_id": "bay_kelp",
+                    "quantity_min": 1,
+                    "quantity_max": 1
+                  }
+                ],
+                "stamina_surcharge": 4
+              }
+            },
+            {
+              "id": "clear_the_crevice",
+              "label": "先把礁缝里的东西赶出来",
+              "description": "缝里窝着的水母一个劲往外探触丝，清干净才好下手割菜。",
+              "route_stamina": 2,
+              "action_stamina": 2,
+              "battle": {
+                "enemy_ids": [
+                  "foam_jelly",
+                  "foam_jelly"
+                ],
+                "can_flee": true,
+                "flee_dc": 13
+              },
+              "success": {
+                "text": "触丝缩回缝里再没伸出来。这一片礁岸的海带全归了队伍。",
+                "rewards": [
+                  {
+                    "item_id": "bay_kelp",
+                    "quantity_min": 3,
+                    "quantity_max": 5
+                  },
+                  {
+                    "item_id": "bay_moon_scallop",
+                    "quantity_min": 1,
+                    "quantity_max": 2
+                  }
+                ],
+                "quality_ability_bonus": 18
+              }
+            },
+            {
+              "id": "step_lightly",
+              "label": "踩着湿礁挑拣",
+              "description": "少拿一点，但每一步都踩在最稳的地方。",
+              "route_stamina": 3,
+              "action_stamina": 1,
+              "check": {
+                "attribute": "agility",
+                "mode": "best",
+                "dice": "normal",
+                "dc": 13
+              },
+              "success": {
+                "text": "队伍在湿礁上挑着走，只割最嫩的那一段。",
+                "rewards": [
+                  {
+                    "item_id": "bay_kelp",
+                    "quantity_min": 2,
+                    "quantity_max": 4
+                  }
+                ],
+                "next_route_discount": 1,
+                "quality_ability_bonus": 16
+              },
+              "critical_success": {
+                "text": "脚步落在最稳的礁面上，队伍割得又快又准。",
+                "rewards": [
+                  {
+                    "item_id": "bay_kelp",
+                    "quantity_min": 3,
+                    "quantity_max": 6
+                  }
+                ],
+                "next_route_discount": 2,
+                "quality_ability_bonus": 30
+              },
+              "failure": {
+                "text": "湿礁太滑，队伍放慢了速度。",
+                "stamina_surcharge": 2
+              },
+              "critical_failure": {
+                "text": "有人滑进礁缝，队伍花了很久才把他拉上来。",
+                "stamina_surcharge": 5
+              }
+            }
+          ]
+        },
+        {
+          "id": "firework_sprite_nest",
+          "name": "烟花筒里的东西",
+          "description": "码在祭台边的一排烟花筒里传出细碎的响动，火星正从筒口往外冒。",
+          "min_depth": 3,
+          "max_depth": 6,
+          "weight": 2.0,
+          "max_occurrences": 1,
+          "choices": [
+            {
+              "id": "stamp_it_out",
+              "label": "掀开筒子把它们赶出去",
+              "description": "先打散，再收筒底没受潮的那点货。",
+              "route_stamina": 2,
+              "action_stamina": 2,
+              "battle": {
+                "enemy_ids": [
+                  "firework_sprite",
+                  "firework_sprite"
+                ],
+                "can_flee": true,
+                "flee_dc": 13
+              },
+              "success": {
+                "text": "最后一点火星落进水里。队伍把筒底没受潮的那点货也带走了。",
+                "rewards": [
+                  {
+                    "item_id": "mist_grape",
+                    "quantity_min": 2,
+                    "quantity_max": 4
+                  },
+                  {
+                    "item_id": "autumn_herb",
+                    "quantity_min": 1,
+                    "quantity_max": 3
+                  }
+                ],
+                "quality_ability_bonus": 15
+              }
+            },
+            {
+              "id": "let_them_burn",
+              "label": "等它们自己烧完",
+              "description": "退到安全距离看完整筒，不碰运气。",
+              "route_stamina": 5,
+              "action_stamina": 1,
+              "success": {
+                "text": "队伍远远看着那几只小东西炸完最后一筒，才绕过去。"
+              }
+            }
+          ]
+        },
+        {
+          "id": "night_market_stall",
+          "name": "夜市旧货摊",
+          "description": "摊子最里头堆着一堆泡过水的旧货，摊主自己也说不清里头有什么。",
+          "min_depth": 1,
+          "max_depth": 6,
+          "weight": 1.5,
+          "max_occurrences": 1,
+          "choices": [
+            {
+              "id": "haggle_for_the_pile",
+              "label": "磨那一堆旧货",
+              "description": "全看嘴皮子和运气，磨出来的是什么都不好说。",
+              "route_stamina": 2,
+              "action_stamina": 2,
+              "check": {
+                "attribute": "luck",
+                "mode": "best",
+                "dice": "normal",
+                "dc": 14
+              },
+              "success": {
+                "text": "摊主被磨得没脾气，从底下抽出一把还算锋利的短剑塞给队伍，又搭了两串海葡萄。",
+                "rewards": [
+                  {
+                    "item_id": "mist_grape",
+                    "quantity_min": 1,
+                    "quantity_max": 3
+                  }
+                ],
+                "fixed_rewards": []
+              },
+              "critical_success": {
+                "text": "摊主索性把整堆旧货推过来。除了那把短剑，底下还压着一本记满了字的札记。",
+                "rewards": [
+                  {
+                    "item_id": "mist_grape",
+                    "quantity_min": 2,
+                    "quantity_max": 4
+                  }
+                ],
+                "fixed_rewards": [
+                  {
+                    "item_id": "bay_tide_blade",
+                    "quantity": 1,
+                    "quality": 0
+                  },
+                  {
+                    "item_id": "partner_notes_small",
+                    "quantity": 1,
+                    "quality": 0
+                  },
+                  {
+                    "item_id": "ribbed_berry_seed",
+                    "quantity": 2,
+                    "quality": 0
+                  }
+                ],
+                "quality_ability_bonus": 20
+              },
+              "failure": {
+                "text": "摊主只肯让出几串吃的。",
+                "rewards": [
+                  {
+                    "item_id": "mist_grape",
+                    "quantity_min": 1,
+                    "quantity_max": 2
+                  }
+                ]
+              },
+              "critical_failure": {
+                "text": "摊主把队伍当成来挑事的，队伍只好先走。",
+                "stamina_surcharge": 2
+              }
+            },
+            {
+              "id": "walk_past",
+              "label": "接着往前逛",
+              "description": "不停脚，夜市的热闹留在身后。",
+              "route_stamina": 3,
+              "action_stamina": 1,
+              "success": {
+                "text": "队伍没停下，灯和吆喝都被落在身后。"
+              }
+            }
+          ]
+        },
+        {
+          "id": "lantern_ghost_shrine",
+          "name": "守灯的灯鬼",
+          "description": "祭台前的灯串上挂着一盏明显比别的大一圈的纸灯，队伍走近的时候，它转了过来。",
+          "min_depth": 4,
+          "max_depth": 6,
+          "weight": 2.0,
+          "max_occurrences": 1,
+          "choices": [
+            {
+              "id": "push_through",
+              "label": "把它打下来",
+              "description": "纸灯里头藏着的东西，落地才知道是什么。",
+              "route_stamina": 2,
+              "action_stamina": 2,
+              "battle": {
+                "enemy_ids": [
+                  "lantern_ghost"
+                ],
+                "can_flee": true,
+                "flee_dc": 14
+              },
+              "success": {
+                "text": "纸灯落在地上烧成一小堆灰，挂在里面的东西掉了出来。",
+                "rewards": [
+                  {
+                    "item_id": "sea_shell",
+                    "quantity_min": 2,
+                    "quantity_max": 4
+                  },
+                  {
+                    "item_id": "bay_kelp",
+                    "quantity_min": 2,
+                    "quantity_max": 4
+                  }
+                ],
+                "quality_ability_bonus": 20
+              }
+            },
+            {
+              "id": "slip_past_the_light",
+              "label": "贴着灯影外侧溜过去",
+              "description": "灯光够不到的那条线很窄，脚步必须准。",
+              "route_stamina": 3,
+              "action_stamina": 1,
+              "check": {
+                "attribute": "agility",
+                "mode": "best",
+                "dice": "normal",
+                "dc": 15
+              },
+              "success": {
+                "text": "队伍从灯影够不到的那条线外走完了这一段。",
+                "next_route_discount": 2
+              },
+              "critical_success": {
+                "text": "几乎是从灯鬼眼皮底下溜过去的，顺手把地上的东西也捡了。",
+                "rewards": [
+                  {
+                    "item_id": "sea_shell",
+                    "quantity_min": 1,
+                    "quantity_max": 3
+                  }
+                ],
+                "next_route_discount": 2,
+                "quality_ability_bonus": 15,
+                "fixed_rewards": [
+                  {
+                    "item_id": "swiftfoot_anklet",
+                    "quantity": 1,
+                    "quality": 0
+                  }
+                ]
+              },
+              "failure": {
+                "text": "灯骨横扫过来，队伍退回灯影外面。",
+                "stamina_surcharge": 4
+              },
+              "critical_failure": {
+                "text": "灯串被撞断一整条，队伍在黑暗里摸索了很久。",
+                "stamina_surcharge": 6
+              }
+            }
+          ]
+        },
+        {
+          "id": "tide_pool_survey",
+          "name": "潮池点货",
+          "description": "礁石围出的一串小池子，退潮后各自留了点东西，深浅不一。",
+          "min_depth": 3,
+          "max_depth": 6,
+          "weight": 1.5,
+          "max_occurrences": 1,
+          "choices": [
+            {
+              "id": "fish_out_the_lurkers",
+              "label": "把池底的活物先捞出去",
+              "description": "池子里有东西在动，不清走没法挨个点货。",
+              "route_stamina": 2,
+              "action_stamina": 2,
+              "battle": {
+                "enemy_ids": [
+                  "foam_jelly",
+                  "tide_hermit"
+                ],
+                "can_flee": true,
+                "flee_dc": 14
+              },
+              "success": {
+                "text": "池底的活物被清了出去。剩下的东西按种类分好，最深那个池底卧着一枚珍珠。",
+                "rewards": [
+                  {
+                    "item_id": "sea_shell",
+                    "quantity_min": 3,
+                    "quantity_max": 5
+                  },
+                  {
+                    "item_id": "sea_pearl",
+                    "quantity_min": 1,
+                    "quantity_max": 1
+                  }
+                ],
+                "quality_ability_bonus": 22
+              }
+            },
+            {
+              "id": "count_the_pools",
+              "label": "一个个池子点过去",
+              "description": "认得出池底是什么，才敢往深处伸手。",
+              "route_stamina": 2,
+              "action_stamina": 2,
+              "check": {
+                "attribute": "intelligence",
+                "mode": "best",
+                "dice": "normal",
+                "dc": 15
+              },
+              "success": {
+                "text": "队伍把潮池里的东西按种类分好。最深那个池底压着一枚珍珠。",
+                "rewards": [
+                  {
+                    "item_id": "sea_shell",
+                    "quantity_min": 3,
+                    "quantity_max": 5
+                  },
+                  {
+                    "item_id": "sea_pearl",
+                    "quantity_min": 1,
+                    "quantity_max": 2
+                  }
+                ],
+                "quality_ability_bonus": 25,
+                "fixed_rewards": [
+                  {
+                    "item_id": "ribbed_berry_seed",
+                    "quantity": 1,
+                    "quality": 0
+                  }
+                ]
+              },
+              "critical_success": {
+                "text": "最深处的池子里困着一条没跟潮水走的蓝鳍金枪鱼，队伍一点没伤着它。",
+                "rewards": [
+                  {
+                    "item_id": "sea_shell",
+                    "quantity_min": 4,
+                    "quantity_max": 7
+                  },
+                  {
+                    "item_id": "sea_pearl",
+                    "quantity_min": 2,
+                    "quantity_max": 3
+                  },
+                  {
+                    "item_id": "sail_bluefin",
+                    "quantity_min": 1,
+                    "quantity_max": 1
+                  }
+                ],
+                "quality_ability_bonus": 45,
+                "fixed_rewards": [
+                  {
+                    "item_id": "ribbed_berry_seed",
+                    "quantity": 1,
+                    "quality": 0
+                  }
+                ]
+              },
+              "failure": {
+                "text": "数到一半浪水又漫上来，队伍只捞到最浅那几个池子里的东西。",
+                "rewards": [
+                  {
+                    "item_id": "sea_shell",
+                    "quantity_min": 1,
+                    "quantity_max": 3
+                  }
+                ]
+              },
+              "critical_failure": {
+                "text": "一脚踏进最深的池子，队伍湿着裤子退了出来。",
+                "stamina_surcharge": 3
+              }
+            },
+            {
+              "id": "grab_what_you_see",
+              "label": "看见什么捞什么",
+              "description": "不细挑，把能抓到的都抓一把。",
+              "route_stamina": 2,
+              "action_stamina": 2,
+              "success": {
+                "text": "队伍不细看，把够得着的都捞了一把。",
+                "rewards": [
+                  {
+                    "item_id": "sea_shell",
+                    "quantity_min": 2,
+                    "quantity_max": 4
+                  },
+                  {
+                    "item_id": "bay_shrimp",
+                    "quantity_min": 1,
+                    "quantity_max": 3
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "firework_finale",
+          "name": "夏夜烟花",
+          "description": "祭台最里头那盏最大的灯底下，湿透的祭衣从灯芯里站了起来。今年这一场还没放完。",
+          "min_depth": 7,
+          "max_depth": 7,
+          "weight": 1.0,
+          "max_occurrences": 1,
+          "choices": [
+            {
+              "id": "face_the_warden",
+              "label": "把灯芯里的东西请下来",
+              "description": "打赢它，这一晚的收成才算落袋。",
+              "route_stamina": 2,
+              "action_stamina": 3,
+              "battle": {
+                "enemy_ids": [
+                  "midsummer_warden"
+                ],
+                "can_flee": false,
+                "flee_dc": 20
+              },
+              "success": {
+                "text": "祭主身上的湿祭衣散成一片潮雾。灯芯烧到最后一寸，整片滩涂的灯同时亮了起来，队伍在最大的那盏灯下面把这一趟的收成摊开。",
+                "rewards": [
+                  {
+                    "item_id": "sea_pearl",
+                    "quantity_min": 3,
+                    "quantity_max": 5
+                  },
+                  {
+                    "item_id": "sail_bluefin",
+                    "quantity_min": 3,
+                    "quantity_max": 5
+                  }
+                ],
+                "fixed_rewards": [
+                  {
+                    "item_id": "partner_notes_medium",
+                    "quantity": 1,
+                    "quality": 0
+                  }
+                ],
+                "quality_ability_bonus": 40
+              }
+            }
+          ]
+        }
+      ]
     }
   ],
   "delve_enemies": [
@@ -3984,6 +5278,97 @@
           "to_hit": 5,
           "damage_dice": "1d8",
           "damage_bonus": 1
+        }
+      ]
+    },
+    {
+      "id": "tide_hermit",
+      "name": "潮渍寄居蟹",
+      "icon": "shell",
+      "description": "背着旧螺壳在潮间带横行的蟹。壳比甲硬，钳子比壳更快。",
+      "max_hp": 26,
+      "armor_class": 12,
+      "initiative_bonus": 3,
+      "attacks": [
+        {
+          "name": "钳击",
+          "to_hit": 4,
+          "damage_dice": "1d6",
+          "damage_bonus": 1
+        }
+      ]
+    },
+    {
+      "id": "foam_jelly",
+      "name": "浪沫水母",
+      "icon": "droplets",
+      "description": "被浪推上岸的透明水母，触丝还在往下滴发亮的黏液。",
+      "max_hp": 20,
+      "armor_class": 14,
+      "initiative_bonus": 5,
+      "attacks": [
+        {
+          "name": "触丝蜇刺",
+          "to_hit": 5,
+          "damage_dice": "1d4",
+          "damage_bonus": 2
+        }
+      ]
+    },
+    {
+      "id": "firework_sprite",
+      "name": "烟花小妖",
+      "icon": "ticket",
+      "description": "钻在没点着的烟花筒里的小东西，一激动就炸出一串火星。",
+      "max_hp": 32,
+      "armor_class": 13,
+      "initiative_bonus": 6,
+      "attacks": [
+        {
+          "name": "爆响火花",
+          "to_hit": 5,
+          "damage_dice": "1d8"
+        }
+      ]
+    },
+    {
+      "id": "lantern_ghost",
+      "name": "夜市灯鬼",
+      "icon": "lamp-desk",
+      "description": "祭台前那盏最大的纸灯成了精。灯骨抽长了半人高，一晃整串灯都跟着响。",
+      "max_hp": 70,
+      "armor_class": 14,
+      "initiative_bonus": 2,
+      "attacks": [
+        {
+          "name": "灯骨横扫",
+          "to_hit": 5,
+          "damage_dice": "1d10"
+        }
+      ]
+    },
+    {
+      "id": "midsummer_warden",
+      "name": "夏潮祭主",
+      "icon": "crown",
+      "description": "祭台最里头那盏大灯烧得太久了。灯芯里长出来的东西披着一身湿透的祭衣，把整片潮声都收在身后。",
+      "max_hp": 110,
+      "armor_class": 14,
+      "initiative_bonus": 4,
+      "attacks_per_turn": 2,
+      "boss": true,
+      "attacks": [
+        {
+          "name": "潮涌横扫",
+          "to_hit": 5,
+          "damage_dice": "1d8",
+          "damage_bonus": 1
+        },
+        {
+          "name": "烟花爆散",
+          "to_hit": 5,
+          "damage_dice": "1d6",
+          "damage_bonus": 2
         }
       ]
     }
@@ -5142,6 +6527,92 @@
           "level": 17
         }
       }
+    },
+    {
+      "id": "make_heartscale_pendant",
+      "station_id": "town_workbench",
+      "name": "镶嵌心鳞坠饰",
+      "inputs": [
+        {
+          "item_id": "heart_scale",
+          "quantity": 2
+        },
+        {
+          "item_id": "flax_thread",
+          "quantity": 2
+        }
+      ],
+      "produce_item_id": "heartscale_pendant",
+      "produce_quantity": 1,
+      "duration_seconds": 600,
+      "time_difficulty": 200,
+      "stamina_cost": 5,
+      "collect_xp": 30,
+      "tags": [
+        "exploration_equipment"
+      ],
+      "quality": {
+        "thresholds": [
+          65.0,
+          120.0,
+          190.0,
+          280.0
+        ],
+        "width": 20.0,
+        "miracle_probability_cap": 0.003,
+        "miracle_eligible": false
+      },
+      "unlock_condition": {
+        "hook": "player_level",
+        "params": {
+          "level": 15
+        }
+      }
+    },
+    {
+      "id": "brew_night_bell_drink",
+      "station_id": "town_workbench",
+      "name": "调制夜铃蜜饮",
+      "inputs": [
+        {
+          "item_id": "night_bellflower",
+          "quantity": 2
+        },
+        {
+          "item_id": "summer_dew_nectar",
+          "quantity": 1
+        },
+        {
+          "item_id": "firefly_grass",
+          "quantity": 3
+        }
+      ],
+      "produce_item_id": "night_bell_brew",
+      "produce_quantity": 1,
+      "duration_seconds": 300,
+      "time_difficulty": 155,
+      "stamina_cost": 3,
+      "collect_xp": 16,
+      "quality": {
+        "thresholds": [
+          70.0,
+          130.0,
+          200.0,
+          300.0
+        ],
+        "width": 20.0,
+        "miracle_probability_cap": 0.003,
+        "miracle_eligible": false
+      },
+      "unlock_condition": {
+        "hook": "player_level",
+        "params": {
+          "level": 12
+        }
+      },
+      "tags": [
+        "food"
+      ]
     }
   ],
   "mining_sites": [
@@ -5729,7 +7200,21 @@
       "jade_duck_egg",
       "wool",
       "cloud_fleece",
-      "miracle_crystal"
+      "miracle_crystal",
+      "heartscale_fish",
+      "lantern_fish",
+      "giant_heartscale_fish",
+      "heart_scale",
+      "star_sand",
+      "summer_kelp",
+      "heartscale_pendant",
+      "firefly_grass",
+      "night_bellflower",
+      "summer_dew_nectar",
+      "falling_star_ear",
+      "night_bell_brew",
+      "ribbed_berry",
+      "ribbed_berry_seed"
     ],
     "tiers": [
       {
@@ -7072,6 +8557,95 @@
           85.0,
           150.0,
           250.0
+        ],
+        "width": 20.0,
+        "miracle_probability_cap": 0.003,
+        "miracle_eligible": true
+      }
+    },
+    {
+      "id": "summer_lantern_bay",
+      "name": "夏夜灯湾",
+      "description": "灯火漂在湾面，水下有零星的心形磷光在追。",
+      "accent": "#d4537e",
+      "min_level": 12,
+      "stamina_cost": 4,
+      "cast_xp": 28,
+      "time_difficulty": 170,
+      "draws": {
+        "base_draws": 7,
+        "ability_bonus": 1.0,
+        "difficulty": 170
+      },
+      "outputs": [
+        {
+          "item_id": "heartscale_fish",
+          "weight": 24,
+          "quantity_min": 1,
+          "quantity_max": 1,
+          "codex": true,
+          "size_min": 12.0,
+          "size_max": 28.0
+        },
+        {
+          "item_id": "lantern_fish",
+          "weight": 20,
+          "quantity_min": 1,
+          "quantity_max": 1,
+          "codex": true,
+          "size_min": 16.0,
+          "size_max": 36.0
+        },
+        {
+          "item_id": "star_sand",
+          "weight": 14,
+          "quantity_min": 1,
+          "quantity_max": 2
+        },
+        {
+          "item_id": "summer_kelp",
+          "weight": 14,
+          "quantity_min": 1,
+          "quantity_max": 2
+        },
+        {
+          "item_id": "fish_fry",
+          "weight": 12,
+          "quantity_min": 1,
+          "quantity_max": 1
+        },
+        {
+          "item_id": "river_weed",
+          "weight": 12,
+          "quantity_min": 1,
+          "quantity_max": 2
+        },
+        {
+          "item_id": "heart_scale",
+          "weight": 4.5,
+          "quantity_min": 1,
+          "quantity_max": 1,
+          "rare": true
+        }
+      ],
+      "big_catch": {
+        "item_id": "giant_heartscale_fish",
+        "fallback_item_id": "heartscale_fish",
+        "weight": 0.5,
+        "stamina_cost": 3,
+        "base_chance": 0.35,
+        "ability_bonus": 0.45,
+        "difficulty": 200,
+        "min_quality": 3,
+        "size_min": 55.0,
+        "size_max": 105.0
+      },
+      "quality": {
+        "thresholds": [
+          50.0,
+          95.0,
+          165.0,
+          275.0
         ],
         "width": 20.0,
         "miracle_probability_cap": 0.003,

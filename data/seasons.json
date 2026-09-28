@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "note": "活动档期配置。由 patches/ 下的档期补丁（local_seasons / local_gathering_season / local_fishing_bonuses）读取，每次现读、改完立刻生效（时间用后端时钟）。窗口之外：活动路线、钓点、采集点从列表消失，直接调接口也会被拒。当前窗口设在 2099 年——活动内容已入库、剧情尚未开放；开服时把两个日期改成真实档期即可。",
+  "seasons": [
+    {
+      "expedition_id": "summer_tide_festival",
+      "name": "夏活·夏夜潮祭",
+      "starts_at": "2099-01-01T00:00:00+08:00",
+      "ends_at": "2099-12-31T23:59:59+08:00",
+      "note": "开放窗口未定：日期先设在 2099 年，剧情上线时改成真实档期。窗口之外整条路线从探索列表消失，已经出发的队伍可以照常走完并结算。",
+      "leader_bonus": {
+        "partner_id": "guqi_sp",
+        "reward_multiplier": 1.2,
+        "label": "盛夏领航",
+        "note": "顾祇SP 担任领队时，本次探索最终带回的战利品总量提升至 120%（按物品数量总量四舍五入再分摊，装备类固定掉落不参与）。"
+      },
+      "leader_note": "夏典期间探索夏夜潮祭，且由顾祇SP担任领队时，探索收益为120%",
+      "companion_bonus": {
+        "partner_id": "ai_xinyu",
+        "reward_multiplier": 1.2,
+        "label": "鳞光聚鱼",
+        "note": "艾欣愉陪钓夏夜灯湾时，单竿钓获总量提升至 120%（按物品数量总量四舍五入再分摊，装备类固定掉落不参与）。"
+      },
+      "fishing_spot_ids": [
+        "summer_lantern_bay"
+      ],
+      "fishing_spot_badge": "夏日限定",
+      "fishing_spot_note": "夏典期间在夏夜灯湾钓鱼，且由艾欣愉陪钓时，陪钓收益为120%",
+      "gathering_site_ids": [
+        "summer_firefly_meadow"
+      ],
+      "gathering_site_badge": "夏日限定",
+      "gathering_site_note": "夏典期间探索夏夜萤野，且由绯恩SP派驻采集时，采集收益为120%",
+      "gathering_bonus": {
+        "partner_id": "fein_sp",
+        "reward_multiplier": 1.2,
+        "label": "盛夏采撷",
+        "note": "绯恩SP 驻场采集夏夜萤野时，本次采集收获总量提升至 120%（按物品数量总量四舍五入再分摊）。"
+      }
+    }
+  ]
+}

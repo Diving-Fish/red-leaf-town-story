@@ -4718,6 +4718,185 @@
           ]
         }
       ]
+    },
+    {
+      "id": "guqi_sp",
+      "name": "顾祇SP",
+      "rarity": 5,
+      "standard_recruitable": false,
+      "description": "",
+      "growth_curve": "linear",
+      "exploration_stats": {
+        "strength": 8,
+        "agility": 16,
+        "intelligence": 10,
+        "luck": 14
+      },
+      "tendencies": [
+        {
+          "industry": "exploration",
+          "level_1": 37,
+          "level_60": 240
+        }
+      ],
+      "trait_codes": [
+        "stage_presence"
+      ],
+      "artworks": [
+        {
+          "breakthrough": 0,
+          "asset_key": "red-leaf-town/partners/guqi_sp/breakthrough-0-a02554c8fe57865e.webp",
+          "width": 936,
+          "height": 1664,
+          "content_type": "image/webp"
+        },
+        {
+          "breakthrough": 1,
+          "asset_key": "red-leaf-town/partners/guqi_sp/breakthrough-1-11aceb46a3b84700.webp",
+          "width": 747,
+          "height": 1328,
+          "content_type": "image/webp"
+        },
+        {
+          "breakthrough": 2,
+          "asset_key": "red-leaf-town/partners/guqi_sp/breakthrough-2-098b4100afbd4301.webp",
+          "width": 936,
+          "height": 1664,
+          "content_type": "image/webp"
+        }
+      ],
+      "avatar_crops": [
+        {
+          "x": 215,
+          "y": 280,
+          "w": 300,
+          "h": 300,
+          "breakthrough": 0
+        },
+        {
+          "x": 145,
+          "y": 265,
+          "w": 300,
+          "h": 300,
+          "breakthrough": 1
+        },
+        {
+          "x": 295,
+          "y": 120,
+          "w": 300,
+          "h": 300,
+          "breakthrough": 2
+        }
+      ],
+      "ascensions": [
+        {
+          "breakthrough": 1,
+          "min_player_level": 15,
+          "coins": 8000,
+          "items": [
+            {
+              "item_id": "miracle_crystal",
+              "quantity": 18,
+              "min_quality": 0
+            },
+            {
+              "item_id": "sea_shell",
+              "quantity": 12,
+              "min_quality": 3
+            },
+            {
+              "item_id": "heart_scale",
+              "quantity": 2,
+              "min_quality": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fein_sp",
+      "name": "绯恩SP",
+      "rarity": 5,
+      "standard_recruitable": false,
+      "description": "",
+      "growth_curve": "linear",
+      "exploration_stats": {
+        "strength": 12,
+        "agility": 12,
+        "intelligence": 13,
+        "luck": 11
+      },
+      "tendencies": [
+        {
+          "industry": "gathering",
+          "level_1": 37,
+          "level_60": 235
+        },
+        {
+          "industry": "aquatic",
+          "level_1": 32,
+          "level_60": 205
+        }
+      ],
+      "trait_codes": [
+        "summer_mood"
+      ],
+      "artworks": [
+        {
+          "breakthrough": 0,
+          "asset_key": "red-leaf-town/partners/fein_sp/breakthrough-0-d944c6a476468e7d.webp",
+          "width": 936,
+          "height": 1664,
+          "content_type": "image/webp"
+        }
+      ],
+      "avatar_crops": [
+        {
+          "x": 332,
+          "y": 80,
+          "w": 300,
+          "h": 300,
+          "breakthrough": 0
+        },
+        {
+          "breakthrough": 1,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        },
+        {
+          "breakthrough": 2,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        }
+      ],
+      "ascensions": [
+        {
+          "breakthrough": 1,
+          "min_player_level": 15,
+          "coins": 8000,
+          "items": [
+            {
+              "item_id": "miracle_crystal",
+              "quantity": 18,
+              "min_quality": 0
+            },
+            {
+              "item_id": "night_bellflower",
+              "quantity": 10,
+              "min_quality": 3
+            },
+            {
+              "item_id": "lantern_fish",
+              "quantity": 3,
+              "min_quality": 0
+            }
+          ]
+        }
+      ]
     }
   ]
 }

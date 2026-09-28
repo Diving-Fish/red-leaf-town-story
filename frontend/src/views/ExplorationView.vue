@@ -17,6 +17,7 @@ import StateBlock from '@/components/StateBlock.vue'
 import ViewHeader from '@/components/ViewHeader.vue'
 import { useGameStore } from '@/stores/game'
 import { useUiStore } from '@/stores/ui'
+import { itemKindName } from '@/lib/items'
 import type {
   DelveBattleActionResult,
   DelveBattleLog,
@@ -26,6 +27,7 @@ import type {
   ExplorationKind,
   ExplorationResolutionResult,
   InventoryItem,
+  ItemDefinition,
 } from '@/types'
 
 const game = useGameStore()
@@ -133,6 +135,14 @@ function gearSummary(item: InventoryItem | null) {
   if (gear.initiative_bonus) parts.push(`先攻 +${gear.initiative_bonus}`)
   if (gear.advantage_uses) parts.push(`每场 ${gear.advantage_uses} 次优势骰`)
   return parts.join(' · ')
+}
+
+/** 「冻结的战利品」里固定奖励那一路不全是装备：种子、同行札记也从这里出，标签按物品类型给。 */
+function fixedRewardLabel(item: ItemDefinition | null) {
+  if (!item) return '战利品'
+  if (item.id.startsWith('partner_notes')) return '札记'
+  if (item.kind === 'equipment') return '装备'
+  return itemKindName(item.kind)
 }
 
 function carryCount(key: string) {
@@ -599,6 +609,7 @@ function dieLabel(result: ExplorationResolutionResult, index: number) {
             领队必须具有探索倾向；其他位置可以安排任意伙伴。探索伙伴作为队员时提供 25% 探索能力。
             <template v-if="isDelve">探秘必须三人满编，出发后队伍会带着冻结的装备和道具进入副本。</template>
           </p>
+          <p v-if="expedition.leader_note" class="leader-note">{{ expedition.leader_note }}</p>
           <div class="party-selects">
             <section class="party-slot">
               <span class="ui-label">领队 · 必须具备探索倾向</span>
@@ -1014,7 +1025,7 @@ function dieLabel(result: ExplorationResolutionResult, index: number) {
             <i><GameIcon :name="gear.item?.icon || 'shield'" :size="17" /></i>
             <span>
               <strong>{{ gear.item?.name || gear.item_id }}</strong>
-              <small>装备</small>
+              <small>{{ fixedRewardLabel(gear.item) }}</small>
             </span>
             <b>×{{ gear.quantity }}</b>
           </span>
@@ -1077,6 +1088,15 @@ function dieLabel(result: ExplorationResolutionResult, index: number) {
 .exploration-view { --expedition-accent: #b85f3f; }
 .expedition-card, .event-card, .haul-card, .event-log { padding: 20px; }
 .expedition-card { border-top: 3px solid var(--expedition-accent); }
+/* 活动路线的领队加成提示：文案由后端 leader_note 提供，只在有内容时显示 */
+.leader-note {
+  margin: -4px 0 14px;
+  padding: 0;
+  color: #8ab4f8;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
 .expedition-heading { display: flex; gap: 15px; align-items: flex-start; }
 .expedition-heading .ui-section-title, .event-card .ui-section-title { margin: 3px 0 6px; }
 .expedition-icon { width: 52px; height: 52px; display: grid; flex: 0 0 auto; place-items: center; color: #efd1b7; border-radius: 15px 5px; background: color-mix(in srgb, var(--expedition-accent) 34%, transparent); }
