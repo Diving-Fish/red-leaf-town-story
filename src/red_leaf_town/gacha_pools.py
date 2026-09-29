@@ -31,6 +31,9 @@ class GachaDefinition(BaseModel):
     background_asset_id: str = ""
     featured_partner_id: str | None = None
     featured_rate: float = Field(default=0, ge=0, le=1)
+    # 四星 UP：抽中四星时按这个比例给 UP 角色，没有大保底。
+    featured_four_star_partner_id: str | None = None
+    featured_four_star_rate: float = Field(default=0, ge=0, le=1)
     # 限定池的伙伴名单。留空表示不限定，用全部伙伴。
     partner_ids: list[str] = Field(default_factory=list)
 
@@ -46,10 +49,20 @@ class GachaDefinition(BaseModel):
             raise ValueError(f"gacha pool {self.pool_id}: item_probability is positive but item_drops is empty")
         if bool(self.featured_partner_id) != (self.featured_rate > 0):
             raise ValueError(f"gacha pool {self.pool_id}: featured_partner_id and featured_rate must be set together")
+        if bool(self.featured_four_star_partner_id) != (self.featured_four_star_rate > 0):
+            raise ValueError(
+                f"gacha pool {self.pool_id}: featured_four_star_partner_id and featured_four_star_rate must be set together"
+            )
         if len(self.partner_ids) != len(set(self.partner_ids)):
             raise ValueError(f"gacha pool {self.pool_id}: partner_ids must be unique")
         if self.partner_ids and self.featured_partner_id and self.featured_partner_id not in self.partner_ids:
             raise ValueError(f"gacha pool {self.pool_id}: featured_partner_id must be part of partner_ids")
+        if (
+            self.partner_ids
+            and self.featured_four_star_partner_id
+            and self.featured_four_star_partner_id not in self.partner_ids
+        ):
+            raise ValueError(f"gacha pool {self.pool_id}: featured_four_star_partner_id must be part of partner_ids")
         return self
 
 

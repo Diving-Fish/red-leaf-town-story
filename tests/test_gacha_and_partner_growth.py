@@ -741,3 +741,62 @@ def test_bai_tiantian_up_guarantee_and_independent_progress(growth_game, monkeyp
     assert second["result"]["results"][0]["content_id"] == "bai_tiantian"
     pools = {pool["pool_id"]: pool for pool in second["state"]["gacha_pools"]}
     assert pools["bai-tiantian-up-1"]["featured_guaranteed"] is False
+
+
+def test_four_star_up_takes_its_share_of_four_star_draws_without_touching_five_stars(growth_game):
+    service, *_ = growth_game
+    catalog = load_partner_catalog()
+    four_star_candidates = [entry for entry in catalog.partners if entry.rarity == 4]
+    five_star_candidates = [entry for entry in catalog.partners if entry.rarity == 5]
+    gacha = GachaDefinition(
+        pool_id="test-four-up",
+        title="测试四星 UP 池",
+        rarity_probabilities={3: 0, 4: 1, 5: 0},
+        item_probability=0,
+        four_star_guarantee=999,
+        five_star_pity=999,
+        featured_four_star_partner_id="ai_xinyu",
+        featured_four_star_rate=0.8,
+    )
+    service.rng = random.Random(11)
+
+    picks = [service._pick_gacha_partner(gacha, four_star_candidates, 4).id for _ in range(4000)]
+    assert 0.77 < picks.count("ai_xinyu") / len(picks) < 0.83
+    others = [pick for pick in picks if pick != "ai_xinyu"]
+    assert len(set(others)) == len(four_star_candidates) - 1
+
+    five_picks = [service._pick_gacha_partner(gacha, five_star_candidates, 5).id for _ in range(400)]
+    assert "ai_xinyu" not in five_picks
+
+
+def test_four_star_up_must_be_set_together_and_stay_inside_the_roster():
+    base = dict(
+        title="四星 UP 校验",
+        rarity_probabilities={3: 0.7, 4: 0.25, 5: 0.05},
+        item_probability=0,
+        four_star_guarantee=10,
+        five_star_pity=10,
+    )
+    with pytest.raises(ValueError):
+        GachaDefinition(pool_id="half-set", featured_four_star_partner_id="ai_xinyu", **base)
+    with pytest.raises(ValueError):
+        GachaDefinition(
+            pool_id="off-roster",
+            partner_ids=["babi", "leilei"],
+            featured_four_star_partner_id="ai_xinyu",
+            featured_four_star_rate=0.8,
+            **base,
+        )
+
+
+@pytest.mark.parametrize("pool_id", ["guqi-sp-up-1", "fein-sp-up-1"])
+def test_summer_pools_feature_ai_xinyu_at_ten_percent(growth_game, pool_id):
+    service, *_ = growth_game
+    pool = load_gacha_pools()[pool_id]
+    assert pool.featured_four_star_partner_id == "ai_xinyu"
+    assert pool.rarity_probabilities[4] * pool.featured_four_star_rate == pytest.approx(0.10)
+    assert pool.rarity_probabilities[4] * (1 - pool.featured_four_star_rate) == pytest.approx(0.025)
+    listed = {entry["pool_id"]: entry for entry in service.snapshot_by_sub("growth-sub")["gacha_pools"]}
+    if pool_id in listed:
+        assert listed[pool_id]["featured_four_star_partner_id"] == "ai_xinyu"
+        assert listed[pool_id]["featured_four_star_rate"] == pytest.approx(0.8)

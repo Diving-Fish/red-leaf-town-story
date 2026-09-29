@@ -33,7 +33,8 @@ const groups = computed<RarityGroup[]>(() => {
     if (!partners.length) continue
     const rarityProbability = pool.rarity_probabilities[rarity] || 0
 
-    const featuredId = rarity === 5 ? pool.featured_partner_id : null
+    const featuredId = rarity === 5 ? pool.featured_partner_id : rarity === 4 ? pool.featured_four_star_partner_id : null
+    const featuredRate = rarity === 5 ? pool.featured_rate : pool.featured_four_star_rate
     const featured = featuredId ? partners.find((entry) => entry.partner_id === featuredId) : undefined
 
     let rows: DetailRow[]
@@ -41,10 +42,10 @@ const groups = computed<RarityGroup[]>(() => {
       const others = partners.filter((entry) => entry.partner_id !== featuredId)
       rows = others.length
         ? [
-            { ...featured, probability: rarityProbability * pool.featured_rate, featured: true },
+            { ...featured, probability: rarityProbability * featuredRate, featured: true },
             ...others.map((entry) => ({
               ...entry,
-              probability: (rarityProbability * (1 - pool.featured_rate)) / others.length,
+              probability: (rarityProbability * (1 - featuredRate)) / others.length,
               featured: false,
             })),
           ]
@@ -79,6 +80,9 @@ function barWidth(value: number) {
       <p v-if="pool.featured_partner_id" class="ui-description">
         抽到非 UP 五星后，本池下一个五星必为 UP 角色（提前出五星也生效），获得 UP 后重置；各池独立计算。
         <strong v-if="pool.featured_guaranteed">当前下个五星必出 UP。</strong>
+      </p>
+      <p v-if="pool.featured_four_star_partner_id" class="ui-description">
+        抽到四星时，有 {{ (pool.featured_four_star_rate * 100).toFixed(0) }}% 为四星 UP 角色；四星 UP 不设保底。
       </p>
       <div class="gacha-details-summary">
         <span v-for="group in groups" :key="`sum:${group.rarity}`" class="gacha-details-summary-chip">

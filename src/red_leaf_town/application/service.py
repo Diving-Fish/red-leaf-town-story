@@ -5415,7 +5415,16 @@ class GameService(SummerServiceMixin, SailingServiceMixin):
         self, gacha: GachaDefinition, candidates: list[PartnerDefinition], rarity: int,
         featured_guaranteed: bool = False,
     ) -> PartnerDefinition:
-        """五星歪后下一次五星必出 UP，否则按 featured_rate 判定。"""
+        """五星歪后下一次五星必出 UP，否则按 featured_rate 判定；四星 UP 只按 featured_four_star_rate 判定。"""
+        if rarity == 4 and gacha.featured_four_star_partner_id:
+            featured = next((entry for entry in candidates if entry.id == gacha.featured_four_star_partner_id), None)
+            if featured is not None:
+                if self.rng.random() < gacha.featured_four_star_rate:
+                    return featured
+                others = [entry for entry in candidates if entry.id != gacha.featured_four_star_partner_id]
+                if others:
+                    return others[self.rng.randrange(len(others))]
+                return featured
         if rarity == 5 and gacha.featured_partner_id:
             featured = next((entry for entry in candidates if entry.id == gacha.featured_partner_id), None)
             if featured is not None:
@@ -7176,6 +7185,8 @@ class GameService(SummerServiceMixin, SailingServiceMixin):
                 "featured_partner_id": gacha.featured_partner_id,
                 "featured_rate": gacha.featured_rate,
                 "featured_guaranteed": self._gacha_featured_guaranteed(player, gacha),
+                "featured_four_star_partner_id": gacha.featured_four_star_partner_id,
+                "featured_four_star_rate": gacha.featured_four_star_rate,
                 "catalog": [
                     catalog_payload[definition.id]
                     for rarity in (5, 4, 3)

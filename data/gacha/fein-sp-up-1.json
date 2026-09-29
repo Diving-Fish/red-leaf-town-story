@@ -47,6 +47,8 @@
   "background_asset_id": "fein_sp_gacha",
   "featured_partner_id": "fein_sp",
   "featured_rate": 0.8,
+  "featured_four_star_partner_id": "ai_xinyu",
+  "featured_four_star_rate": 0.8,
   "partner_ids": [
     "ai_liqi",
     "ai_xinyu",

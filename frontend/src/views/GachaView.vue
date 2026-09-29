@@ -40,6 +40,12 @@ function poolFeaturedName(pool: GachaPoolState) {
     || pool.featured_partner_id
 }
 
+function poolFeaturedFourStarName(pool: GachaPoolState) {
+  if (!pool.featured_four_star_partner_id) return null
+  return pool.catalog.find((entry) => entry.partner_id === pool.featured_four_star_partner_id)?.name
+    || pool.featured_four_star_partner_id
+}
+
 function poolSubtitle(pool: GachaPoolState) {
   if (pool.max_pulls_per_player != null) {
     return `限定 ${pool.max_pulls_per_player} 抽 · 剩余 ${pool.remaining_pulls}`
@@ -81,6 +87,11 @@ const pityTags = computed(() => {
     tags.push(pool.featured_guaranteed
       ? `下个五星必出 ${featuredPartnerName.value}`
       : `UP！${featuredPartnerName.value} 占五星概率 ${(pool.featured_rate * 100).toFixed(0)}%，歪后下个五星必出 UP`)
+  }
+  const fourStarName = poolFeaturedFourStarName(pool)
+  if (fourStarName) {
+    const rate = (pool.rarity_probabilities[4] || 0) * pool.featured_four_star_rate * 100
+    tags.push(`4★ UP！${fourStarName} 基础概率 ${rate.toFixed(1)}%`)
   }
   if (pool.max_pulls_per_player != null) tags.push(`本池限抽 ${pool.max_pulls_per_player} 次 · 剩余 ${pool.remaining_pulls}`)
   return tags
