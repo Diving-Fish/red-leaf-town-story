@@ -8,3 +8,15 @@ frontend/dist-beta/
 data/story_uploads.json
 data/story_shares/
 /config.json
+
+# Local artwork, generated drafts and exports; runtime images are hosted on CDN.
+/data/gacha/artwork/
+/output/
+*.[pP][nN][gG]
+*.[jJ][pP][gG]
+*.[jJ][pP][eE][gG]
+*.[wW][eE][bB][pP]
+*.[gG][iI][fF]
+*.[aA][vV][iI][fF]
+*.[pP][sS][dD]
+*.[kK][rR][aA]

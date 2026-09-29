@@ -942,6 +942,7 @@ export const useGameStore = defineStore('game', () => {
     loadMailbox,
     readMail,
     claimMail,
+    claimSummerReward: (points: number) => action(`summer:claim:${points}`, `${API_ROOT}/summer/rewards/${points}/claim`, { successMessage: '活动回礼已放入仓库' }),
     claimAchievement,
     claimAllAchievements,
     createBindingCode,

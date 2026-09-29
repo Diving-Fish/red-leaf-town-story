@@ -1434,6 +1434,12 @@ def create_blueprint(
         result = get_service().dump_feed(subject)
         return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
 
+    @blueprint.post("/api/red-leaf-town/summer/rewards/<int:points>/claim")
+    @login_required
+    async def claim_summer_reward(subject: str, points: int):
+        result = get_service().claim_summer_reward(subject, points)
+        return jsonify({"code": 0, "data": _attach_cdn_urls(result)})
+
     @blueprint.post("/api/red-leaf-town/gacha/convert")
     @login_required
     async def convert_gacha_currency(subject: str):

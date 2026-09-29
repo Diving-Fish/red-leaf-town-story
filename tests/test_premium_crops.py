@@ -281,4 +281,4 @@ def test_tree_fruit_pays_for_the_stamina_it_costs(game):
 def test_only_tree_fruit_charges_stamina_to_plant(game):
     service, _, _, _ = game
     charging = {crop.id for crop in service.content.crops if crop.stamina_cost > 0}
-    assert charging == {"peach_berry", "berry_berry", "passho_berry", "pamtre_berry"}
+    assert charging == {"peach_berry", "berry_berry", "passho_berry", "pamtre_berry", "ribbed_berry"}

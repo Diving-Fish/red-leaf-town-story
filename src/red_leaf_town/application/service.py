@@ -11,6 +11,8 @@ from typing import NamedTuple
 from uuid import uuid4
 
 from .sailing import SailingServiceMixin
+from .summer import SummerServiceMixin
+from red_leaf_town.summer_content import POINT_UNITS
 
 from red_leaf_town.achievements import (
     achievement_snapshot,
@@ -133,6 +135,8 @@ from red_leaf_town.partner_content import (
     level_cap_for_breakthrough,
     load_partner_catalog,
 )
+from red_leaf_town.season_content import load_seasons, SeasonDefinition
+from red_leaf_town.domain.season import scale_quantities
 from red_leaf_town.partner_traits import execute_partner_traits, partner_trait_catalog
 from red_leaf_town.rewards import serialize_reward, validate_reward_references
 from red_leaf_town.story_assets import StoryAssetCatalog, load_story_asset_catalog
@@ -215,7 +219,7 @@ class GameError(Exception):
         self.status = status
 
 
-class GameService(SailingServiceMixin):
+class GameService(SummerServiceMixin, SailingServiceMixin):
     def __init__(
         self,
         content: GameContent,
@@ -230,6 +234,7 @@ class GameService(SailingServiceMixin):
         story_catalog_loader: Callable[[], StoryCatalog] = load_story_catalog,
         story_asset_loader: Callable[[], StoryAssetCatalog] = load_story_asset_catalog,
         gacha_pool_loader: Callable[[], dict[str, GachaDefinition]] = load_gacha_pools,
+        season_loader: Callable[[], dict[str, SeasonDefinition]] = load_seasons,
     ):
         self.content = content
         self.repository = repository
@@ -245,6 +250,7 @@ class GameService(SailingServiceMixin):
         self.story_catalog_loader = story_catalog_loader
         self.story_asset_loader = story_asset_loader
         self.gacha_pool_loader = gacha_pool_loader
+        self.season_loader = season_loader
 
     def _world_snapshot(self, now: int) -> dict:
         world = self.content.world
@@ -350,6 +356,7 @@ class GameService(SailingServiceMixin):
                 raise GameError("exploration_active", "当前已有一支队伍在探索中", 409)
             if expedition.beta and not self._is_beta_player(player):
                 raise GameError("content_locked", "这条路线还在内测中")
+            self._require_content(player, expedition)
             if player.level < expedition.min_level:
                 raise GameError("content_locked", f"达到 {expedition.min_level} 级后解锁")
             voyage = player.sailing.active_run
@@ -370,6 +377,7 @@ class GameService(SailingServiceMixin):
                 run_id=str(uuid4()),
                 expedition_id=expedition.id,
                 expedition_kind=expedition.kind,
+                season_bonus=self._season_bonus(expedition, "leader_bonus", [leader_partner_id], now),
                 partner_ids=party,
                 leader_partner_id=leader_partner_id,
                 exploration_ability=ability,
@@ -477,7 +485,10 @@ class GameService(SailingServiceMixin):
                 run.route_stamina_raw = route_raw
                 run.action_stamina_spent = action_total
                 run.stamina_spent += cost
+                run.season_pending_units = cost * POINT_UNITS if self._season_open(expedition, now) else 0
                 outcome = self._begin_delve_battle(run, event, choice)
+                if outcome != "ongoing":
+                    self._finish_summer_battle(player, run, expedition, now)
                 if outcome == "wiped":
                     # 敌人抢到先攻并在我方出手前就打光了队伍。不结算这一步的话，
                     # 战斗会挂在那里，之后每个行动都被判成"不是我方的回合"。
@@ -498,6 +509,7 @@ class GameService(SailingServiceMixin):
                     "completed": False,
                 }
 
+            self._award_summer_units(player, expedition, cost * POINT_UNITS, now)
             rewards = self._settle_exploration_outcome(
                 run,
                 expedition,
@@ -632,6 +644,7 @@ class GameService(SailingServiceMixin):
                 raise GameError("delve_action_invalid", str(exc)) from exc
 
             if fled:
+                self._finish_summer_battle(player, run, expedition, now)
                 run.battle = None
                 self._advance_exploration_node(
                     run,
@@ -652,6 +665,8 @@ class GameService(SailingServiceMixin):
             delve_battle.advance_turn(battle)
             outcome = self._run_delve_enemy_turns(battle, members)
             drops: list = []
+            if outcome in ("victory", "wiped"):
+                self._finish_summer_battle(player, run, expedition, now)
             if outcome == "victory":
                 stats = player.achievement_stats
                 stats.delve_wins[run.expedition_id] = stats.delve_wins.get(run.expedition_id, 0) + 1
@@ -783,6 +798,11 @@ class GameService(SailingServiceMixin):
             if run.battle is not None:
                 raise GameError("delve_battle_active", "战斗结束之前没法撤离", 409)
             rewards = list(run.pending_rewards)
+            if run.season_bonus:
+                for reward, quantity in zip(rewards, scale_quantities(
+                    [entry.quantity for entry in rewards], run.season_bonus.multiplier,
+                )):
+                    reward.quantity = quantity
             if run.status == "completed":
                 stats = player.achievement_stats
                 stats.completed_expedition_ids = sorted(set(stats.completed_expedition_ids) | {run.expedition_id})
@@ -820,6 +840,8 @@ class GameService(SailingServiceMixin):
                     if carried.quantity > 0 and carried.item_id in self.content.item_map
                 ],
             }
+            if run.season_bonus:
+                result["leader_bonus"] = run.season_bonus.model_dump()
             player.exploration_run = None
             return result
 
@@ -914,7 +936,7 @@ class GameService(SailingServiceMixin):
 
         def mutation(player: PlayerState):
             self._settle(player, now)
-            site = self._gathering_site(player, site_id)
+            site = self._gathering_site(player, site_id, allow_closed=not partner_id)
             desired_ids = [partner_id] if partner_id else []
             if site.assigned_partner_ids == desired_ids:
                 return {"site_id": site_id, "partner_id": partner_id or None, "changed": False}
@@ -997,6 +1019,9 @@ class GameService(SailingServiceMixin):
                 consume_stamina(player, task.stamina_cost, self.content, now)
             except ValueError as exc:
                 raise GameError("resource_insufficient", str(exc)) from exc
+            snapshot.season_bonus = self._season_bonus(
+                task, "gathering_bonus", snapshot.assigned_partner_ids, now,
+            )
             site.task_snapshot = snapshot
             site.task_results = []
             return {
@@ -1018,7 +1043,7 @@ class GameService(SailingServiceMixin):
 
         def mutation(player: PlayerState):
             self._settle(player, now)
-            site = self._gathering_site(player, site_id)
+            site = self._gathering_site(player, site_id, allow_closed=True)
             if site.task_snapshot is None:
                 raise GameError("gathering_site_empty", "这个采集点没有进行中的任务")
             if site.task_snapshot.ready_at > now:
@@ -1026,6 +1051,11 @@ class GameService(SailingServiceMixin):
             results = site.task_results
             if not results:
                 raise GameError("task_content_missing", "采集任务配置缺失，请联系管理员", 409)
+            season_bonus = site.task_snapshot.season_bonus
+            task_definition = self.content.gathering_task_map.get(site.task_snapshot.content_id)
+            season = self._season(task_definition)
+            if season and season.is_open(site.task_snapshot.started_at):
+                self._award_summer_units(player, task_definition, site.task_snapshot.final_duration, now)
             harvest_xp = site.task_snapshot.harvest_xp
             task_id = site.task_snapshot.content_id
             for result in results:
@@ -1037,6 +1067,7 @@ class GameService(SailingServiceMixin):
             site.task_results = []
             return {
                 "site_id": site_id,
+                "season_bonus": season_bonus.model_dump() if season_bonus else None,
                 "drops": [self._result_snapshot(result) for result in results],
                 "experience": harvest_xp,
                 "levels": levels,
@@ -1456,6 +1487,7 @@ class GameService(SailingServiceMixin):
             fishing = player.fishing
             if request_id and request_id in fishing.recent_request_ids:
                 return {"spot_id": spot_id, "duplicate": True, "drops": [], "experience": 0}
+            self._require_content(player, spot)
             if fishing.pending_big_catch is not None:
                 raise GameError("big_catch_pending", "线还绷着，先处理咬钩的大物")
             if now - fishing.last_cast_at < FISHING_MIN_INTERVAL_SECONDS and fishing.last_cast_at:
@@ -1512,6 +1544,14 @@ class GameService(SailingServiceMixin):
                     continue
                 quantity = self.rng.randint(entry.quantity_min, entry.quantity_max)
                 batches.append(self._roll_batch(entry, quantity))
+            season_bonus = self._season_bonus(spot, "companion_bonus", companion_ids, now)
+            if season_bonus:
+                batches = [
+                    batch._replace(quantity=quantity)
+                    for batch, quantity in zip(batches, scale_quantities(
+                        [batch.quantity for batch in batches], season_bonus.multiplier,
+                    ))
+                ]
             drops = self._grant_fishing_batches(
                 player,
                 batches,
@@ -1524,6 +1564,7 @@ class GameService(SailingServiceMixin):
             levels = grant_experience(player, spot.cast_xp, self.content, max_level=self._player_level_cap(player))
             milestones = self._claim_codex_milestones(player, now)
             partner_experience = self._grant_companion_experience(player, stamina_cost)
+            self._award_summer_units(player, spot, stamina_cost * POINT_UNITS, now)
             fishing.spot_id = spot_id
             fishing.combo = min(self._combo_cap(player), combo + 1)
             fishing.combo_updated_at = now
@@ -1535,6 +1576,7 @@ class GameService(SailingServiceMixin):
             return {
                 "spot_id": spot_id,
                 "duplicate": False,
+                "companion_bonus": season_bonus.model_dump() if season_bonus else None,
                 "stamina_cost": stamina_cost,
                 "draws": draws,
                 "ability": ability,
@@ -1588,6 +1630,7 @@ class GameService(SailingServiceMixin):
                 spent = big_catch.stamina_cost
                 success = self.rng.random() < chance
             player.fishing.pending_big_catch = None
+            self._award_summer_units(player, spot, spent * POINT_UNITS, now)
             partner_experience = self._grant_companion_experience(player, spent)
             if not success:
                 quality = roll_quality(self.rng, probabilities)
@@ -3285,12 +3328,15 @@ class GameService(SailingServiceMixin):
         ability = self._aquatic_ability(player, self._fishing_companion_ids(player))
         spots = []
         for spot in self.content.fishing_spots:
+            if not self._content_visible(player, spot):
+                continue
             unlocked = player.level >= spot.min_level
             combo = self._current_combo(player, spot.id, now) if unlocked else 0
             # 产出表和大物都不下发：钓点该保留神秘感，见过什么去图鉴里看。
             spots.append({
                 **spot.model_dump(exclude={"outputs", "big_catch", "quality"}),
                 "unlocked": unlocked,
+                **self._season_notes(spot, "fishing", now),
                 "combo": combo,
                 "draws": {
                     **spot.draws.model_dump(),
@@ -3354,10 +3400,13 @@ class GameService(SailingServiceMixin):
         codex_species = {entry.item_id for entry in player.fish_codex.entries}
         codex_pool: list[str] = []
         for spot in self.content.fishing_spots:
+            visible = self._content_visible(player, spot)
             for output in spot.outputs:
-                if output.codex and output.item_id not in codex_pool:
+                if (output.codex and output.item_id not in codex_pool
+                        and (visible or output.item_id in codex_species)):
                     codex_pool.append(output.item_id)
-            if spot.big_catch and spot.big_catch.item_id not in codex_pool:
+            if (spot.big_catch and spot.big_catch.item_id not in codex_pool
+                    and (visible or spot.big_catch.item_id in codex_species)):
                 codex_pool.append(spot.big_catch.item_id)
         built = {pond.pond_id for pond in player.ponds}
         return {
@@ -3378,7 +3427,7 @@ class GameService(SailingServiceMixin):
             "companion": partner_map.get(player.fishing.companion_partner_id),
             "spots": spots,
             "next_spot_level": next(
-                (spot.min_level for spot in self.content.fishing_spots if player.level < spot.min_level),
+                (spot["min_level"] for spot in spots if player.level < spot["min_level"]),
                 None,
             ),
             "combo_rules": self.content.fishing_combo.model_dump(),
@@ -3741,6 +3790,7 @@ class GameService(SailingServiceMixin):
             previous = next((entry for entry in player.gacha_history if entry.request_id == request_id), None)
             if previous:
                 return {**previous.model_dump(), "replayed": True}
+            self._require_content(player, gacha)
             if not self._pool_is_open(partners_by_rarity):
                 raise GameError("gacha_pool_invalid", "这个招募池暂时无法招募", 500)
             if player.guide_leaves < count:
@@ -5104,6 +5154,9 @@ class GameService(SailingServiceMixin):
         catalog = self.story_catalog_loader()
         context = StoryContext(player=player, cue=code, now=self._now())
         matched = catalog.matching(context, set(player.seen_story_ids))
+        for script in matched:
+            if script.id.startswith("summer_chapter_"):
+                self._require_summer_story(player, script.id, context.now)
         assets = self.story_asset_loader()
         partners = self.partner_catalog_loader()
         return {
@@ -5118,6 +5171,8 @@ class GameService(SailingServiceMixin):
         now = self._now()
 
         def mutation(player: PlayerState):
+            if script.id.startswith("summer_chapter_"):
+                self._require_summer_story(player, script.id, now)
             if script.id in player.seen_story_ids:
                 return {"story_id": script.id, "granted": None}
             player.seen_story_ids.append(script.id)
@@ -5469,7 +5524,7 @@ class GameService(SailingServiceMixin):
             except ValueError as exc:
                 raise GameError("production_slot_not_found", "生产位置不存在", 404) from exc
         if industry == "gathering":
-            return self._gathering_site(player, slot_id)
+            return self._gathering_site(player, slot_id, allow_closed=True)
         if industry == "crafting":
             return self._crafting_station(player, slot_id)
         if industry == "mining":
@@ -5524,8 +5579,9 @@ class GameService(SailingServiceMixin):
             raise GameError("plot_locked", "这块土地尚未解锁")
         return player.plots[slot]
 
-    def _gathering_site(self, player: PlayerState, site_id: str) -> GatheringSiteState:
-        self._require_content(player, self.content.gathering_site_map.get(site_id))
+    def _gathering_site(self, player: PlayerState, site_id: str, *, allow_closed: bool = False) -> GatheringSiteState:
+        if not allow_closed:
+            self._require_content(player, self.content.gathering_site_map.get(site_id))
         site = next((entry for entry in player.gathering_sites if entry.site_id == site_id), None)
         if site is None:
             raise GameError("gathering_site_locked", "这个采集点尚未解锁", 404)
@@ -5836,10 +5892,44 @@ class GameService(SailingServiceMixin):
     def _is_beta_player(self, player: PlayerState) -> bool:
         return player.player_id in self._beta_player_ids()
 
+    def _season(self, definition):
+        season_id = getattr(definition, "season_id", "")
+        if not season_id:
+            return None
+        try:
+            return self.season_loader().get(season_id)
+        except (OSError, ValueError):
+            # Invalid schedules must close event content, without blocking ordinary gameplay.
+            return None
+
+    def _season_open(self, definition, now: int) -> bool:
+        if not getattr(definition, "season_id", ""):
+            return True
+        season = self._season(definition)
+        return season is not None and season.is_open(now)
+
+    def _season_bonus(self, definition, kind: str, partner_ids: list[str], now: int):
+        season = self._season(definition)
+        return season.bonus_snapshot(kind, partner_ids) if season and season.is_open(now) else None
+
+    def _season_notes(self, definition, kind: str, now: int) -> dict:
+        season = self._season(definition)
+        if not season or not season.is_open(now):
+            return {}
+        if kind == "exploration":
+            return {"leader_note": season.leader_note}
+        prefix = "fishing_spot" if kind == "fishing" else "gathering_site"
+        return {"event_badge": getattr(season, prefix + "_badge"),
+                "event_note": getattr(season, prefix + "_note")}
+
     def _content_visible(self, player, definition) -> bool:
-        return definition is not None and (not getattr(definition, "beta", False) or self._is_beta_player(player))
+        return (definition is not None
+                and (not getattr(definition, "beta", False) or self._is_beta_player(player))
+                and self._season_open(definition, self._now()))
 
     def _require_content(self, player, definition) -> None:
+        if not self._season_open(definition, self._now()):
+            raise GameError("content_locked", "活动尚未开放或已经结束，暂时不能开始新任务", 409)
         if not self._content_visible(player, definition):
             raise GameError("content_locked", "此内容目前仅对内测玩家开放", 403)
 
@@ -5857,9 +5947,7 @@ class GameService(SailingServiceMixin):
             raise GameError("content_locked", f"{species.name}需要居民 {species.min_level} 级及对应设施 {species.required_facility_tier} 级", 403)
 
     def _visible_expeditions(self, player: PlayerState) -> list:
-        if self._is_beta_player(player):
-            return list(self.content.exploration_expeditions)
-        return [entry for entry in self.content.exploration_expeditions if not entry.beta]
+        return [entry for entry in self.content.exploration_expeditions if self._content_visible(player, entry)]
 
     def _settle_exploration_outcome(
         self,
@@ -6399,6 +6487,7 @@ class GameService(SailingServiceMixin):
                 **expedition.model_dump(exclude={"events"}),
                 "unlocked": player.level >= expedition.min_level,
                 "affordable": player.coins >= expedition.entry_fee,
+                **self._season_notes(expedition, "exploration", now),
             }
             for expedition in visible
         ]
@@ -6608,7 +6697,7 @@ class GameService(SailingServiceMixin):
         gathering_task_map = self.content.gathering_task_map
         for site in player.gathering_sites:
             definition = self.content.gathering_site_map.get(site.site_id)
-            if not self._content_visible(player, definition):
+            if not self._content_visible(player, definition) and not (site.task_snapshot or site.assigned_partner_ids):
                 continue
             task_snapshot = site.task_snapshot
             assigned_partners = [
@@ -6627,6 +6716,8 @@ class GameService(SailingServiceMixin):
                 "ready": bool(task_snapshot and task_snapshot.ready_at <= now),
                 "remaining_seconds": max(0, task_snapshot.ready_at - now) if task_snapshot else 0,
                 "definition": definition.model_dump() if definition else None,
+                **self._season_notes(definition, "gathering", now),
+                "event_closed": not self._season_open(definition, now),
                 "task": {
                     **gathering_task_map[task_snapshot.content_id].model_dump(),
                     "item": items[gathering_task_map[task_snapshot.content_id].outputs[0].item_id].model_dump(),
@@ -6831,6 +6922,7 @@ class GameService(SailingServiceMixin):
             "stamina_supply": self._stamina_snapshot(player, now),
             "mail": self._mail_summary(player, now),
             "achievements": achievement_snapshot(player, self.content),
+            "summer_event": self._summer_snapshot(player, now),
             "crops": [
                 crop.model_dump()
                 for crop in self.content.crops
@@ -7046,6 +7138,8 @@ class GameService(SailingServiceMixin):
         pools = sorted(self.gacha_pool_loader().values(), key=lambda entry: (entry.display_order, entry.min_level, entry.pool_id))
         snapshots = []
         for gacha in pools:
+            if not self._content_visible(player, gacha):
+                continue
             candidates = self._pool_partner_candidates(gacha, catalog)
             # 还凑不齐三个星级的池子（比如限定池的立绘还没画完）先不摆出来。
             if not self._pool_is_open(candidates):
@@ -7456,6 +7550,11 @@ class GameService(SailingServiceMixin):
             now,
             task.applied_effects,
         )
+        if task.season_bonus:
+            for result, quantity in zip(site.task_results, scale_quantities(
+                [entry.quantity for entry in site.task_results], task.season_bonus.multiplier,
+            )):
+                result.quantity = quantity
 
     def _result_snapshot(self, result: ProductionResultSnapshot) -> dict:
         item = self.content.item_map.get(result.item_id)

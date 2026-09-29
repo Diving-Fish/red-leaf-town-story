@@ -180,6 +180,577 @@
         "offset_y": 0.0
       },
       "created_at": 0
+    },
+    {
+      "id": "guqi_sp_gacha",
+      "kind": "background",
+      "name": "顾祇SP · 潮灯聚光",
+      "asset_key": "red-leaf-town/story/background/guqi_sp_gacha-ada626d8905c720f.png",
+      "width": 1672,
+      "height": 941,
+      "content_type": "image/png",
+      "created_at": 0
+    },
+    {
+      "id": "fein_sp_gacha",
+      "kind": "background",
+      "name": "绯恩SP · 萤野夏心",
+      "asset_key": "red-leaf-town/story/background/fein_sp_gacha-742e2405c662dfa2.png",
+      "width": 1672,
+      "height": 940,
+      "content_type": "image/png",
+      "created_at": 0
+    },
+    {
+      "id": "summer_b567367294ef8a00",
+      "kind": "background",
+      "name": "红叶镇镇口 · 黄昏",
+      "asset_key": "red-leaf-town/story/background/town_gate_dusk-53c4b56e6b21da00.webp",
+      "width": 1672,
+      "height": 941,
+      "content_type": "image/webp",
+      "inline_layout": {
+        "offset_x": 0.0,
+        "offset_y": 0.0,
+        "scale": 1.0
+      },
+      "stage_layout": {
+        "offset_x": 0.0,
+        "offset_y": 0.0,
+        "scale": 1.0
+      }
+    },
+    {
+      "id": "summer_ab337f72d25e0da2",
+      "kind": "background",
+      "name": "传送门空地 · 黄昏",
+      "asset_key": "red-leaf-town/story/background/portal_hollow-13e505784a666a0f.webp",
+      "width": 1672,
+      "height": 941,
+      "content_type": "image/webp",
+      "inline_layout": {
+        "offset_x": 0.0,
+        "offset_y": 0.0,
+        "scale": 1.0
+      },
+      "stage_layout": {
+        "offset_x": 0.0,
+        "offset_y": 0.0,
+        "scale": 1.0
+      }
+    },
+    {
+      "id": "summer_be6ef41ba62a73cd",
+      "kind": "portrait",
+      "name": "绯恩",
+      "asset_key": "red-leaf-town/story/portrait/fein_story-d1e6063253388b09.webp",
+      "width": 1008,
+      "height": 1792,
+      "content_type": "image/webp",
+      "inline_layout": {
+        "offset_x": -0.15,
+        "offset_y": 0.31,
+        "scale": 3.0
+      },
+      "stage_layout": {
+        "offset_x": 0.1,
+        "offset_y": 0.25,
+        "scale": 1.31
+      }
+    },
+    {
+      "id": "summer_be9528a223c49a52",
+      "kind": "background",
+      "name": "种田背景",
+      "asset_key": "red-leaf-town/story/background/summer-up_9bf10eaab578-1de751124d84f49d.webp",
+      "width": 1672,
+      "height": 941,
+      "content_type": "image/webp",
+      "inline_layout": {
+        "offset_x": 0.0,
+        "offset_y": 0.0,
+        "scale": 1.0
+      },
+      "stage_layout": {
+        "offset_x": 0.0,
+        "offset_y": 0.0,
+        "scale": 1.0
+      }
+    },
+    {
+      "id": "summer_eb0bb084f963c55d",
+      "kind": "background",
+      "name": "baili_gacha",
+      "asset_key": "red-leaf-town/story/background/baili_gacha-b7813eee259b518c.webp",
+      "width": 1672,
+      "height": 941,
+      "content_type": "image/webp",
+      "inline_layout": {
+        "offset_x": 0.0,
+        "offset_y": 0.0,
+        "scale": 1.0
+      },
+      "stage_layout": {
+        "offset_x": 0.0,
+        "offset_y": 0.0,
+        "scale": 1.0
+      }
+    },
+    {
+      "id": "summer_e711ce0714f3d4b9",
+      "kind": "background",
+      "name": "矿洞背景",
+      "asset_key": "red-leaf-town/story/background/summer-up_93d2c8fd6601-701394ce9e096f4a.webp",
+      "width": 1360,
+      "height": 768,
+      "content_type": "image/webp",
+      "inline_layout": {
+        "offset_x": 0.0,
+        "offset_y": 0.0,
+        "scale": 1.0
+      },
+      "stage_layout": {
+        "offset_x": 0.0,
+        "offset_y": 0.0,
+        "scale": 1.0
+      }
+    },
+    {
+      "id": "summer_83a19beb45068d91",
+      "kind": "portrait",
+      "name": "向含鸯-透明",
+      "asset_key": "red-leaf-town/story/portrait/summer-up_de856cf62c8d-38dbe66eb53c1b29.webp",
+      "width": 1254,
+      "height": 1254,
+      "content_type": "image/webp",
+      "inline_layout": {
+        "offset_x": 0.1,
+        "offset_y": 0.25,
+        "scale": 1.26
+      },
+      "stage_layout": {
+        "offset_x": 0.1,
+        "offset_y": 0.25,
+        "scale": 1.26
+      }
+    },
+    {
+      "id": "summer_fdd2fe76f6e6a4c5",
+      "kind": "background",
+      "name": "鱼追豹",
+      "asset_key": "red-leaf-town/story/background/summer-up_476eb3aa8ab9-05580b287aee9709.webp",
+      "width": 1672,
+      "height": 940,
+      "content_type": "image/webp",
+      "inline_layout": {
+        "offset_x": 0.0,
+        "offset_y": 0.0,
+        "scale": 1.0
+      },
+      "stage_layout": {
+        "offset_x": 0.0,
+        "offset_y": 0.0,
+        "scale": 1.0
+      }
+    },
+    {
+      "id": "summer_09dac7c15c736f62",
+      "kind": "portrait",
+      "name": "绯恩-气鼓鼓",
+      "asset_key": "red-leaf-town/story/portrait/summer-up_bf4cbf1a61d1-b5d4d61dd98a4b11.webp",
+      "width": 940,
+      "height": 1672,
+      "content_type": "image/webp",
+      "inline_layout": {
+        "offset_x": 0.1,
+        "offset_y": 0.2,
+        "scale": 1.23
+      },
+      "stage_layout": {
+        "offset_x": 0.1,
+        "offset_y": 0.2,
+        "scale": 1.23
+      }
+    },
+    {
+      "id": "summer_ce1bc23ceabeb065",
+      "kind": "portrait",
+      "name": "顾祇初始",
+      "asset_key": "red-leaf-town/story/portrait/summer-up_28e6abbf440f-b9f21d1946355e60.webp",
+      "width": 940,
+      "height": 1672,
+      "content_type": "image/webp",
+      "inline_layout": {
+        "offset_x": 0.03,
+        "offset_y": 0.23,
+        "scale": 1.23
+      },
+      "stage_layout": {
+        "offset_x": 0.03,
+        "offset_y": 0.23,
+        "scale": 1.23
+      }
+    },
+    {
+      "id": "summer_f2df9f34954bda6a",
+      "kind": "background",
+      "name": "顾祇一破",
+      "asset_key": "red-leaf-town/story/background/summer-up_f68a666ea793-42242d3da07ed4c8.webp",
+      "width": 1672,
+      "height": 941,
+      "content_type": "image/webp",
+      "inline_layout": {
+        "offset_x": 0.0,
+        "offset_y": 0.0,
+        "scale": 1.0
+      },
+      "stage_layout": {
+        "offset_x": 0.0,
+        "offset_y": 0.0,
+        "scale": 1.0
+      }
+    },
+    {
+      "id": "summer_75590fb168528265",
+      "kind": "background",
+      "name": "绯恩搓脸",
+      "asset_key": "red-leaf-town/story/background/summer-up_580b3350c48a-2f500a92d0434677.webp",
+      "width": 1672,
+      "height": 941,
+      "content_type": "image/webp",
+      "inline_layout": {
+        "offset_x": 0.0,
+        "offset_y": 0.0,
+        "scale": 1.0
+      },
+      "stage_layout": {
+        "offset_x": 0.0,
+        "offset_y": 0.0,
+        "scale": 1.0
+      }
+    },
+    {
+      "id": "summer_bd3de59bf8f05258",
+      "kind": "background",
+      "name": "舞台背景-搭建中",
+      "asset_key": "red-leaf-town/story/background/summer-up_f89c8316b94f-6ebb6bcdefbf9c73.webp",
+      "width": 1672,
+      "height": 941,
+      "content_type": "image/webp",
+      "inline_layout": {
+        "offset_x": 0.0,
+        "offset_y": 0.0,
+        "scale": 1.0
+      },
+      "stage_layout": {
+        "offset_x": 0.0,
+        "offset_y": 0.0,
+        "scale": 1.0
+      }
+    },
+    {
+      "id": "summer_da73c7805cc58a31",
+      "kind": "portrait",
+      "name": "绯恩-震惊",
+      "asset_key": "red-leaf-town/story/portrait/summer-up_95700b9d85c7-f731c7977094041b.webp",
+      "width": 1254,
+      "height": 1254,
+      "content_type": "image/webp",
+      "inline_layout": {
+        "offset_x": -0.11,
+        "offset_y": 0.23,
+        "scale": 1.23
+      },
+      "stage_layout": {
+        "offset_x": -0.11,
+        "offset_y": 0.23,
+        "scale": 1.23
+      }
+    },
+    {
+      "id": "summer_4024f543053c9073",
+      "kind": "portrait",
+      "name": "凡妮莎-透明",
+      "asset_key": "red-leaf-town/story/portrait/summer-up_3f771ed12946-3a6004bfb423c658.webp",
+      "width": 720,
+      "height": 1280,
+      "content_type": "image/webp",
+      "inline_layout": {
+        "offset_x": 0.0,
+        "offset_y": 0.23,
+        "scale": 1.23
+      },
+      "stage_layout": {
+        "offset_x": 0.0,
+        "offset_y": 0.23,
+        "scale": 1.23
+      }
+    },
+    {
+      "id": "summer_c436166693d1ad1d",
+      "kind": "background",
+      "name": "工坊",
+      "asset_key": "red-leaf-town/story/background/summer-up_e3a928d646ea-a2053c932cc8f807.webp",
+      "width": 1672,
+      "height": 941,
+      "content_type": "image/webp",
+      "inline_layout": {
+        "offset_x": 0.0,
+        "offset_y": 0.0,
+        "scale": 1.0
+      },
+      "stage_layout": {
+        "offset_x": 0.0,
+        "offset_y": 0.0,
+        "scale": 1.0
+      }
+    },
+    {
+      "id": "summer_468eaa830ec69bd2",
+      "kind": "portrait",
+      "name": "古语俞-透明",
+      "asset_key": "red-leaf-town/story/portrait/summer-up_329125055d27-898c345841e07f3d.webp",
+      "width": 941,
+      "height": 1672,
+      "content_type": "image/webp",
+      "inline_layout": {
+        "offset_x": -0.11,
+        "offset_y": 0.19,
+        "scale": 1.23
+      },
+      "stage_layout": {
+        "offset_x": -0.11,
+        "offset_y": 0.19,
+        "scale": 1.23
+      }
+    },
+    {
+      "id": "summer_e907180ad07943c5",
+      "kind": "portrait",
+      "name": "白天天-透明",
+      "asset_key": "red-leaf-town/story/portrait/summer-up_03097d0ae8d3-9685bc752888ffdc.webp",
+      "width": 1254,
+      "height": 1254,
+      "content_type": "image/webp",
+      "inline_layout": {
+        "offset_x": -0.01,
+        "offset_y": 0.15,
+        "scale": 1.1
+      },
+      "stage_layout": {
+        "offset_x": -0.01,
+        "offset_y": 0.15,
+        "scale": 1.1
+      }
+    },
+    {
+      "id": "summer_f5a8c9c360a21523",
+      "kind": "background",
+      "name": "夏活背景",
+      "asset_key": "red-leaf-town/story/background/summer-up_3c8d763ec8d9-054d2b2362cd1b84.webp",
+      "width": 1672,
+      "height": 941,
+      "content_type": "image/webp",
+      "inline_layout": {
+        "offset_x": 0.0,
+        "offset_y": 0.0,
+        "scale": 1.0
+      },
+      "stage_layout": {
+        "offset_x": 0.0,
+        "offset_y": 0.0,
+        "scale": 1.0
+      }
+    },
+    {
+      "id": "summer_5ecd20b2ead465e6",
+      "kind": "portrait",
+      "name": "顾祇sp立绘",
+      "asset_key": "red-leaf-town/story/portrait/summer-up_34d02229015a-d78dec0a900b5647.webp",
+      "width": 1254,
+      "height": 1254,
+      "content_type": "image/webp",
+      "inline_layout": {
+        "offset_x": 0.09,
+        "offset_y": 0.23,
+        "scale": 1.24
+      },
+      "stage_layout": {
+        "offset_x": 0.09,
+        "offset_y": 0.23,
+        "scale": 1.24
+      }
+    },
+    {
+      "id": "summer_427d39f3fecd4707",
+      "kind": "portrait",
+      "name": "顾祇sp-惊愕-透明底",
+      "asset_key": "red-leaf-town/story/portrait/summer-up_77148426023e-b0c3e2ebf6bbd938.webp",
+      "width": 1254,
+      "height": 1254,
+      "content_type": "image/webp",
+      "inline_layout": {
+        "offset_x": 0.1,
+        "offset_y": 0.23,
+        "scale": 1.25
+      },
+      "stage_layout": {
+        "offset_x": 0.1,
+        "offset_y": 0.23,
+        "scale": 1.25
+      }
+    },
+    {
+      "id": "summer_50dc46bdf1e70213",
+      "kind": "background",
+      "name": "工坊-夜",
+      "asset_key": "red-leaf-town/story/background/summer-up_20be2233d4e4-2cdf756dd436702c.webp",
+      "width": 1672,
+      "height": 940,
+      "content_type": "image/webp",
+      "inline_layout": {
+        "offset_x": 0.0,
+        "offset_y": 0.0,
+        "scale": 1.0
+      },
+      "stage_layout": {
+        "offset_x": 0.0,
+        "offset_y": 0.0,
+        "scale": 1.0
+      }
+    },
+    {
+      "id": "summer_7ef30617585dbadd",
+      "kind": "background",
+      "name": "红枫林小径-夜",
+      "asset_key": "red-leaf-town/story/background/summer-up_8a357dfad7e1-76ddfb1bc7547654.webp",
+      "width": 1672,
+      "height": 941,
+      "content_type": "image/webp",
+      "inline_layout": {
+        "offset_x": 0.0,
+        "offset_y": 0.0,
+        "scale": 1.0
+      },
+      "stage_layout": {
+        "offset_x": 0.0,
+        "offset_y": 0.0,
+        "scale": 1.0
+      }
+    },
+    {
+      "id": "summer_ebdda7c9f438633a",
+      "kind": "background",
+      "name": "红枫林缘-夜",
+      "asset_key": "red-leaf-town/story/background/summer-up_1d5988f5f88d-2b8327aba15ee0c6.webp",
+      "width": 1672,
+      "height": 941,
+      "content_type": "image/webp",
+      "inline_layout": {
+        "offset_x": 0.0,
+        "offset_y": 0.0,
+        "scale": 1.0
+      },
+      "stage_layout": {
+        "offset_x": 0.0,
+        "offset_y": 0.0,
+        "scale": 1.0
+      }
+    },
+    {
+      "id": "summer_9cd4265c20601ef2",
+      "kind": "portrait",
+      "name": "顾祇sp-背影-透明",
+      "asset_key": "red-leaf-town/story/portrait/summer-up_48541378cceb-d97d9647637a28c1.webp",
+      "width": 940,
+      "height": 1672,
+      "content_type": "image/webp",
+      "inline_layout": {
+        "offset_x": 0.0,
+        "offset_y": 0.2,
+        "scale": 1.23
+      },
+      "stage_layout": {
+        "offset_x": 0.0,
+        "offset_y": 0.2,
+        "scale": 1.23
+      }
+    },
+    {
+      "id": "summer_c3ad0b2abb3cd4fd",
+      "kind": "background",
+      "name": "空屋与农田 · 入夜",
+      "asset_key": "red-leaf-town/story/background/farm_house_night-6fa916a78383b500.webp",
+      "width": 1672,
+      "height": 941,
+      "content_type": "image/webp",
+      "inline_layout": {
+        "offset_x": 0.0,
+        "offset_y": 0.0,
+        "scale": 1.0
+      },
+      "stage_layout": {
+        "offset_x": 0.0,
+        "offset_y": 0.0,
+        "scale": 1.0
+      }
+    },
+    {
+      "id": "summer_932aef920e205252",
+      "kind": "background",
+      "name": "顾祇推车",
+      "asset_key": "red-leaf-town/story/background/summer-up_472d6673c173-2bd1d3b94bda1453.webp",
+      "width": 1672,
+      "height": 941,
+      "content_type": "image/webp",
+      "inline_layout": {
+        "offset_x": 0.0,
+        "offset_y": 0.0,
+        "scale": 1.0
+      },
+      "stage_layout": {
+        "offset_x": 0.0,
+        "offset_y": 0.0,
+        "scale": 1.0
+      }
+    },
+    {
+      "id": "summer_78884c58b6ade17c",
+      "kind": "background",
+      "name": "顾祇坐地",
+      "asset_key": "red-leaf-town/story/background/summer-up_af8e2dbadf36-84e9d7bfa319f061.webp",
+      "width": 1672,
+      "height": 941,
+      "content_type": "image/webp",
+      "inline_layout": {
+        "offset_x": 0.0,
+        "offset_y": 0.0,
+        "scale": 1.0
+      },
+      "stage_layout": {
+        "offset_x": 0.0,
+        "offset_y": 0.0,
+        "scale": 1.0
+      }
+    },
+    {
+      "id": "summer_648dd3f7e15dd1d8",
+      "kind": "background",
+      "name": "舞台背景-完成",
+      "asset_key": "red-leaf-town/story/background/summer-up_1539a3e9a077-a8790d6ddd6322eb.webp",
+      "width": 1672,
+      "height": 941,
+      "content_type": "image/webp",
+      "inline_layout": {
+        "offset_x": 0.0,
+        "offset_y": 0.0,
+        "scale": 1.0
+      },
+      "stage_layout": {
+        "offset_x": 0.0,
+        "offset_y": 0.0,
+        "scale": 1.0
+      }
     }
   ]
 }

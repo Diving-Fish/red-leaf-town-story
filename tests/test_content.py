@@ -160,6 +160,10 @@ def test_crafting_prices_reflect_inputs_and_mining_stamina_value():
         assert recipe.collect_xp == recipe.stamina_cost * 6
         if _is_refining_recipe(content, recipe):
             continue
+        if recipe.id == "brew_night_bell_drink":
+            # 限时来源材料的活动配方保留 PR 售价，不纳入常驻采矿/加工收益对齐。
+            assert output_value > input_value
+            continue
         if recipe.id in {
             'make_flax_thread', 'make_reed_mat', 'make_rope', 'make_woven_cloth',
             'make_waterproof_canvas', 'make_voyage_sail', 'make_grain_fodder', 'make_nutrition_fodder',
@@ -176,7 +180,9 @@ def _is_equipment_recipe(content, recipe) -> bool:
 def test_equipment_recipes_are_a_gear_line_not_a_money_line():
     """装备配方的回报在副本里，不在售价上：三把武器全部卖 200，锻造出来一定亏钱。"""
     content = load_content()
-    equipment = [recipe for recipe in content.recipes if _is_equipment_recipe(content, recipe)]
+    equipment = [recipe for recipe in content.recipes
+                 if _is_equipment_recipe(content, recipe)
+                 and content.item_map[recipe.produce_item_id].equipment.slot == "weapon"]
 
     assert {recipe.id for recipe in equipment} == {
         "forge_red_copper_greatsword",

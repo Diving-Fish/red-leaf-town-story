@@ -1,0 +1,455 @@
+{
+  "id": "summer_chapter_4",
+  "title": "第 4 章",
+  "priority": 0,
+  "trigger": {
+    "hook": "all_of",
+    "repeatable": true,
+    "params": {
+      "conditions": [
+        {
+          "hook": "cue",
+          "params": {
+            "cue": "summer:summer_chapter_4"
+          }
+        },
+        {
+          "hook": "season_progress",
+          "params": {
+            "season_id": "summer_tide_festival",
+            "points": 400,
+            "previous_story_id": "summer_chapter_3"
+          }
+        }
+      ]
+    }
+  },
+  "steps": [
+    {
+      "asset_id": "summer_c3ad0b2abb3cd4fd",
+      "duration": 0.45,
+      "transition": "fade",
+      "type": "background"
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "你默默地把绯恩送回去的时候，已经是后半夜了。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "今天发生了很多事。矿洞，码头，工坊，红枫林。舞台，乐声，订单，账本。向含鸯，凡妮莎，白天天，古语俞。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "当然还有最重要的，绯恩和顾祇。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "你",
+      "text": "……",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "说实话，你不懂人心里的那些弯弯绕绕。你只觉得绯恩热情过度，以及顾祇心里藏着东西。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "绯恩的事，你想不明白。顾祇的事，你觉得能想明白。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "想不明白的，先放一放。能想明白的，明天再说。",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "",
+      "duration": 0.45,
+      "transition": "fade",
+      "type": "background"
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "第二天。",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "summer_c436166693d1ad1d",
+      "duration": 0.45,
+      "transition": "fade",
+      "type": "background"
+    },
+    {
+      "focus": "none",
+      "speaker": "你",
+      "text": "早啊。",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "summer_468eaa830ec69bd2",
+      "breakthrough": 0,
+      "duration": 0.28,
+      "flip": false,
+      "layout": {
+        "offset_x": -0.02,
+        "offset_y": 0.19,
+        "scale": 1.23
+      },
+      "partner_id": "",
+      "slot": "center",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": true
+    },
+    {
+      "focus": "none",
+      "speaker": "古语俞",
+      "text": "早安！今天的委托是加工鱼塘那边要求的最新款防豹太晶格斗栅栏哦。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "你",
+      "text": "……所谓的太晶格斗就是在每个栅栏上加了一个橙红色的拳头形状的小雕像？",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "古语俞",
+      "text": "没错哦！反正订单备注上写着“古剑喵最怕这个，见到就会跑得远远的”——我也不清楚这到底靠不靠谱，但反正先按要求加工了就完事了啦。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "古语俞",
+      "text": "对了，今天的矿麻烦帮我去催一催，矿洞那边的物料还没送过来，有很多东西都不能继续加工了。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "你",
+      "text": "（努力压住了嘴角避免直接笑出来）……好。",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "",
+      "breakthrough": 0,
+      "duration": 0.28,
+      "flip": false,
+      "layout": null,
+      "partner_id": "",
+      "slot": "center",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": false
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "就这样前往矿洞了。一进矿洞，看到的是……",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "summer_932aef920e205252",
+      "duration": 0.45,
+      "transition": "fade",
+      "type": "background"
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "顾祇正把一车赤铜矿和月银矿推上发车轨道。那把比她还高的镐立在背后，镐尖锐利得像把镰刀。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "你",
+      "text": "你平时就用这个拉矿？向含鸯呢？没和你一块？",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "顾祇闻言，轻轻推了一下。矿车就像有生命一样，稳稳当当地顺着轨道开了出去。上面堆得满满当当的矿一颗都没掉下来。",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "summer_e711ce0714f3d4b9",
+      "duration": 0.45,
+      "transition": "fade",
+      "type": "background"
+    },
+    {
+      "asset_id": "summer_ce1bc23ceabeb065",
+      "breakthrough": 0,
+      "duration": 0.26,
+      "flip": false,
+      "layout": {
+        "offset_x": -0.05,
+        "offset_y": 0.23,
+        "scale": 1.23
+      },
+      "partner_id": "",
+      "slot": "center",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": true
+    },
+    {
+      "focus": "none",
+      "speaker": "顾祇",
+      "text": "向含鸯去找她姐了。你知道的，矿洞这地方，一个人看着就够。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "你",
+      "text": "其实我很好奇，你们两个是怎么做到每天挖出那么多矿的？",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "顾祇",
+      "text": "那是你没来挖过。挖多了，熟练了，自然就能每天挖出很多来。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "顾祇",
+      "text": "我刚来那会也经常把矿道给弄塌了。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "你",
+      "text": "但你挖矿不用镐。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "顾祇",
+      "text": "确实不用，我直接把矿石从石头缝里拽出来。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "顾祇",
+      "text": "我承认效率一开始的确是不如向含鸯妹妹。但是熟练了之后就好了。轻松，省事，还不会把自己弄得灰头土脸的。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "你",
+      "text": "你来红叶镇，多久了？",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "顾祇",
+      "text": "哪能记得呢。这里的春天太短，数着数着就漏了。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "你",
+      "text": "……你还说过一句话。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "顾祇",
+      "text": "我说过的话，我自己都记不住。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "你",
+      "text": "你说，'这地方进来容易出去难，总得有人找点乐子。'",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "她手上的动作停了。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "顾祇",
+      "text": "你在意的竟然是这个。",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "",
+      "breakthrough": 0,
+      "duration": 0.28,
+      "flip": false,
+      "layout": null,
+      "partner_id": "",
+      "slot": "center",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": false
+    },
+    {
+      "asset_id": "summer_78884c58b6ade17c",
+      "duration": 0.45,
+      "transition": "fade",
+      "type": "background"
+    },
+    {
+      "focus": "none",
+      "speaker": "顾祇",
+      "text": "这镇子，跟矿道一个样。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "顾祇",
+      "text": "洞口开得再大，进去的人也是顺着坡往下滑的。想爬回去，得自己找落脚的地方——一格一格凿出来的那种。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "顾祇",
+      "text": "这里的人不凿。不是不想出去，是压根没觉得出不去是个事。日子照样过，橙橙果照样种，挺好的。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "顾祇",
+      "text": "就是……太干了。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "你",
+      "text": "你说什么？",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "顾祇",
+      "text": "夏日已经如此炎热了，我们的日常还要那么干燥吗？",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "summer_e711ce0714f3d4b9",
+      "duration": 0.45,
+      "transition": "fade",
+      "type": "background"
+    },
+    {
+      "asset_id": "summer_ce1bc23ceabeb065",
+      "breakthrough": 0,
+      "duration": 0.26,
+      "flip": false,
+      "layout": {
+        "offset_x": -0.05,
+        "offset_y": 0.23,
+        "scale": 1.23
+      },
+      "partner_id": "",
+      "slot": "center",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": true
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "长久的沉默。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "如果你没记错的话，顾祇是第一个提起这件事的人。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "没有其他人提起过，向含鸯听过一遍，只当她挖矿挖晕了。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "你",
+      "text": "白天天说，那三张立柱的订单里，有一批货不对。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "顾祇",
+      "text": "呵，订单箱里投的单子。规格写在备注上，加工费照付。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "顾祇",
+      "text": "……也就是她。哼。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "你",
+      "text": "为什么不告诉白天天？",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "顾祇",
+      "text": "告诉白天天，她就得管。她管起来多麻烦。",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "",
+      "breakthrough": 0,
+      "duration": 0.28,
+      "flip": false,
+      "layout": null,
+      "partner_id": "",
+      "slot": "center",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": false
+    },
+    {
+      "asset_id": "summer_932aef920e205252",
+      "duration": 0.45,
+      "transition": "fade",
+      "type": "background"
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "她把最后一筐矿装上车，两手一推，送上了轨道。那矿车轻得像没有质量，滴溜溜的就冲上了地表。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "顾祇",
+      "text": "工坊今天能开工了。镇子的日常，照常运转。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "身后，她又哼起了昨晚那支调子。",
+      "type": "dialogue"
+    }
+  ]
+}

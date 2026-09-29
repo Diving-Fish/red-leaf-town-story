@@ -25,6 +25,11 @@ export interface ProductionNode {
   activeName: string
   activeItemName: string
   activeItemIcon: string
+  /* 活动采集点角标（服务端活动档期下发，普通采集点没有） */
+  eventClosed?: boolean
+  eventBadge?: string
+  /* 活动采集点蓝字收益说明（服务端活动档期下发，普通采集点没有） */
+  eventNote?: string
 }
 
 export interface ProductionCopy {
@@ -99,6 +104,9 @@ function baseNode(
     assignment_locked: boolean
     task_snapshot: ProductionTaskSnapshot | null
     task_results: ProductionResultSnapshot[]
+    event_closed?: boolean
+    event_badge?: string
+    event_note?: string
   },
   fallbackAccent: string,
 ): Omit<ProductionNode, 'activeName' | 'activeItemName' | 'activeItemIcon'> {
@@ -115,6 +123,9 @@ function baseNode(
     assignmentLocked: source.assignment_locked,
     taskSnapshot: source.task_snapshot,
     taskResults: source.task_results || [],
+    eventClosed: source.event_closed,
+    eventBadge: source.event_badge,
+    eventNote: source.event_note,
   }
 }
 

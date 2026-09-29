@@ -1,0 +1,811 @@
+{
+  "id": "summer_chapter_5",
+  "title": "第 5 章",
+  "priority": 0,
+  "trigger": {
+    "hook": "all_of",
+    "repeatable": true,
+    "params": {
+      "conditions": [
+        {
+          "hook": "cue",
+          "params": {
+            "cue": "summer:summer_chapter_5"
+          }
+        },
+        {
+          "hook": "season_progress",
+          "params": {
+            "season_id": "summer_tide_festival",
+            "points": 500,
+            "previous_story_id": "summer_chapter_4"
+          }
+        }
+      ]
+    }
+  },
+  "steps": [
+    {
+      "asset_id": "summer_be9528a223c49a52",
+      "duration": 0.45,
+      "transition": "fade",
+      "type": "background"
+    },
+    {
+      "asset_id": "summer_5ecd20b2ead465e6",
+      "breakthrough": 0,
+      "duration": 0.28,
+      "flip": false,
+      "layout": {
+        "offset_x": 0.0,
+        "offset_y": 0.23,
+        "scale": 1.24
+      },
+      "partner_id": "",
+      "slot": "center",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": true
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "从矿洞出来的时候，顾祇已经换完了衣服。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "你",
+      "text": "……你是怎么做到一键换装的？",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "顾祇",
+      "text": "怎么了嘛，这种最粗浅的把戏，我会这个很奇怪吗。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "的确，对于一个能在短短几小时内凭空造出一个舞台的存在，换件衣服再容易不过了。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "顾祇",
+      "text": "哈——果然还是阳光下好一点。矿洞虽然凉快，但总归阴森森的。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "顾祇",
+      "text": "说起来，你昨晚不是和绯恩两个人钻在小树林里吗，怎么今天她都不和你一块了？",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "顾祇",
+      "text": "难·道·是——",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "你看着顾祇的表情，总觉得这姑娘想歪了。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "唉，现在的年轻人，就喜欢胡思乱想。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "你",
+      "text": "没怎么，后来把她送到家了。今天一早也没见到她，或许是太累了，还在休息。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "顾祇",
+      "text": "哦~不但送人家到家里，还让绯恩小姐“太累了”呀~",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "你",
+      "text": "……",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "不想解释了，总觉得会越描越黑，毁灭吧。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "你",
+      "text": "你呢，接下来是什么安排？",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "顾祇",
+      "text": "我要去一趟工坊，你呢？",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "你",
+      "text": "……好吧，左右也没什么事。",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "",
+      "breakthrough": 0,
+      "duration": 0.28,
+      "flip": false,
+      "layout": null,
+      "partner_id": "",
+      "slot": "center",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": false
+    },
+    {
+      "asset_id": "summer_c436166693d1ad1d",
+      "duration": 0.45,
+      "transition": "fade",
+      "type": "background"
+    },
+    {
+      "asset_id": "summer_468eaa830ec69bd2",
+      "breakthrough": 0,
+      "duration": 0.28,
+      "flip": false,
+      "layout": {
+        "offset_x": 0.15,
+        "offset_y": 0.19,
+        "scale": 1.23
+      },
+      "partner_id": "",
+      "slot": "left",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": true
+    },
+    {
+      "focus": "none",
+      "speaker": "古语俞",
+      "text": "嗨嗨嗨，又见面了嗷——等等，你是！？",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "summer_5ecd20b2ead465e6",
+      "breakthrough": 0,
+      "duration": 0.28,
+      "flip": false,
+      "layout": null,
+      "partner_id": "",
+      "slot": "right",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": true
+    },
+    {
+      "focus": "none",
+      "speaker": "顾祇",
+      "text": "第一次见？哦，你还真是第一次见。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "顾祇",
+      "text": "没事，过几天就习以为常了。夏天就该穿的凉快些。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "顾祇",
+      "text": "天使大人——出来加班——",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "summer_e907180ad07943c5",
+      "breakthrough": 0,
+      "duration": 0.28,
+      "flip": false,
+      "layout": null,
+      "partner_id": "",
+      "slot": "left",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": true
+    },
+    {
+      "focus": "none",
+      "speaker": "白天天",
+      "text": "急什么，多大人了，公共场合喧哗吵闹。丢人。",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "summer_427d39f3fecd4707",
+      "breakthrough": 0,
+      "duration": 0.28,
+      "flip": false,
+      "layout": null,
+      "partner_id": "",
+      "slot": "right",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": true
+    },
+    {
+      "focus": "none",
+      "speaker": "顾祇",
+      "text": "哈？难道不是你拖我的单？几根柱子几天了修不好，你的效率去哪了！",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "白天天",
+      "text": "总得有个先来后到。像这种匿名又没什么实际收益的订单，自然要放在最后。",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "",
+      "breakthrough": 0,
+      "duration": 0.28,
+      "flip": false,
+      "layout": null,
+      "partner_id": "",
+      "slot": "left",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": false
+    },
+    {
+      "asset_id": "",
+      "breakthrough": 0,
+      "duration": 0.28,
+      "flip": false,
+      "layout": null,
+      "partner_id": "",
+      "slot": "right",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": false
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "两个人在工坊里吵吵闹闹的，古语俞急忙把你拉了出去……",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "summer_468eaa830ec69bd2",
+      "breakthrough": 0,
+      "duration": 0.28,
+      "flip": false,
+      "layout": {
+        "offset_x": -0.04,
+        "offset_y": 0.19,
+        "scale": 1.23
+      },
+      "partner_id": "",
+      "slot": "center",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": true
+    },
+    {
+      "focus": "none",
+      "speaker": "古语俞",
+      "text": "说实话，能见到主管这个样子，还真是难得。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "你",
+      "text": "……我也不知道她们会这样。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "古语俞",
+      "text": "算啦。让她们吵去，我去点一下那几车矿，今天也该下工了。",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "",
+      "breakthrough": 0,
+      "duration": 0.28,
+      "flip": false,
+      "layout": null,
+      "partner_id": "",
+      "slot": "center",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": false
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "古语俞匆匆离开了，工坊里仍然在叽里呱啦的争吵。这两个人一点都不淑女。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "不多时，古语俞又回来了。",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "summer_468eaa830ec69bd2",
+      "breakthrough": 0,
+      "duration": 0.28,
+      "flip": false,
+      "layout": {
+        "offset_x": -0.04,
+        "offset_y": 0.19,
+        "scale": 1.23
+      },
+      "partner_id": "",
+      "slot": "center",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": true
+    },
+    {
+      "focus": "none",
+      "speaker": "古语俞",
+      "text": "诶，对了，有个事要和你说。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "你",
+      "text": "什么？",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "古语俞",
+      "text": "今天早上有个人来找我，下了一个泳装的单，配色是金红色。你知道哪里可以买桃桃果汁和橙橙果汁吗？",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "你",
+      "text": "诶？去仓库应该能买到果子，果汁就得你们自己想办法了吧。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "古语俞",
+      "text": "啧。你啊你，真是个木头脑袋！",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "古语俞恨铁不成钢地用法杖敲了你一下。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "古语俞",
+      "text": "看她那活蹦乱跳的样子……算了。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "古语俞走远了。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "这些谜语人说的话，你是一点都听不懂。你决定到工坊里面去，看看那两位吵的怎么样了。",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "",
+      "breakthrough": 0,
+      "duration": 0.28,
+      "flip": false,
+      "layout": null,
+      "partner_id": "",
+      "slot": "center",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": false
+    },
+    {
+      "asset_id": "summer_e907180ad07943c5",
+      "breakthrough": 0,
+      "duration": 0.28,
+      "flip": false,
+      "layout": null,
+      "partner_id": "",
+      "slot": "left",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": true
+    },
+    {
+      "asset_id": "summer_5ecd20b2ead465e6",
+      "breakthrough": 0,
+      "duration": 0.28,
+      "flip": false,
+      "layout": null,
+      "partner_id": "",
+      "slot": "right",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": true
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "两位吵是不吵了。白天天依旧是不食人间烟火的冷漠表情，在工作台后翻着订单册。顾祇靠在门框上抱着胳膊，把玩着自己身上的冰晶链子。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "顾祇",
+      "text": "回来啦？那条鱼和你说了什么？",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "你想了想，觉得如果把什么金红泳装一类的东西说出去，顾祇又会越想越歪。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "你",
+      "text": "没什么。倒是你，这里的事情忙完了？",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "顾祇",
+      "text": "算啦。不在这里陪口是心非的家伙唠嗑了。你看她那求而不得的别扭样子。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "白天天",
+      "text": "诡辩。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "顾祇",
+      "text": "你看，又来。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "你",
+      "text": "我印象如果没错的话，你们两个好像今天第一次见面吧？",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "顾祇",
+      "text": "印象大差不差，但反感一个人不需要理由。走了。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "你",
+      "text": "去哪？",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "顾祇",
+      "text": "港口啊。还是说你想在这陪道学先生扯皮？",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "白天天",
+      "text": "总比敢做不敢当强。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "顾祇",
+      "text": "我看心口不一的另有其人呢？",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "白天天",
+      "text": "无意义的争辩。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "顾祇",
+      "text": "说不过就是说不过。还找理由。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "眼看她们又要剑拔弩张了，你赶忙打圆场。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "你",
+      "text": "打住打住。再吵吵下去，订单的进度只会更慢。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "你知道白天天向来对事不对人，决定息事宁人。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "白天天",
+      "text": "哼。反正无名订单排在最后。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "顾祇",
+      "text": "谁稀罕似的。",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "",
+      "breakthrough": 0,
+      "duration": 0.28,
+      "flip": false,
+      "layout": null,
+      "partner_id": "",
+      "slot": "right",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": false
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "顾祇走远了。",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "",
+      "breakthrough": 0,
+      "duration": 0.28,
+      "flip": false,
+      "layout": null,
+      "partner_id": "",
+      "slot": "left",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": false
+    },
+    {
+      "asset_id": "summer_e907180ad07943c5",
+      "breakthrough": 0,
+      "duration": 0.28,
+      "flip": false,
+      "layout": null,
+      "partner_id": "",
+      "slot": "center",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": true
+    },
+    {
+      "focus": "none",
+      "speaker": "白天天",
+      "text": "去罢。那件泳装订单，我会先做。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "你",
+      "text": "……",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "你不明白。但正如古语俞所说，白天天从来不说为什么。",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "",
+      "breakthrough": 0,
+      "duration": 0.28,
+      "flip": false,
+      "layout": null,
+      "partner_id": "",
+      "slot": "center",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": false
+    },
+    {
+      "asset_id": "",
+      "duration": 0.45,
+      "transition": "fade",
+      "type": "background"
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "你记得顾祇说要去港口。但到达的时候……",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "summer_648dd3f7e15dd1d8",
+      "duration": 0.45,
+      "transition": "fade",
+      "type": "background"
+    },
+    {
+      "focus": "none",
+      "speaker": "你",
+      "text": "这……这就完成了？",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "整个舞台窗棂明净，灯光完备。明明昨天来看的时候，这个舞台还是个半成品。",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "summer_5ecd20b2ead465e6",
+      "breakthrough": 0,
+      "duration": 0.28,
+      "flip": false,
+      "layout": {
+        "offset_x": 0.0,
+        "offset_y": 0.23,
+        "scale": 1.24
+      },
+      "partner_id": "",
+      "slot": "center",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": true
+    },
+    {
+      "focus": "none",
+      "speaker": "顾祇",
+      "text": "怎么啦，你不会真觉得我离了那个天使什么都干不了吧？",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "你",
+      "text": "（她竟然能做到这种事……）",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "你",
+      "text": "这么说，你去问白天天要柱子，莫不是……",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "顾祇",
+      "text": "是啦，只是去呛她一下。我真需要她给我加工吗？",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "你",
+      "text": "真可靠啊，顾祇小姐。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "你",
+      "text": "你花了那么大心思，就只是为了在这里开演唱会？",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "顾祇",
+      "text": "不然呢？我说了，红叶镇太一成不变了，昨天和今天，挖的都是同一批矿。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "顾祇",
+      "text": "在平淡的日常里加了把火，红叶镇后面来的所有人，都会记住这一天。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "顾祇",
+      "text": "会说，她建立了红叶镇第一支乐队，创造了新的历史。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "你",
+      "text": "（……这话可不兴说啊。）",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "顾祇",
+      "text": "嘛，虽然现在就我一个就是了。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "你",
+      "text": "你有考虑招募其他人一起吗？",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "顾祇",
+      "text": "其他人？我乐意去招募，她们未必乐意去参与。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "顾祇",
+      "text": "大部分人每天都在工作啦。再说，像天使大人那种，你让她穿泳装，和杀了她差不多。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "你",
+      "text": "……嗯，的确很难想象呢。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "顾祇",
+      "text": "我话放在这里，她要是能穿泳装上这个台，我这辈子不进矿洞挖矿。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "你",
+      "text": "（……总觉得她又说了什么很不得了的话呢。）",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "",
+      "breakthrough": 0,
+      "duration": 0.28,
+      "flip": false,
+      "layout": null,
+      "partner_id": "",
+      "slot": "center",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": false
+    },
+    {
+      "asset_id": "",
+      "duration": 0.45,
+      "transition": "fade",
+      "type": "background"
+    }
+  ]
+}

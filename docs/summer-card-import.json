@@ -1,0 +1,97 @@
+[
+  {
+    "partner_id": "guqi_sp",
+    "source": "顾祇sp初始.jpg",
+    "source_sha256": "452f7c26bbe278857963c09455881d136d940a2dad3dfbe9068e7b21e057f9cc",
+    "artwork": {
+      "breakthrough": 0,
+      "asset_key": "red-leaf-town/partners/guqi_sp/breakthrough-0-a02554c8fe57865e.webp",
+      "width": 936,
+      "height": 1664,
+      "content_type": "image/webp"
+    },
+    "avatar_crop": {
+      "breakthrough": 0,
+      "x": 280,
+      "y": 290,
+      "w": 320,
+      "h": 320
+    }
+  },
+  {
+    "partner_id": "guqi_sp",
+    "source": "顾祇sp一破.jpg",
+    "source_sha256": "45aba67e6e8bb8996430bb8deea243b5a05afea9f19dde5cb90a81590e956a84",
+    "artwork": {
+      "breakthrough": 1,
+      "asset_key": "red-leaf-town/partners/guqi_sp/breakthrough-1-11aceb46a3b84700.webp",
+      "width": 747,
+      "height": 1328,
+      "content_type": "image/webp"
+    },
+    "avatar_crop": {
+      "breakthrough": 1,
+      "x": 220,
+      "y": 235,
+      "w": 290,
+      "h": 290
+    }
+  },
+  {
+    "partner_id": "guqi_sp",
+    "source": "顾祇sp满破.jpg",
+    "source_sha256": "14964a7306f5a1ed924d26c210c29806c98a7ae27463988d539812aa6c8bcc1f",
+    "artwork": {
+      "breakthrough": 2,
+      "asset_key": "red-leaf-town/partners/guqi_sp/breakthrough-2-098b4100afbd4301.webp",
+      "width": 936,
+      "height": 1664,
+      "content_type": "image/webp"
+    },
+    "avatar_crop": {
+      "breakthrough": 2,
+      "x": 305,
+      "y": 125,
+      "w": 290,
+      "h": 290
+    }
+  },
+  {
+    "partner_id": "fein_sp",
+    "source": "绯恩泳装.jpg",
+    "source_sha256": "c273344fcaa930d2018da6b032225dbe91c8e4bef363e559e53bf4daf82b8025",
+    "artwork": {
+      "breakthrough": 0,
+      "asset_key": "red-leaf-town/partners/fein_sp/breakthrough-0-d944c6a476468e7d.webp",
+      "width": 936,
+      "height": 1664,
+      "content_type": "image/webp"
+    },
+    "avatar_crop": {
+      "breakthrough": 0,
+      "x": 320,
+      "y": 60,
+      "w": 300,
+      "h": 300
+    }
+  },
+  {
+    "partner_id": "fein_sp",
+    "source": "output/imagegen/fein-sp-breakthrough-1-beach-draft.png",
+    "source_sha256": "27e0ed973a096eb1b9fc210ddcb47932b6449762c1d80e2f0cabd896d7a38f82",
+    "artwork": {
+      "breakthrough": 1,
+      "asset_key": "red-leaf-town/partners/fein_sp/breakthrough-1-c2bfa98edd241fef.webp",
+      "width": 936,
+      "height": 1664,
+      "content_type": "image/webp"
+    },
+    "avatar_crop": {
+      "breakthrough": 1,
+      "x": 270,
+      "y": 360,
+      "w": 340,
+      "h": 340
+    }
+  }
+]

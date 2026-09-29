@@ -284,6 +284,7 @@ class CropDefinition(BaseModel):
 
 
 class GatheringSiteDefinition(BaseModel):
+    season_id: str = ""
     beta: bool = False
     id: str = Field(min_length=1)
     name: str = Field(min_length=1)
@@ -316,6 +317,7 @@ class GatheringDrawDefinition(BaseModel):
 
 
 class GatheringTaskDefinition(BaseModel):
+    season_id: str = ""
     beta: bool = False
     id: str = Field(min_length=1)
     site_id: str = Field(min_length=1)
@@ -481,6 +483,7 @@ class ExplorationEventDefinition(BaseModel):
 
 
 class ExplorationExpeditionDefinition(BaseModel):
+    season_id: str = ""
     id: str = Field(min_length=1)
     kind: Literal["transport", "survey", "delve"]
     # 内测路线只对白名单玩家可见可进，验收之后摘掉这个标记就是正式内容。
@@ -683,6 +686,7 @@ class BigCatchDefinition(BaseModel):
 
 
 class FishingSpotDefinition(BaseModel):
+    season_id: str = ""
     id: str = Field(min_length=1)
     name: str = Field(min_length=1)
     description: str = ""
@@ -1315,6 +1319,8 @@ class GameContent(BaseModel):
         for task in self.gathering_tasks:
             if task.site_id not in gathering_site_ids:
                 raise ValueError(f"gathering task {task.id} references an unknown site")
+            if task.season_id != self.gathering_site_map[task.site_id].season_id:
+                raise ValueError(f"gathering task {task.id} must use its site's season")
             if any(output.item_id not in items for output in task.outputs):
                 raise ValueError(f"gathering task {task.id} references an unknown item")
             if any(not self.item_map[output.item_id].has_quality for output in task.outputs):

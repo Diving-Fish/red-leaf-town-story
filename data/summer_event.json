@@ -1,0 +1,208 @@
+{
+  "season_id": "summer_tide_festival",
+  "claim_grace_days": 7,
+  "milestones": [
+    {
+      "points": 100,
+      "reward": {
+        "coins": 3000,
+        "guide_leaves": 2,
+        "items": []
+      }
+    },
+    {
+      "points": 200,
+      "reward": {
+        "coins": 0,
+        "guide_leaves": 2,
+        "items": [
+          {
+            "item_id": "partner_notes_medium",
+            "quantity": 3,
+            "quality": 0
+          }
+        ]
+      }
+    },
+    {
+      "points": 300,
+      "reward": {
+        "coins": 3000,
+        "guide_leaves": 2,
+        "items": [
+          {
+            "item_id": "miracle_crystal",
+            "quantity": 3,
+            "quality": 0
+          }
+        ]
+      }
+    },
+    {
+      "points": 400,
+      "reward": {
+        "coins": 0,
+        "guide_leaves": 2,
+        "items": [
+          {
+            "item_id": "night_bellflower",
+            "quantity": 5,
+            "quality": 3
+          },
+          {
+            "item_id": "lantern_fish",
+            "quantity": 3,
+            "quality": 1
+          }
+        ]
+      }
+    },
+    {
+      "points": 500,
+      "reward": {
+        "coins": 0,
+        "guide_leaves": 2,
+        "items": [
+          {
+            "item_id": "miracle_crystal",
+            "quantity": 3,
+            "quality": 0
+          },
+          {
+            "item_id": "partner_notes_medium",
+            "quantity": 3,
+            "quality": 0
+          }
+        ]
+      }
+    },
+    {
+      "points": 600,
+      "reward": {
+        "coins": 0,
+        "guide_leaves": 2,
+        "items": [
+          {
+            "item_id": "sea_shell",
+            "quantity": 6,
+            "quality": 3
+          },
+          {
+            "item_id": "heart_scale",
+            "quantity": 2,
+            "quality": 1
+          }
+        ]
+      }
+    },
+    {
+      "points": 700,
+      "reward": {
+        "coins": 0,
+        "guide_leaves": 2,
+        "items": [
+          {
+            "item_id": "miracle_crystal",
+            "quantity": 6,
+            "quality": 0
+          },
+          {
+            "item_id": "partner_notes_medium",
+            "quantity": 3,
+            "quality": 0
+          }
+        ]
+      }
+    },
+    {
+      "points": 800,
+      "reward": {
+        "coins": 0,
+        "guide_leaves": 2,
+        "items": [
+          {
+            "item_id": "night_bellflower",
+            "quantity": 5,
+            "quality": 3
+          },
+          {
+            "item_id": "sea_shell",
+            "quantity": 6,
+            "quality": 3
+          }
+        ]
+      }
+    },
+    {
+      "points": 900,
+      "reward": {
+        "coins": 6000,
+        "guide_leaves": 2,
+        "items": [
+          {
+            "item_id": "miracle_crystal",
+            "quantity": 6,
+            "quality": 0
+          }
+        ]
+      }
+    },
+    {
+      "points": 1000,
+      "reward": {
+        "coins": 8000,
+        "guide_leaves": 2,
+        "items": [
+          {
+            "item_id": "ribbed_berry_seed",
+            "quantity": 1,
+            "quality": 0
+          },
+          {
+            "item_id": "partner_notes_medium",
+            "quantity": 3,
+            "quality": 0
+          }
+        ]
+      }
+    }
+  ],
+  "chapters": [
+    {
+      "story_id": "summer_chapter_0",
+      "title": "前置",
+      "points": 0,
+      "previous_story_id": ""
+    },
+    {
+      "story_id": "summer_chapter_1",
+      "title": "第 1 章",
+      "points": 100,
+      "previous_story_id": "summer_chapter_0"
+    },
+    {
+      "story_id": "summer_chapter_2",
+      "title": "第 2 章",
+      "points": 200,
+      "previous_story_id": "summer_chapter_1"
+    },
+    {
+      "story_id": "summer_chapter_3",
+      "title": "第 3 章",
+      "points": 300,
+      "previous_story_id": "summer_chapter_2"
+    },
+    {
+      "story_id": "summer_chapter_4",
+      "title": "第 4 章",
+      "points": 400,
+      "previous_story_id": "summer_chapter_3"
+    },
+    {
+      "story_id": "summer_chapter_5",
+      "title": "第 5 章",
+      "points": 500,
+      "previous_story_id": "summer_chapter_4"
+    }
+  ]
+}

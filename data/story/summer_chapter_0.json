@@ -1,0 +1,485 @@
+{
+  "id": "summer_chapter_0",
+  "title": "前置",
+  "priority": 0,
+  "trigger": {
+    "hook": "all_of",
+    "repeatable": true,
+    "params": {
+      "conditions": [
+        {
+          "hook": "cue",
+          "params": {
+            "cue": "summer:summer_chapter_0"
+          }
+        },
+        {
+          "hook": "season_progress",
+          "params": {
+            "season_id": "summer_tide_festival",
+            "points": 0,
+            "previous_story_id": ""
+          }
+        }
+      ]
+    }
+  },
+  "steps": [
+    {
+      "asset_id": "summer_b567367294ef8a00",
+      "duration": 0.45,
+      "transition": "fade",
+      "type": "background"
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "自从来这红叶镇，似乎也有些时日了。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "从起先的茫然、不知所措，到渐渐的习以为常。随着时间的流逝，你从锄头都不知道怎么握，到如今刀耕火种，养鱼柴桑，在这红叶镇开辟出一片属于自己的小天地。",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "",
+      "duration": 3.0,
+      "transition": "fade",
+      "type": "background"
+    },
+    {
+      "asset_id": "summer_ab337f72d25e0da2",
+      "duration": 3.0,
+      "transition": "fade",
+      "type": "background"
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "当然，还有同样从那个裂隙掉下来的、性情各异的伙伴们。",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "summer_be6ef41ba62a73cd",
+      "breakthrough": 0,
+      "duration": 0.28,
+      "flip": false,
+      "layout": null,
+      "partner_id": "",
+      "slot": "left",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": true
+    },
+    {
+      "focus": "none",
+      "speaker": "绯恩",
+      "text": "想什么呢？",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "你",
+      "text": "……",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "日子一天天过去。在大家的努力下，红叶镇已经一步步走上了正轨。所有人各司其职，吵吵闹闹，却也其乐融融。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "只是这平稳前行却又毫无波澜的日常，虽是安稳，却又总觉得缺失了些什么。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "毕竟这红叶镇，来时容易，去时绝不可谓轻松。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "绯恩",
+      "text": "机会难得，不如四处走走？",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "你",
+      "text": "……好。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "话说回来，自打刚来红叶镇开始，就是这位少女一直陪着你。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "种下的第一颗橙橙果，去红枫林里探索捡回蜂蜡，将农田开辟到如今的规模，无中生有的鱼塘和牧场，再到扬帆起航的初帆号，一切都离不开她的帮助。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "照理，该当好好感谢她才对。",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "",
+      "duration": 1.5,
+      "transition": "fade",
+      "type": "background"
+    },
+    {
+      "asset_id": "summer_be9528a223c49a52",
+      "duration": 1.5,
+      "transition": "fade",
+      "type": "background"
+    },
+    {
+      "focus": "none",
+      "speaker": "你",
+      "text": "农田已经那么多了啊。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "农田在几位伙伴的管理下井井有条，现在甚至可以每一块田种植不同的作物了。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "绯恩",
+      "text": "没错哦。现在正是夏季，等再过一段时间入秋，收成好了，就可以开辟新的田地了。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "你",
+      "text": "夏天啊……",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "",
+      "breakthrough": 0,
+      "duration": 0.28,
+      "flip": false,
+      "layout": null,
+      "partner_id": "",
+      "slot": "left",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": false
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "确实，哪怕红叶镇是一片与世隔绝的桃花源，也没能逃过四季交替。",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "summer_eb0bb084f963c55d",
+      "duration": 0.45,
+      "transition": "fade",
+      "type": "background"
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "现在的天气很热，像白璃她们，在田间劳作的时候都戴着草帽。",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "summer_be9528a223c49a52",
+      "duration": 0.45,
+      "transition": "fade",
+      "type": "background"
+    },
+    {
+      "asset_id": "summer_be6ef41ba62a73cd",
+      "breakthrough": 0,
+      "duration": 0.28,
+      "flip": false,
+      "layout": null,
+      "partner_id": "",
+      "slot": "left",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": true
+    },
+    {
+      "focus": "none",
+      "speaker": "绯恩",
+      "text": "？",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "话又说回来，好像你见到绯恩开始，她就是这样的穿搭。初春入夏，都是如此。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "你",
+      "text": "咱们去个凉快点的地方吧。这里有些热了。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "绯恩",
+      "text": "嗯，虽然我也不是很热……但是，如果说凉快一点的地方的话……",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "你",
+      "text": "凉快的地方……晒不到太阳……月石深洞怎么样？",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "绯恩",
+      "text": "嗯，向含鸯小姐和顾祇小姐应该也在那边。",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "",
+      "duration": 1.5,
+      "transition": "fade",
+      "type": "background"
+    },
+    {
+      "asset_id": "summer_e711ce0714f3d4b9",
+      "duration": 3.0,
+      "transition": "fade",
+      "type": "background"
+    },
+    {
+      "asset_id": "",
+      "breakthrough": 0,
+      "duration": 0.28,
+      "flip": false,
+      "layout": null,
+      "partner_id": "",
+      "slot": "left",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": false
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "这里是月石深洞，红叶镇的月银矿90%以上都出自这里。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "源源不断的月银矿产出，是红叶镇能发展到现在的第一桶金。哪怕现在矿洞已经相当大了，并且挖矿的收益没那么高，依旧会有人派驻在这边挖矿。",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "summer_83a19beb45068d91",
+      "breakthrough": 0,
+      "duration": 0.28,
+      "flip": false,
+      "layout": null,
+      "partner_id": "",
+      "slot": "right",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": true
+    },
+    {
+      "focus": "none",
+      "speaker": "向含鸯",
+      "text": "是你啊，还有绯恩小姐。这矿洞可不是你们适合来的地方。",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "summer_be6ef41ba62a73cd",
+      "breakthrough": 0,
+      "duration": 0.28,
+      "flip": false,
+      "layout": null,
+      "partner_id": "",
+      "slot": "left",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": true
+    },
+    {
+      "focus": "none",
+      "speaker": "绯恩",
+      "text": "但这里应该是最凉快的地方了，哪怕是鱼塘，也是有阳光直晒的。矿洞现在那么大了，总是阴凉一些的。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "绯恩",
+      "text": "更不用说那边还有艾欣愉和古剑喵天天追追打打了。",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "",
+      "breakthrough": 0,
+      "duration": 0.28,
+      "flip": false,
+      "layout": null,
+      "partner_id": "",
+      "slot": "right",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": false
+    },
+    {
+      "asset_id": "",
+      "breakthrough": 0,
+      "duration": 0.28,
+      "flip": false,
+      "layout": null,
+      "partner_id": "",
+      "slot": "left",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": false
+    },
+    {
+      "asset_id": "summer_fdd2fe76f6e6a4c5",
+      "duration": 0.45,
+      "transition": "fade",
+      "type": "background"
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "这是鱼塘那边每天都会发生的事。只要艾欣愉被叫去陪钓，就会有贪吃的古剑喵偷偷溜进鱼塘，带走一两条塘养红鲫。当然，被发现后难免被艾欣愉追着攻击。",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "summer_e711ce0714f3d4b9",
+      "duration": 0.45,
+      "transition": "fade",
+      "type": "background"
+    },
+    {
+      "asset_id": "summer_83a19beb45068d91",
+      "breakthrough": 0,
+      "duration": 0.28,
+      "flip": false,
+      "layout": null,
+      "partner_id": "",
+      "slot": "right",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": true
+    },
+    {
+      "focus": "none",
+      "speaker": "你",
+      "text": "今天就你一个吗？",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "向含鸯",
+      "text": "（白了你一眼）什么话，月石深洞本来就只排一个人。我又不是来看热闹的。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "向含鸯",
+      "text": "你要是问那个女人在哪，我无可奉告。她昨天挖了三车矿就跑了，要我替一下她的岗位。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "向含鸯",
+      "text": "走之前还在那儿念叨什么\"这地方进来容易出去难，总得有人找点乐子\"之类的胡话。我当她挖矿挖晕了。\n",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "summer_be6ef41ba62a73cd",
+      "breakthrough": 0,
+      "duration": 0.28,
+      "flip": false,
+      "layout": null,
+      "partner_id": "",
+      "slot": "left",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": true
+    },
+    {
+      "focus": "none",
+      "speaker": "绯恩",
+      "text": "说起来，上次她也是……",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "绯恩",
+      "text": "（上次灵果草甸的探索开放的时候，顾祇就把挖到一半的矿丢下，跑去干别的了。）",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "向含鸯",
+      "text": "虽然我没有探索方面的天赋，但单论挖矿，我可完全不比她差——顺便，堕天使这种存在，能乖乖在月石深洞挖矿，反正我不信。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "向含鸯",
+      "text": "月银矿我会按时送到加工坊的，放心好了。祝你们两个玩的开心~",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "summer_09dac7c15c736f62",
+      "breakthrough": 0,
+      "duration": 0.28,
+      "flip": false,
+      "layout": null,
+      "partner_id": "",
+      "slot": "left",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": true
+    },
+    {
+      "focus": "none",
+      "speaker": "绯恩",
+      "text": "什么叫\"玩得开心\"啊！我陪他从第一颗橙橙果种到现在，什么时候是来玩的了！",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "你",
+      "text": "……（顿了一下）谢谢。\n",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "绯恩",
+      "text": "……突、突然说什么呢。\n",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "你没有回答。只是遥遥地，镇子的另一头，传来了一阵谁都没听过的、很热闹的乐声。",
+      "type": "dialogue"
+    }
+  ]
+}

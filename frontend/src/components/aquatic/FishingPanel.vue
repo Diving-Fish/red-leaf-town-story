@@ -133,8 +133,12 @@ async function cast(spot: FishingSpotState) {
         :style="{ '--spot-accent': spot.accent }"
       >
         <header>
-          <h3>{{ spot.name }}</h3>
+          <div class="spot-title">
+            <h3>{{ spot.name }}</h3>
+            <span v-if="spot.event_badge" class="spot-badge">{{ spot.event_badge }}</span>
+          </div>
           <small>{{ spot.description }}</small>
+          <p v-if="spot.event_note" class="spot-note">{{ spot.event_note }}</p>
         </header>
 
         <dl class="spot-stats">
@@ -245,6 +249,10 @@ async function cast(spot: FishingSpotState) {
 .spot-card { --spot-accent: #6f93a6; display: flex; flex-direction: column; gap: 13px; padding: 18px; border-color: color-mix(in srgb, var(--spot-accent) 30%, transparent); background: linear-gradient(150deg, color-mix(in srgb, var(--spot-accent) 8%, #141b16), #101713); }
 .spot-card h3 { margin: 0; font: 600 17px Georgia, 'Noto Serif SC', serif; }
 .spot-card header small { display: block; margin-top: 5px; color: #849087; line-height: 1.55; }
+.spot-title { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.spot-badge { flex-shrink: 0; padding: 2px 9px; border-radius: 99px; background: color-mix(in srgb, var(--spot-accent) 24%, transparent); color: var(--spot-accent); font-size: 12px; }
+/* 活动钓点的收益说明：文案由后端 event_note 提供，只在有内容时显示（蓝色与探索路线的领队备注一致） */
+.spot-note { margin: 8px 0 0; color: #8ab4f8; font-size: 13px; font-weight: 600; letter-spacing: 0.02em; line-height: 1.55; }
 
 .spot-stats { display: flex; gap: 18px; margin: 0; }
 .spot-stats dt { color: #77837a; font-size: 12px; }

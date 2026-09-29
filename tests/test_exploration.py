@@ -33,7 +33,7 @@ def partner(partner_id: str, exploration: int | None) -> PartnerDefinition:
 
 @pytest.fixture
 def exploration_game():
-    content = load_content()
+    content = load_content().model_copy(deep=True)
     repository = InMemoryPlayerRepository(content)
     catalog = PartnerCatalog(partners=[
         partner("leader", 40),
@@ -174,7 +174,7 @@ def test_player_schema_29_adds_an_empty_exploration_run():
         "updated_at": 1,
     })
 
-    assert migrated.schema_version == 31
+    assert migrated.schema_version == 33
     assert migrated.exploration_run is None
 
 

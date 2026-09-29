@@ -1,0 +1,681 @@
+{
+  "id": "summer_chapter_2",
+  "title": "第 2 章",
+  "priority": 0,
+  "trigger": {
+    "hook": "all_of",
+    "repeatable": true,
+    "params": {
+      "conditions": [
+        {
+          "hook": "cue",
+          "params": {
+            "cue": "summer:summer_chapter_2"
+          }
+        },
+        {
+          "hook": "season_progress",
+          "params": {
+            "season_id": "summer_tide_festival",
+            "points": 200,
+            "previous_story_id": "summer_chapter_1"
+          }
+        }
+      ]
+    }
+  },
+  "steps": [
+    {
+      "asset_id": "summer_c436166693d1ad1d",
+      "duration": 0.45,
+      "transition": "fade",
+      "type": "background"
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "工坊，一个日夜不停的地方。从红叶镇各处收来的原材料都会送到这里，加工成各式各样的产品，再运送到各个岗位上，为伙伴们提供工作便利。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "也正因如此，工坊每时每刻都有人值守，只为了能在伙伴们需要的时候，第一时间就能搭把手。",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "summer_be6ef41ba62a73cd",
+      "breakthrough": 0,
+      "duration": 0.28,
+      "flip": false,
+      "layout": null,
+      "partner_id": "",
+      "slot": "left",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": true
+    },
+    {
+      "focus": "none",
+      "speaker": "绯恩",
+      "text": "打扰了~",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "summer_468eaa830ec69bd2",
+      "breakthrough": 0,
+      "duration": 0.28,
+      "flip": false,
+      "layout": null,
+      "partner_id": "",
+      "slot": "right",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": true
+    },
+    {
+      "focus": "none",
+      "speaker": "古语俞",
+      "text": "欢迎光临订单请投递在门口的订单箱在加工完毕后会统一发放——哈欠。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "古语俞",
+      "text": "真是不常见的组合。两位，要做点什么？",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "古语俞的眼神在你身上停留了很久，最后留在了绯恩身上。你是工坊的常客，经常带来订单——但是绯恩却是不常来的客人。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "绯恩",
+      "text": "那个，我们是来打听一件事。最近有一些不同寻常的枫木板，或是大型的立柱这样的加工委托吗？因为发生了一些很值得在意的事情……",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "古语俞没有回答。那种态度非常的微妙，但更多的是……看傻子的眼神。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "古语俞",
+      "text": "枫木板啊……每天至少十个人来订。这种量，查不出什么的。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "绯恩",
+      "text": "啊……",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "古语俞",
+      "text": "不如说，你们是遇到了什么样的事情，才会来工坊找线索？",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "绯恩",
+      "text": "是这样……",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "",
+      "breakthrough": 0,
+      "duration": 0.28,
+      "flip": false,
+      "layout": null,
+      "partner_id": "",
+      "slot": "right",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": false
+    },
+    {
+      "asset_id": "",
+      "breakthrough": 0,
+      "duration": 0.28,
+      "flip": false,
+      "layout": null,
+      "partner_id": "",
+      "slot": "left",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": false
+    },
+    {
+      "asset_id": "",
+      "duration": 0.45,
+      "transition": "fade",
+      "type": "background"
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "绯恩给古语俞详细说明了突然建起的舞台。你也提到了那个方向时不时会传来的乐声……",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "summer_c436166693d1ad1d",
+      "duration": 0.45,
+      "transition": "fade",
+      "type": "background"
+    },
+    {
+      "asset_id": "summer_468eaa830ec69bd2",
+      "breakthrough": 0,
+      "duration": 0.28,
+      "flip": false,
+      "layout": null,
+      "partner_id": "",
+      "slot": "right",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": true
+    },
+    {
+      "focus": "none",
+      "speaker": "古语俞",
+      "text": "船长小姐出航期间，在所有人眼皮底下神不知鬼不觉的搭起一座舞台？",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "古语俞",
+      "text": "还真是值得好奇的故事。我得查查怎么回事……枫木板和赤铜立柱……",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "古语俞钻到柜台后，抱出一摞订单台账，一页页翻起来。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "白天天",
+      "text": "——不用翻了。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "里间的门口，白天天不知已经站了多久。她走过来，从古语俞手里抽走台账，动作熟得像拿自己桌上的茶杯。",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "summer_e907180ad07943c5",
+      "breakthrough": 0,
+      "duration": 0.28,
+      "flip": false,
+      "layout": null,
+      "partner_id": "",
+      "slot": "left",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": true
+    },
+    {
+      "focus": "none",
+      "speaker": "白天天",
+      "text": "枫木板每天十张。赤铜立柱，这个月一共三张。这两个数字，你们不用查。",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "",
+      "breakthrough": 0,
+      "duration": 0.28,
+      "flip": false,
+      "layout": null,
+      "partner_id": "",
+      "slot": "right",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": false
+    },
+    {
+      "asset_id": "summer_be6ef41ba62a73cd",
+      "breakthrough": 0,
+      "duration": 0.28,
+      "flip": true,
+      "layout": {
+        "offset_x": -0.1,
+        "offset_y": 0.25,
+        "scale": 1.31
+      },
+      "partner_id": "",
+      "slot": "right",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": true
+    },
+    {
+      "focus": "none",
+      "speaker": "绯恩",
+      "text": "那、那我们不就白来——",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "白天天",
+      "text": "不。你们来得正好。——那三张立柱的料里，有一批不对。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "你",
+      "text": "不对？",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "白天天",
+      "text": "货从我手上过。那天一碰，就知道不对。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "绯恩",
+      "text": "可是港口那座舞台我们去过的——那些枫木板和立柱就立在那儿，我们都看见了，从外面看和平时用的明明一模一样。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "白天天",
+      "text": "……是啊。看不出。",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "summer_468eaa830ec69bd2",
+      "breakthrough": 0,
+      "duration": 0.28,
+      "flip": false,
+      "layout": {
+        "offset_x": 0.04,
+        "offset_y": 0.41,
+        "scale": 1.23
+      },
+      "partner_id": "",
+      "slot": "center",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": true
+    },
+    {
+      "focus": "none",
+      "speaker": "古语俞",
+      "text": "……那批立柱我也过手了。就是几根普通的柱子。主管的直觉准得吓人。就是从来不说为什么。",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "",
+      "breakthrough": 0,
+      "duration": 0.28,
+      "flip": false,
+      "layout": null,
+      "partner_id": "",
+      "slot": "center",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": false
+    },
+    {
+      "focus": "none",
+      "speaker": "你",
+      "text": "……你不是用手摸出来的。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "白天天第一次正眼看着你，手从台账上收回来。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "白天天",
+      "text": "……",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "",
+      "duration": 0.45,
+      "transition": "fade",
+      "type": "background"
+    },
+    {
+      "asset_id": "",
+      "breakthrough": 0,
+      "duration": 0.28,
+      "flip": false,
+      "layout": null,
+      "partner_id": "",
+      "slot": "right",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": false
+    },
+    {
+      "focus": "none",
+      "speaker": "白天天",
+      "text": "（哼……）",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "——几天前，水边。",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "summer_f5a8c9c360a21523",
+      "duration": 0.45,
+      "transition": "fade",
+      "type": "background"
+    },
+    {
+      "asset_id": "summer_5ecd20b2ead465e6",
+      "breakthrough": 0,
+      "duration": 0.28,
+      "flip": false,
+      "layout": null,
+      "partner_id": "",
+      "slot": "right",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": true
+    },
+    {
+      "focus": "none",
+      "speaker": "顾祇",
+      "text": "那一位。你是不是太闲了。今天水边放松日，你穿着工坊衣服就来了？围裙呢？工具呢？你这身跟平时有什么区别。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "白天天",
+      "text": "我平时也这样。倒是你，平时灰头土脸，今天突然变成这个样子。我差点没认出来。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "顾祇",
+      "text": "这叫反差。叫偶像感。你懂什么。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "白天天",
+      "text": "我懂的是，你昨天矿洞只挖了三车。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "白天天",
+      "text": "全红叶镇都在等你出矿，顾祇。但是你跑来水边穿成这样。",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "summer_427d39f3fecd4707",
+      "breakthrough": 0,
+      "duration": 0.28,
+      "flip": false,
+      "layout": null,
+      "partner_id": "",
+      "slot": "right",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": true
+    },
+    {
+      "focus": "none",
+      "speaker": "顾祇",
+      "text": "你是加工什么东西能用到月银矿啊！谁会用那么多月银短剑啊！",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "白天天",
+      "text": "你别管谁要。你挖不出矿，我拿什么加工。加工位没原料，全红叶镇进度都要卡。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "白天天",
+      "text": "你今天穿得再好看，矿石又不会自己从地里长出来。",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "summer_5ecd20b2ead465e6",
+      "breakthrough": 0,
+      "duration": 0.28,
+      "flip": false,
+      "layout": null,
+      "partner_id": "",
+      "slot": "right",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": true
+    },
+    {
+      "focus": "none",
+      "speaker": "顾祇",
+      "text": "你真是让人火大。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "白天天",
+      "text": "彼此彼此。当年你顶撞我的时候，也是这副表情。一千年了，一点没变。还是那么不务正业。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "顾祇",
+      "text": "……我变了。我学会挖矿了。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "顾祇",
+      "text": "我还学会了推矿车。还学会看矿脉走向。还学会分辨哪些岩石层适合反转，哪些容易塌。你这天天在工坊坐办公室的，大概没学过这些吧。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "白天天",
+      "text": "……确实没有。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "顾祇",
+      "text": "那你笑什么。当初你们放逐了堕天使，说要维持秩序，可我在外面学会的东西，你一样都不会。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "白天天",
+      "text": "可你穿成这样，不还是为了给那个人看？",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "summer_427d39f3fecd4707",
+      "breakthrough": 0,
+      "duration": 0.28,
+      "flip": false,
+      "layout": null,
+      "partner_id": "",
+      "slot": "right",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": true
+    },
+    {
+      "focus": "none",
+      "speaker": "顾祇",
+      "text": "——你闭嘴！",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "白天天",
+      "text": "在天使面前，堕天使如此伤风败俗。你觉得这画面像话吗。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "白天天",
+      "text": "哗众取宠，自取没趣，跳梁小丑的把戏，也该到此为止了。",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "summer_5ecd20b2ead465e6",
+      "breakthrough": 0,
+      "duration": 0.28,
+      "flip": false,
+      "layout": null,
+      "partner_id": "",
+      "slot": "right",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": true
+    },
+    {
+      "focus": "none",
+      "speaker": "顾祇",
+      "text": "这么多年了，还没见过天使大人如此气急败坏。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "顾祇",
+      "text": "莫不是，某位自诩不食人间烟火的天使，拉不下脸穿泳装当偶像？",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "白天天",
+      "text": "你！",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "",
+      "breakthrough": 0,
+      "duration": 0.28,
+      "flip": false,
+      "layout": null,
+      "partner_id": "",
+      "slot": "right",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": false
+    },
+    {
+      "asset_id": "",
+      "duration": 0.45,
+      "transition": "fade",
+      "type": "background"
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "……",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "summer_c436166693d1ad1d",
+      "duration": 0.45,
+      "transition": "fade",
+      "type": "background"
+    },
+    {
+      "asset_id": "summer_468eaa830ec69bd2",
+      "breakthrough": 0,
+      "duration": 0.28,
+      "flip": false,
+      "layout": null,
+      "partner_id": "",
+      "slot": "right",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": true
+    },
+    {
+      "focus": "none",
+      "speaker": "古语俞",
+      "text": "主管？",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "白天天",
+      "text": "没什么。",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "summer_be6ef41ba62a73cd",
+      "breakthrough": 0,
+      "duration": 0.28,
+      "flip": true,
+      "layout": {
+        "offset_x": -0.1,
+        "offset_y": 0.25,
+        "scale": 1.31
+      },
+      "partner_id": "",
+      "slot": "right",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": true
+    },
+    {
+      "focus": "none",
+      "speaker": "绯恩",
+      "text": "您刚刚是不是——",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "白天天",
+      "text": "我说了，没什么。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "白天天",
+      "text": "那批货的送货单在库房三号架，最上面一摞。要查就快。……别让我看见。",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "summer_468eaa830ec69bd2",
+      "breakthrough": 0,
+      "duration": 0.28,
+      "flip": false,
+      "layout": {
+        "offset_x": 0.04,
+        "offset_y": 0.41,
+        "scale": 1.23
+      },
+      "partner_id": "",
+      "slot": "center",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": true
+    },
+    {
+      "focus": "none",
+      "speaker": "古语俞",
+      "text": "……我早说过，主管从来不说为什么。",
+      "type": "dialogue"
+    }
+  ]
+}

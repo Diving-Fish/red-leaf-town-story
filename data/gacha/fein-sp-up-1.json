@@ -1,0 +1,103 @@
+{
+  "pool_id": "fein-sp-up-1",
+  "title": "萤野夏心",
+  "min_level": 2,
+  "max_pulls_per_player": null,
+  "rarity_probabilities": {
+    "3": 0.4,
+    "4": 0.125,
+    "5": 0.025
+  },
+  "item_probability": 0.45,
+  "first_pulls_without_items": 0,
+  "four_star_guarantee": 10,
+  "five_star_pity": 50,
+  "item_drops": [
+    {
+      "task_item_id": "thick_soil_fertilizer",
+      "weight": 35.0,
+      "quantity": 2
+    },
+    {
+      "task_item_id": "maple_wind_whistle",
+      "weight": 35.0,
+      "quantity": 2
+    },
+    {
+      "task_item_id": "harvest_knot",
+      "weight": 20.0,
+      "quantity": 2
+    },
+    {
+      "task_item_id": "handover_order",
+      "weight": 5.0,
+      "quantity": 1
+    },
+    {
+      "task_item_id": "night_lamp_tea",
+      "weight": 4.0,
+      "quantity": 1
+    },
+    {
+      "task_item_id": "golden_leaf",
+      "weight": 1.0,
+      "quantity": 1
+    }
+  ],
+  "background_asset_id": "fein_sp_gacha",
+  "featured_partner_id": "fein_sp",
+  "featured_rate": 0.8,
+  "partner_ids": [
+    "ai_liqi",
+    "ai_xinyu",
+    "aishen",
+    "aiweier",
+    "aorui_jin",
+    "babi",
+    "bai_lingxue",
+    "bai_tiantian",
+    "banniang",
+    "bufeng_zhuoying",
+    "daian_zeer",
+    "fein",
+    "fein_sp",
+    "fumeng",
+    "guidengdeng",
+    "gujian_bu",
+    "gujian_miao",
+    "guqi",
+    "guyu_yu",
+    "hei_yuchuan",
+    "hongkai",
+    "hongzhijian",
+    "jia_gula",
+    "leilei",
+    "lengyue",
+    "luo_nali",
+    "mami",
+    "manlong",
+    "manlong_2",
+    "nuanyu",
+    "nuanyu_2",
+    "shuiling",
+    "sunfeng_liya",
+    "wei_jiang",
+    "wujian",
+    "xiang_hanyang",
+    "xiang_hanyuan",
+    "xiao_xingyun",
+    "xiaoha",
+    "xixi",
+    "xiyue_kanna",
+    "xuanyuan",
+    "ya_ziweier",
+    "ye_huanan",
+    "ye_lvsu",
+    "yuan_huiqin",
+    "ze_feiyang",
+    "zhake",
+    "zhuoyan"
+  ],
+  "display_order": -290,
+  "season_id": "summer_tide_festival"
+}

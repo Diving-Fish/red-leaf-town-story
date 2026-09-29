@@ -60,6 +60,7 @@ export default createRouter({
       meta: { title: '剧情编辑器', standalone: true },
     },
     { path: '/', name: 'dashboard', component: DashboardView, meta: { title: '总览' } },
+    { path: '/summer', name: 'summer', component: () => import('@/views/SummerEventView.vue'), meta: { title: '夏夜潮祭' } },
     { path: '/farm', name: 'farm', component: FarmView, meta: { title: '农场' } },
     { path: '/gathering', name: 'gathering', component: GatheringView, meta: { title: '采集' } },
     {

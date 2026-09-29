@@ -100,8 +100,8 @@ def game():
 def test_aquatic_content_loads_with_industry_rules_and_feed_config():
     content = load_content()
     assert "aquatic" in content.industries
-    assert [spot.id for spot in content.fishing_spots] == ["town_creek", "maple_lake"]
-    assert [spot.min_level for spot in content.fishing_spots] == [2, 10]
+    assert [spot.id for spot in content.fishing_spots if not spot.season_id] == ["town_creek", "maple_lake"]
+    assert [spot.min_level for spot in content.fishing_spots if not spot.season_id] == [2, 10]
     # 钓鱼是不限流的体力出口，所以定在最低档 6 XP/体力。
     assert all(spot.cast_xp == spot.stamina_cost * 6 for spot in content.fishing_spots)
     assert content.feed_slot is not None and content.feed_slot.capacity == 500
@@ -114,8 +114,8 @@ def test_every_fish_in_the_codex_carries_a_size_range():
     content = load_content()
     for spot in content.fishing_spots:
         fish = [entry for entry in spot.outputs if entry.codex]
-        # 每个钓点 3~5 种鱼，杂物（水草、鱼苗）不进图鉴也不记体型。
-        assert 3 <= len(fish) <= 5
+        # 常驻钓点 3~5 种鱼，活动钓点允许 2 种；杂物不进图鉴。
+        assert (2 if spot.season_id else 3) <= len(fish) <= 5
         assert all(entry.size_max > entry.size_min > 0 for entry in fish)
         assert all(not entry.has_size for entry in spot.outputs if not entry.codex)
 
@@ -126,6 +126,8 @@ def test_fishing_expectation_per_draw_stays_where_it_was():
     prices = {item.id: item.sell_price for item in content.items}
     expected = {"town_creek": 18.3, "maple_lake": 31.3}
     for spot in content.fishing_spots:
+        if spot.id not in expected:
+            continue
         total = sum(entry.weight for entry in spot.outputs) + (spot.big_catch.weight if spot.big_catch else 0)
         value = sum(
             prices[entry.item_id] * (entry.quantity_min + entry.quantity_max) / 2 * entry.weight
@@ -174,7 +176,7 @@ def test_schema_nineteen_migration_starts_from_empty_aquatic_state():
         "created_at": started_at,
         "updated_at": started_at,
     })
-    assert player.schema_version == 31
+    assert player.schema_version == 33
     assert player.ponds == []
     assert player.feed_slot.units == 0 and player.feed_slot.quality_score == 0
     assert player.fishing.combo == 0 and player.fishing.pending_big_catch is None
@@ -194,7 +196,7 @@ def test_schema_twenty_one_adds_neutral_pond_trait_parameters():
         "ponds": [{"pond_id": "pond_1", "last_settled_at": started_at}],
     })
     pond = player.ponds[0]
-    assert player.schema_version == 31
+    assert player.schema_version == 33
     assert (pond.cycle_multiplier, pond.feed_multiplier) == (1, 1)
     assert pond.quality_bonus == pond.generation_gain_bonus == 0
     assert pond.trait_effects == []

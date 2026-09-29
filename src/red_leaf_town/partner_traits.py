@@ -922,3 +922,53 @@ def _star_guidance(context):
     context["event_check_bonus"] = int(context.get("event_check_bonus", 0)) + 2
     context["star_guidance_partner_id"] = context["source_partner_id"]
     record_partner_trait_effect(context, "star_guidance", value=2)
+
+
+@register_partner_trait(
+    "stage_presence",
+    "舞台气场",
+    "顾祇SP探索担任领队时，全队探索检定调整值+1；敏捷检定额外再+1。偶像站上 C 位，聚光灯就会照过来。",
+    phases=("exploration_event",),
+)
+def _stage_presence(context: MutableMapping[str, Any]) -> None:
+    """舞台气场：只有站在一号位（领队）时才点亮，敏捷再吃一档。
+
+    「在队」这件事本身不用在这里判断：service 的特性阶段按 run.partner_ids
+    逐个伙伴执行（_execute_partner_trait_phase），她不在队伍里 handler 根本不会
+    被调用。这里额外管的是「队内位置」——只有 source_partner_id 恰好等于
+    run.leader_partner_id（前端队伍选择器的一号位「领队」）时才生效，
+    和上游「王骑号令」判断领队的写法一致。
+    """
+
+    if not _exploration_check(context):
+        return
+    leader_partner_id = str(context.get("leader_partner_id") or "")
+    if not leader_partner_id or leader_partner_id != str(context.get("source_partner_id") or ""):
+        return
+    _add(context, "check_bonus", 1, stacking_group="exploration_check_bonus")
+    if context.get("check_attribute") == "agility":
+        _add(
+            context,
+            "check_bonus",
+            1,
+            effect="stage_presence_agility_edge",
+            stacking_group="exploration_check_bonus",
+        )
+
+
+@register_partner_trait(
+    "summer_mood",
+    "夏日心情",
+    "采集、垂钓与鱼塘的品质能力+25；晴朗天气下开始采集任务时，额外抽取1次产出。",
+    phases=("task_prepare", "output_draw", "instant_action", "asset_prepare"),
+)
+def _summer_mood(context: MutableMapping[str, Any]) -> None:
+    phase = str(context.get("phase") or "")
+    if phase == "task_prepare" and _industry_is(context, "gathering"):
+        _add(context, "quality_ability_bonus", 25, stacking_group="quality_ability")
+    elif phase == "instant_action" and _industry_is(context, "aquatic"):
+        _add(context, "quality_ability_bonus", 25, stacking_group="quality_ability")
+    elif phase == "asset_prepare" and _industry_is(context, "aquatic") and _action_is(context, "pond_segment"):
+        _add(context, "quality_bonus", 25, stacking_group="pond_quality")
+    elif phase == "output_draw" and _industry_is(context, "gathering") and _weather_is(context, "sunny"):
+        _add(context, "draw_bonus", 1, stacking_group="draw_count")

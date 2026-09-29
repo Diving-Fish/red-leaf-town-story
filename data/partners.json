@@ -1306,6 +1306,98 @@
       ]
     },
     {
+      "id": "fein_sp",
+      "name": "绯恩SP",
+      "rarity": 5,
+      "standard_recruitable": false,
+      "description": "",
+      "growth_curve": "linear",
+      "exploration_stats": {
+        "strength": 12,
+        "agility": 12,
+        "intelligence": 13,
+        "luck": 11
+      },
+      "tendencies": [
+        {
+          "industry": "gathering",
+          "level_1": 37,
+          "level_60": 235
+        },
+        {
+          "industry": "aquatic",
+          "level_1": 32,
+          "level_60": 205
+        }
+      ],
+      "trait_codes": [
+        "summer_mood"
+      ],
+      "artworks": [
+        {
+          "breakthrough": 0,
+          "asset_key": "red-leaf-town/partners/fein_sp/breakthrough-0-d944c6a476468e7d.webp",
+          "width": 936,
+          "height": 1664,
+          "content_type": "image/webp"
+        },
+        {
+          "breakthrough": 1,
+          "asset_key": "red-leaf-town/partners/fein_sp/breakthrough-1-c2bfa98edd241fef.webp",
+          "width": 936,
+          "height": 1664,
+          "content_type": "image/webp"
+        }
+      ],
+      "avatar_crops": [
+        {
+          "breakthrough": 0,
+          "x": 323,
+          "y": 57,
+          "w": 278,
+          "h": 278
+        },
+        {
+          "breakthrough": 1,
+          "x": 270,
+          "y": 360,
+          "w": 340,
+          "h": 340
+        },
+        {
+          "breakthrough": 2,
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        }
+      ],
+      "ascensions": [
+        {
+          "breakthrough": 1,
+          "min_player_level": 15,
+          "coins": 8000,
+          "items": [
+            {
+              "item_id": "miracle_crystal",
+              "quantity": 18,
+              "min_quality": 0
+            },
+            {
+              "item_id": "night_bellflower",
+              "quantity": 10,
+              "min_quality": 3
+            },
+            {
+              "item_id": "lantern_fish",
+              "quantity": 3,
+              "min_quality": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
       "id": "fumeng",
       "name": "浮梦",
       "rarity": 3,
@@ -1768,6 +1860,100 @@
             },
             {
               "item_id": "amber_beeswax",
+              "quantity": 2,
+              "min_quality": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "guqi_sp",
+      "name": "顾祇SP",
+      "rarity": 5,
+      "standard_recruitable": false,
+      "description": "",
+      "growth_curve": "linear",
+      "exploration_stats": {
+        "strength": 8,
+        "agility": 16,
+        "intelligence": 10,
+        "luck": 14
+      },
+      "tendencies": [
+        {
+          "industry": "exploration",
+          "level_1": 37,
+          "level_60": 240
+        }
+      ],
+      "trait_codes": [
+        "stage_presence"
+      ],
+      "artworks": [
+        {
+          "breakthrough": 0,
+          "asset_key": "red-leaf-town/partners/guqi_sp/breakthrough-0-a02554c8fe57865e.webp",
+          "width": 936,
+          "height": 1664,
+          "content_type": "image/webp"
+        },
+        {
+          "breakthrough": 1,
+          "asset_key": "red-leaf-town/partners/guqi_sp/breakthrough-1-11aceb46a3b84700.webp",
+          "width": 747,
+          "height": 1328,
+          "content_type": "image/webp"
+        },
+        {
+          "breakthrough": 2,
+          "asset_key": "red-leaf-town/partners/guqi_sp/breakthrough-2-098b4100afbd4301.webp",
+          "width": 936,
+          "height": 1664,
+          "content_type": "image/webp"
+        }
+      ],
+      "avatar_crops": [
+        {
+          "breakthrough": 0,
+          "x": 280,
+          "y": 290,
+          "w": 320,
+          "h": 320
+        },
+        {
+          "breakthrough": 1,
+          "x": 220,
+          "y": 235,
+          "w": 290,
+          "h": 290
+        },
+        {
+          "breakthrough": 2,
+          "x": 305,
+          "y": 125,
+          "w": 290,
+          "h": 290
+        }
+      ],
+      "ascensions": [
+        {
+          "breakthrough": 1,
+          "min_player_level": 15,
+          "coins": 8000,
+          "items": [
+            {
+              "item_id": "miracle_crystal",
+              "quantity": 18,
+              "min_quality": 0
+            },
+            {
+              "item_id": "sea_shell",
+              "quantity": 12,
+              "min_quality": 3
+            },
+            {
+              "item_id": "heart_scale",
               "quantity": 2,
               "min_quality": 0
             }
@@ -2925,14 +3111,14 @@
       "artworks": [
         {
           "breakthrough": 0,
-          "asset_key": "red-leaf-town/partners/nuanyu_2/breakthrough-0-3b0427721b846067.webp",
+          "asset_key": "red-leaf-town/partners/nuanyu_2/breakthrough-0-4a400ca3aedb2d88.webp",
           "width": 1053,
           "height": 1872,
           "content_type": "image/webp"
         },
         {
           "breakthrough": 1,
-          "asset_key": "red-leaf-town/partners/nuanyu_2/breakthrough-2-94d2190f892dbc7f.webp",
+          "asset_key": "red-leaf-town/partners/nuanyu_2/breakthrough-1-4a8ca9856c822ece.webp",
           "width": 936,
           "height": 1664,
           "content_type": "image/webp"
@@ -2941,17 +3127,17 @@
       "avatar_crops": [
         {
           "breakthrough": 0,
-          "x": 273,
-          "y": 246,
-          "w": 468,
-          "h": 468
+          "x": 392,
+          "y": 242,
+          "w": 404,
+          "h": 404
         },
         {
           "breakthrough": 1,
-          "x": 349,
-          "y": 106,
-          "w": 359,
-          "h": 359
+          "x": 278,
+          "y": 75,
+          "w": 400,
+          "h": 400
         },
         {
           "breakthrough": 2,

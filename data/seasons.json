@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "seasons": [
+    {
+      "name": "夏活·夏夜潮祭",
+      "starts_at": "2026-09-29T00:00:00+08:00",
+      "ends_at": "2026-11-01T00:00:00+08:00",
+      "note": "北京时间 2026-09-29 起至 10 月 31 日全天；11 月 1 日 00:00 关闭新任务及两个活动 UP 池，已出发任务仍可完成结算。",
+      "leader_bonus": {
+        "partner_id": "guqi_sp",
+        "reward_multiplier": 1.2,
+        "label": "盛夏领航",
+        "note": "顾祇SP 担任领队时，出发冻结 120% 收益加成；返程对普通战利品总量四舍五入后分摊，固定奖励（种子、装备、札记等）不参与。"
+      },
+      "leader_note": "夏典期间探索夏夜潮祭，且由顾祇SP担任领队时，探索收益为120%",
+      "companion_bonus": {
+        "partner_id": "ai_xinyu",
+        "reward_multiplier": 1.2,
+        "label": "鳞光聚鱼",
+        "note": "艾欣愉陪钓夏夜灯湾时，单竿钓获总量提升至 120%（按物品数量总量四舍五入再分摊，装备类固定掉落不参与）。"
+      },
+      "fishing_spot_badge": "夏日限定",
+      "fishing_spot_note": "夏典期间在夏夜灯湾钓鱼，且由艾欣愉陪钓时，陪钓收益为120%",
+      "gathering_site_badge": "夏日限定",
+      "gathering_site_note": "夏典期间探索夏夜萤野，且由绯恩SP派驻采集时，采集收益为120%",
+      "gathering_bonus": {
+        "partner_id": "fein_sp",
+        "reward_multiplier": 1.2,
+        "label": "盛夏采撷",
+        "note": "绯恩SP 驻场采集夏夜萤野时，本次采集收获总量提升至 120%（按物品数量总量四舍五入再分摊）。"
+      },
+      "id": "summer_tide_festival"
+    }
+  ]
+}

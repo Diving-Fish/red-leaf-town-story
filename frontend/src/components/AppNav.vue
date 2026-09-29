@@ -25,7 +25,7 @@ function badge(item: NavItem) {
 
 <template>
   <nav class="app-nav" :class="[`app-nav--${variant}`, { 'app-nav--tiles': variant === 'rail' }]" aria-label="游戏功能">
-    <RouterLink v-for="item in items" :key="item.to" :to="item.to" @click="emit('navigate')">
+    <RouterLink v-for="item in items" :key="item.to" :to="item.to" :class="{ 'nav-festival': item.accent === 'festival' }" @click="emit('navigate')">
       <span class="nav-icon">
         <component :is="item.icon" :size="20" />
         <i v-if="badge(item)" class="nav-badge">{{ badge(item) }}</i>
@@ -161,5 +161,17 @@ function badge(item: NavItem) {
     background: transparent;
   }
   .app-nav--bar a.router-link-active { color: var(--leaf-bright); }
+}
+.app-nav--rail.app-nav--tiles a.nav-festival {
+  color: #edbd9b;
+  border-color: #cd946b;
+  background: linear-gradient(150deg, #a8613224, #613e2415);
+}
+.app-nav--rail.app-nav--tiles a.nav-festival:hover,
+.app-nav--rail.app-nav--tiles a.nav-festival.router-link-active {
+  color: #ffe0c5;
+  border-color: #f0b183;
+  background: linear-gradient(150deg, #ad663742, #6f482c28);
+  box-shadow: inset 0 1px #ffd4a826;
 }
 </style>

@@ -16,6 +16,7 @@ class GachaItemDropDefinition(BaseModel):
 class GachaDefinition(BaseModel):
     """一个招募池的抽取规则。经济参数（汇率、印记、升星消耗）不在这里，见 GachaEconomyDefinition。"""
 
+    season_id: str = ""
     pool_id: str = Field(min_length=1)
     title: str = Field(min_length=1)
     display_order: int = 0

@@ -140,7 +140,16 @@ class TaskQualitySnapshot(BaseModel):
         return self
 
 
+class SeasonBonusSnapshot(BaseModel):
+    season_id: str = Field(min_length=1)
+    season_name: str
+    partner_id: str = Field(min_length=1)
+    multiplier: float = Field(ge=1, le=10, allow_inf_nan=False)
+    label: str = ""
+
+
 class ProductionTaskSnapshot(BaseModel):
+    season_bonus: SeasonBonusSnapshot | None = None
     rule_version: int = Field(default=2, ge=1)
     industry: str = Field(min_length=1)
     content_id: str = Field(min_length=1)
@@ -752,6 +761,8 @@ class DelveBattleState(BaseModel):
 
 
 class ExplorationRunState(BaseModel):
+    season_pending_units: int = Field(default=0, ge=0)
+    season_bonus: SeasonBonusSnapshot | None = None
     boss_defeated: bool = False
     talent_check_bonus: int = Field(default=0, ge=0)
     run_id: str = Field(min_length=1)
@@ -801,8 +812,15 @@ class ExplorationRunState(BaseModel):
         return self
 
 
+class SeasonProgressState(BaseModel):
+    # 1800 units = one point; one gathering second = one unit. No rounding loss.
+    units: int = Field(default=0, ge=0)
+    claimed_thresholds: list[int] = Field(default_factory=list)
+
+
 class PlayerState(BaseModel):
-    schema_version: int = 31
+    schema_version: int = 33
+    season_progress: dict[str, SeasonProgressState] = Field(default_factory=dict)
     version: int = 1
     player_id: str
     oauth_sub: str
@@ -1024,7 +1042,18 @@ class PlayerState(BaseModel):
                 run.setdefault("battle", None)
         if schema_version < 31:
             migrated.setdefault("sailing", {})
-        migrated["schema_version"] = 31
+        if schema_version < 32:
+            # Existing tasks/runs were started without an event bonus; never grant one retroactively.
+            run = migrated.get("exploration_run")
+            if run:
+                run.setdefault("season_bonus", None)
+            for site in migrated.get("gathering_sites", []):
+                task = site.get("task_snapshot")
+                if task:
+                    task.setdefault("season_bonus", None)
+        if schema_version < 33:
+            migrated.setdefault("season_progress", {})
+        migrated["schema_version"] = 33
         return migrated
 
     @model_validator(mode="after")

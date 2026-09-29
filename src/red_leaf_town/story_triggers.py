@@ -193,3 +193,15 @@ def _any_of(context: StoryContext, params: dict[str, Any]) -> bool:
 )
 def _none_of(context: StoryContext, params: dict[str, Any]) -> bool:
     return not any(_evaluate_conditions(context, params))
+
+
+@register_story_trigger_hook(
+    "season_progress",
+    lambda params: f"活动累计 {params['points']} 点并完成前一章",
+    lambda params: (_require_identifier(params, "season_id"), _require_positive_int(params, "points", 0)),
+)
+def _season_progress(context: StoryContext, params: dict[str, Any]) -> bool:
+    progress = context.player.season_progress.get(params["season_id"])
+    units = progress.units if progress else 0
+    previous = params.get("previous_story_id", "")
+    return units >= params["points"] * 1800 and (not previous or previous in context.player.seen_story_ids)

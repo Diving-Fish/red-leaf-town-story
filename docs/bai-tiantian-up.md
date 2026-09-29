@@ -3,7 +3,7 @@
 - 卡池：`bai-tiantian-up-1`，排序 -200，居民 2 级开放，保留现有卡池。
 - 五星概率 2.5%，五星中 80% 为白天天；10 抽四星及以上保底，50 抽五星保底，歪后下个五星必出 UP，独立记录进度。
 - 名单沿用常驻角色，不加入其他限定伙伴。
-- 海报：`../data/gacha/artwork/bai-tiantian-up-1.png`，使用内置 image_gen，以现有白天天零破立绘为参考。
+- 海报通过公共素材目录中的 CDN object key 加载。原图本地保留于 `data/gacha/artwork/bai-tiantian-up-1.png`（不入库），使用内置 image_gen，以现有白天天零破立绘为参考。
 
 生成提示词：
 

@@ -65,7 +65,7 @@ def test_schema_30_migrates_without_changing_existing_assets(sailing_game):
     old.pop('sailing')
     old['schema_version'] = 30
     migrated = PlayerState.model_validate(old)
-    assert migrated.schema_version == 31
+    assert migrated.schema_version == 33
     assert migrated.sailing.active_run is None
     assert migrated.sailing.completed_voyages == 0
     assert migrated.inventory == old['inventory']

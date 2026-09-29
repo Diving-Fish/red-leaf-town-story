@@ -384,3 +384,25 @@ def test_growth_achievement_history_and_claims_survive_reload(repository):
     again = GameService(load_content(), repository, clock=lambda: now)
     assert again.snapshot_by_sub('redis-growth-achievements')['player']['maple_flame'] == result['result']['maple_flame']
     assert again.claim_all_achievements('redis-growth-achievements')['result']['maple_flame'] == 0
+
+
+def test_summer_reward_concurrent_claim_persists_once(repository):
+    from concurrent.futures import ThreadPoolExecutor
+    from datetime import datetime
+    from red_leaf_town.domain.models import SeasonProgressState
+    now = int(datetime.fromisoformat('2026-09-29T12:00:00+08:00').timestamp())
+    service = GameService(load_content(), repository, clock=lambda: now)
+    player = service.ensure_player('redis-summer', '夏活持久化')
+    repository.update(player.player_id, lambda p: p.season_progress.__setitem__(
+        'summer_tide_festival', SeasonProgressState(units=100 * 1800)))
+    before = repository.get(player.player_id)
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        results = list(pool.map(lambda _: service.claim_summer_reward('redis-summer', 100), range(2)))
+    assert sum(not r['result']['duplicate'] for r in results) == 1
+    reloaded = GameService(load_content(), repository, clock=lambda: now)
+    state = reloaded.snapshot_by_sub('redis-summer')
+    assert state['summer_event']['milestones'][0]['claimed']
+    after = repository.get(player.player_id)
+    assert after.guide_leaves == before.guide_leaves + 2
+    assert after.coins == before.coins + 3000
+    assert after.season_progress['summer_tide_festival'].units == 100 * 1800

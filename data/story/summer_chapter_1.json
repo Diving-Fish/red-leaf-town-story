@@ -1,0 +1,435 @@
+{
+  "id": "summer_chapter_1",
+  "title": "第 1 章",
+  "priority": 0,
+  "trigger": {
+    "hook": "all_of",
+    "repeatable": true,
+    "params": {
+      "conditions": [
+        {
+          "hook": "cue",
+          "params": {
+            "cue": "summer:summer_chapter_1"
+          }
+        },
+        {
+          "hook": "season_progress",
+          "params": {
+            "season_id": "summer_tide_festival",
+            "points": 100,
+            "previous_story_id": "summer_chapter_0"
+          }
+        }
+      ]
+    }
+  },
+  "steps": [
+    {
+      "asset_id": "summer_e711ce0714f3d4b9",
+      "duration": 0.45,
+      "transition": "fade",
+      "type": "background"
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "最后也是带着气鼓鼓的绯恩从矿洞出来了……",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "虽然被你一句\"谢谢\"搞得当场宕机，但从矿洞出来的时候，她看上去还是气鼓鼓的。",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "summer_be9528a223c49a52",
+      "duration": 0.45,
+      "transition": "fade",
+      "type": "background"
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "但还是好在意，顾祇会去哪里了呢？",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "顾祇是来红叶镇的第一批成员。她和其他人一样，是通过那个裂缝传送过来的。",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "summer_ab337f72d25e0da2",
+      "duration": 0.45,
+      "transition": "fade",
+      "type": "background"
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "其他人从裂隙掉出来的时候，多少会因为失忆而有些迷茫。但顾祇不一样，那双眼睛里铭刻着的，始终是如金色火焰一般的执着。",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "summer_ce1bc23ceabeb065",
+      "breakthrough": 0,
+      "duration": 0.28,
+      "flip": false,
+      "layout": null,
+      "partner_id": "",
+      "slot": "center",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": true
+    },
+    {
+      "focus": "none",
+      "speaker": "顾祇",
+      "text": "我其实是堕天使哦？",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "",
+      "breakthrough": 0,
+      "duration": 0.28,
+      "flip": false,
+      "layout": null,
+      "partner_id": "",
+      "slot": "center",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": false
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "刚来的那天，她是这样告诉你的。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "她说自己喜怒无常，是被放逐的弃子。可在这红叶镇，她几乎每日都在辛勤工作。小小的月石深洞发展到如今这一步，很难没有顾祇的功劳。",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "summer_f2df9f34954bda6a",
+      "duration": 0.45,
+      "transition": "fade",
+      "type": "background"
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "记忆中的顾祇，明明整天一副嫌麻烦的样子，往矿洞里一坐就跟巡视领地的女王似的——可为了优先满足矿物出售和加工，推起矿来，勤恳得吓人。",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "summer_be9528a223c49a52",
+      "duration": 0.45,
+      "transition": "fade",
+      "type": "background"
+    },
+    {
+      "asset_id": "summer_be6ef41ba62a73cd",
+      "breakthrough": 0,
+      "duration": 0.28,
+      "flip": false,
+      "layout": null,
+      "partner_id": "",
+      "slot": "left",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": true
+    },
+    {
+      "focus": "none",
+      "speaker": "绯恩",
+      "text": "你又在发呆了。",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "summer_09dac7c15c736f62",
+      "breakthrough": 0,
+      "duration": 0.28,
+      "flip": false,
+      "layout": null,
+      "partner_id": "",
+      "slot": "left",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": true
+    },
+    {
+      "focus": "none",
+      "speaker": "绯恩",
+      "text": "和女孩子一起出去的时候，专心一点好不好！",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "你",
+      "text": "……对不起嘛。",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "",
+      "breakthrough": 0,
+      "duration": 0.28,
+      "flip": false,
+      "layout": null,
+      "partner_id": "",
+      "slot": "left",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": false
+    },
+    {
+      "asset_id": "summer_75590fb168528265",
+      "duration": 0.45,
+      "transition": "fade",
+      "type": "background"
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "你伸手揉了揉女孩的脸蛋。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "不得不承认，手感好的过分。",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "summer_ab337f72d25e0da2",
+      "duration": 0.45,
+      "transition": "fade",
+      "type": "background"
+    },
+    {
+      "asset_id": "summer_09dac7c15c736f62",
+      "breakthrough": 0,
+      "duration": 0.28,
+      "flip": false,
+      "layout": null,
+      "partner_id": "",
+      "slot": "left",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": true
+    },
+    {
+      "focus": "none",
+      "speaker": "绯恩",
+      "text": "……哼，真是的。",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "summer_be6ef41ba62a73cd",
+      "breakthrough": 0,
+      "duration": 0.28,
+      "flip": false,
+      "layout": null,
+      "partner_id": "",
+      "slot": "left",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": true
+    },
+    {
+      "focus": "none",
+      "speaker": "绯恩",
+      "text": "对了，凡妮莎船长应该快要归航了，我们去看看吧。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "绯恩",
+      "text": "港口刚刚建好，需要不少人手才对。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "你",
+      "text": "好。我们去帮帮忙，好让艾欣愉专心防火防盗防雪豹。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "绯恩",
+      "text": "嗯！",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "",
+      "breakthrough": 0,
+      "duration": 0.28,
+      "flip": false,
+      "layout": null,
+      "partner_id": "",
+      "slot": "left",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": false
+    },
+    {
+      "asset_id": "summer_bd3de59bf8f05258",
+      "duration": 0.45,
+      "transition": "fade",
+      "type": "background"
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "来到港口，第一个看到的是——",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "summer_da73c7805cc58a31",
+      "breakthrough": 0,
+      "duration": 0.28,
+      "flip": false,
+      "layout": null,
+      "partner_id": "",
+      "slot": "left",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": true
+    },
+    {
+      "focus": "none",
+      "speaker": "绯恩",
+      "text": "谁在这里造了个那么大的舞台啊喂！",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "你",
+      "text": "……（难道之前的乐声，是从这里传出来的？）",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "印象里，上一回来港口，还是几天前雾灯群岛刚开的事——白凛她们来找凡妮莎出海，顺路把你也捎上了。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "",
+      "text": "又到底是谁，能在大家眼皮底下，搭出这么大个东西？",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "summer_be6ef41ba62a73cd",
+      "breakthrough": 0,
+      "duration": 0.28,
+      "flip": false,
+      "layout": null,
+      "partner_id": "",
+      "slot": "left",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": true
+    },
+    {
+      "focus": "none",
+      "speaker": "绯恩",
+      "text": "呼……冷静……我要心平气和……",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "summer_4024f543053c9073",
+      "breakthrough": 0,
+      "duration": 0.28,
+      "flip": false,
+      "layout": {
+        "offset_x": -0.23,
+        "offset_y": 0.23,
+        "scale": 1.23
+      },
+      "partner_id": "",
+      "slot": "right",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": true
+    },
+    {
+      "focus": "none",
+      "speaker": "凡妮莎",
+      "text": "绯恩？难得在这边看到你。从苇风湿地回来了？",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "绯恩",
+      "text": "是的，凡妮莎小姐。今天没有出发探索，但是我很想知道，那个……",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "凡妮莎",
+      "text": "你说那边那个舞台吗，我不知道哦？出海之前明明还只是个地基，现在已经搭建的差不多了。可能下次回来之后，就完全修好了也说不定。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "绯恩",
+      "text": "连凡妮莎小姐都不知道这是怎么回事吗……",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "你",
+      "text": "但这些东西肯定不是凭空建起来的。你看这些枫木板和立柱，一看就是加工坊那边的产品。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "绯恩",
+      "text": "对！意思是加工坊那边肯定有人参与了舞台的搭建，或者说他们自己就是——",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "绯恩",
+      "text": "走吧，我们去工坊！",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "你",
+      "text": "你怎么突然对这个舞台那么感兴趣了？",
+      "type": "dialogue"
+    },
+    {
+      "asset_id": "summer_09dac7c15c736f62",
+      "breakthrough": 0,
+      "duration": 0.28,
+      "flip": false,
+      "layout": null,
+      "partner_id": "",
+      "slot": "left",
+      "transition": "fade",
+      "type": "portrait",
+      "visible": true
+    },
+    {
+      "focus": "none",
+      "speaker": "绯恩",
+      "text": "你是笨蛋啊……（小声）反正，你去我就去。",
+      "type": "dialogue"
+    },
+    {
+      "focus": "none",
+      "speaker": "凡妮莎",
+      "text": "呵呵……",
+      "type": "dialogue"
+    }
+  ]
+}

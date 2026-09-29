@@ -218,6 +218,11 @@ export interface GatheringSiteState {
   assigned_partners: OwnedPartner[]
   assignment_locked: boolean
   assignment_locked_until: number | null
+  /** 活动期间由服务端活动档期下发（如「夏日限定」），平时没有这个字段 */
+  event_closed?: boolean
+  event_badge?: string
+  /** 活动期间由服务端活动档期下发的蓝字收益说明，平时没有这个字段 */
+  event_note?: string
 }
 
 export interface TalentNode {
@@ -634,6 +639,9 @@ export interface FishingSpotState {
   unlocked: boolean
   combo: number
   draws: { base_draws: number; ability_bonus: number; difficulty: number; expected: number }
+  event_badge?: string
+  /** 活动期间由服务端活动档期下发的蓝字收益说明，平时没有这个字段 */
+  event_note?: string
 }
 
 export interface PendingBigCatch {
@@ -1184,6 +1192,8 @@ export interface ExplorationExpedition {
   quality: QualityCurveDefinition
   unlocked: boolean
   affordable: boolean
+  /** 活动路线由服务端活动档期下发的蓝字收益说明，平时没有这个字段 */
+  leader_note?: string
 }
 
 export interface ExplorationChoice {
@@ -1346,6 +1356,7 @@ export interface GameState {
   monthly_card: MonthlyCardState
   stamina_supply: StaminaSupplyState
   mail: MailSummary
+  summer_event: SummerEventState
   achievements: AchievementState
   crops: CropDefinition[]
   shop: ShopEntry[]
@@ -1833,4 +1844,28 @@ export interface SailingState {
   last_run: SailingRun | null
   discoveries: Array<{ id: string; name: string; discovered: boolean }>
   collection: Array<{ item_id: string; name: string; quantity: number }>
+}
+
+
+export interface SummerChapter {
+  story_id: string
+  title: string
+  points: number
+  cue: string
+  unlocked: boolean
+  seen: boolean
+  previous_seen: boolean
+}
+export interface SummerEventState {
+  visible: boolean
+  active: boolean
+  can_claim: boolean
+  name: string
+  starts_at: number
+  ends_at: number
+  claim_ends_at: number
+  points: number
+  target: number
+  milestones: Array<{ points: number; reward: Reward; claimed: boolean; claimable: boolean }>
+  chapters: SummerChapter[]
 }
